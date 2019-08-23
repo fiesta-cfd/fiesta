@@ -1,0 +1,110 @@
+\documentclass[10pt,letterpaper]{article}
+\usepackage{amsmath,amssymb}
+\usepackage[margin=0.5in]{geometry}
+
+\begin{document}
+  loboSHOK
+  \section*{Features}
+  \begin{itemize}
+    \item Lua - scriptable configuration files
+    \item MPI+Kokkos - Performance Portability
+    \item VTK - Well supported, feature rich, fast output format
+    \item Uniform Cartesisn Mesh
+    \item Immersed boundary conditions
+    \item Simplified WENO, anisotropic C-method, Runge-Kutta
+    \item Multi-Species, Single Phase, no Diffusion, no Reaction, no External Forcing
+    \item Later: Generalized Curvilinear Coordinates, Combustion, Multi-Phase, Particles...
+  \end{itemize}
+  \section*{Governing Equations}
+  \begin{equation}
+    \tag{1a}
+    \partial_t \rho_k + \nabla \cdot \left( \rho_k \vec{}u \right) = 0
+  \end{equation}
+  \begin{equation}
+    \tag{1b}
+    \partial_t\left(\rho u\right) + \partial_x\left(\rho u^2 + p\right)
+                                  + \partial_y\left(\rho u v\right) 
+                                  + \partial_z\left(\rho u w\right) 
+                                  = \partial_i\left(\widetilde{\beta}\rho C C^{\tau_i}C^{\tau_j}\partial_ju\right)
+  \end{equation}
+  \begin{equation}
+    \tag{1c}
+    \partial_t\left(\rho v\right) + \partial_x\left(\rho v u\right)
+                                  + \partial_y\left(\rho v^2 + p\right) 
+                                  + \partial_z\left(\rho v w\right) 
+                                  = \partial_i\left(\widetilde{\beta}\rho C C^{\tau_i}C^{\tau_j}\partial_ju\right)
+  \end{equation}
+  \begin{equation}
+    \tag{1d}
+    \partial_t\left(\rho w\right) + \partial_x\left(\rho w u\right)
+                                  + \partial_y\left(\rho w v\right) 
+                                  + \partial_z\left(\rho w^2 + p\right) 
+                                  = \partial_i\left(\widetilde{\beta}\rho C C^{\tau_i}C^{\tau_j}\partial_ju\right)
+  \end{equation}
+  \begin{equation}
+    \tag{1e}
+    \partial_tE + \nabla\cdot\left(\vec{u}(E+p)\right)=0
+  \end{equation}
+  \begin{equation}
+    \tag{1f}
+    \partial_tC + \frac{S(\vec{u})}{\epsilon|\delta\vec{x}|}C + \kappa S(\vec{u})|\delta\vec{x}|\nabla^2 C = \frac{S(\vec{u})}{\epsilon|\delta\vec{x}|}G_\rho
+  \end{equation}
+  \begin{equation}
+    \tag{1g}
+    \partial_tC^{\tau_1} + \frac{S(\vec{u})}{\epsilon|\delta\vec{x}|}C^{\tau_1} + \kappa S(\vec{u})|\delta\vec{x}|\nabla^2 C^{\tau_1} = \frac{S(\vec{u})}{\epsilon|\delta\vec{x}|}G_\rho
+  \end{equation}
+  \begin{equation}
+    \tag{1h}
+    \partial_tC^{\tau_2} + \frac{S(\vec{u})}{\epsilon|\delta\vec{x}|}C^{\tau_2} + \kappa S(\vec{u})|\delta\vec{x}|\nabla^2 C^{\tau_2} = \frac{S(\vec{u})}{\epsilon|\delta\vec{x}|}G_\rho
+  \end{equation}
+  \begin{equation}
+    \tag{1j}
+    \partial_tC^{\tau_3} + \frac{S(\vec{u})}{\epsilon|\delta\vec{x}|}C^{\tau_3} + \kappa S(\vec{u})|\delta\vec{x}|\nabla^2 C^{\tau_3} = \frac{S(\vec{u})}{\epsilon|\delta\vec{x}|}G_\rho
+  \end{equation}
+  \begin{equation}
+    \tag{2a}
+    \widetilde{\beta} = \frac{|\delta\vec{x}|^2}{\mu^2\max_\Omega C}{\beta}
+  \end{equation}
+  \begin{equation}
+    \tag{2b}
+    \mu = \max_\Omega\left\{\max\left\{|C^{\tau_1}|,|C^{\tau_2}|,|C^{\tau_3}|\right\}\right\}
+  \end{equation}
+  \begin{equation}
+    \tag{2c}
+    G_\rho = \frac{|\nabla\rho|}{\max_\Omega|\nabla\rho|}
+  \end{equation}
+  \begin{equation}
+    \tag{2d}
+    S(\vec{x}) = \max_{i=1,2,3}\left\{\max_\Omega\left\{u\pm c\right\}\right\}
+  \end{equation}
+  \begin{equation}
+    \tag{2e}
+    p = (1-\gamma)\left(E-\frac{1}{2}\rho|\vec{u}|^2\right)
+  \end{equation}
+  \begin{equation}
+    \tag{2f}
+    \rho = \sum_{k\in S}\rho_k
+  \end{equation}
+  \begin{equation}
+    \tag{2g}
+    \gamma = \frac{C_p}{C_v}
+  \end{equation}
+  \begin{equation}
+    \tag{2h}
+    C_p = \sum_{k\in S}m_k{C_p}_k
+  \end{equation}
+  \begin{equation}
+    \tag{2j}
+    C_v = \sum_{k\in S}m_k{C_v}_k
+  \end{equation}
+  \begin{equation}
+    \tag{2k}
+    {C_p}_k = \frac{\gamma_k R_k}{\gamma_k-1}
+  \end{equation}
+  \begin{equation}
+    \tag{2m}
+    {C_v}_k = \frac{R_k}{\gamma_k-1}
+  \end{equation}
+\end{document}
+
+
