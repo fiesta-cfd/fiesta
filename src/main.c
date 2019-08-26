@@ -45,20 +45,51 @@ double getglobdbl(lua_State *L, const char *var) {
 
 int main(){
     char buff[256];
-    int w,h;
+    int ni,nj,nk,nci,ncj,nck;
+    int idx;
     double gamma;
-    int ceq;
+    double dx,dy,dz;
     lua_State *L = luaL_newstate(); //Opens Lua
     //luaL_openlibs(L);               //opens the standard libraries
 
     if (luaL_loadfile(L,"input.lua") || lua_pcall(L,0,0,0))
         error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
-    w     = getglobint (L, "width" );
-    h     = getglobint (L, "height");
+    nci   = getglobint (L, "ni" );
+    ncj   = getglobint (L, "nj" );
+    nck   = getglobint (L, "nk" );
+    dx    = getglobdbl (L, "dx" );
+    dy    = getglobdbl (L, "dy" );
+    dz    = getglobdbl (L, "dz" );
     gamma = getglobdbl (L, "gamma" );
-    ceq   = getglobbool(L, "ceq"   );
 
-    printf("Width = %d, Height = %d, Gamma = %4.2f, CEQ = %d\n", w, h, gamma,ceq);
+    ni = nci + 1;
+    nj = ncj + 1;
+    nk = nck + 1;
+
+    printf("Gamma = %4.2f\n",gamma);
+    printf("ni = %d, dx = %f\n",ni,dx);
+    printf("nj = %d, dy = %f\n",nj,dy);
+    printf("nk = %d, dz = %f\n",nk,dz);
+
+    double *x = malloc(ni*nj*nk*sizeof(double));
+    double *y = malloc(ni*nj*nk*sizeof(double));
+    double *z = malloc(ni*nj*nk*sizeof(double));
+    double *v = malloc(ni*nj*nk*sizeof(double));
+
+    for (int k=1; k<nk; ++k){
+        for (int j=1; j<nj; ++j){
+            for (int i=1; i<ni; ++i){
+                idx = (ni*nj)*k+ni*j+i;
+                //printf("(%d,%d,%d), %d/%d\n",i,j,k,idx,ni*nj*nk);
+                x[idx] = i*dx;
+                y[idx] = j*dy;
+                z[idx] = k*dz;
+                v[idx] = i*j*k/(ni*nj*nk);
+            }
+        }
+    }
+
+    printf("%d : %f, %f, %f\n",ni*nj*nk-1,x[ni*nj*nk-1],y[ni*nj*nk-1],z[ni*nj*nk-1]);
 
     lua_close(L);
     return 0;
