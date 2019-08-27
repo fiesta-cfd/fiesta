@@ -1,2 +1,2 @@
 default:
-		gcc -g -Ilua-5.3.5/install/include -Llua-5.3.5/install/lib main.c -llua -lm -ldl
+		mpicc -g main.c -llua -lm -ldl -lcgns

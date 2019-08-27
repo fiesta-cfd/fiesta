@@ -1,8 +1,11 @@
 -- input file
 gamma = 1.42
-ni = 100
-nj = 200
-nk = 400
-dx = 0.01
-dy = 0.005
-dz = 0.0025
+ni = 40
+nj = 20
+nk = 10
+dx = 0.025
+dy = 0.05
+dz = 0.1
+procsx = 8
+procsy = 4
+procsz = 2
