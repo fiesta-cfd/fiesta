@@ -215,21 +215,21 @@ int main(){
         }
     }
 
-    //int index_sol;
+    int index_sol;
 
-    //if (cgp_open("pout.cgns", CG_MODE_MODIFY, &index_file))
-    //    cgp_error_exit();
+    if (cgp_open("pout.cgns", CG_MODE_MODIFY, &index_file))
+        cgp_error_exit();
 
-    //if (cg_sol_write(index_file,index_base,index_zone,"FlowSolution",CG_CellCenter, &index_sol))
-    //    cgp_error_exit();
+    if (cg_sol_write(index_file,index_base,index_zone,"FlowSolution",CG_CellCenter, &index_sol))
+        cgp_error_exit();
 
-    //if (cgp_field_write(index_file,index_base,index_zone,index_sol,CG_RealDouble,"Density",&index_flow))
-    //    cgp_error_exit();
+    if (cgp_field_write(index_file,index_base,index_zone,index_sol,CG_RealDouble,"Density",&index_flow))
+        cgp_error_exit();
 
-    //if (cgp_field_write_data(index_file,index_base,index_zone,index_sol,index_flow,start,endc,v))
-    //    cgp_error_exit();
+    if (cgp_field_write_data(index_file,index_base,index_zone,index_sol,index_flow,start,endc,v))
+        cgp_error_exit();
 
-    //cgp_close(index_file);
+    cgp_close(index_file);
 
     MPI_Finalize();
     return 0;
