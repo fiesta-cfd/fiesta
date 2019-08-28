@@ -6,6 +6,7 @@
 #include "lauxlib.h"
 #include "lualib.h"
 #include "cgnslib.h"
+#include "pcgnslib.h"
 #include <mpi.h>
 
 void error(lua_State *L, const char *fmt, ...){
@@ -143,66 +144,92 @@ int main(){
     endk = startk + nck;
     nk = nck + 1;
 
-    printf("I am %3d of %3d: (%4d,%4d,%4d,%4d,%4d,%4d), (%4d,%4d,%4d), (%4d,%4d,%4d), (%4d,%4d,%4d), (%4d,%4d,%4d,%4d,%4d,%4d)\n"
+    printf("I am %3d of %3d: (%2d,%2d,%2d,%2d,%2d,%2d), (%d,%d,%d), (%2d,%2d,%2d), (%2d,%2d,%2d), (%2d,%2d,%2d,%2d,%2d,%2d)\n"
             ,rank,numprocs,left,right,bottom,top,back,front
             ,coords[0],coords[1],coords[2]
             ,nci,ncj,nck
             ,ni,nj,nk
             ,starti,endi,startj,endj,startk,endk);
 
-    double *x = malloc(glbl_ni*glbl_nj*glbl_nk*sizeof(double));
-    double *y = malloc(glbl_ni*glbl_nj*glbl_nk*sizeof(double));
-    double *z = malloc(glbl_ni*glbl_nj*glbl_nk*sizeof(double));
-    double *v = malloc(glbl_ni*glbl_nj*glbl_nk*sizeof(double));
+    double *x = malloc(ni*nj*nk*sizeof(double));
+    double *y = malloc(ni*nj*nk*sizeof(double));
+    double *z = malloc(ni*nj*nk*sizeof(double));
+    double *v = malloc(nci*ncj*nck*sizeof(double));
 
 
-    for (int k=0; k<glbl_nk; ++k){
-        for (int j=0; j<glbl_nj; ++j){
-            for (int i=0; i<glbl_ni; ++i){
-                idx = (glbl_ni*glbl_nj)*k+glbl_ni*j+i;
-                x[idx] = i*dx;
-                y[idx] = j*dy;
-                z[idx] = k*dz;
-                v[idx] = (double)((i+1)*(j+1)*(k+1))/(double)(glbl_ni*glbl_nj*glbl_nk);
-                //printf("(%d,%d,%d): %f, %f, %f, %f\n",i,j,k,x[idx],y[idx],z[idx],v[idx]);
+    for (int k=0; k<nk; ++k){
+        for (int j=0; j<nj; ++j){
+            for (int i=0; i<ni; ++i){
+                idx = (ni*nj)*k+ni*j+i;
+                x[idx] = (starti + i)*dx;
+                y[idx] = (startj + j)*dy;
+                z[idx] = (startk + k)*dz;
             }
         }
     }
 
     lua_close(L);
 
-    if (rank == 0){
-        if (cg_open("grid.cgns",CG_MODE_WRITE,&index_file)) cg_error_exit();
+    int Cx, Cy, Cz;
+    cgsize_t start[3] = {starti+1,startj+1,startk+1};
+    cgsize_t end[3] = {endi+1,endj+1,endk+1};
+    cgsize_t endc[3] = {endi+2,endj+2,endk+2};
 
-        cg_base_write(index_file,"Base",3,3,&index_base);
-        
-        isize[0][0] = glbl_ni;
-        isize[0][1] = glbl_nj;
-        isize[0][2] = glbl_nk;
+    isize[0][0] = glbl_ni;
+    isize[0][1] = glbl_nj;
+    isize[0][2] = glbl_nk;
 
-        isize[1][0] = isize[0][0] - 1;
-        isize[1][1] = isize[0][1] - 1;
-        isize[1][2] = isize[0][2] - 1;
-        
-        isize[2][0] = 0;
-        isize[2][1] = 0;
-        isize[2][2] = 0;
+    isize[1][0] = isize[0][0] - 1;
+    isize[1][1] = isize[0][1] - 1;
+    isize[1][2] = isize[0][2] - 1;
+    
+    isize[2][0] = 0;
+    isize[2][1] = 0;
+    isize[2][2] = 0;
 
-        cg_zone_write(index_file,index_base,"Zone 1",*isize,CG_Structured,&index_zone);
+    cgp_mpi_comm(cartcomm);
+    
+    if (cgp_open("pout.cgns", CG_MODE_WRITE, &index_file) ||
+        cg_base_write(index_file,"Base",3,3,&index_base) ||
+        cg_zone_write(index_file,index_base,"Zone 1",*isize,CG_Structured,&index_zone))
+        cgp_error_exit();
 
-        cg_coord_write(index_file, index_base, index_zone, CG_RealDouble, "CoordinateX",x,&index_coord);
-        cg_coord_write(index_file, index_base, index_zone, CG_RealDouble, "CoordinateY",y,&index_coord);
-        cg_coord_write(index_file, index_base, index_zone, CG_RealDouble, "CoordinateZ",z,&index_coord);
+    if (cgp_coord_write(index_file,index_base,index_zone,CG_RealDouble, "CoordinateX", &Cx) ||
+        cgp_coord_write(index_file,index_base,index_zone,CG_RealDouble, "CoordinateY", &Cy) ||
+        cgp_coord_write(index_file,index_base,index_zone,CG_RealDouble, "CoordinateZ", &Cz))
+        cgp_error_exit();
 
-        cg_close(index_file);
+    if (cgp_coord_write_data(index_file,index_base,index_zone,Cx, start, end, x) ||
+        cgp_coord_write_data(index_file,index_base,index_zone,Cy, start, end, y) ||
+        cgp_coord_write_data(index_file,index_base,index_zone,Cz, start, end, z))
+        cgp_error_exit();
 
-        if (cg_open("grid.cgns",CG_MODE_MODIFY,&index_file)) cg_error_exit();
+    cgp_close(index_file);
 
-        cg_sol_write(index_file,index_base,index_zone,"Sollution 1",CG_Vertex,&index_flow);
-        cg_field_write(index_file,index_base,index_zone,index_flow,CG_RealDouble,"Density",v,&index_field);
-
-        cg_close(index_file);
+    for (int k=0; k<nck; ++k){
+        for (int j=0; j<ncj; ++j){
+            for (int i=0; i<nci; ++i){
+                idx = (nci*ncj)*k+nci*j+i;
+                v[idx] = (double)((starti+i+1)*(startj+j+1)*(startk+k+1))/(double)(ni*nj*nk);
+            }
+        }
     }
+
+    //int index_sol;
+
+    //if (cgp_open("pout.cgns", CG_MODE_MODIFY, &index_file))
+    //    cgp_error_exit();
+
+    //if (cg_sol_write(index_file,index_base,index_zone,"FlowSolution",CG_CellCenter, &index_sol))
+    //    cgp_error_exit();
+
+    //if (cgp_field_write(index_file,index_base,index_zone,index_sol,CG_RealDouble,"Density",&index_flow))
+    //    cgp_error_exit();
+
+    //if (cgp_field_write_data(index_file,index_base,index_zone,index_sol,index_flow,start,endc,v))
+    //    cgp_error_exit();
+
+    //cgp_close(index_file);
 
     MPI_Finalize();
     return 0;
