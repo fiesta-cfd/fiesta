@@ -173,7 +173,7 @@ int main(){
     int Cx, Cy, Cz;
     cgsize_t start[3] = {starti+1,startj+1,startk+1};
     cgsize_t end[3] = {endi+1,endj+1,endk+1};
-    cgsize_t endc[3] = {endi+2,endj+2,endk+2};
+    cgsize_t endc[3] = {endi,endj,endk};
 
     isize[0][0] = glbl_ni;
     isize[0][1] = glbl_nj;
@@ -210,7 +210,8 @@ int main(){
         for (int j=0; j<ncj; ++j){
             for (int i=0; i<nci; ++i){
                 idx = (nci*ncj)*k+nci*j+i;
-                v[idx] = (double)((starti+i+1)*(startj+j+1)*(startk+k+1))/(double)(ni*nj*nk);
+                //v[idx] = (double)((starti+i+1)*(startj+j+1)*(startk+k+1))/(double)(ni*nj*nk);
+                v[idx] = rank;
             }
         }
     }
