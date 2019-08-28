@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <math.h>
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
@@ -50,6 +51,12 @@ int main(){
 
     char buff[256];
     int ni,nj,nk,nci,ncj,nck;
+    int rem;
+    int glbl_ni,glbl_nj,glbl_nk;
+    int glbl_nci,glbl_ncj,glbl_nck;
+    int starti,endi;
+    int startj,endj;
+    int startk,endk;
     int idx;
     double gamma;
     double dx,dy,dz;
@@ -64,9 +71,9 @@ int main(){
 
     if (luaL_loadfile(L,"input.lua") || lua_pcall(L,0,0,0))
         error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
-    nci    = getglobint (L, "ni" );
-    ncj    = getglobint (L, "nj" );
-    nck    = getglobint (L, "nk" );
+    glbl_nci    = getglobint (L, "ni" );
+    glbl_ncj    = getglobint (L, "nj" );
+    glbl_nck    = getglobint (L, "nk" );
     dx     = getglobdbl (L, "dx" );
     dy     = getglobdbl (L, "dy" );
     dz     = getglobdbl (L, "dz" );
@@ -75,43 +82,88 @@ int main(){
     procsy = getglobint (L, "procsy");
     procsz = getglobint (L, "procsz");
 
-    ni = nci + 1;
-    nj = ncj + 1;
-    nk = nck + 1;
+    glbl_ni = glbl_nci + 1;
+    glbl_nj = glbl_ncj + 1;
+    glbl_nk = glbl_nck + 1;
 
     int rank,numprocs;
-    int dims[3] = {procsz,procsx,procsy};
+    MPI_Comm cartcomm;
+    int dims[3] = {procsx,procsy,procsz};
     int periods[3] = {0,0,0};
     int coords[3];
     int left,right,top,bottom,front,back;
 
-    MPI_Comm cartcomm;
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+    MPI_Cart_create(MPI_COMM_WORLD, 3, dims, periods, 0, &cartcomm);
+    MPI_Comm_rank(cartcomm, &rank);
+    MPI_Cart_coords(cartcomm, rank, 3, coords);
+    MPI_Cart_shift(cartcomm, 0, 1, &left, &right);
+    MPI_Cart_shift(cartcomm, 1, 1, &bottom, &top);
+    MPI_Cart_shift(cartcomm, 2, 1, &back, &front);
+
     if (rank == 0){
         printf("Gamma = %4.2f\n",gamma);
-        printf("ni = %d, dx = %f\n",ni,dx);
+        printf("glbl_ni = %d, dx = %f\n",glbl_ni,dx);
         printf("nj = %d, dy = %f\n",nj,dy);
         printf("nk = %d, dz = %f\n",nk,dz);
     }
 
-    printf("I am %d of %d\n",rank,numprocs);
+    rem = glbl_nci % procsx;
+    nci = floor(glbl_nci/procsx);
+    if (coords[0] < rem){
+        nci = nci + 1;
+        starti = nci*coords[0];
+    }else{
+        starti = rem*(nci+1) + (coords[0]-rem)*nci;
+    }
+    endi = starti + nci;
+    ni = nci + 1;
 
-    double *x = malloc(ni*nj*nk*sizeof(double));
-    double *y = malloc(ni*nj*nk*sizeof(double));
-    double *z = malloc(ni*nj*nk*sizeof(double));
-    double *v = malloc(ni*nj*nk*sizeof(double));
+    rem = glbl_ncj % procsy;
+    ncj = floor(glbl_ncj/procsy);
+    if (coords[1] < rem){
+        ncj = ncj + 1;
+        startj = ncj*coords[1];
+    }else{
+        startj = rem*(ncj+1) + (coords[1]-rem)*ncj;
+    }
+    endj = startj + ncj;
+    nj = ncj + 1;
+
+    rem = glbl_nck % procsz;
+    nck = floor(glbl_nck/procsz);
+    if (coords[2] < rem){
+        nck = nck + 1;
+        startk = nck*coords[2];
+    }else{
+        startk = rem*(nck+1) + (coords[2]-rem)*nck;
+    }
+    endk = startk + nck;
+    nk = nck + 1;
+
+    printf("I am %3d of %3d: (%4d,%4d,%4d,%4d,%4d,%4d), (%4d,%4d,%4d), (%4d,%4d,%4d), (%4d,%4d,%4d), (%4d,%4d,%4d,%4d,%4d,%4d)\n"
+            ,rank,numprocs,left,right,bottom,top,back,front
+            ,coords[0],coords[1],coords[2]
+            ,nci,ncj,nck
+            ,ni,nj,nk
+            ,starti,endi,startj,endj,startk,endk);
+
+    double *x = malloc(glbl_ni*glbl_nj*glbl_nk*sizeof(double));
+    double *y = malloc(glbl_ni*glbl_nj*glbl_nk*sizeof(double));
+    double *z = malloc(glbl_ni*glbl_nj*glbl_nk*sizeof(double));
+    double *v = malloc(glbl_ni*glbl_nj*glbl_nk*sizeof(double));
 
 
-    for (int k=0; k<nk; ++k){
-        for (int j=0; j<nj; ++j){
-            for (int i=0; i<ni; ++i){
-                idx = (ni*nj)*k+ni*j+i;
+    for (int k=0; k<glbl_nk; ++k){
+        for (int j=0; j<glbl_nj; ++j){
+            for (int i=0; i<glbl_ni; ++i){
+                idx = (glbl_ni*glbl_nj)*k+glbl_ni*j+i;
                 x[idx] = i*dx;
                 y[idx] = j*dy;
                 z[idx] = k*dz;
-                v[idx] = (double)((i+1)*(j+1)*(k+1))/(double)(ni*nj*nk);
+                v[idx] = (double)((i+1)*(j+1)*(k+1))/(double)(glbl_ni*glbl_nj*glbl_nk);
                 //printf("(%d,%d,%d): %f, %f, %f, %f\n",i,j,k,x[idx],y[idx],z[idx],v[idx]);
             }
         }
@@ -124,9 +176,9 @@ int main(){
 
         cg_base_write(index_file,"Base",3,3,&index_base);
         
-        isize[0][0] = ni;
-        isize[0][1] = nj;
-        isize[0][2] = nk;
+        isize[0][0] = glbl_ni;
+        isize[0][1] = glbl_nj;
+        isize[0][2] = glbl_nk;
 
         isize[1][0] = isize[0][0] - 1;
         isize[1][1] = isize[0][1] - 1;
