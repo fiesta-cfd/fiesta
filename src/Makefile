@@ -1,2 +1,2 @@
 default:
-		mpicc -g main.c -llua -lm -ldl -lcgns
+		mpicc -g main.c -llua53 -lm -ldl -lcgns

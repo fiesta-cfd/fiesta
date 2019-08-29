@@ -9,6 +9,8 @@
 #include "pcgnslib.h"
 #include <mpi.h>
 
+#define PDBI if(rank==0) printf("%s:%d\n",__FILE__,__LINE__);
+
 // Lua error function
 void error(lua_State *L, const char *fmt, ...){
     va_list argp;
@@ -124,6 +126,7 @@ int main(){
         printf("nj = %d, dy = %f\n",nj,dy);
         printf("nk = %d, dz = %f\n",nk,dz);
     }
+    PDBI
 
     /* Distribute grid cells to mpi ranks including uneven remainders */
     rem = glbl_nci % procsx;
@@ -171,6 +174,7 @@ int main(){
     double *y = malloc(ni*nj*nk*sizeof(double));
     double *z = malloc(ni*nj*nk*sizeof(double));
     double *v = malloc(nci*ncj*nck*sizeof(double));
+    PDBI
 
 
     /* calculate rank local grid coordinates */
@@ -184,6 +188,7 @@ int main(){
             }
         }
     }
+    PDBI
 
 
     int Cx, Cy, Cz;
@@ -204,19 +209,30 @@ int main(){
     isize[2][0] = 0;
     isize[2][1] = 0;
     isize[2][2] = 0;
+    PDBI
 
     cgp_mpi_comm(cartcomm);
+    PDBI
+    MPI_Barrier(cartcomm);
+    PDBI
+    index_file = -314;
     
     /* create cgns file and write grid coordinates in parallel*/
-    if (cgp_open("pout.cgns", CG_MODE_WRITE, &index_file) ||
-        cg_base_write(index_file,"Base",3,3,&index_base) ||
+    //if (cgp_open("pout.cgns", CG_MODE_WRITE, &index_file) ||
+    //    cg_base_write(index_file,"Base",3,3,&index_base) ||
+    PDBI
+    cgp_open("pout.cgns", CG_MODE_WRITE, &index_file);
+    PDBI
+    if (cg_base_write(index_file,"Base",3,3,&index_base) ||
         cg_zone_write(index_file,index_base,"Zone 1",*isize,CG_Structured,&index_zone))
         cgp_error_exit();
+    PDBI
 
     if (cgp_coord_write(index_file,index_base,index_zone,CG_RealDouble, "CoordinateX", &Cx) ||
         cgp_coord_write(index_file,index_base,index_zone,CG_RealDouble, "CoordinateY", &Cy) ||
         cgp_coord_write(index_file,index_base,index_zone,CG_RealDouble, "CoordinateZ", &Cz))
         cgp_error_exit();
+    PDBI
 
     if (cgp_coord_write_data(index_file,index_base,index_zone,Cx, start, end, x) ||
         cgp_coord_write_data(index_file,index_base,index_zone,Cy, start, end, y) ||
@@ -224,6 +240,7 @@ int main(){
         cgp_error_exit();
 
     cgp_close(index_file);
+    PDBI
 
     /* contrive sample flow variable */
     for (int k=0; k<nck; ++k){
@@ -235,6 +252,8 @@ int main(){
             }
         }
     }
+    PDBI
+
 
     int index_sol;
 
