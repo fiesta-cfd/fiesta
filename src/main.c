@@ -9,6 +9,7 @@
 #include "pcgnslib.h"
 #include <mpi.h>
 
+// Lua error function
 void error(lua_State *L, const char *fmt, ...){
     va_list argp;
     va_start(argp, fmt);
@@ -18,6 +19,7 @@ void error(lua_State *L, const char *fmt, ...){
     exit(EXIT_FAILURE);
 }
 
+//Lua get boolean value
 int getglobbool(lua_State *L, const char *var) {
     int isnum, result;
     lua_getglobal(L, var);
@@ -26,6 +28,7 @@ int getglobbool(lua_State *L, const char *var) {
     return result;
 }
 
+//Lua get integer value
 int getglobint(lua_State *L, const char *var) {
     int isnum, result;
     lua_getglobal(L, var);
@@ -36,6 +39,7 @@ int getglobint(lua_State *L, const char *var) {
     return result;
 }
 
+//Lua get double value
 double getglobdbl(lua_State *L, const char *var) {
     int isnum;
     double result;
@@ -67,11 +71,15 @@ int main(){
     int index_file, icelldim, iphysdim, index_base, index_zone, index_coord, index_flow, index_field;
     cgsize_t isize[3][3];
 
+    /* Create Lua State */
     lua_State *L = luaL_newstate(); //Opens Lua
     //luaL_openlibs(L);               //opens the standard libraries
 
+    /* Open and run Lua configuration file */
     if (luaL_loadfile(L,"input.lua") || lua_pcall(L,0,0,0))
         error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
+
+    /* get global variables from Lua results */
     glbl_nci    = getglobint (L, "ni" );
     glbl_ncj    = getglobint (L, "nj" );
     glbl_nck    = getglobint (L, "nk" );
@@ -83,6 +91,10 @@ int main(){
     procsy = getglobint (L, "procsy");
     procsz = getglobint (L, "procsz");
 
+    /* Done with Lua */
+    lua_close(L);
+
+    /* calculate number of nodes from number of cells */
     glbl_ni = glbl_nci + 1;
     glbl_nj = glbl_ncj + 1;
     glbl_nk = glbl_nck + 1;
@@ -94,9 +106,11 @@ int main(){
     int coords[3];
     int left,right,top,bottom,front,back;
 
+    /* Get basic MPI parameters */
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+    /* Create cartesian topology and get rank dimensions and neighbors */
     MPI_Cart_create(MPI_COMM_WORLD, 3, dims, periods, 0, &cartcomm);
     MPI_Comm_rank(cartcomm, &rank);
     MPI_Cart_coords(cartcomm, rank, 3, coords);
@@ -111,6 +125,7 @@ int main(){
         printf("nk = %d, dz = %f\n",nk,dz);
     }
 
+    /* Distribute grid cells to mpi ranks including uneven remainders */
     rem = glbl_nci % procsx;
     nci = floor(glbl_nci/procsx);
     if (coords[0] < rem){
@@ -151,12 +166,14 @@ int main(){
             ,ni,nj,nk
             ,starti,endi,startj,endj,startk,endk);
 
+    /* allocate grid coordinate and flow variables */
     double *x = malloc(ni*nj*nk*sizeof(double));
     double *y = malloc(ni*nj*nk*sizeof(double));
     double *z = malloc(ni*nj*nk*sizeof(double));
     double *v = malloc(nci*ncj*nck*sizeof(double));
 
 
+    /* calculate rank local grid coordinates */
     for (int k=0; k<nk; ++k){
         for (int j=0; j<nj; ++j){
             for (int i=0; i<ni; ++i){
@@ -168,13 +185,14 @@ int main(){
         }
     }
 
-    lua_close(L);
 
     int Cx, Cy, Cz;
+    /* calculate rank local start and end indices for CGNS file shapes */
     cgsize_t start[3] = {starti+1,startj+1,startk+1};
     cgsize_t end[3] = {endi+1,endj+1,endk+1};
     cgsize_t endc[3] = {endi,endj,endk};
 
+    /* specify overall file shape for cgns */
     isize[0][0] = glbl_ni;
     isize[0][1] = glbl_nj;
     isize[0][2] = glbl_nk;
@@ -189,6 +207,7 @@ int main(){
 
     cgp_mpi_comm(cartcomm);
     
+    /* create cgns file and write grid coordinates in parallel*/
     if (cgp_open("pout.cgns", CG_MODE_WRITE, &index_file) ||
         cg_base_write(index_file,"Base",3,3,&index_base) ||
         cg_zone_write(index_file,index_base,"Zone 1",*isize,CG_Structured,&index_zone))
@@ -206,6 +225,7 @@ int main(){
 
     cgp_close(index_file);
 
+    /* contrive sample flow variable */
     for (int k=0; k<nck; ++k){
         for (int j=0; j<ncj; ++j){
             for (int i=0; i<nci; ++i){
@@ -218,6 +238,7 @@ int main(){
 
     int index_sol;
 
+    /* open cgns file and write cell centered flow variable */
     if (cgp_open("pout.cgns", CG_MODE_MODIFY, &index_file))
         cgp_error_exit();
 
