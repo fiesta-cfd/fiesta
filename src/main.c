@@ -50,7 +50,7 @@ int main(){
         }
     }
 
-    cf = writeGrid(cf,x,y,z);
+    //cf = writeGrid(cf,x,y,z,"grid.cgns");
 
     /* contrive sample flow variable */
     for (int k=0; k<cf.nck; ++k){
@@ -63,7 +63,8 @@ int main(){
         }
     }
     
-    writeSolution(cf,v);
+    writeSolution(cf,x,y,z,v,1,0.65);
+    writeSolution(cf,x,y,z,v,2,0.85);
 
     MPI_Finalize();
     return 0;
