@@ -7,3 +7,7 @@ try
 for nfs filesystems like in xena if file writing is slow
 see https://github.com/open-mpi/ompi/issues/4446
 
+to compile with cuda need to
+    export OMPI_CXX=/users/beromer/Kokkos/kokkos/bin/nvcc_wrapper
+
+
