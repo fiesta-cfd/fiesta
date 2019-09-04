@@ -47,7 +47,7 @@ struct inputConfig executeConfiguration(char * fname){
     struct inputConfig myConfig;
     /* Create Lua State */
     lua_State *L = luaL_newstate(); //Opens Lua
-    //luaL_openlibs(L);               //opens the standard libraries
+    luaL_openlibs(L);               //opens the standard libraries
 
     /* Open and run Lua configuration file */
     if (luaL_loadfile(L,fname) || lua_pcall(L,0,0,0))
