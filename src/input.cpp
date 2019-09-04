@@ -65,6 +65,20 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.yProcs      = getglobint (L, "procsy");
     myConfig.zProcs      = getglobint (L, "procsz");
 
+    int isnum;
+    double z;
+
+    lua_getglobal(L,"f");
+    lua_pushnumber(L,2.0);
+    lua_pushnumber(L,3.0);
+    if (lua_pcall(L,2,1,0) != LUA_OK)
+        error(L, "error running function 'f': %s\n",lua_tostring(L, -1));
+    z = lua_tonumberx(L,-1,&isnum);
+    if (!isnum)
+        error(L, "function 'f' should return a number");
+    lua_pop(L,1);
+    printf("Function is %f\n",z);
+
     /* Done with Lua */
     lua_close(L);
 

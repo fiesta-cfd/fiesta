@@ -7,6 +7,13 @@ nk = 10
 dx = L/ni
 dy = L/nj
 dz = L/nk
-procsx = 2
-procsy = 2
-procsz = 2
+procsx = 1
+procsy = 1
+procsz = 1
+
+function f(x,y)
+    --return(x^2 * math.sin(y))/(1-x)
+    local rtn = (math.pi*x + math.pi*y)
+    return rtn
+    --return (x/y)
+end

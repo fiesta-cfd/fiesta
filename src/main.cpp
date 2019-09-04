@@ -9,7 +9,6 @@
 
 void fnExit1(void){
     Kokkos::finalize();
-    MPI_Finalize();
 }
 
 int main(int argc, char* argv[]){
@@ -33,6 +32,10 @@ int main(int argc, char* argv[]){
         printf("glbl_nj = %d, dy = %f\n",cf.glbl_nj,cf.dy);
         printf("glbl_nk = %d, dz = %f\n",cf.glbl_nk,cf.dz);
     }
+
+    Kokkos::View<double*[2]> a("testView",5);
+
+    
 
     //printf("I am %3d of %3d: (%2d,%2d,%2d,%2d,%2d,%2d), (%d,%d,%d), (%2d,%2d,%2d), (%2d,%2d,%2d), (%2d,%2d,%2d,%2d,%2d,%2d)\n"
     //        ,rank,numprocs,left,right,bottom,top,back,front
@@ -76,7 +79,7 @@ int main(int argc, char* argv[]){
     writeSolution(cf,x,y,z,v,1,0.65);
     writeSolution(cf,x,y,z,v,2,0.85);
 
-    //MPI_Finalize();
+    MPI_Finalize();
     //Kokkos::finalize();
     return 0;
 }
