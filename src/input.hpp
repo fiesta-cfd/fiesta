@@ -5,9 +5,11 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <math.h>
+extern "C" {
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
+}
 #include <mpi.h>
 
 // Lua error function
