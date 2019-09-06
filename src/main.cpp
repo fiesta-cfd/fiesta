@@ -3,9 +3,7 @@
 #include "cgns.hpp"
 #include "Kokkos_Core.hpp"
 #include <mpi.h>
-
-#define MYDBG printf("%s:%d\n",__FILE__,__LINE__);
-#define MYDBG0 if(rank==0) printf("%s:%d\n",__FILE__,__LINE__);
+#include "lsdebug.hpp"
 
 void fnExit1(void){
     Kokkos::finalize();
@@ -26,16 +24,20 @@ int main(int argc, char* argv[]){
 
     cf = mpi_init(cf);
 
+    MYDBG
+
+    Kokkos::View<double****> myV("testView",cf.nci,cf.ncj,cf.nck,cf.nv);
+    MYDBG
+
+    loadInitialConditions(cf,myV);
+    MYDBG
+
     if (cf.rank == 0){
         printf("Gamma = %4.2f\n",cf.gamma);
         printf("glbl_ni = %d, dx = %f\n",cf.glbl_ni,cf.dx);
         printf("glbl_nj = %d, dy = %f\n",cf.glbl_nj,cf.dy);
         printf("glbl_nk = %d, dz = %f\n",cf.glbl_nk,cf.dz);
     }
-
-    Kokkos::View<double*[2]> a("testView",5);
-
-    
 
     //printf("I am %3d of %3d: (%2d,%2d,%2d,%2d,%2d,%2d), (%d,%d,%d), (%2d,%2d,%2d), (%2d,%2d,%2d), (%2d,%2d,%2d,%2d,%2d,%2d)\n"
     //        ,rank,numprocs,left,right,bottom,top,back,front
@@ -76,8 +78,8 @@ int main(int argc, char* argv[]){
         }
     }
     
-    writeSolution(cf,x,y,z,v,1,0.65);
-    writeSolution(cf,x,y,z,v,2,0.85);
+    writeSolution(cf,x,y,z,myV,1,0.65);
+    writeSolution(cf,x,y,z,myV,2,0.85);
 
     MPI_Finalize();
     //Kokkos::finalize();

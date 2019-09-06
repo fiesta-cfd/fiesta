@@ -1,4 +1,5 @@
 #include "cgns.hpp"
+#include "lsdebug.hpp"
 
 struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y, double *z,char * fname){
 
@@ -47,27 +48,45 @@ struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y, double
     return cf;
 }
 
-void writeSolution(struct inputConfig cf, double *x, double *y, double *z, double * v, int tdx, double time){
+void writeSolution(struct inputConfig cf, double *x, double *y, double *z, const Kokkos::View<double****> deviceV, int tdx, double time){
     int index_sol, index_flow;
 
     char solname[32];
-    char fname[32];
+    char fsname[32];
     cgsize_t dims = 1;
     cgsize_t idims[2];
     idims[0] = 32;
     idims[1] = 1;
 
-    sprintf(fname,"sol-%06d.cgns",tdx);
-    cf = writeGrid(cf, x,y,z,fname);
-    sprintf(solname,"FS%030d",tdx);
-
+    snprintf(fsname,32,"sol-%06d.cgns",tdx);
+    cf = writeGrid(cf, x,y,z,fsname);
+    snprintf(solname,32,"FS%030d",tdx);
 
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
     cgsize_t end[3] = {cf.iEnd+1,cf.jEnd+1,cf.kEnd+1};
     cgsize_t endc[3] = {cf.iEnd,cf.jEnd,cf.kEnd};
 
+    
+
+    typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
+    Kokkos::deep_copy(hostV,deviceV);
+    
+
+    double *v = (double*)malloc(cf.nci*cf.ncj*cf.nck*sizeof(double));
+    
+
+    int idx;
+    for (int k=0; k<cf.nck; ++k){
+        for (int j=0; j<cf.ncj; ++j){
+            for (int i=0; i<cf.nci; ++i){
+                idx = (cf.nci*cf.ncj)*k+cf.nci*j+i;
+                v[idx] = hostV(i,j,k,0);
+            }
+        }
+    }
+    
     /* open cgns file and write cell centered flow variable */
-    if (cgp_open(fname, CG_MODE_MODIFY, &cf.cF))
+    if (cgp_open(fsname, CG_MODE_MODIFY, &cf.cF))
         cgp_error_exit();
 
     if (cg_sol_write(cf.cF,cf.cB,cf.cZ,solname,CG_CellCenter, &index_sol))

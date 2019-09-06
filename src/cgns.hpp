@@ -9,6 +9,6 @@ extern "C" {
 
 struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y, double *z,char * fname);
 
-void writeSolution(struct inputConfig cf, double *x, double *y, double *z, double * v, int tdx, double time);
+void writeSolution(struct inputConfig cf, double *x, double *y, double *z, const Kokkos::View<double****> deviceV, int tdx, double time);
 
 #endif

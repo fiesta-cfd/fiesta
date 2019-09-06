@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <math.h>
 #include "lua.hpp"
+#include "Kokkos_Core.hpp"
 #include <mpi.h>
 
 // Lua error function
@@ -22,6 +23,7 @@ double getglobdbl(lua_State *L, const char *var);
 
 //configuration structure
 struct inputConfig {
+    char inputFname[32];
     int glbl_ni,glbl_nj,glbl_nk;
     int glbl_nci,glbl_ncj,glbl_nck;
     double gamma;
@@ -31,7 +33,7 @@ struct inputConfig {
     int xMinus,yMinus,zMinus;
     int rank;
     int nci,ncj,nck;
-    int ni,nj,nk;
+    int ni,nj,nk,nv;
     int iStart,jStart,kStart;
     int iEnd,jEnd,kEnd;
     MPI_Comm comm;
@@ -39,5 +41,7 @@ struct inputConfig {
 };
 
 struct inputConfig executeConfiguration(char * fname);
+
+int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> v);
 
 #endif

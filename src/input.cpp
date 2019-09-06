@@ -1,4 +1,6 @@
 #include "input.hpp"
+#include "Kokkos_Core.hpp"
+#include "lsdebug.hpp"
 
 // Lua error function
 void error(lua_State *L, const char *fmt, ...){
@@ -57,6 +59,7 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.glbl_nci    = getglobint (L, "ni" );
     myConfig.glbl_ncj    = getglobint (L, "nj" );
     myConfig.glbl_nck    = getglobint (L, "nk" );
+    myConfig.nv          = getglobint (L, "nv" );
     myConfig.dx          = getglobdbl (L, "dx" );
     myConfig.dy          = getglobdbl (L, "dy" );
     myConfig.dz          = getglobdbl (L, "dz" );
@@ -64,6 +67,8 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.xProcs      = getglobint (L, "procsx");
     myConfig.yProcs      = getglobint (L, "procsy");
     myConfig.zProcs      = getglobint (L, "procsz");
+
+    snprintf(myConfig.inputFname,32,"%s",fname);
 
     int isnum;
     double z;
@@ -88,4 +93,28 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.glbl_nk = myConfig.glbl_nck + 1;
 
     return myConfig;
+}
+
+int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> v){
+    
+    lua_State *L = luaL_newstate(); //Opens Lua
+    luaL_openlibs(L);               //opens the standard libraries
+
+    /* Open and run Lua configuration file */
+    if (luaL_loadfile(L,cf.inputFname) || lua_pcall(L,0,0,0))
+        error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
+    
+    typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(v);
+    for (int k=0; k<cf.nck; ++k){
+        for (int j=0; j<cf.ncj; ++j){
+            for (int i=0; i<cf.nci; ++i){
+                hostV(i,j,k,0) = 1.25;
+            }
+        }
+    }
+
+    Kokkos::deep_copy(v,hostV);
+    lua_close(L);
+
+    return 0;
 }
