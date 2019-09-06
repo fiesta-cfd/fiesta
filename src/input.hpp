@@ -27,13 +27,13 @@ struct inputConfig {
     int glbl_ni,glbl_nj,glbl_nk;
     int glbl_nci,glbl_ncj,glbl_nck;
     double gamma;
-    double dx,dy,dz;
+    double dt,dx,dy,dz;
     int xProcs,yProcs,zProcs,numProcs;
     int xPlus,yPlus,zPlus;
     int xMinus,yMinus,zMinus;
     int rank;
     int nci,ncj,nck;
-    int ni,nj,nk,nv;
+    int nt,ni,nj,nk,nv;
     int iStart,jStart,kStart;
     int iEnd,jEnd,kEnd;
     MPI_Comm comm;

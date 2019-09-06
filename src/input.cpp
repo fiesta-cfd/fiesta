@@ -14,7 +14,7 @@ void error(lua_State *L, const char *fmt, ...){
 
 //Lua get boolean value
 int getglobbool(lua_State *L, const char *var) {
-    int isnum, result;
+    int result;
     lua_getglobal(L, var);
     result = (int)lua_toboolean(L, -1);
     lua_pop(L,1);
@@ -56,10 +56,12 @@ struct inputConfig executeConfiguration(char * fname){
         error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
 
     /* get global variables from Lua results */
+    myConfig.nt          = getglobint (L, "nt" );
     myConfig.glbl_nci    = getglobint (L, "ni" );
     myConfig.glbl_ncj    = getglobint (L, "nj" );
     myConfig.glbl_nck    = getglobint (L, "nk" );
     myConfig.nv          = getglobint (L, "nv" );
+    myConfig.dt          = getglobdbl (L, "dt" );
     myConfig.dx          = getglobdbl (L, "dx" );
     myConfig.dy          = getglobdbl (L, "dy" );
     myConfig.dz          = getglobdbl (L, "dz" );
@@ -69,20 +71,6 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.zProcs      = getglobint (L, "procsz");
 
     snprintf(myConfig.inputFname,32,"%s",fname);
-
-    int isnum;
-    double z;
-
-    lua_getglobal(L,"f");
-    lua_pushnumber(L,2.0);
-    lua_pushnumber(L,3.0);
-    if (lua_pcall(L,2,1,0) != LUA_OK)
-        error(L, "error running function 'f': %s\n",lua_tostring(L, -1));
-    z = lua_tonumberx(L,-1,&isnum);
-    if (!isnum)
-        error(L, "function 'f' should return a number");
-    lua_pop(L,1);
-    printf("Function is %f\n",z);
 
     /* Done with Lua */
     lua_close(L);
@@ -95,7 +83,10 @@ struct inputConfig executeConfiguration(char * fname){
     return myConfig;
 }
 
-int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> v){
+int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> deviceV){
+    
+    double z;
+    int isnum;
     
     lua_State *L = luaL_newstate(); //Opens Lua
     luaL_openlibs(L);               //opens the standard libraries
@@ -103,17 +94,31 @@ int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> 
     /* Open and run Lua configuration file */
     if (luaL_loadfile(L,cf.inputFname) || lua_pcall(L,0,0,0))
         error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
-    
-    typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(v);
-    for (int k=0; k<cf.nck; ++k){
-        for (int j=0; j<cf.ncj; ++j){
-            for (int i=0; i<cf.nci; ++i){
-                hostV(i,j,k,0) = 1.25;
+
+    typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
+    for (int v=0; v<cf.nv; ++v){
+        for (int k=0; k<cf.nck; ++k){
+            for (int j=0; j<cf.ncj; ++j){
+                for (int i=0; i<cf.nci; ++i){
+                    lua_getglobal(L,"f");
+                    lua_pushnumber(L,cf.iStart+i);
+                    lua_pushnumber(L,cf.jStart+j);
+                    lua_pushnumber(L,cf.kStart+k);
+                    lua_pushnumber(L,v);
+                    if (lua_pcall(L,4,1,0) != LUA_OK)
+                        error(L, "error running function 'f': %s\n",lua_tostring(L, -1));
+                    z = lua_tonumberx(L,-1,&isnum);
+                    if (!isnum)
+                        error(L, "function 'f' should return a number");
+                    lua_pop(L,1);
+                    
+                    hostV(i,j,k,v) = z;
+                }
             }
         }
     }
 
-    Kokkos::deep_copy(v,hostV);
+    Kokkos::deep_copy(deviceV,hostV);
     lua_close(L);
 
     return 0;

@@ -3,14 +3,13 @@
 
 struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y, double *z,char * fname){
 
-    int icelldim, iphysdim, index_coord, index_field;
+    //int icelldim, iphysdim, index_coord, index_field;
     cgsize_t isize[3][3];
 
     int Cx, Cy, Cz;
     /* calculate rank local start and end indices for CGNS file shapes */
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
     cgsize_t end[3] = {cf.iEnd+1,cf.jEnd+1,cf.kEnd+1};
-    cgsize_t endc[3] = {cf.iEnd,cf.jEnd,cf.kEnd};
 
     /* specify overall file shape for cgns */
     isize[0][0] = cf.glbl_ni;
@@ -51,6 +50,8 @@ struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y, double
 void writeSolution(struct inputConfig cf, double *x, double *y, double *z, const Kokkos::View<double****> deviceV, int tdx, double time){
     int index_sol, index_flow;
 
+    char dName[32];
+
     char solname[32];
     char fsname[32];
     cgsize_t dims = 1;
@@ -63,19 +64,23 @@ void writeSolution(struct inputConfig cf, double *x, double *y, double *z, const
     snprintf(solname,32,"FS%030d",tdx);
 
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
-    cgsize_t end[3] = {cf.iEnd+1,cf.jEnd+1,cf.kEnd+1};
     cgsize_t endc[3] = {cf.iEnd,cf.jEnd,cf.kEnd};
-
-    
 
     typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
     Kokkos::deep_copy(hostV,deviceV);
+
+    /* open cgns file and write cell centered flow variable */
+    if (cgp_open(fsname, CG_MODE_MODIFY, &cf.cF))
+        cgp_error_exit();
     
+    if (cg_sol_write(cf.cF,cf.cB,cf.cZ,solname,CG_CellCenter, &index_sol))
+        cgp_error_exit();
 
     double *v = (double*)malloc(cf.nci*cf.ncj*cf.nck*sizeof(double));
-    
 
     int idx;
+
+    //write momentum x
     for (int k=0; k<cf.nck; ++k){
         for (int j=0; j<cf.ncj; ++j){
             for (int i=0; i<cf.nci; ++i){
@@ -84,19 +89,79 @@ void writeSolution(struct inputConfig cf, double *x, double *y, double *z, const
             }
         }
     }
-    
-    /* open cgns file and write cell centered flow variable */
-    if (cgp_open(fsname, CG_MODE_MODIFY, &cf.cF))
-        cgp_error_exit();
 
-    if (cg_sol_write(cf.cF,cf.cB,cf.cZ,solname,CG_CellCenter, &index_sol))
-        cgp_error_exit();
-
-    if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealDouble,"Density",&index_flow))
+    if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealDouble,"MomentumX",&index_flow))
         cgp_error_exit();
 
     if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
         cgp_error_exit();
+
+    //write momentum y
+    for (int k=0; k<cf.nck; ++k){
+        for (int j=0; j<cf.ncj; ++j){
+            for (int i=0; i<cf.nci; ++i){
+                idx = (cf.nci*cf.ncj)*k+cf.nci*j+i;
+                v[idx] = hostV(i,j,k,1);
+            }
+        }
+    }
+    
+    if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealDouble,"MomentumY",&index_flow))
+        cgp_error_exit();
+
+    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+        cgp_error_exit();
+
+    //write momentum z
+    for (int k=0; k<cf.nck; ++k){
+        for (int j=0; j<cf.ncj; ++j){
+            for (int i=0; i<cf.nci; ++i){
+                idx = (cf.nci*cf.ncj)*k+cf.nci*j+i;
+                v[idx] = hostV(i,j,k,2);
+            }
+        }
+    }
+    
+    if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealDouble,"MomentumZ",&index_flow))
+        cgp_error_exit();
+
+    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+        cgp_error_exit();
+
+    //write energy
+    for (int k=0; k<cf.nck; ++k){
+        for (int j=0; j<cf.ncj; ++j){
+            for (int i=0; i<cf.nci; ++i){
+                idx = (cf.nci*cf.ncj)*k+cf.nci*j+i;
+                v[idx] = hostV(i,j,k,3);
+            }
+        }
+    }
+    
+    if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealDouble,"EnergyInternal",&index_flow))
+        cgp_error_exit();
+
+    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+        cgp_error_exit();
+
+    //write densities
+    for (int vn=4; vn<cf.nv; ++vn){
+        snprintf(dName,32,"SpeciesDensity%d",vn-3);
+        for (int k=0; k<cf.nck; ++k){
+            for (int j=0; j<cf.ncj; ++j){
+                for (int i=0; i<cf.nci; ++i){
+                    idx = (cf.nci*cf.ncj)*k+cf.nci*j+i;
+                    v[idx] = hostV(i,j,k,vn);
+                }
+            }
+        }
+        
+        if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealDouble,dName,&index_flow))
+            cgp_error_exit();
+
+        if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+            cgp_error_exit();
+    }
 
     cg_biter_write(cf.cF,cf.cB,"TimeIterValues",1);
     cg_goto(cf.cF,cf.cB,"BaseIterativeData_t",1,"end");
@@ -106,6 +171,5 @@ void writeSolution(struct inputConfig cf, double *x, double *y, double *z, const
     cg_array_write("FlowSolutionPointers",CG_Character,2,idims,solname);
     cg_simulation_type_write(cf.cF,cf.cB,CG_TimeAccurate);
     
-
     cgp_close(cf.cF);
 }
