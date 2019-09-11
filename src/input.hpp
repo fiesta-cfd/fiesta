@@ -38,6 +38,8 @@ struct inputConfig {
     int iEnd,jEnd,kEnd;
     MPI_Comm comm;
     int cF,cB,cZ;
+
+    int out_freq;
 };
 
 struct inputConfig executeConfiguration(char * fname);

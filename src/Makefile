@@ -1,5 +1,6 @@
 KOKKOS_PATH = /users/beromer/Kokkos/kokkos
 KOKKOS_SRC_PATH = ${KOKKOS_PATH}
+#KOKKOS_DEVICES="OpenMP"
 KOKKOS_DEVICES="Cuda"
 SRC = $(wildcard /users/beromer/src/loboshok/src/*.cpp)
 vpath %.cpp $(sort $(dir $(SRC)))
@@ -10,7 +11,7 @@ default: build
 ifneq (,$(findstring Cuda,$(KOKKOS_DEVICES)))
 #CXX = ${KOKKOS_PATH}/bin/nvcc_wrapper
 CXX = mpicxx
-CXXFLAGS = -O3 -llua53 -lm -ldl -lcgns
+CXXFLAGS = -O3 -llua53 -lm -ldl -lcgns --expt-extended-lambda
 LINK = ${CXX}
 LDFLAGS = 
 EXE = loboshok.cuda
@@ -18,22 +19,14 @@ KOKKOS_DEVICES = "Cuda,OpenMP"
 KOKKOS_ARCH = "SNB,Kepler35"
 KOKKOS_CUDA_OPTIONS += "enable_lambda"
 else
-CXX = g++
-CXXFLAGS = -O3
+CXX = mpicxx
+#CXX = g++
+CXXFLAGS = -O3 -llua53 -lm -ldl -lcgns --expt-extended-lambda
 LINK = ${CXX}
 LDFLAGS =  
 EXE = loboshok.host
 KOKKOS_DEVICES = "OpenMP"
 KOKKOS_ARCH = "SNB"
-endif
-ifneq (,$(findstring ROCm,$(KOKKOS_DEVICES)))
-CXX = /opt/rocm/hcc/bin/clang++
-CXXFLAGS = -O3
-LINK = ${CXX}
-LDFLAGS =
-EXE = loboshok.rocm
-KOKKOS_DEVICES = "ROCm"
-KOKKOS_ARCH = "Fiji"
 endif
 
 DEPFLAGS = -M

@@ -70,6 +70,8 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.yProcs      = getglobint (L, "procsy");
     myConfig.zProcs      = getglobint (L, "procsz");
 
+    myConfig.out_freq    = getglobint (L, "out_freq");
+
     snprintf(myConfig.inputFname,32,"%s",fname);
 
     /* Done with Lua */

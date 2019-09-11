@@ -1,4 +1,6 @@
 -- input file
+out_freq = 1
+
 gamma = 1.42
 L = 1
 nt = 10
@@ -10,9 +12,9 @@ dt = 0.1
 dx = L/ni
 dy = L/nj
 dz = L/nk
-procsx = 2
-procsy = 2
-procsz = 2
+procsx = 1
+procsy = 1
+procsz = 1
 
 function f(i,j,k,v)
     local slant = 0.5 + (L-j*dy)/4
