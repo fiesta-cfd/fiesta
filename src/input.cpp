@@ -69,6 +69,7 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.xProcs      = getglobint (L, "procsx");
     myConfig.yProcs      = getglobint (L, "procsy");
     myConfig.zProcs      = getglobint (L, "procsz");
+    myConfig.ng          = getglobint (L, "ng" );
 
     myConfig.out_freq    = getglobint (L, "out_freq");
 
@@ -97,15 +98,19 @@ int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> 
     if (luaL_loadfile(L,cf.inputFname) || lua_pcall(L,0,0,0))
         error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
 
+    
     typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
     for (int v=0; v<cf.nv; ++v){
-        for (int k=0; k<cf.nck; ++k){
-            for (int j=0; j<cf.ncj; ++j){
-                for (int i=0; i<cf.nci; ++i){
+        for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+            for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+                for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+                    int ii = i - cf.ng;
+                    int jj = j - cf.ng;
+                    int kk = k - cf.ng;
                     lua_getglobal(L,"f");
-                    lua_pushnumber(L,cf.iStart+i);
-                    lua_pushnumber(L,cf.jStart+j);
-                    lua_pushnumber(L,cf.kStart+k);
+                    lua_pushnumber(L,cf.iStart+ii);
+                    lua_pushnumber(L,cf.jStart+jj);
+                    lua_pushnumber(L,cf.kStart+kk);
                     lua_pushnumber(L,v);
                     if (lua_pcall(L,4,1,0) != LUA_OK)
                         error(L, "error running function 'f': %s\n",lua_tostring(L, -1));
@@ -119,9 +124,12 @@ int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> 
             }
         }
     }
+    
 
-    Kokkos::deep_copy(deviceV,hostV);
     lua_close(L);
+    
+    Kokkos::deep_copy(deviceV,hostV);
+    
 
     return 0;
 }

@@ -4,6 +4,7 @@ out_freq = 1
 gamma = 1.42
 L = 1
 nt = 10
+ng = 3
 ni = 100
 nj = 100
 nk = 100
@@ -12,9 +13,9 @@ dt = 0.1
 dx = L/ni
 dy = L/nj
 dz = L/nk
-procsx = 1
-procsy = 1
-procsz = 1
+procsx = 2
+procsy = 2
+procsz = 2
 
 function f(i,j,k,v)
     local slant = 0.5 + (L-j*dy)/4

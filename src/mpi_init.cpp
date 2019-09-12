@@ -31,6 +31,7 @@ struct inputConfig mpi_init(struct inputConfig cf){
     }
     cf.iEnd = cf.iStart + cf.nci;
     cf.ni = cf.nci + 1;
+    cf.ngi = cf.nci + 2*cf.ng;
 
     rem = cf.glbl_ncj % cf.yProcs;
     cf.ncj = floor(cf.glbl_ncj/cf.yProcs);
@@ -42,6 +43,7 @@ struct inputConfig mpi_init(struct inputConfig cf){
     }
     cf.jEnd = cf.jStart + cf.ncj;
     cf.nj = cf.ncj + 1;
+    cf.ngj = cf.ncj + 2*cf.ng;
 
     rem = cf.glbl_nck % cf.zProcs;
     cf.nck = floor(cf.glbl_nck/cf.zProcs);
@@ -53,6 +55,7 @@ struct inputConfig mpi_init(struct inputConfig cf){
     }
     cf.kEnd = cf.kStart + cf.nck;
     cf.nk = cf.nck + 1;
+    cf.ngk = cf.nck + 2*cf.ng;
 
     return cf;
 }

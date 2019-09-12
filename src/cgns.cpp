@@ -81,10 +81,13 @@ void writeSolution(struct inputConfig cf, double *x, double *y, double *z, const
     int idx;
 
     //write momentum x
-    for (int k=0; k<cf.nck; ++k){
-        for (int j=0; j<cf.ncj; ++j){
-            for (int i=0; i<cf.nci; ++i){
-                idx = (cf.nci*cf.ncj)*k+cf.nci*j+i;
+    for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+                int ii = i - cf.ng;
+                int jj = j - cf.ng;
+                int kk = k - cf.ng;
+                idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
                 v[idx] = hostV(i,j,k,0);
             }
         }
@@ -97,10 +100,13 @@ void writeSolution(struct inputConfig cf, double *x, double *y, double *z, const
         cgp_error_exit();
 
     //write momentum y
-    for (int k=0; k<cf.nck; ++k){
-        for (int j=0; j<cf.ncj; ++j){
-            for (int i=0; i<cf.nci; ++i){
-                idx = (cf.nci*cf.ncj)*k+cf.nci*j+i;
+    for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+                int ii = i - cf.ng;
+                int jj = j - cf.ng;
+                int kk = k - cf.ng;
+                idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
                 v[idx] = hostV(i,j,k,1);
             }
         }
@@ -113,10 +119,13 @@ void writeSolution(struct inputConfig cf, double *x, double *y, double *z, const
         cgp_error_exit();
 
     //write momentum z
-    for (int k=0; k<cf.nck; ++k){
-        for (int j=0; j<cf.ncj; ++j){
-            for (int i=0; i<cf.nci; ++i){
-                idx = (cf.nci*cf.ncj)*k+cf.nci*j+i;
+    for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+                int ii = i - cf.ng;
+                int jj = j - cf.ng;
+                int kk = k - cf.ng;
+                idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
                 v[idx] = hostV(i,j,k,2);
             }
         }
@@ -129,10 +138,13 @@ void writeSolution(struct inputConfig cf, double *x, double *y, double *z, const
         cgp_error_exit();
 
     //write energy
-    for (int k=0; k<cf.nck; ++k){
-        for (int j=0; j<cf.ncj; ++j){
-            for (int i=0; i<cf.nci; ++i){
-                idx = (cf.nci*cf.ncj)*k+cf.nci*j+i;
+    for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+                int ii = i - cf.ng;
+                int jj = j - cf.ng;
+                int kk = k - cf.ng;
+                idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
                 v[idx] = hostV(i,j,k,3);
             }
         }
@@ -147,10 +159,13 @@ void writeSolution(struct inputConfig cf, double *x, double *y, double *z, const
     //write densities
     for (int vn=4; vn<cf.nv; ++vn){
         snprintf(dName,32,"SpeciesDensity%d",vn-3);
-        for (int k=0; k<cf.nck; ++k){
-            for (int j=0; j<cf.ncj; ++j){
-                for (int i=0; i<cf.nci; ++i){
-                    idx = (cf.nci*cf.ncj)*k+cf.nci*j+i;
+        for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+            for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+                for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+                    int ii = i - cf.ng;
+                    int jj = j - cf.ng;
+                    int kk = k - cf.ng;
+                    idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
                     v[idx] = hostV(i,j,k,vn);
                 }
             }

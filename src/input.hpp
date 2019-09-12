@@ -38,6 +38,7 @@ struct inputConfig {
     int iEnd,jEnd,kEnd;
     MPI_Comm comm;
     int cF,cB,cZ;
+    int ng,ngi,ngj,ngk;
 
     int out_freq;
 };

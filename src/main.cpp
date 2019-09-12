@@ -23,7 +23,7 @@ struct rhs_func {
         Kokkos::View<double****> myU("testK",cf.nci,cf.ncj,cf.nck,cf.nv);
         myK = k;
         myU = u;
-        Kokkos::parallel_for("Loopf", policy_f({0,0,0,0},{cf.nci, cf.ncj, cf.nck, cf.nv}),
+        Kokkos::parallel_for("Loopf", policy_f({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv}),
         KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
             myK(i,j,k,v) = 1; //u(i,j,k,v)*dt;
         });
@@ -56,12 +56,15 @@ int main(int argc, char* argv[]){
 
     cf = mpi_init(cf);
 
-    Kokkos::View<double****> myV("testView",cf.nci,cf.ncj,cf.nck,cf.nv);
-    Kokkos::View<double****> tmp("testView",cf.nci,cf.ncj,cf.nck,cf.nv);
-    Kokkos::View<double****> K1("testView",cf.nci,cf.ncj,cf.nck,cf.nv);
-    Kokkos::View<double****> K2("testView",cf.nci,cf.ncj,cf.nck,cf.nv);
+    
+    Kokkos::View<double****> myV("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv);
+    Kokkos::View<double****> tmp("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv);
+    Kokkos::View<double****> K1("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv);
+    Kokkos::View<double****> K2("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv);
+    
     
     loadInitialConditions(cf,myV);
+    
 
     if (cf.rank == 0){
         printf("loboSHOK - %s\n",cf.inputFname);
@@ -107,7 +110,7 @@ int main(int argc, char* argv[]){
         f1();
         //f(cf.dt,cf,tmp,K1);
         //tmp = myV + k1/2
-        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.nci, cf.ncj, cf.nck, cf.nv}),
+        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv}),
                KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
             tmp(i,j,k,v) = myV(i,j,k,v) + K1(i,j,k,v)/2;
         });
@@ -116,7 +119,7 @@ int main(int argc, char* argv[]){
         f2();
         //f(cf.dt,cf,tmp,K2);
         //myV = myV + K2
-        Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.nci, cf.ncj, cf.nck, cf.nv}),
+        Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv}),
                KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
             myV(i,j,k,v) = myV(i,j,k,v) + K2(i,j,k,v);
         });
