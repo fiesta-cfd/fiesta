@@ -1,4 +1,5 @@
 #include "mpi_init.hpp"
+#include "lsdebug.hpp"
 
 struct inputConfig mpi_init(struct inputConfig cf){
 
@@ -58,4 +59,67 @@ struct inputConfig mpi_init(struct inputConfig cf){
     cf.ngk = cf.nck + 2*cf.ng;
 
     return cf;
+}
+
+void haloExchange(struct inputConfig cf, Kokkos::View<double****> deviceV){
+    typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
+    Kokkos::deep_copy(hostV,deviceV);
+
+    MYDBG0
+    double *leftOut   = (double*)malloc(cf.ng*cf.ngj*cf.ngk*cf.nv*sizeof(double));
+    double *leftIn    = (double*)malloc(cf.ng*cf.ngj*cf.ngk*cf.nv*sizeof(double));
+    double *rightOut  = (double*)malloc(cf.ng*cf.ngj*cf.ngk*cf.nv*sizeof(double));
+    double *rightIn   = (double*)malloc(cf.ng*cf.ngj*cf.ngk*cf.nv*sizeof(double));
+    
+    double *bottomOut = (double*)malloc(cf.ngi*cf.ng*cf.ngk*cf.nv*sizeof(double));
+    double *bottomIn  = (double*)malloc(cf.ngi*cf.ng*cf.ngk*cf.nv*sizeof(double));
+    double *topOut    = (double*)malloc(cf.ngi*cf.ng*cf.ngk*cf.nv*sizeof(double));
+    double *topIn     = (double*)malloc(cf.ngi*cf.ng*cf.ngk*cf.nv*sizeof(double));
+
+    double *backOut   = (double*)malloc(cf.ngi*cf.ngj*cf.ng*cf.nv*sizeof(double));
+    double *backIn    = (double*)malloc(cf.ngi*cf.ngj*cf.ng*cf.nv*sizeof(double));
+    double *frontOut  = (double*)malloc(cf.ngi*cf.ngj*cf.ng*cf.nv*sizeof(double));
+    double *frontIn   = (double*)malloc(cf.ngi*cf.ngj*cf.ng*cf.nv*sizeof(double));
+    MYDBG0
+
+    int idx;
+    MYDBG0
+    for (int v=0; v<cf.nv; ++v){
+        for (int k=0; k<cf.ngk; ++k){
+            for (int j=0; j<cf.ngj; ++j){
+                for (int i=cf.ng; i<cf.ng+cf.ng; ++i){
+                    idx = v*cf.ng*cf.ngj*cf.ngk + k*cf.ng*cf.ngj + j*cf.ng + (i-cf.ng);
+                    leftOut[idx]  = hostV(i,j,k,v);
+                    rightOut[idx] = hostV(i+cf.nci-cf.ng,j,k,v);
+                }
+            }
+        }
+    }
+    MYDBG0
+    for (int v=0; v<cf.nv; ++v){
+        for (int k=0; k<cf.ngk; ++k){
+            for (int j=cf.ng; j<cf.ng+cf.ng; ++j){
+                for (int i=0; i<cf.ngi; ++i){
+                    idx = v*cf.ngi*cf.ng*cf.ngk + k*cf.ngi*cf.ng + (j-cf.ng)*cf.ngi + i;
+                    bottomOut[idx]  = hostV(i,j,k,v);
+                    topOut[idx] = hostV(i+cf.nci-cf.ng,j,k,v);
+                }
+            }
+        }
+    }
+    MYDBG0
+    for (int v=0; v<cf.nv; ++v){
+        for (int k=cf.ng; k<cf.ng+cf.ng; ++k){
+            for (int j=0; j<cf.ngj; ++j){
+                for (int i=0; i<cf.ngi; ++i){
+                    idx = v*cf.ngi*cf.ngj*cf.ng + (k-cf.ng)*cf.ngi*cf.ngj + j*cf.ngi + i;
+                    backOut[idx]  = hostV(i,j,k,v);
+                    frontOut[idx] = hostV(i+cf.nci-cf.ng,j,k,v);
+                }
+            }
+        }
+    }
+    MYDBG0
+
+
 }

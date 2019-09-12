@@ -65,6 +65,7 @@ int main(int argc, char* argv[]){
     
     loadInitialConditions(cf,myV);
     
+    haloExchange(cf,myV);
 
     if (cf.rank == 0){
         printf("loboSHOK - %s\n",cf.inputFname);
