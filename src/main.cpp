@@ -1,6 +1,7 @@
 #include "input.hpp"
 #include "mpi_init.hpp"
 #include "cgns.hpp"
+#include "bc.hpp"
 #include "Kokkos_Core.hpp"
 #include <mpi.h>
 #include "lsdebug.hpp"
@@ -67,6 +68,7 @@ int main(int argc, char* argv[]){
     
     
     haloExchange(cf,myV);
+    applyBCs(cf,myV);
     
 
     if (cf.rank == 0){

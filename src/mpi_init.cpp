@@ -150,37 +150,79 @@ void haloExchange(struct inputConfig cf, Kokkos::View<double****> deviceV){
     
     MPI_Waitall(12,reqs, MPI_STATUSES_IGNORE);
 
-    for (int v=0; v<cf.nv; ++v){
-        for (int k=0; k<cf.ngk; ++k){
-            for (int j=0; j<cf.ngj; ++j){
-                for (int i=cf.ng; i<cf.ng+cf.ng; ++i){
-                    idx = v*cf.ng*cf.ngj*cf.ngk + k*cf.ng*cf.ngj + j*cf.ng + (i-cf.ng);
-                    hostV(i,j,k,v) = leftIn[idx];
-                    hostV(i+cf.nci-cf.ng,j,k,v) = rightIn[idx];
+    if (cf.xMinus != MPI_PROC_NULL){
+        for (int v=0; v<cf.nv; ++v){
+            for (int k=0; k<cf.ngk; ++k){
+                for (int j=0; j<cf.ngj; ++j){
+                    for (int i=cf.ng; i<cf.ng+cf.ng; ++i){
+                        idx = v*cf.ng*cf.ngj*cf.ngk + k*cf.ng*cf.ngj + j*cf.ng + (i-cf.ng);
+                        hostV(i,j,k,v) = leftIn[idx];
+                    }
+                }
+            }
+        }
+    }
+        
+    if (cf.xPlus != MPI_PROC_NULL){
+        for (int v=0; v<cf.nv; ++v){
+            for (int k=0; k<cf.ngk; ++k){
+                for (int j=cf.ng; j<cf.ng+cf.ng; ++j){
+                    for (int i=0; i<cf.ngi; ++i){
+                        idx = v*cf.ngi*cf.ng*cf.ngk + k*cf.ngi*cf.ng + (j-cf.ng)*cf.ngi + i;
+                        hostV(i,j,k,v) = bottomIn[idx];
+                    }
                 }
             }
         }
     }
     
-    for (int v=0; v<cf.nv; ++v){
-        for (int k=0; k<cf.ngk; ++k){
-            for (int j=cf.ng; j<cf.ng+cf.ng; ++j){
-                for (int i=0; i<cf.ngi; ++i){
-                    idx = v*cf.ngi*cf.ng*cf.ngk + k*cf.ngi*cf.ng + (j-cf.ng)*cf.ngi + i;
-                    hostV(i,j,k,v) = bottomIn[idx];
-                    hostV(i+cf.nci-cf.ng,j,k,v) = topIn[idx];
+    if (cf.yMinus != MPI_PROC_NULL){
+        for (int v=0; v<cf.nv; ++v){
+            for (int k=cf.ng; k<cf.ng+cf.ng; ++k){
+                for (int j=0; j<cf.ngj; ++j){
+                    for (int i=0; i<cf.ngi; ++i){
+                        idx = v*cf.ngi*cf.ngj*cf.ng + (k-cf.ng)*cf.ngi*cf.ngj + j*cf.ngi + i;
+                        hostV(i,j,k,v) = backIn[idx];
+                    }
+                }
+            }
+        }
+    }
+
+    if (cf.yPlus != MPI_PROC_NULL){
+        for (int v=0; v<cf.nv; ++v){
+            for (int k=0; k<cf.ngk; ++k){
+                for (int j=0; j<cf.ngj; ++j){
+                    for (int i=cf.ng; i<cf.ng+cf.ng; ++i){
+                        idx = v*cf.ng*cf.ngj*cf.ngk + k*cf.ng*cf.ngj + j*cf.ng + (i-cf.ng);
+                        hostV(i+cf.nci-cf.ng,j,k,v) = rightIn[idx];
+                    }
                 }
             }
         }
     }
     
-    for (int v=0; v<cf.nv; ++v){
-        for (int k=cf.ng; k<cf.ng+cf.ng; ++k){
-            for (int j=0; j<cf.ngj; ++j){
-                for (int i=0; i<cf.ngi; ++i){
-                    idx = v*cf.ngi*cf.ngj*cf.ng + (k-cf.ng)*cf.ngi*cf.ngj + j*cf.ngi + i;
-                    hostV(i,j,k,v) = backIn[idx];
-                    hostV(i+cf.nci-cf.ng,j,k,v) = frontIn[idx];
+    if (cf.zMinus != MPI_PROC_NULL){
+        for (int v=0; v<cf.nv; ++v){
+            for (int k=0; k<cf.ngk; ++k){
+                for (int j=cf.ng; j<cf.ng+cf.ng; ++j){
+                    for (int i=0; i<cf.ngi; ++i){
+                        idx = v*cf.ngi*cf.ng*cf.ngk + k*cf.ngi*cf.ng + (j-cf.ng)*cf.ngi + i;
+                        hostV(i+cf.nci-cf.ng,j,k,v) = topIn[idx];
+                    }
+                }
+            }
+        }
+    }
+    
+    if (cf.zPlus != MPI_PROC_NULL){
+        for (int v=0; v<cf.nv; ++v){
+            for (int k=cf.ng; k<cf.ng+cf.ng; ++k){
+                for (int j=0; j<cf.ngj; ++j){
+                    for (int i=0; i<cf.ngi; ++i){
+                        idx = v*cf.ngi*cf.ngj*cf.ng + (k-cf.ng)*cf.ngi*cf.ngj + j*cf.ngi + i;
+                        hostV(i+cf.nci-cf.ng,j,k,v) = frontIn[idx];
+                    }
                 }
             }
         }
