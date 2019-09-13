@@ -6,7 +6,9 @@ struct inputConfig mpi_init(struct inputConfig cf){
     int rem;
 
     int dims[3] = {cf.xProcs,cf.yProcs,cf.zProcs};
-    int periods[3] = {0,0,0};
+    //int periods[3] = {0,0,0};
+    //printf("Periods = {%d,%d,%d}\n",cf.xPer,cf.yPer,cf.zPer);
+    int periods[3] = {cf.xPer,cf.yPer,cf.zPer};
     int coords[3];
 
     /* Get basic MPI parameters */

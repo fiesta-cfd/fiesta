@@ -1,5 +1,7 @@
 #include "Kokkos_Core.hpp"
+#include "lsdebug.hpp"
 #include "input.hpp"
+#include "mpi_init.hpp"
 #include <mpi.h>
 
 struct bc_L {
@@ -81,22 +83,32 @@ struct bc_F {
 };
 
 void applyBCs(struct inputConfig cf, Kokkos::View<double****> &u){
+
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_bl;
-    if (cf.xMinus == MPI_PROC_NULL)
+
+    haloExchange(cf,u);
+
+    if (cf.xMinus < 0){
         Kokkos::parallel_for(policy_bl({0,0,0},{cf.ncj,cf.nck,cf.nv}), bc_L(cf.ng,cf.ng,u));
+    }
 
-    if (cf.xPlus == MPI_PROC_NULL)
+    if (cf.xPlus < 0){
         Kokkos::parallel_for(policy_bl({0,0,0},{cf.ncj,cf.nck,cf.nv}), bc_R(cf.ng+cf.nci,cf.ng,u));
+    }
 
-    if (cf.yMinus == MPI_PROC_NULL)
+    if (cf.yMinus < 0){
         Kokkos::parallel_for(policy_bl({0,0,0},{cf.nci,cf.nck,cf.nv}), bc_B(cf.ng,cf.ng,u));
+    }
 
-    if (cf.yPlus == MPI_PROC_NULL)
+    if (cf.yPlus < 0){
         Kokkos::parallel_for(policy_bl({0,0,0},{cf.nci,cf.nck,cf.nv}), bc_T(cf.ng+cf.ncj,cf.ng,u));
+    }
 
-    if (cf.zMinus == MPI_PROC_NULL)
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.nci,cf.ncj,cf.nv}), bc_T(cf.ng,cf.ng,u));
+    if (cf.zMinus < 0){
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.nci,cf.ncj,cf.nv}), bc_H(cf.ng,cf.ng,u));
+    }
 
-    if (cf.zPlus == MPI_PROC_NULL)
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.nci,cf.ncj,cf.nv}), bc_T(cf.ng+cf.nck,cf.ng,u));
+    if (cf.zPlus < 0){
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.nci,cf.ncj,cf.nv}), bc_F(cf.ng+cf.nck,cf.ng,u));
+    }
 }

@@ -16,6 +16,9 @@ dz = L/nk
 procsx = 2
 procsy = 2
 procsz = 2
+xPer = 0
+yPer = 1
+zPer = 0
 
 function f(i,j,k,v)
     local slant = 0.5 + (L-j*dy)/4

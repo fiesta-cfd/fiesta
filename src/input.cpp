@@ -70,6 +70,9 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.yProcs      = getglobint (L, "procsy");
     myConfig.zProcs      = getglobint (L, "procsz");
     myConfig.ng          = getglobint (L, "ng" );
+    myConfig.xPer        = getglobint (L, "xPer" );
+    myConfig.yPer        = getglobint (L, "yPer" );
+    myConfig.zPer        = getglobint (L, "zPer" );
 
     myConfig.out_freq    = getglobint (L, "out_freq");
 
@@ -98,7 +101,6 @@ int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> 
     if (luaL_loadfile(L,cf.inputFname) || lua_pcall(L,0,0,0))
         error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
 
-    
     typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
     for (int v=0; v<cf.nv; ++v){
         for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
@@ -125,11 +127,9 @@ int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> 
         }
     }
     
-
     lua_close(L);
     
     Kokkos::deep_copy(deviceV,hostV);
     
-
     return 0;
 }

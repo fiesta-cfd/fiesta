@@ -39,6 +39,7 @@ struct inputConfig {
     MPI_Comm comm;
     int cF,cB,cZ;
     int ng,ngi,ngj,ngk;
+    int xPer,yPer,zPer;
 
     int out_freq;
 };
