@@ -65,7 +65,9 @@ int main(int argc, char* argv[]){
     
     loadInitialConditions(cf,myV);
     
+    
     haloExchange(cf,myV);
+    
 
     if (cf.rank == 0){
         printf("loboSHOK - %s\n",cf.inputFname);
@@ -74,14 +76,15 @@ int main(int argc, char* argv[]){
         printf("nt = %d, dt = %f\n",cf.nt,cf.dt);
         printf("glbl_ni = %d, dx = %f\n",cf.glbl_ni,cf.dx);
         printf("glbl_nj = %d, dy = %f\n",cf.glbl_nj,cf.dy);
-        printf("glbl_nk = %d, dz = %f\n",cf.glbl_nk,cf.dz);
-        printf("Gamma = %4.2f\n",cf.gamma);
+        printf("glbl_nk = %d, dz = %f\n\n",cf.glbl_nk,cf.dz);
     }
+    
 
     /* allocate grid coordinate and flow variables */
     double *x = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
     double *y = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
     double *z = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
+    
 
     /* calculate rank local grid coordinates */
     for (int k=0; k<cf.nk; ++k){
@@ -94,13 +97,22 @@ int main(int argc, char* argv[]){
             }
         }
     }
+    
 
     //typedef typename Kokkos::View<double****> ViewType;
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_1;
     //Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_1({0,0,0},{cf.nci, cf.ncj, cf.nck});
+    
 
     double time = 0.0;
+    
+
+    MPI_Barrier(cf.comm);
+    
+
     writeSolution(cf,x,y,z,myV,0,0.00);
+    
+
     for (int t=0; t<cf.nt; ++t){
         time = time + cf.dt;
 
@@ -127,8 +139,13 @@ int main(int argc, char* argv[]){
         
         if (t % cf.out_freq == 0)
             writeSolution(cf,x,y,z,myV,t+1,time);
+        if (cf.rank==0) printf("%d/%d, %f\n",t+1,cf.nt,time);
     }
 
+    if (cf.rank==0) printf("\n");
+    MPI_Barrier(cf.comm);
+    MYDBGR
+    
     MPI_Finalize();
     //Kokkos::finalize();
     return 0;

@@ -65,7 +65,7 @@ void haloExchange(struct inputConfig cf, Kokkos::View<double****> deviceV){
     typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
     Kokkos::deep_copy(hostV,deviceV);
 
-    MYDBG0
+    
     double *leftOut   = (double*)malloc(cf.ng*cf.ngj*cf.ngk*cf.nv*sizeof(double));
     double *leftIn    = (double*)malloc(cf.ng*cf.ngj*cf.ngk*cf.nv*sizeof(double));
     double *rightOut  = (double*)malloc(cf.ng*cf.ngj*cf.ngk*cf.nv*sizeof(double));
@@ -80,10 +80,12 @@ void haloExchange(struct inputConfig cf, Kokkos::View<double****> deviceV){
     double *backIn    = (double*)malloc(cf.ngi*cf.ngj*cf.ng*cf.nv*sizeof(double));
     double *frontOut  = (double*)malloc(cf.ngi*cf.ngj*cf.ng*cf.nv*sizeof(double));
     double *frontIn   = (double*)malloc(cf.ngi*cf.ngj*cf.ng*cf.nv*sizeof(double));
-    MYDBG0
+    
 
     int idx;
-    MYDBG0
+    MPI_Request reqs[12];
+
+    
     for (int v=0; v<cf.nv; ++v){
         for (int k=0; k<cf.ngk; ++k){
             for (int j=0; j<cf.ngj; ++j){
@@ -95,7 +97,7 @@ void haloExchange(struct inputConfig cf, Kokkos::View<double****> deviceV){
             }
         }
     }
-    MYDBG0
+    
     for (int v=0; v<cf.nv; ++v){
         for (int k=0; k<cf.ngk; ++k){
             for (int j=cf.ng; j<cf.ng+cf.ng; ++j){
@@ -107,7 +109,7 @@ void haloExchange(struct inputConfig cf, Kokkos::View<double****> deviceV){
             }
         }
     }
-    MYDBG0
+    
     for (int v=0; v<cf.nv; ++v){
         for (int k=cf.ng; k<cf.ng+cf.ng; ++k){
             for (int j=0; j<cf.ngj; ++j){
@@ -119,7 +121,34 @@ void haloExchange(struct inputConfig cf, Kokkos::View<double****> deviceV){
             }
         }
     }
-    MYDBG0
+    
+    MPI_Barrier(cf.comm);
+    
+    //send and recieve left
+    MPI_Isend(leftOut, cf.ng*cf.ngj*cf.ngk*cf.nv, MPI_DOUBLE, cf.xMinus,           0, cf.comm, &reqs[0]);
+    MPI_Irecv(leftIn,  cf.ng*cf.ngj*cf.ngk*cf.nv, MPI_DOUBLE, cf.xMinus, MPI_ANY_TAG, cf.comm, &reqs[1]);
 
+    //send and recieve right
+    MPI_Isend(rightOut, cf.ng*cf.ngj*cf.ngk*cf.nv, MPI_DOUBLE, cf.xPlus,           0, cf.comm, &reqs[2]);
+    MPI_Irecv(rightIn,  cf.ng*cf.ngj*cf.ngk*cf.nv, MPI_DOUBLE, cf.xPlus, MPI_ANY_TAG, cf.comm, &reqs[3]);
+    
+    //send and recieve bottom
+    MPI_Isend(bottomOut, cf.ngi*cf.ng*cf.ngk*cf.nv, MPI_DOUBLE, cf.yMinus,           0, cf.comm, &reqs[4]);
+    MPI_Irecv(bottomIn,  cf.ngi*cf.ng*cf.ngk*cf.nv, MPI_DOUBLE, cf.yMinus, MPI_ANY_TAG, cf.comm, &reqs[5]);
+    
+    //send and recieve top
+    MPI_Isend(topOut, cf.ngi*cf.ng*cf.ngk*cf.nv, MPI_DOUBLE, cf.yPlus,           0, cf.comm, &reqs[6]);
+    MPI_Irecv(topIn,  cf.ngi*cf.ng*cf.ngk*cf.nv, MPI_DOUBLE, cf.yPlus, MPI_ANY_TAG, cf.comm, &reqs[7]);
+    
+    //send and recieve back
+    MPI_Isend(backOut, cf.ngi*cf.ngj*cf.ng*cf.nv, MPI_DOUBLE, cf.zMinus,           0, cf.comm, &reqs[8]);
+    MPI_Irecv(backIn,  cf.ngi*cf.ngj*cf.ng*cf.nv, MPI_DOUBLE, cf.zMinus, MPI_ANY_TAG, cf.comm, &reqs[9]);
+    
+    //send and recieve front
+    MPI_Isend(frontOut, cf.ngi*cf.ngj*cf.ng*cf.nv, MPI_DOUBLE, cf.zPlus,           0, cf.comm, &reqs[10]);
+    MPI_Irecv(frontIn,  cf.ngi*cf.ngj*cf.ng*cf.nv, MPI_DOUBLE, cf.zPlus, MPI_ANY_TAG, cf.comm, &reqs[11]);
+    
+    MPI_Waitall(12,reqs, MPI_STATUSES_IGNORE);
 
+    
 }
