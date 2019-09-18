@@ -63,8 +63,10 @@ struct inputConfig mpi_init(struct inputConfig cf){
     return cf;
 }
 
-void haloExchange(struct inputConfig cf, Kokkos::View<double****> deviceV){
-    typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
+void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV){
+    //typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
+    typename Kokkos::View<double****>::HostMirror hostV;
+    hostV = Kokkos::create_mirror_view(deviceV);
     Kokkos::deep_copy(hostV,deviceV);
 
     

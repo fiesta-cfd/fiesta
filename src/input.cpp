@@ -60,12 +60,12 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.glbl_nci    = getglobint (L, "ni" );
     myConfig.glbl_ncj    = getglobint (L, "nj" );
     myConfig.glbl_nck    = getglobint (L, "nk" );
-    myConfig.nv          = getglobint (L, "nv" );
+    myConfig.ns          = getglobint (L, "ns" );
     myConfig.dt          = getglobdbl (L, "dt" );
     myConfig.dx          = getglobdbl (L, "dx" );
     myConfig.dy          = getglobdbl (L, "dy" );
     myConfig.dz          = getglobdbl (L, "dz" );
-    myConfig.gamma       = getglobdbl (L, "gamma" );
+    myConfig.R           = getglobdbl (L, "R" );
     myConfig.xProcs      = getglobint (L, "procsx");
     myConfig.yProcs      = getglobint (L, "procsy");
     myConfig.zProcs      = getglobint (L, "procsz");
@@ -74,7 +74,28 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.yPer        = getglobint (L, "yPer" );
     myConfig.zPer        = getglobint (L, "zPer" );
 
+    myConfig.gamma = (double*)malloc(myConfig.ns*sizeof(double));
+    myConfig.M = (double*)malloc(myConfig.ns*sizeof(double));
+
+    int isnum;
+
+    lua_getglobal(L, "gamma");
+    for (int s=0; s<myConfig.ns; ++s){
+        lua_pushnumber(L, s+1);
+        lua_gettable(L, -2);
+        myConfig.gamma[s] = (double)lua_tonumberx(L, -1, &isnum);
+        lua_pop(L,1);
+    }
+    lua_getglobal(L, "M");
+    for (int s=0; s<myConfig.ns; ++s){
+        lua_pushnumber(L, s+1);
+        lua_gettable(L, -2);
+        myConfig.M[s] = (double)lua_tonumberx(L, -1, &isnum);
+        lua_pop(L,1);
+    }
+
     myConfig.out_freq    = getglobint (L, "out_freq");
+    myConfig.nv = 4 + myConfig.ns;
 
     snprintf(myConfig.inputFname,32,"%s",fname);
 

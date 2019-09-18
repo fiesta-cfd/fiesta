@@ -9,25 +9,40 @@
 //template < class ViewType >
 struct rhs_func {
 
-    Kokkos::View<double****> u;
-    Kokkos::View<double****> k;
+    Kokkos::View<double****> var;
+    Kokkos::View<double****> dvar;
+    Kokkos::View<double*> cd;
 
-    typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_f;
+    typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_f;
     struct inputConfig cf;
     double dt;
 
-    rhs_func(double dt_, struct inputConfig &cf_, const Kokkos::View<double****> & u_, const Kokkos::View<double****> & k_)
-            : dt(dt_), cf(cf_) , u(u_), k(k_) {}
+    rhs_func(double dt_, struct inputConfig &cf_, const Kokkos::View<double****> & u_, Kokkos::View<double****> & k_, Kokkos::View<double*> & cd_)
+        : dt(dt_), cf(cf_) , var(u_), dvar(k_) , cd(cd_){}
 
     void operator()() const {
-        Kokkos::View<double****> myK("testK",cf.nci,cf.ncj,cf.nck,cf.nv);
-        Kokkos::View<double****> myU("testK",cf.nci,cf.ncj,cf.nck,cf.nv);
-        myK = k;
-        myU = u;
-        Kokkos::parallel_for("Loopf", policy_f({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv}),
-        KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
-            myK(i,j,k,v) = 1; //u(i,j,k,v)*dt;
+        Kokkos::View<double****> my_dvar = dvar;
+        Kokkos::View<double****> my_var = var;
+        Kokkos::View<double*> my_cd = cd;
+
+        Kokkos::parallel_for("Loopf", policy_f({0,0,0},{cf.ngi, cf.ngj, cf.ngk}),
+        KOKKOS_LAMBDA __device__ (const int i, const int j, const int k) {
+            
+            int ns = (int)my_cd(0);
+            double rho = 0;
+
+            for (int s=0; s<my_cd(0); ++s)
+                rho = rho + my_var(i,j,k,4+s);
+
+            //rim3 = 
+            //uim3 = u(i-3,j,k,0);
+            
+            //for (int v=0; v<6; ++v)
+            //    my_dvar(i,j,k,v) = my_var(i,j,k,v)/my_cd(1);
+            my_dvar(i,j,k,0) = my_var(i,j,k,0)/my_cd(1);
+            
         });
+
     }
 };
 
@@ -53,7 +68,22 @@ int main(int argc, char* argv[]){
     Kokkos::View<double****> tmp("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv);
     Kokkos::View<double****> K1("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv);
     Kokkos::View<double****> K2("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv);
+    Kokkos::View<double*> cd("deviceCF",4+cf.ns*2);
+    typename Kokkos::View<double*>::HostMirror hostcd = Kokkos::create_mirror_view(cd);
+    Kokkos::deep_copy(hostcd, cd);
+    hostcd(0) = cf.nv;
+    hostcd(1) = cf.dx;
+    hostcd(2) = cf.dy;
+    hostcd(3) = cf.dz;
     
+    int sdx = 4;
+    for (int s=0; s<cf.ns; ++s){
+        hostcd(sdx) = cf.gamma[s];
+        hostcd(sdx+1) = cf.R/cf.M[s];
+        sdx += 2;
+    }
+    Kokkos::deep_copy(cd,hostcd);
+
     loadInitialConditions(cf,myV);
     
     applyBCs(cf,myV);
@@ -61,11 +91,15 @@ int main(int argc, char* argv[]){
     if (cf.rank == 0){
         printf("loboSHOK - %s\n",cf.inputFname);
         printf("-----------------------\n");
-        printf("Running %d processes as (%d.%d,%d)\n",cf.numProcs,cf.xProcs,cf.yProcs,cf.zProcs);
+        printf("Running %d processes as (%d,%d,%d)\n",cf.numProcs,cf.xProcs,cf.yProcs,cf.zProcs);
         printf("nt = %d, dt = %f\n",cf.nt,cf.dt);
         printf("glbl_ni = %d, dx = %f\n",cf.glbl_ni,cf.dx);
         printf("glbl_nj = %d, dy = %f\n",cf.glbl_nj,cf.dy);
-        printf("glbl_nk = %d, dz = %f\n\n",cf.glbl_nk,cf.dz);
+        printf("glbl_nk = %d, dz = %f\n",cf.glbl_nk,cf.dz);
+        printf("Number of Species = %d:\n",cf.ns);
+        for (int s=0; s<cf.ns; ++s)
+            printf("    Species %d, Gamma = %4.2f, M = %6.4f\n",s+1,cf.gamma[s],cf.M[s]);
+        printf("-----------------------\n");
     }
     
 
@@ -105,7 +139,7 @@ int main(int argc, char* argv[]){
 
         //K1 = dt*f(tmp) dt is member data to f()
         applyBCs(cf,tmp);
-        rhs_func f1(cf.dt,cf,tmp,K1);
+        rhs_func f1(cf.dt,cf,tmp,K1, cd);
         f1();
         
         //tmp = myV + k1/2
@@ -116,7 +150,7 @@ int main(int argc, char* argv[]){
 
         //K2 = dt*f(tmp) dt is member data to f()
         applyBCs(cf,tmp);
-        rhs_func f2(cf.dt,cf,tmp,K2);
+        rhs_func f2(cf.dt,cf,tmp,K2, cd);
         f2();
 
         //myV = myV + K2

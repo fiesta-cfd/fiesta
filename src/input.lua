@@ -1,7 +1,10 @@
 -- input file
 out_freq = 1
 
-gamma = 1.42
+R = 8.314462 --J/(K*mol)
+ns = 2
+gamma = {1.41, 1.67}
+M = {0.02897,0.14606} --kg/mol
 L = 1
 nt = 10
 ng = 3
@@ -14,8 +17,8 @@ dx = L/ni
 dy = L/nj
 dz = L/nk
 procsx = 2
-procsy = 2
-procsz = 2
+procsy = 1
+procsz = 1
 xPer = 0
 yPer = 1
 zPer = 0
