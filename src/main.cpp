@@ -25,10 +25,12 @@ struct rhs_func {
         Kokkos::View<double****> var = mvar;
         Kokkos::View<double*> cd = mcd;
 
-        Kokkos::parallel_for("Loopf", policy_f({0,0,0},{cf.ngi, cf.ngj, cf.ngk}),
+        Kokkos::parallel_for("Loopf", policy_f({cf.ng,cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng}),
         KOKKOS_LAMBDA __device__ (const int i, const int j, const int k) {
             
             int ns = (int)cd(0);
+
+            double eps = 0.000001;
 
             double Cp = 0;
             double Cv = 0;
@@ -36,6 +38,10 @@ struct rhs_func {
 
             double ur,ul,vr,vl,wr,wl;
             double dxp,dyp,dzp;
+
+            double f1,f2,f3,f4,f5;
+            double b1,b2,b3, w1,w2,w3, p1,p2,p3;
+            double wxl,wxr, wyl,wyr, wzl,wzr;
 
             double rho[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
             double uvel[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -137,16 +143,184 @@ struct rhs_func {
             dyp = (pres[9]  - 8.0*pres[3] + 8.0*pres[4] - pres[10])/(12.0*cd(2));
             dzp = (pres[11] - 8.0*pres[5] + 8.0*pres[6] - pres[12])/(12.0*cd(3));
 
-            //do weno here
+            //can maybe reduce local variable usage by converting momentumns to velities in expressions at the last moment
+            //and by using the same array space for pressure and density, we only need one at a time, test this first
 
-            dvar(i,j,k,0) = var(i,j,k,0)/cd(1);
-            dvar(i,j,k,1) = var(i,j,k,1)/cd(1);
-            dvar(i,j,k,2) = var(i,j,k,2)/cd(1);
-            dvar(i,j,k,3) = var(i,j,k,3)/cd(1);
-            for (int s=0; s<ns; ++s)
-                dvar(i,j,k,4+s) = var(i,j,k,4+s)/cd(1);
-            
-            
+            for (int vv=0; vv <4+ns; ++vv){
+                if (ul < 0.0){
+                    f1 = var(i-3,j,k,vv);
+                    f2 = var(i-2,j,k,vv);
+                    f3 = var(i-1,j,k,vv);
+                    f4 = var(i  ,j,k,vv);
+                    f5 = var(i+1,j,k,vv);
+                }else{
+                    f1 = var(i-2,j,k,vv);
+                    f2 = var(i-1,j,k,vv);
+                    f3 = var(i  ,j,k,vv);
+                    f4 = var(i+1,j,k,vv);
+                    f5 = var(i+2,j,k,vv);
+                }
+
+                b1 = (13/12)*pow((f1-2.0*f2+f3),2.0) + (0.25)*pow((f1-4.0*f2+3.0*f3),2.0);
+                b2 = (13/12)*pow((f2-2.0*f3+f4),2.0) + (0.25)*pow((f2-f4),2.0);
+                b3 = (13/12)*pow((f3-2.0*f4+f5),2.0) + (0.25)*pow((3.0*f3-4.0*f4+f5),2.0);
+
+                w1 = (0.1)/pow((eps+b1),2.0);
+                w2 = (0.6)/pow((eps+b2),2.0);
+                w3 = (0.3)/pow((eps+b3),2.0);
+
+                p1 = ( 1.0/3.0)*f1 + (-7.0/6.0)*f2 + (11.0/6.0)*f3;
+                p2 = (-1.0/6.0)*f2 + ( 5.0/6.0)*f3 + ( 1.0/3.0)*f4;
+                p3 = ( 1.0/3.0)*f3 + ( 5.0/6.0)*f4 + (-1.0/6.0)*f5;
+
+                wxl = ul*(w1*p1+w2*p2+w3*p3)/(w1+w2+w3);
+
+                if (ur <0.0){
+                    f1 = var(i-2,j,k,vv);
+                    f2 = var(i-1,j,k,vv);
+                    f3 = var(i  ,j,k,vv);
+                    f4 = var(i+1,j,k,vv);
+                    f5 = var(i+2,j,k,vv);
+                }else{
+                    f1 = var(i-1,j,k,vv);
+                    f2 = var(i  ,j,k,vv);
+                    f3 = var(i+1,j,k,vv);
+                    f4 = var(i+2,j,k,vv);
+                    f5 = var(i+3,j,k,vv);
+                }
+
+                b1 = (13/12)*pow((f1-2.0*f2+f3),2.0) + (0.25)*pow((f1-4.0*f2+3.0*f3),2.0);
+                b2 = (13/12)*pow((f2-2.0*f3+f4),2.0) + (0.25)*pow((f2-f4),2.0);
+                b3 = (13/12)*pow((f3-2.0*f4+f5),2.0) + (0.25)*pow((3.0*f3-4.0*f4+f5),2.0);
+
+                w1 = (0.1)/pow((eps+b1),2.0);
+                w2 = (0.6)/pow((eps+b2),2.0);
+                w3 = (0.3)/pow((eps+b3),2.0);
+
+                p1 = ( 1.0/3.0)*f1 + (-7.0/6.0)*f2 + (11.0/6.0)*f3;
+                p2 = (-1.0/6.0)*f2 + ( 5.0/6.0)*f3 + ( 1.0/3.0)*f4;
+                p3 = ( 1.0/3.0)*f3 + ( 5.0/6.0)*f4 + (-1.0/6.0)*f5;
+
+                wxr = ur*(w1*p1+w2*p2+w3*p3)/(w1+w2+w3);
+
+                if (vl < 0.0){
+                    f1 = var(i,j-3,k,vv);
+                    f2 = var(i,j-2,k,vv);
+                    f3 = var(i,j-1,k,vv);
+                    f4 = var(i,j  ,k,vv);
+                    f5 = var(i,j+1,k,vv);
+                }else{
+                    f1 = var(i,j-2,k,vv);
+                    f2 = var(i,j-1,k,vv);
+                    f3 = var(i,j  ,k,vv);
+                    f4 = var(i,j+1,k,vv);
+                    f5 = var(i,j+2,k,vv);
+                }
+
+                b1 = (13/12)*pow((f1-2.0*f2+f3),2.0) + (0.25)*pow((f1-4.0*f2+3.0*f3),2.0);
+                b2 = (13/12)*pow((f2-2.0*f3+f4),2.0) + (0.25)*pow((f2-f4),2.0);
+                b3 = (13/12)*pow((f3-2.0*f4+f5),2.0) + (0.25)*pow((3.0*f3-4.0*f4+f5),2.0);
+
+                w1 = (0.1)/pow((eps+b1),2.0);
+                w2 = (0.6)/pow((eps+b2),2.0);
+                w3 = (0.3)/pow((eps+b3),2.0);
+
+                p1 = ( 1.0/3.0)*f1 + (-7.0/6.0)*f2 + (11.0/6.0)*f3;
+                p2 = (-1.0/6.0)*f2 + ( 5.0/6.0)*f3 + ( 1.0/3.0)*f4;
+                p3 = ( 1.0/3.0)*f3 + ( 5.0/6.0)*f4 + (-1.0/6.0)*f5;
+
+                wyl = vl*(w1*p1+w2*p2+w3*p3)/(w1+w2+w3);
+
+                if (vr <0.0){
+                    f1 = var(i,j-2,k,vv);
+                    f2 = var(i,j-1,k,vv);
+                    f3 = var(i,j  ,k,vv);
+                    f4 = var(i,j+1,k,vv);
+                    f5 = var(i,j+2,k,vv);
+                }else{          
+                    f1 = var(i,j-1,k,vv);
+                    f2 = var(i,j  ,k,vv);
+                    f3 = var(i,j+1,k,vv);
+                    f4 = var(i,j+2,k,vv);
+                    f5 = var(i,j+3,k,vv);
+                }
+
+                b1 = (13/12)*pow((f1-2.0*f2+f3),2.0) + (0.25)*pow((f1-4.0*f2+3.0*f3),2.0);
+                b2 = (13/12)*pow((f2-2.0*f3+f4),2.0) + (0.25)*pow((f2-f4),2.0);
+                b3 = (13/12)*pow((f3-2.0*f4+f5),2.0) + (0.25)*pow((3.0*f3-4.0*f4+f5),2.0);
+
+                w1 = (0.1)/pow((eps+b1),2.0);
+                w2 = (0.6)/pow((eps+b2),2.0);
+                w3 = (0.3)/pow((eps+b3),2.0);
+
+                p1 = ( 1.0/3.0)*f1 + (-7.0/6.0)*f2 + (11.0/6.0)*f3;
+                p2 = (-1.0/6.0)*f2 + ( 5.0/6.0)*f3 + ( 1.0/3.0)*f4;
+                p3 = ( 1.0/3.0)*f3 + ( 5.0/6.0)*f4 + (-1.0/6.0)*f5;
+
+                wyr = vr*(w1*p1+w2*p2+w3*p3)/(w1+w2+w3);
+
+                if (wl < 0.0){
+                    f1 = var(i,j,k-3,vv);
+                    f2 = var(i,j,k-2,vv);
+                    f3 = var(i,j,k-1,vv);
+                    f4 = var(i,j,k  ,vv);
+                    f5 = var(i,j,k+1,vv);
+                }else{              
+                    f1 = var(i,j,k-2,vv);
+                    f2 = var(i,j,k-1,vv);
+                    f3 = var(i,j,k  ,vv);
+                    f4 = var(i,j,k+1,vv);
+                    f5 = var(i,j,k+2,vv);
+                }
+
+                b1 = (13/12)*pow((f1-2.0*f2+f3),2.0) + (0.25)*pow((f1-4.0*f2+3.0*f3),2.0);
+                b2 = (13/12)*pow((f2-2.0*f3+f4),2.0) + (0.25)*pow((f2-f4),2.0);
+                b3 = (13/12)*pow((f3-2.0*f4+f5),2.0) + (0.25)*pow((3.0*f3-4.0*f4+f5),2.0);
+
+                w1 = (0.1)/pow((eps+b1),2.0);
+                w2 = (0.6)/pow((eps+b2),2.0);
+                w3 = (0.3)/pow((eps+b3),2.0);
+
+                p1 = ( 1.0/3.0)*f1 + (-7.0/6.0)*f2 + (11.0/6.0)*f3;
+                p2 = (-1.0/6.0)*f2 + ( 5.0/6.0)*f3 + ( 1.0/3.0)*f4;
+                p3 = ( 1.0/3.0)*f3 + ( 5.0/6.0)*f4 + (-1.0/6.0)*f5;
+
+                wzl = wl*(w1*p1+w2*p2+w3*p3)/(w1+w2+w3);
+
+                if (wr <0.0){
+                    f1 = var(i,j,k-2,vv);
+                    f2 = var(i,j,k-1,vv);
+                    f3 = var(i,j,k  ,vv);
+                    f4 = var(i,j,k+1,vv);
+                    f5 = var(i,j,k+2,vv);
+                }else{              
+                    f1 = var(i,j,k-1,vv);
+                    f2 = var(i,j,k  ,vv);
+                    f3 = var(i,j,k+1,vv);
+                    f4 = var(i,j,k+2,vv);
+                    f5 = var(i,j,k+3,vv);
+                }
+
+                b1 = (13/12)*pow((f1-2.0*f2+f3),2.0) + (0.25)*pow((f1-4.0*f2+3.0*f3),2.0);
+                b2 = (13/12)*pow((f2-2.0*f3+f4),2.0) + (0.25)*pow((f2-f4),2.0);
+                b3 = (13/12)*pow((f3-2.0*f4+f5),2.0) + (0.25)*pow((3.0*f3-4.0*f4+f5),2.0);
+
+                w1 = (0.1)/pow((eps+b1),2.0);
+                w2 = (0.6)/pow((eps+b2),2.0);
+                w3 = (0.3)/pow((eps+b3),2.0);
+
+                p1 = ( 1.0/3.0)*f1 + (-7.0/6.0)*f2 + (11.0/6.0)*f3;
+                p2 = (-1.0/6.0)*f2 + ( 5.0/6.0)*f3 + ( 1.0/3.0)*f4;
+                p3 = ( 1.0/3.0)*f3 + ( 5.0/6.0)*f4 + (-1.0/6.0)*f5;
+
+                wzr = wr*(w1*p1+w2*p2+w3*p3)/(w1+w2+w3);
+
+                dvar(i,j,k,vv) = ( (wxr-wxl)/cd(1) + (wyr-wyl)/cd(2) +(wzr-wzl)/cd(3) );
+            }
+
+            dvar(i,j,k,0) = dvar(i,j,k,0) + dxp;
+            dvar(i,j,k,1) = dvar(i,j,k,1) + dyp;
+            dvar(i,j,k,2) = dvar(i,j,k,2) + dzp;
         });
 
     }
@@ -192,8 +366,6 @@ int main(int argc, char* argv[]){
 
     loadInitialConditions(cf,myV);
     
-    applyBCs(cf,myV);
-
     if (cf.rank == 0){
         printf("loboSHOK - %s\n",cf.inputFname);
         printf("-----------------------\n");
@@ -240,30 +412,31 @@ int main(int argc, char* argv[]){
     for (int t=0; t<cf.nt; ++t){
         time = time + cf.dt;
 
-        //tmp = myV
-        Kokkos::deep_copy(tmp,myV);
-
-        //K1 = dt*f(tmp) dt is member data to f()
-        applyBCs(cf,tmp);
-        rhs_func f1(cf.dt,cf,tmp,K1, cd);
-        f1();
-        
-        //tmp = myV + k1/2
-        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv}),
-               KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
-            tmp(i,j,k,v) = myV(i,j,k,v) + K1(i,j,k,v)/2;
-        });
-
-        //K2 = dt*f(tmp) dt is member data to f()
-        applyBCs(cf,tmp);
-        rhs_func f2(cf.dt,cf,tmp,K2, cd);
-        f2();
-
-        //myV = myV + K2
-        Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv}),
-               KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
-            myV(i,j,k,v) = myV(i,j,k,v) + K2(i,j,k,v);
-        });
+        applyBCs(cf,myV);
+//        //tmp = myV
+//        Kokkos::deep_copy(tmp,myV);
+//
+//        //K1 = dt*f(tmp) dt is member data to f()
+//        applyBCs(cf,tmp);
+//        rhs_func f1(cf.dt,cf,tmp,K1, cd);
+//        f1();
+//        
+//        //tmp = myV + k1/2
+//        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv}),
+//               KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
+//            tmp(i,j,k,v) = myV(i,j,k,v) + K1(i,j,k,v)/2;
+//        });
+//
+//        //K2 = dt*f(tmp) dt is member data to f()
+//        applyBCs(cf,tmp);
+//        rhs_func f2(cf.dt,cf,tmp,K2, cd);
+//        f2();
+//
+//        //myV = myV + K2
+//        Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv}),
+//               KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
+//            myV(i,j,k,v) = myV(i,j,k,v) + K2(i,j,k,v);
+//        });
         
         if (t % cf.out_freq == 0)
             writeSolution(cf,x,y,z,myV,t+1,time);

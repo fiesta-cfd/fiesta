@@ -108,7 +108,7 @@ void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV){
                 for (int i=0; i<cf.ngi; ++i){
                     idx = v*cf.ngi*cf.ng*cf.ngk + k*cf.ngi*cf.ng + (j-cf.ng)*cf.ngi + i;
                     bottomOut[idx]  = hostV(i,j,k,v);
-                    topOut[idx] = hostV(i+cf.nci-cf.ng,j,k,v);
+                    topOut[idx] = hostV(i,j+cf.ncj-cf.ng,k,v);
                 }
             }
         }
@@ -120,7 +120,7 @@ void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV){
                 for (int i=0; i<cf.ngi; ++i){
                     idx = v*cf.ngi*cf.ngj*cf.ng + (k-cf.ng)*cf.ngi*cf.ngj + j*cf.ngi + i;
                     backOut[idx]  = hostV(i,j,k,v);
-                    frontOut[idx] = hostV(i+cf.nci-cf.ng,j,k,v);
+                    frontOut[idx] = hostV(i,j,k+cf.nck-cf.ng,v);
                 }
             }
         }

@@ -89,26 +89,26 @@ void applyBCs(struct inputConfig cf, Kokkos::View<double****> &u){
     haloExchange(cf,u);
 
     if (cf.xMinus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ncj,cf.nck,cf.nv}), bc_L(cf.ng,cf.ng,u));
+        Kokkos::parallel_for(policy_bl({cf.ng,cf.ng,0},{cf.ncj,cf.nck,cf.nv}), bc_L(cf.ng,cf.ng,u));
     }
 
     if (cf.xPlus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ncj,cf.nck,cf.nv}), bc_R(cf.ng+cf.nci,cf.ng,u));
+        Kokkos::parallel_for(policy_bl({cf.ng,cf.ng,0},{cf.ncj,cf.nck,cf.nv}), bc_R(cf.ng+cf.nci,cf.ng,u));
     }
 
     if (cf.yMinus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.nci,cf.nck,cf.nv}), bc_B(cf.ng,cf.ng,u));
+        Kokkos::parallel_for(policy_bl({0,cf.ng,0},{cf.ngi,cf.nck,cf.nv}), bc_B(cf.ng,cf.ng,u));
     }
 
     if (cf.yPlus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.nci,cf.nck,cf.nv}), bc_T(cf.ng+cf.ncj,cf.ng,u));
+        Kokkos::parallel_for(policy_bl({0,cf.ng,0},{cf.ngi,cf.nck,cf.nv}), bc_T(cf.ng+cf.ncj,cf.ng,u));
     }
 
     if (cf.zMinus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.nci,cf.ncj,cf.nv}), bc_H(cf.ng,cf.ng,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngj,cf.nv}), bc_H(cf.ng,cf.ng,u));
     }
 
     if (cf.zPlus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.nci,cf.ncj,cf.nv}), bc_F(cf.ng+cf.nck,cf.ng,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngj,cf.nv}), bc_F(cf.ng+cf.nck,cf.ng,u));
     }
 }
