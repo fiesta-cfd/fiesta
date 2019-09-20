@@ -13,7 +13,7 @@ struct bc_L {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int j, const int k, const int v) const {
         for (int i=0; i<ng; ++i)
-            u(n-i-1,j,k,v) = u(n+i,j,k,v);
+            u(n-i-1,j,k,v) = u(n+i+1,j,k,v);
     }
 };
 
@@ -26,7 +26,7 @@ struct bc_R {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int j, const int k, const int v) const {
         for (int i=0; i<ng; ++i)
-            u(n+i+1,j,k,v) = u(n-i,j,k,v);
+            u(n+i,j,k,v) = u(n-i-2,j,k,v);
     }
 };
 
@@ -39,7 +39,7 @@ struct bc_B {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int k, const int v) const {
         for (int j=0; j<ng; ++j)
-            u(i,n-j-1,k,v) = u(i,n+j,k,v);
+            u(i,n-j-1,k,v) = u(i,n+j+1,k,v);
     }
 };
 
@@ -52,7 +52,7 @@ struct bc_T {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int k, const int v) const {
         for (int j=0; j<ng; ++j)
-            u(i,n+j+1,k,v) = u(i,n-j,k,v);
+            u(i,n+j,k,v) = u(i,n-j-2,k,v);
     }
 };
 
@@ -65,7 +65,7 @@ struct bc_H {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j, const int v) const {
         for (int k=0; k<ng; ++k)
-            u(i,j,n-k-1,v) = u(i,j,n+k,v);
+            u(i,j,n-k-1,v) = u(i,j,n+k+1,v);
     }
 };
 
@@ -78,7 +78,7 @@ struct bc_F {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j, const int v) const {
         for (int k=0; k<ng; ++k)
-            u(i,j,n+k+1,v) = u(i,j,n-k,v);
+            u(i,j,n+k,v) = u(i,j,n-k-2,v);
     }
 };
 
@@ -89,19 +89,19 @@ void applyBCs(struct inputConfig cf, Kokkos::View<double****> &u){
     haloExchange(cf,u);
 
     if (cf.xMinus < 0){
-        Kokkos::parallel_for(policy_bl({cf.ng,cf.ng,0},{cf.ncj,cf.nck,cf.nv}), bc_L(cf.ng,cf.ng,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngj,cf.ngk,cf.nv}), bc_L(cf.ng,cf.ng,u));
     }
 
     if (cf.xPlus < 0){
-        Kokkos::parallel_for(policy_bl({cf.ng,cf.ng,0},{cf.ncj,cf.nck,cf.nv}), bc_R(cf.ng+cf.nci,cf.ng,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngj,cf.ngk,cf.nv}), bc_R(cf.ng+cf.nci,cf.ng,u));
     }
 
     if (cf.yMinus < 0){
-        Kokkos::parallel_for(policy_bl({0,cf.ng,0},{cf.ngi,cf.nck,cf.nv}), bc_B(cf.ng,cf.ng,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngk,cf.nv}), bc_B(cf.ng,cf.ng,u));
     }
 
     if (cf.yPlus < 0){
-        Kokkos::parallel_for(policy_bl({0,cf.ng,0},{cf.ngi,cf.nck,cf.nv}), bc_T(cf.ng+cf.ncj,cf.ng,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngk,cf.nv}), bc_T(cf.ng+cf.ncj,cf.ng,u));
     }
 
     if (cf.zMinus < 0){

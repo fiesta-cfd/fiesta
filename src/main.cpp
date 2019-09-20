@@ -43,11 +43,12 @@ struct rhs_func {
             double b1,b2,b3, w1,w2,w3, p1,p2,p3;
             double wxl,wxr, wyl,wyr, wzl,wzr;
 
-            double rho[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
-            double uvel[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
-            double vvel[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
-            double wvel[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
-            double pres[13] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+            double rho [19] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+            double uvel[19] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+            double vvel[19] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+            double wvel[19] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+            double pres[19] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+            double evar[19] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
             for (int s=0; s<ns; ++s){
                 rho[0]  = rho[0]  + var(i  ,j  ,k  ,4+s);
@@ -63,6 +64,12 @@ struct rhs_func {
                 rho[10] = rho[10] + var(i  ,j+2,k  ,4+s);
                 rho[11] = rho[11] + var(i  ,j  ,k-2,4+s);
                 rho[12] = rho[12] + var(i  ,j  ,k+2,4+s);
+                rho[13] = rho[13] + var(i-3,j  ,k  ,4+s);
+                rho[14] = rho[14] + var(i+3,j  ,k  ,4+s);
+                rho[15] = rho[15] + var(i  ,j-3,k  ,4+s);
+                rho[16] = rho[16] + var(i  ,j+3,k  ,4+s);
+                rho[17] = rho[17] + var(i  ,j  ,k-3,4+s);
+                rho[18] = rho[18] + var(i  ,j  ,k+3,4+s);
             }
 
             uvel[0]  = var(i  ,j  ,k  ,0)/rho[0];
@@ -78,6 +85,12 @@ struct rhs_func {
             uvel[10] = var(i  ,j+2,k  ,0)/rho[10];
             uvel[11] = var(i  ,j  ,k-2,0)/rho[11];
             uvel[12] = var(i  ,j  ,k+2,0)/rho[12];
+            uvel[13] = var(i-3,j  ,k  ,0)/rho[13];
+            uvel[14] = var(i+3,j  ,k  ,0)/rho[14];
+            uvel[15] = var(i  ,j-3,k  ,0)/rho[15];
+            uvel[16] = var(i  ,j+3,k  ,0)/rho[16];
+            uvel[17] = var(i  ,j  ,k-3,0)/rho[17];
+            uvel[18] = var(i  ,j  ,k+3,0)/rho[18];
 
             vvel[0]  = var(i  ,j  ,k  ,1)/rho[0];
             vvel[1]  = var(i-1,j  ,k  ,1)/rho[1];
@@ -92,6 +105,12 @@ struct rhs_func {
             vvel[10] = var(i  ,j+2,k  ,1)/rho[10];
             vvel[11] = var(i  ,j  ,k-2,1)/rho[11];
             vvel[12] = var(i  ,j  ,k+2,1)/rho[12];
+            vvel[13] = var(i-3,j  ,k  ,1)/rho[13];
+            vvel[14] = var(i+3,j  ,k  ,1)/rho[14];
+            vvel[15] = var(i  ,j-3,k  ,1)/rho[15];
+            vvel[16] = var(i  ,j+3,k  ,1)/rho[16];
+            vvel[17] = var(i  ,j  ,k-3,1)/rho[17];
+            vvel[18] = var(i  ,j  ,k+3,1)/rho[18];
 
             wvel[0]  = var(i  ,j  ,k  ,2)/rho[0];
             wvel[1]  = var(i-1,j  ,k  ,2)/rho[1];
@@ -106,7 +125,14 @@ struct rhs_func {
             wvel[10] = var(i  ,j+2,k  ,2)/rho[10];
             wvel[11] = var(i  ,j  ,k-2,2)/rho[11];
             wvel[12] = var(i  ,j  ,k+2,2)/rho[12];
+            wvel[13] = var(i-3,j  ,k  ,2)/rho[13];
+            wvel[14] = var(i+3,j  ,k  ,2)/rho[14];
+            wvel[15] = var(i  ,j-3,k  ,2)/rho[15];
+            wvel[16] = var(i  ,j+3,k  ,2)/rho[16];
+            wvel[17] = var(i  ,j  ,k-3,2)/rho[17];
+            wvel[18] = var(i  ,j  ,k+3,2)/rho[18];
             
+            // need to weight by mass fractions.  this means another array for gamma at each stencil point
             for (int s=0; s<ns; ++s){
                 gammas = cd(4+2*s);
                 Rs = cd(4+2*s+1);
@@ -115,6 +141,7 @@ struct rhs_func {
             }
 
             gamma = Cp/Cv;
+            //printf("%f\n",gamma);
 
             pres[0]  = (gamma-1)*(var(i  ,j  ,k  ,3)-0.5*rho[0]  *(uvel[0] *uvel[0]  + vvel[0] *vvel[0]  + wvel[0] *wvel[0] ));
             pres[1]  = (gamma-1)*(var(i-1,j  ,k  ,3)-0.5*rho[1]  *(uvel[1] *uvel[1]  + vvel[1] *vvel[1]  + wvel[1] *wvel[1] ));
@@ -129,36 +156,60 @@ struct rhs_func {
             pres[10] = (gamma-1)*(var(i  ,j+2,k  ,3)-0.5*rho[10] *(uvel[10]*uvel[10] + vvel[10]*vvel[10] + wvel[10]*wvel[10]));
             pres[11] = (gamma-1)*(var(i  ,j  ,k-2,3)-0.5*rho[11] *(uvel[11]*uvel[11] + vvel[11]*vvel[11] + wvel[11]*wvel[11]));
             pres[12] = (gamma-1)*(var(i  ,j  ,k+2,3)-0.5*rho[12] *(uvel[12]*uvel[12] + vvel[12]*vvel[12] + wvel[12]*wvel[12]));
+            pres[13] = (gamma-1)*(var(i-3,j  ,k  ,3)-0.5*rho[13] *(uvel[13]*uvel[13] + vvel[13]*vvel[13] + wvel[13]*wvel[13]));
+            pres[14] = (gamma-1)*(var(i+3,j  ,k  ,3)-0.5*rho[14] *(uvel[14]*uvel[14] + vvel[14]*vvel[14] + wvel[14]*wvel[14]));
+            pres[15] = (gamma-1)*(var(i  ,j-3,k  ,3)-0.5*rho[15] *(uvel[15]*uvel[15] + vvel[15]*vvel[15] + wvel[15]*wvel[15]));
+            pres[16] = (gamma-1)*(var(i  ,j+3,k  ,3)-0.5*rho[16] *(uvel[16]*uvel[16] + vvel[16]*vvel[16] + wvel[16]*wvel[16]));
+            pres[17] = (gamma-1)*(var(i  ,j  ,k-3,3)-0.5*rho[17] *(uvel[17]*uvel[17] + vvel[17]*vvel[17] + wvel[17]*wvel[17]));
+            pres[18] = (gamma-1)*(var(i  ,j  ,k+3,3)-0.5*rho[18] *(uvel[18]*uvel[18] + vvel[18]*vvel[18] + wvel[18]*wvel[18]));
 
-            ur = (-uvel[2]  + 7.0*uvel[0] + 7.0*uvel[1] - uvel[7])/12.0;
-            ul = (-uvel[8]  + 7.0*uvel[2] + 7.0*uvel[0] - uvel[1])/12.0;
+            ul = (-uvel[2]  + 7.0*uvel[0] + 7.0*uvel[1] - uvel[7])/12.0;
+            ur = (-uvel[8]  + 7.0*uvel[2] + 7.0*uvel[0] - uvel[1])/12.0;
             
-            vr = (-uvel[4]  + 7.0*vvel[0] + 7.0*vvel[3] - vvel[9])/12.0;
-            vl = (-uvel[10] + 7.0*vvel[4] + 7.0*vvel[0] - vvel[3])/12.0;
+            vl = (-vvel[4]  + 7.0*vvel[0] + 7.0*vvel[3] - vvel[9])/12.0;
+            vr = (-vvel[10] + 7.0*vvel[4] + 7.0*vvel[0] - vvel[3])/12.0;
             
-            wr = (-uvel[6]  + 7.0*wvel[0] + 7.0*wvel[5] - wvel[11])/12.0;
-            wl = (-uvel[12] + 7.0*wvel[6] + 7.0*wvel[0] - wvel[5] )/12.0;
+            wl = (-wvel[6]  + 7.0*wvel[0] + 7.0*wvel[5] - wvel[11])/12.0;
+            wr = (-wvel[12] + 7.0*wvel[6] + 7.0*wvel[0] - wvel[5] )/12.0;
 
             dxp = (pres[7]  - 8.0*pres[1] + 8.0*pres[2] - pres[8] )/(12.0*cd(1));
             dyp = (pres[9]  - 8.0*pres[3] + 8.0*pres[4] - pres[10])/(12.0*cd(2));
             dzp = (pres[11] - 8.0*pres[5] + 8.0*pres[6] - pres[12])/(12.0*cd(3));
 
+            //printf("%f, %f, %f\n",dxp,dyp,dzp);
+
             //can maybe reduce local variable usage by converting momentumns to velities in expressions at the last moment
             //and by using the same array space for pressure and density, we only need one at a time, test this first
 
             for (int vv=0; vv <4+ns; ++vv){
-                if (ul < 0.0){
-                    f1 = var(i-3,j,k,vv);
-                    f2 = var(i-2,j,k,vv);
-                    f3 = var(i-1,j,k,vv);
-                    f4 = var(i  ,j,k,vv);
-                    f5 = var(i+1,j,k,vv);
+                if (vv == 3){
+                    if (ul < 0.0){
+                        f1 = var(i+2,j,k,vv) + pres[8];
+                        f2 = var(i+1,j,k,vv) + pres[2];
+                        f3 = var(i  ,j,k,vv) + pres[0];
+                        f4 = var(i-1,j,k,vv) + pres[1];
+                        f5 = var(i-2,j,k,vv) + pres[7];
+                    }else{              
+                        f1 = var(i-3,j,k,vv) + pres[13];
+                        f2 = var(i-2,j,k,vv) + pres[7];
+                        f3 = var(i-1,j,k,vv) + pres[1];
+                        f4 = var(i  ,j,k,vv) + pres[0];
+                        f5 = var(i+1,j,k,vv) + pres[2];
+                    }
                 }else{
-                    f1 = var(i-2,j,k,vv);
-                    f2 = var(i-1,j,k,vv);
-                    f3 = var(i  ,j,k,vv);
-                    f4 = var(i+1,j,k,vv);
-                    f5 = var(i+2,j,k,vv);
+                    if (ul < 0.0){
+                        f1 = var(i+2,j,k,vv);
+                        f2 = var(i+1,j,k,vv);
+                        f3 = var(i  ,j,k,vv);
+                        f4 = var(i-1,j,k,vv);
+                        f5 = var(i-2,j,k,vv);
+                    }else{              
+                        f1 = var(i-3,j,k,vv);
+                        f2 = var(i-2,j,k,vv);
+                        f3 = var(i-1,j,k,vv);
+                        f4 = var(i  ,j,k,vv);
+                        f5 = var(i+1,j,k,vv);
+                    }
                 }
 
                 b1 = (13/12)*pow((f1-2.0*f2+f3),2.0) + (0.25)*pow((f1-4.0*f2+3.0*f3),2.0);
@@ -175,18 +226,34 @@ struct rhs_func {
 
                 wxl = ul*(w1*p1+w2*p2+w3*p3)/(w1+w2+w3);
 
-                if (ur <0.0){
-                    f1 = var(i-2,j,k,vv);
-                    f2 = var(i-1,j,k,vv);
-                    f3 = var(i  ,j,k,vv);
-                    f4 = var(i+1,j,k,vv);
-                    f5 = var(i+2,j,k,vv);
+                if (vv == 3){
+                    if (ur < 0.0){
+                        f1 = var(i+3,j,k,vv) + pres[14];
+                        f2 = var(i+2,j,k,vv) + pres[8];
+                        f3 = var(i+1,j,k,vv) + pres[2];
+                        f4 = var(i  ,j,k,vv) + pres[0];
+                        f5 = var(i-1,j,k,vv) + pres[1];
+                    }else{              
+                        f1 = var(i-2,j,k,vv) + pres[7];
+                        f2 = var(i-1,j,k,vv) + pres[1];
+                        f3 = var(i  ,j,k,vv) + pres[0];
+                        f4 = var(i+1,j,k,vv) + pres[2];
+                        f5 = var(i+2,j,k,vv) + pres[8];
+                    }
                 }else{
-                    f1 = var(i-1,j,k,vv);
-                    f2 = var(i  ,j,k,vv);
-                    f3 = var(i+1,j,k,vv);
-                    f4 = var(i+2,j,k,vv);
-                    f5 = var(i+3,j,k,vv);
+                    if (ur < 0.0){
+                        f1 = var(i+3,j,k,vv);
+                        f2 = var(i+2,j,k,vv);
+                        f3 = var(i+1,j,k,vv);
+                        f4 = var(i  ,j,k,vv);
+                        f5 = var(i-1,j,k,vv);
+                    }else{              
+                        f1 = var(i-2,j,k,vv);
+                        f2 = var(i-1,j,k,vv);
+                        f3 = var(i  ,j,k,vv);
+                        f4 = var(i+1,j,k,vv);
+                        f5 = var(i+2,j,k,vv);
+                    }
                 }
 
                 b1 = (13/12)*pow((f1-2.0*f2+f3),2.0) + (0.25)*pow((f1-4.0*f2+3.0*f3),2.0);
@@ -203,18 +270,34 @@ struct rhs_func {
 
                 wxr = ur*(w1*p1+w2*p2+w3*p3)/(w1+w2+w3);
 
-                if (vl < 0.0){
-                    f1 = var(i,j-3,k,vv);
-                    f2 = var(i,j-2,k,vv);
-                    f3 = var(i,j-1,k,vv);
-                    f4 = var(i,j  ,k,vv);
-                    f5 = var(i,j+1,k,vv);
+                if (vv == 3){
+                    if (vl < 0.0){
+                        f1 = var(i,j+2,k,vv) + pres[10];
+                        f2 = var(i,j+1,k,vv) + pres[4];
+                        f3 = var(i,j  ,k,vv) + pres[0];
+                        f4 = var(i,j-1,k,vv) + pres[3];
+                        f5 = var(i,j-2,k,vv) + pres[9];
+                    }else{              
+                        f1 = var(i,j-3,k,vv) + pres[15];
+                        f2 = var(i,j-2,k,vv) + pres[9];
+                        f3 = var(i,j-1,k,vv) + pres[3];
+                        f4 = var(i,j  ,k,vv) + pres[0];
+                        f5 = var(i,j+1,k,vv) + pres[4];
+                    }
                 }else{
-                    f1 = var(i,j-2,k,vv);
-                    f2 = var(i,j-1,k,vv);
-                    f3 = var(i,j  ,k,vv);
-                    f4 = var(i,j+1,k,vv);
-                    f5 = var(i,j+2,k,vv);
+                    if (vl < 0.0){
+                        f1 = var(i,j+2,k,vv);
+                        f2 = var(i,j+1,k,vv);
+                        f3 = var(i,j  ,k,vv);
+                        f4 = var(i,j-1,k,vv);
+                        f5 = var(i,j-2,k,vv);
+                    }else{              
+                        f1 = var(i,j-3,k,vv);
+                        f2 = var(i,j-2,k,vv);
+                        f3 = var(i,j-1,k,vv);
+                        f4 = var(i,j  ,k,vv);
+                        f5 = var(i,j+1,k,vv);
+                    }
                 }
 
                 b1 = (13/12)*pow((f1-2.0*f2+f3),2.0) + (0.25)*pow((f1-4.0*f2+3.0*f3),2.0);
@@ -231,18 +314,34 @@ struct rhs_func {
 
                 wyl = vl*(w1*p1+w2*p2+w3*p3)/(w1+w2+w3);
 
-                if (vr <0.0){
-                    f1 = var(i,j-2,k,vv);
-                    f2 = var(i,j-1,k,vv);
-                    f3 = var(i,j  ,k,vv);
-                    f4 = var(i,j+1,k,vv);
-                    f5 = var(i,j+2,k,vv);
-                }else{          
-                    f1 = var(i,j-1,k,vv);
-                    f2 = var(i,j  ,k,vv);
-                    f3 = var(i,j+1,k,vv);
-                    f4 = var(i,j+2,k,vv);
-                    f5 = var(i,j+3,k,vv);
+                if (vv == 3){
+                    if (vr < 0.0){
+                        f1 = var(i,j+3,k,vv) + pres[16];
+                        f2 = var(i,j+2,k,vv) + pres[10];
+                        f3 = var(i,j+1,k,vv) + pres[4];
+                        f4 = var(i,j  ,k,vv) + pres[0];
+                        f5 = var(i,j-1,k,vv) + pres[3];
+                    }else{              
+                        f1 = var(i,j-2,k,vv) + pres[9];
+                        f2 = var(i,j-1,k,vv) + pres[3];
+                        f3 = var(i,j  ,k,vv) + pres[0];
+                        f4 = var(i,j+1,k,vv) + pres[4];
+                        f5 = var(i,j+2,k,vv) + pres[10];
+                    }
+                }else{
+                    if (vr < 0.0){
+                        f1 = var(i,j+3,k,vv);
+                        f2 = var(i,j+2,k,vv);
+                        f3 = var(i,j+1,k,vv);
+                        f4 = var(i,j  ,k,vv);
+                        f5 = var(i,j-1,k,vv);
+                    }else{              
+                        f1 = var(i,j-2,k,vv);
+                        f2 = var(i,j-1,k,vv);
+                        f3 = var(i,j  ,k,vv);
+                        f4 = var(i,j+1,k,vv);
+                        f5 = var(i,j+2,k,vv);
+                    }
                 }
 
                 b1 = (13/12)*pow((f1-2.0*f2+f3),2.0) + (0.25)*pow((f1-4.0*f2+3.0*f3),2.0);
@@ -259,18 +358,34 @@ struct rhs_func {
 
                 wyr = vr*(w1*p1+w2*p2+w3*p3)/(w1+w2+w3);
 
-                if (wl < 0.0){
-                    f1 = var(i,j,k-3,vv);
-                    f2 = var(i,j,k-2,vv);
-                    f3 = var(i,j,k-1,vv);
-                    f4 = var(i,j,k  ,vv);
-                    f5 = var(i,j,k+1,vv);
-                }else{              
-                    f1 = var(i,j,k-2,vv);
-                    f2 = var(i,j,k-1,vv);
-                    f3 = var(i,j,k  ,vv);
-                    f4 = var(i,j,k+1,vv);
-                    f5 = var(i,j,k+2,vv);
+                if (vv == 3){
+                    if (wl < 0.0){
+                        f1 = var(i,j,k+2,vv) + pres[12];
+                        f2 = var(i,j,k+1,vv) + pres[6];
+                        f3 = var(i,j,k  ,vv) + pres[0];
+                        f4 = var(i,j,k-1,vv) + pres[5];
+                        f5 = var(i,j,k-2,vv) + pres[11];
+                    }else{              
+                        f1 = var(i,j,k-3,vv) + pres[17];
+                        f2 = var(i,j,k-2,vv) + pres[11];
+                        f3 = var(i,j,k-1,vv) + pres[5];
+                        f4 = var(i,j,k  ,vv) + pres[0];
+                        f5 = var(i,j,k+1,vv) + pres[6];
+                    }
+                }else{
+                    if (wl < 0.0){
+                        f1 = var(i,j,k+2,vv);
+                        f2 = var(i,j,k+1,vv);
+                        f3 = var(i,j,k  ,vv);
+                        f4 = var(i,j,k-1,vv);
+                        f5 = var(i,j,k-2,vv);
+                    }else{              
+                        f1 = var(i,j,k-3,vv);
+                        f2 = var(i,j,k-2,vv);
+                        f3 = var(i,j,k-1,vv);
+                        f4 = var(i,j,k  ,vv);
+                        f5 = var(i,j,k+1,vv);
+                    }
                 }
 
                 b1 = (13/12)*pow((f1-2.0*f2+f3),2.0) + (0.25)*pow((f1-4.0*f2+3.0*f3),2.0);
@@ -287,18 +402,34 @@ struct rhs_func {
 
                 wzl = wl*(w1*p1+w2*p2+w3*p3)/(w1+w2+w3);
 
-                if (wr <0.0){
-                    f1 = var(i,j,k-2,vv);
-                    f2 = var(i,j,k-1,vv);
-                    f3 = var(i,j,k  ,vv);
-                    f4 = var(i,j,k+1,vv);
-                    f5 = var(i,j,k+2,vv);
-                }else{              
-                    f1 = var(i,j,k-1,vv);
-                    f2 = var(i,j,k  ,vv);
-                    f3 = var(i,j,k+1,vv);
-                    f4 = var(i,j,k+2,vv);
-                    f5 = var(i,j,k+3,vv);
+                if (vv == 3){
+                    if (wr < 0.0){
+                        f1 = var(i,j,k+3,vv) + pres[18];
+                        f2 = var(i,j,k+2,vv) + pres[12];
+                        f3 = var(i,j,k+1,vv) + pres[6];
+                        f4 = var(i,j,k  ,vv) + pres[0];
+                        f5 = var(i,j,k-1,vv) + pres[5];
+                    }else{              
+                        f1 = var(i,j,k-2,vv) + pres[11];
+                        f2 = var(i,j,k-1,vv) + pres[5];
+                        f3 = var(i,j,k  ,vv) + pres[0];
+                        f4 = var(i,j,k+1,vv) + pres[6];
+                        f5 = var(i,j,k+2,vv) + pres[12];
+                    }
+                }else{
+                    if (wr < 0.0){
+                        f1 = var(i,j,k+3,vv);
+                        f2 = var(i,j,k+2,vv);
+                        f3 = var(i,j,k+1,vv);
+                        f4 = var(i,j,k  ,vv);
+                        f5 = var(i,j,k-1,vv);
+                    }else{              
+                        f1 = var(i,j,k-2,vv);
+                        f2 = var(i,j,k-1,vv);
+                        f3 = var(i,j,k  ,vv);
+                        f4 = var(i,j,k+1,vv);
+                        f5 = var(i,j,k+2,vv);
+                    }
                 }
 
                 b1 = (13/12)*pow((f1-2.0*f2+f3),2.0) + (0.25)*pow((f1-4.0*f2+3.0*f3),2.0);
@@ -315,12 +446,16 @@ struct rhs_func {
 
                 wzr = wr*(w1*p1+w2*p2+w3*p3)/(w1+w2+w3);
 
-                dvar(i,j,k,vv) = ( (wxr-wxl)/cd(1) + (wyr-wyl)/cd(2) +(wzr-wzl)/cd(3) );
+                dvar(i,j,k,vv) = -( (wxr-wxl)/cd(1) + (wyr-wyl)/cd(2) +(wzr-wzl)/cd(3) );
+                //dvar(i,j,k,vv) = -( (wxr-wxl)/cd(1) + (wyr-wyl)/cd(2)  );
+                //dvar(i,j,k,vv) = -( (wxr-wxl)/cd(1) );
             }
 
-            dvar(i,j,k,0) = dvar(i,j,k,0) + dxp;
-            dvar(i,j,k,1) = dvar(i,j,k,1) + dyp;
-            dvar(i,j,k,2) = dvar(i,j,k,2) + dzp;
+            dvar(i,j,k,0) = dvar(i,j,k,0) - dxp;
+            dvar(i,j,k,1) = dvar(i,j,k,1) - dyp;
+            dvar(i,j,k,2) = dvar(i,j,k,2) - dzp;
+            //dvar(i,j,k,1) = 0;
+            //dvar(i,j,k,2) = 0;
         });
 
     }
@@ -412,35 +547,44 @@ int main(int argc, char* argv[]){
     for (int t=0; t<cf.nt; ++t){
         time = time + cf.dt;
 
-        applyBCs(cf,myV);
-//        //tmp = myV
-//        Kokkos::deep_copy(tmp,myV);
-//
-//        //K1 = dt*f(tmp) dt is member data to f()
-//        applyBCs(cf,tmp);
-//        rhs_func f1(cf.dt,cf,tmp,K1, cd);
+//        applyBCs(cf,myV);
+//        rhs_func f1(cf.dt,cf,myV,K1, cd);
 //        f1();
-//        
-//        //tmp = myV + k1/2
-//        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv}),
-//               KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
-//            tmp(i,j,k,v) = myV(i,j,k,v) + K1(i,j,k,v)/2;
-//        });
-//
-//        //K2 = dt*f(tmp) dt is member data to f()
-//        applyBCs(cf,tmp);
-//        rhs_func f2(cf.dt,cf,tmp,K2, cd);
-//        f2();
 //
 //        //myV = myV + K2
-//        Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv}),
+//        Kokkos::parallel_for("Loop2", policy_1({cf.ng,cf.ng,cf.ng,0},{cf.ngi-cf.ng,cf.ngj-cf.ng,cf.ngk-cf.ng,cf.nv}),
 //               KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
-//            myV(i,j,k,v) = myV(i,j,k,v) + K2(i,j,k,v);
+//            myV(i,j,k,v) = myV(i,j,k,v) + cf.dt*K1(i,j,k,v);
 //        });
+
+        //tmp = myV
+        Kokkos::deep_copy(tmp,myV);
+
+        //K1 = dt*f(tmp) dt is member data to f()
+        applyBCs(cf,tmp);
+        rhs_func f1(cf.dt,cf,tmp,K1, cd);
+        f1();
         
-        if (t % cf.out_freq == 0)
-            writeSolution(cf,x,y,z,myV,t+1,time);
+        //tmp = myV + k1/2
+        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv}),
+               KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
+            tmp(i,j,k,v) = myV(i,j,k,v) + cf.dt*K1(i,j,k,v)/2;
+        });
+
+        //K2 = dt*f(tmp) dt is member data to f()
+        applyBCs(cf,tmp);
+        rhs_func f2(cf.dt,cf,tmp,K2, cd);
+        f2();
+
+        //myV = myV + K2
+        Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv}),
+               KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
+            myV(i,j,k,v) = myV(i,j,k,v) + cf.dt*K2(i,j,k,v);
+        });
+        
         if (cf.rank==0) printf("%d/%d, %f\n",t+1,cf.nt,time);
+        if ((t+1) % cf.out_freq == 0)
+            writeSolution(cf,x,y,z,myV,t+1,time);
     }
 
     //if (cf.rank==0) printf("\n");

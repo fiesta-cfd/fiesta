@@ -1,30 +1,38 @@
 -- input file
-out_freq = 1
+out_freq = 100
 
 R = 8.314462 --J/(K*mol)
 ns = 2
-gamma = {1.41, 1.67}
-M = {0.02897,0.14606} --kg/mol
-L = 1
-nt = 10
+gamma = {1.40, 1.40}
+M = {0.02897,0.02897} --kg/mol
+--gamma = {1.41, 1.67}
+--M = {0.02897,0.14606} --kg/mol
+nt = 5000
 ng = 3
-ni = 100
-nj = 100
-nk = 100
 nv = 6
-dt = 0.001
-dx = L/ni
-dy = L/nj
-dz = L/nk
+dt = 0.0001
+
+Lx = 2.0
+Ly = 0.5
+Lz = 1.0
+
+dx = 0.01
+dy = 0.01
+dz = 0.01
+
+ni = math.floor(Lx/dx)
+nj = math.floor(Ly/dy)
+nk = math.floor(Lz/dz)
+
 procsx = 1
 procsy = 1
-procsz = 1
+procsz = 2
 xPer = 0
-yPer = 0
+yPer = 1
 zPer = 0
 
 function f(i,j,k,v)
-    local xdist = math.abs(0.5-((dx/2)+dx*i))
+    local xdist = math.abs(0.6-((dx/2)+dx*i))
     local zdist = math.abs(0.5-((dz/2)+dz*k))
     local rdist = math.sqrt(xdist*xdist + zdist*zdist)
 
@@ -39,7 +47,7 @@ function f(i,j,k,v)
         if v==5 then return 0      end
     end
 
-    if rdist < 0.1 then
+    if rdist < 0.2 then
         if v==0 then return 0      end
         if v==1 then return 0      end
         if v==2 then return 0      end
