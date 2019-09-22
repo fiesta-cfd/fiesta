@@ -1,5 +1,9 @@
 -- input file
-out_freq = 100
+out_freq = 1
+restart = 1
+time = 2.0
+tstart = 0
+restartName = "restart.sol"
 
 R = 8.314462 --J/(K*mol)
 ns = 2
@@ -7,7 +11,7 @@ gamma = {1.40, 1.40}
 M = {0.02897,0.02897} --kg/mol
 --gamma = {1.41, 1.67}
 --M = {0.02897,0.14606} --kg/mol
-nt = 5000
+nt = 3
 ng = 3
 nv = 6
 dt = 0.0001
@@ -16,9 +20,9 @@ Lx = 2.0
 Ly = 0.5
 Lz = 1.0
 
-dx = 0.01
-dy = 0.01
-dz = 0.01
+dx = 0.005
+dy = 0.005
+dz = 0.005
 
 ni = math.floor(Lx/dx)
 nj = math.floor(Ly/dy)

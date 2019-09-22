@@ -49,6 +49,7 @@ struct rhs_func {
             double wvel[19] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
             double pres[19] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
             double evar[19] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+            double rhom[2][19];
 
             for (int s=0; s<ns; ++s){
                 rho[0]  = rho[0]  + var(i  ,j  ,k  ,4+s);
@@ -136,6 +137,7 @@ struct rhs_func {
             for (int s=0; s<ns; ++s){
                 gammas = cd(4+2*s);
                 Rs = cd(4+2*s+1);
+                
                 Cp = Cp + (gammas*Rs)/(gammas-1);
                 Cv = Cv + Rs/(gammas-1);
             }
@@ -499,10 +501,12 @@ int main(int argc, char* argv[]){
     }
     Kokkos::deep_copy(cd,hostcd);
 
-    loadInitialConditions(cf,myV);
+    if (cf.restart == 0)
+        loadInitialConditions(cf,myV);
     
     if (cf.rank == 0){
         printf("loboSHOK - %s\n",cf.inputFname);
+        printf("Restart File: %d | %s\n",cf.restart,cf.sfName);
         printf("-----------------------\n");
         printf("Running %d processes as (%d,%d,%d)\n",cf.numProcs,cf.xProcs,cf.yProcs,cf.zProcs);
         printf("nt = %d, dt = %f\n",cf.nt,cf.dt);
@@ -538,13 +542,18 @@ int main(int argc, char* argv[]){
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_1;
     //Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_1({0,0,0},{cf.nci, cf.ncj, cf.nck});
     
-    double time = 0.0;
+    double time = cf.time;
+    int tstart = cf.tstart;
     
     MPI_Barrier(cf.comm);
-    
-    writeSolution(cf,x,y,z,myV,0,0.00);
 
-    for (int t=0; t<cf.nt; ++t){
+    if (cf.restart == 1){
+        readSolution(cf,myV);
+    }else{
+        writeSolution(cf,x,y,z,myV,0,0.00);
+    }
+
+    for (int t=tstart; t<cf.nt; ++t){
         time = time + cf.dt;
 
 //        applyBCs(cf,myV);

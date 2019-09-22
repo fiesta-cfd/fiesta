@@ -188,3 +188,40 @@ void writeSolution(struct inputConfig cf, double *x, double *y, double *z, const
     
     cgp_close(cf.cF);
 }
+
+void readSolution(struct inputConfig cf, const Kokkos::View<double****> deviceV){
+    typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
+    Kokkos::deep_copy(hostV,deviceV);
+
+    /* open cgns file for reading restart information */
+    if (cgp_open(cf.sfName, CG_MODE_MODIFY, &cf.cF))
+        cgp_error_exit();
+
+    int idx;
+    
+    cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
+    cgsize_t endc[3] = {cf.iEnd,cf.jEnd,cf.kEnd};
+
+    double * readV;
+    readV = (double *)malloc(cf.nci*cf.ncj*cf.nck*cf.nv*sizeof(double));
+
+    for (int v=0; v<cf.nv; ++v){
+        cgp_field_read_data(cf.cF,1,1,1,v+1,start,endc,readV);
+        for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+            for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+                for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+                    int ii = i - cf.ng;
+                    int jj = j - cf.ng;
+                    int kk = k - cf.ng;
+                    idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
+                    hostV(i,j,k,v) = readV[idx];
+                }
+            }
+        }
+    }
+
+    cgp_close(cf.cF);
+    
+    Kokkos::deep_copy(deviceV,hostV);
+    free(readV);
+}

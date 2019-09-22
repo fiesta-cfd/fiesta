@@ -1,6 +1,7 @@
 #include "input.hpp"
 #include "Kokkos_Core.hpp"
 #include "lsdebug.hpp"
+#include "string.h"
 
 // Lua error function
 void error(lua_State *L, const char *fmt, ...){
@@ -44,6 +45,19 @@ double getglobdbl(lua_State *L, const char *var) {
     return result;
 }
 
+//Lua get string
+char * getglobstr(lua_State *L, const char * var){
+    //size_t len;
+    const char *iresult;
+    char *result;
+    result = (char *)malloc(32*sizeof(char));
+    lua_getglobal(L, var);
+    iresult = lua_tostring(L, -1);
+    strcpy(result,iresult);
+    //result = lua_tolstring(L, -1, &len);
+    return result;
+}
+
 struct inputConfig executeConfiguration(char * fname){
 
     struct inputConfig myConfig;
@@ -73,6 +87,10 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.xPer        = getglobint (L, "xPer" );
     myConfig.yPer        = getglobint (L, "yPer" );
     myConfig.zPer        = getglobint (L, "zPer" );
+    myConfig.restart     = getglobint (L, "restart");
+    myConfig.sfName      = getglobstr (L, "restartName");
+    myConfig.tstart      = getglobint (L, "tstart");
+    myConfig.time        = getglobdbl (L, "time");
 
     myConfig.gamma = (double*)malloc(myConfig.ns*sizeof(double));
     myConfig.M = (double*)malloc(myConfig.ns*sizeof(double));

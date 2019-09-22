@@ -42,6 +42,10 @@ struct inputConfig {
     int cF,cB,cZ;
     int ng,ngi,ngj,ngk;
     int xPer,yPer,zPer;
+    int restart;
+    const char * sfName;
+    int tstart;
+    double time;
 
     int out_freq;
 };
