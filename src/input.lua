@@ -1,42 +1,46 @@
 -- input file
-out_freq = 1
-restart = 1
-time = 2.0
+out_freq = 200
+write_freq = 50
+restart = 0
+time = 0.0
 tstart = 0
-restartName = "restart.sol"
+restartName = "sol-001000.cgns"
 
 R = 8.314462 --J/(K*mol)
 ns = 2
-gamma = {1.40, 1.40}
-M = {0.02897,0.02897} --kg/mol
---gamma = {1.41, 1.67}
---M = {0.02897,0.14606} --kg/mol
-nt = 3
-ng = 3
-nv = 6
-dt = 0.0001
+--gamma = {1.41, 1.41}
+gamma = {1.41, 1.67}
+--M = {0.02897,0.02897} --kg/mol
+M = {0.02897,0.14606} --kg/mol
 
-Lx = 2.0
-Ly = 0.5
+nt = 20000
+ng = 3
+dt = 0.0002
+
+Lx = 3.0
+Ly = 1.0
 Lz = 1.0
 
-dx = 0.005
-dy = 0.005
-dz = 0.005
+ni = 600
+nj = 200
+nk = 200
 
-ni = math.floor(Lx/dx)
-nj = math.floor(Ly/dy)
-nk = math.floor(Lz/dz)
+dx = Lx/ni
+dy = Ly/nj
+dz = Lz/nk
 
 procsx = 1
 procsy = 1
 procsz = 2
 xPer = 0
-yPer = 1
+yPer = 0
 zPer = 0
 
 function f(i,j,k,v)
-    local xdist = math.abs(0.6-((dx/2)+dx*i))
+    local angle = 15
+    local topdist = (Ly - ((dy/2)+dy*j))
+    local xcenter = 0.6 + topdist*math.tan(angle*math.pi/180)
+    local xdist = math.abs(xcenter-((dx/2)+dx*i))
     local zdist = math.abs(0.5-((dz/2)+dz*k))
     local rdist = math.sqrt(xdist*xdist + zdist*zdist)
 

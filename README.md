@@ -11,3 +11,5 @@ to compile with cuda need to
     export OMPI_CXX=/users/beromer/Kokkos/kokkos/bin/nvcc_wrapper
 
 
+example multi-gpu nvprof
+mpirun -np 2 nvprof --output-profile profile.%q{OMPI_COMM_WORLD_RANK} ../loboshok.cuda input.lua --kokkos-ndevices=2

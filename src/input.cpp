@@ -113,6 +113,7 @@ struct inputConfig executeConfiguration(char * fname){
     }
 
     myConfig.out_freq    = getglobint (L, "out_freq");
+    myConfig.write_freq    = getglobint (L, "write_freq");
     myConfig.nv = 4 + myConfig.ns;
 
     snprintf(myConfig.inputFname,32,"%s",fname);

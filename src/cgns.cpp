@@ -60,6 +60,10 @@ void writeSolution(struct inputConfig cf, double *x, double *y, double *z, const
     idims[1] = 1;
 
     snprintf(fsname,32,"sol-%06d.cgns",tdx);
+    if (cf.rank == 0){
+        printf("Writing %s...\n",fsname);
+    }
+
     cf = writeGrid(cf, x,y,z,fsname);
     snprintf(solname,32,"FS%030d",tdx);
 

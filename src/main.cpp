@@ -34,7 +34,7 @@ struct rhs_func {
 
             double Cp = 0;
             double Cv = 0;
-            double gamma,gammas,Rs;
+            double gammas,Rs;
 
             double ur,ul,vr,vl,wr,wl;
             double dxp,dyp,dzp;
@@ -48,8 +48,8 @@ struct rhs_func {
             double vvel[19] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
             double wvel[19] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
             double pres[19] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-            double evar[19] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-            double rhom[2][19];
+            double gamma[19] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+            double mf[2][19];
 
             for (int s=0; s<ns; ++s){
                 rho[0]  = rho[0]  + var(i  ,j  ,k  ,4+s);
@@ -71,6 +71,28 @@ struct rhs_func {
                 rho[16] = rho[16] + var(i  ,j+3,k  ,4+s);
                 rho[17] = rho[17] + var(i  ,j  ,k-3,4+s);
                 rho[18] = rho[18] + var(i  ,j  ,k+3,4+s);
+            }
+
+            for (int s=0; s<ns; ++s){
+                mf[s][0]  = var(i  ,j  ,k  ,4+s)/rho[0] ;
+                mf[s][1]  = var(i-1,j  ,k  ,4+s)/rho[1] ;
+                mf[s][2]  = var(i+1,j  ,k  ,4+s)/rho[2] ;
+                mf[s][3]  = var(i  ,j-1,k  ,4+s)/rho[3] ;
+                mf[s][4]  = var(i  ,j+1,k  ,4+s)/rho[4] ;
+                mf[s][5]  = var(i  ,j  ,k-1,4+s)/rho[5] ;
+                mf[s][6]  = var(i  ,j  ,k+1,4+s)/rho[6] ;
+                mf[s][7]  = var(i-2,j  ,k  ,4+s)/rho[7] ;
+                mf[s][8]  = var(i+2,j  ,k  ,4+s)/rho[8] ;
+                mf[s][9]  = var(i  ,j-2,k  ,4+s)/rho[9] ;
+                mf[s][10] = var(i  ,j+2,k  ,4+s)/rho[10];
+                mf[s][11] = var(i  ,j  ,k-2,4+s)/rho[11];
+                mf[s][12] = var(i  ,j  ,k+2,4+s)/rho[12];
+                mf[s][13] = var(i-3,j  ,k  ,4+s)/rho[13];
+                mf[s][14] = var(i+3,j  ,k  ,4+s)/rho[14];
+                mf[s][15] = var(i  ,j-3,k  ,4+s)/rho[15];
+                mf[s][16] = var(i  ,j+3,k  ,4+s)/rho[16];
+                mf[s][17] = var(i  ,j  ,k-3,4+s)/rho[17];
+                mf[s][18] = var(i  ,j  ,k+3,4+s)/rho[18];
             }
 
             uvel[0]  = var(i  ,j  ,k  ,0)/rho[0];
@@ -134,36 +156,39 @@ struct rhs_func {
             wvel[18] = var(i  ,j  ,k+3,2)/rho[18];
             
             // need to weight by mass fractions.  this means another array for gamma at each stencil point
-            for (int s=0; s<ns; ++s){
-                gammas = cd(4+2*s);
-                Rs = cd(4+2*s+1);
-                
-                Cp = Cp + (gammas*Rs)/(gammas-1);
-                Cv = Cv + Rs/(gammas-1);
+            for(int idx=0; idx<19; ++idx){
+                Cp = 0;
+                Cv = 0;
+                for (int s=0; s<ns; ++s){
+                    gammas = cd(4+2*s);
+                    Rs = cd(4+2*s+1);
+                    
+                    Cp = Cp + mf[s][idx]*( (gammas*Rs)/(gammas-1) );
+                    Cv = Cv + mf[s][idx]*( Rs/(gammas-1) );
+                }
+
+                gamma[idx] = Cp/Cv;
             }
 
-            gamma = Cp/Cv;
-            //printf("%f\n",gamma);
-
-            pres[0]  = (gamma-1)*(var(i  ,j  ,k  ,3)-0.5*rho[0]  *(uvel[0] *uvel[0]  + vvel[0] *vvel[0]  + wvel[0] *wvel[0] ));
-            pres[1]  = (gamma-1)*(var(i-1,j  ,k  ,3)-0.5*rho[1]  *(uvel[1] *uvel[1]  + vvel[1] *vvel[1]  + wvel[1] *wvel[1] ));
-            pres[2]  = (gamma-1)*(var(i+1,j  ,k  ,3)-0.5*rho[2]  *(uvel[2] *uvel[2]  + vvel[2] *vvel[2]  + wvel[2] *wvel[2] ));
-            pres[3]  = (gamma-1)*(var(i  ,j-1,k  ,3)-0.5*rho[3]  *(uvel[3] *uvel[3]  + vvel[3] *vvel[3]  + wvel[3] *wvel[3] ));
-            pres[4]  = (gamma-1)*(var(i  ,j+1,k  ,3)-0.5*rho[4]  *(uvel[4] *uvel[4]  + vvel[4] *vvel[4]  + wvel[4] *wvel[4] ));
-            pres[5]  = (gamma-1)*(var(i  ,j  ,k-1,3)-0.5*rho[5]  *(uvel[5] *uvel[5]  + vvel[5] *vvel[5]  + wvel[5] *wvel[5] ));
-            pres[6]  = (gamma-1)*(var(i  ,j  ,k+1,3)-0.5*rho[6]  *(uvel[6] *uvel[6]  + vvel[6] *vvel[6]  + wvel[6] *wvel[6] ));
-            pres[7]  = (gamma-1)*(var(i-2,j  ,k  ,3)-0.5*rho[7]  *(uvel[7] *uvel[7]  + vvel[7] *vvel[7]  + wvel[7] *wvel[7] ));
-            pres[8]  = (gamma-1)*(var(i+2,j  ,k  ,3)-0.5*rho[8]  *(uvel[8] *uvel[8]  + vvel[8] *vvel[8]  + wvel[8] *wvel[8] ));
-            pres[9]  = (gamma-1)*(var(i  ,j-2,k  ,3)-0.5*rho[9]  *(uvel[9] *uvel[9]  + vvel[9] *vvel[9]  + wvel[9] *wvel[9] ));
-            pres[10] = (gamma-1)*(var(i  ,j+2,k  ,3)-0.5*rho[10] *(uvel[10]*uvel[10] + vvel[10]*vvel[10] + wvel[10]*wvel[10]));
-            pres[11] = (gamma-1)*(var(i  ,j  ,k-2,3)-0.5*rho[11] *(uvel[11]*uvel[11] + vvel[11]*vvel[11] + wvel[11]*wvel[11]));
-            pres[12] = (gamma-1)*(var(i  ,j  ,k+2,3)-0.5*rho[12] *(uvel[12]*uvel[12] + vvel[12]*vvel[12] + wvel[12]*wvel[12]));
-            pres[13] = (gamma-1)*(var(i-3,j  ,k  ,3)-0.5*rho[13] *(uvel[13]*uvel[13] + vvel[13]*vvel[13] + wvel[13]*wvel[13]));
-            pres[14] = (gamma-1)*(var(i+3,j  ,k  ,3)-0.5*rho[14] *(uvel[14]*uvel[14] + vvel[14]*vvel[14] + wvel[14]*wvel[14]));
-            pres[15] = (gamma-1)*(var(i  ,j-3,k  ,3)-0.5*rho[15] *(uvel[15]*uvel[15] + vvel[15]*vvel[15] + wvel[15]*wvel[15]));
-            pres[16] = (gamma-1)*(var(i  ,j+3,k  ,3)-0.5*rho[16] *(uvel[16]*uvel[16] + vvel[16]*vvel[16] + wvel[16]*wvel[16]));
-            pres[17] = (gamma-1)*(var(i  ,j  ,k-3,3)-0.5*rho[17] *(uvel[17]*uvel[17] + vvel[17]*vvel[17] + wvel[17]*wvel[17]));
-            pres[18] = (gamma-1)*(var(i  ,j  ,k+3,3)-0.5*rho[18] *(uvel[18]*uvel[18] + vvel[18]*vvel[18] + wvel[18]*wvel[18]));
+            pres[0]  = (gamma[0] -1)*(var(i  ,j  ,k  ,3)-0.5*rho[0]  *(uvel[0] *uvel[0]  + vvel[0] *vvel[0]  + wvel[0] *wvel[0] ));
+            pres[1]  = (gamma[1] -1)*(var(i-1,j  ,k  ,3)-0.5*rho[1]  *(uvel[1] *uvel[1]  + vvel[1] *vvel[1]  + wvel[1] *wvel[1] ));
+            pres[2]  = (gamma[2] -1)*(var(i+1,j  ,k  ,3)-0.5*rho[2]  *(uvel[2] *uvel[2]  + vvel[2] *vvel[2]  + wvel[2] *wvel[2] ));
+            pres[3]  = (gamma[3] -1)*(var(i  ,j-1,k  ,3)-0.5*rho[3]  *(uvel[3] *uvel[3]  + vvel[3] *vvel[3]  + wvel[3] *wvel[3] ));
+            pres[4]  = (gamma[4] -1)*(var(i  ,j+1,k  ,3)-0.5*rho[4]  *(uvel[4] *uvel[4]  + vvel[4] *vvel[4]  + wvel[4] *wvel[4] ));
+            pres[5]  = (gamma[5] -1)*(var(i  ,j  ,k-1,3)-0.5*rho[5]  *(uvel[5] *uvel[5]  + vvel[5] *vvel[5]  + wvel[5] *wvel[5] ));
+            pres[6]  = (gamma[6] -1)*(var(i  ,j  ,k+1,3)-0.5*rho[6]  *(uvel[6] *uvel[6]  + vvel[6] *vvel[6]  + wvel[6] *wvel[6] ));
+            pres[7]  = (gamma[7] -1)*(var(i-2,j  ,k  ,3)-0.5*rho[7]  *(uvel[7] *uvel[7]  + vvel[7] *vvel[7]  + wvel[7] *wvel[7] ));
+            pres[8]  = (gamma[8] -1)*(var(i+2,j  ,k  ,3)-0.5*rho[8]  *(uvel[8] *uvel[8]  + vvel[8] *vvel[8]  + wvel[8] *wvel[8] ));
+            pres[9]  = (gamma[9] -1)*(var(i  ,j-2,k  ,3)-0.5*rho[9]  *(uvel[9] *uvel[9]  + vvel[9] *vvel[9]  + wvel[9] *wvel[9] ));
+            pres[10] = (gamma[10]-1)*(var(i  ,j+2,k  ,3)-0.5*rho[10] *(uvel[10]*uvel[10] + vvel[10]*vvel[10] + wvel[10]*wvel[10]));
+            pres[11] = (gamma[11]-1)*(var(i  ,j  ,k-2,3)-0.5*rho[11] *(uvel[11]*uvel[11] + vvel[11]*vvel[11] + wvel[11]*wvel[11]));
+            pres[12] = (gamma[12]-1)*(var(i  ,j  ,k+2,3)-0.5*rho[12] *(uvel[12]*uvel[12] + vvel[12]*vvel[12] + wvel[12]*wvel[12]));
+            pres[13] = (gamma[13]-1)*(var(i-3,j  ,k  ,3)-0.5*rho[13] *(uvel[13]*uvel[13] + vvel[13]*vvel[13] + wvel[13]*wvel[13]));
+            pres[14] = (gamma[14]-1)*(var(i+3,j  ,k  ,3)-0.5*rho[14] *(uvel[14]*uvel[14] + vvel[14]*vvel[14] + wvel[14]*wvel[14]));
+            pres[15] = (gamma[15]-1)*(var(i  ,j-3,k  ,3)-0.5*rho[15] *(uvel[15]*uvel[15] + vvel[15]*vvel[15] + wvel[15]*wvel[15]));
+            pres[16] = (gamma[16]-1)*(var(i  ,j+3,k  ,3)-0.5*rho[16] *(uvel[16]*uvel[16] + vvel[16]*vvel[16] + wvel[16]*wvel[16]));
+            pres[17] = (gamma[17]-1)*(var(i  ,j  ,k-3,3)-0.5*rho[17] *(uvel[17]*uvel[17] + vvel[17]*vvel[17] + wvel[17]*wvel[17]));
+            pres[18] = (gamma[18]-1)*(var(i  ,j  ,k+3,3)-0.5*rho[18] *(uvel[18]*uvel[18] + vvel[18]*vvel[18] + wvel[18]*wvel[18]));
 
             ul = (-uvel[2]  + 7.0*uvel[0] + 7.0*uvel[1] - uvel[7])/12.0;
             ur = (-uvel[8]  + 7.0*uvel[2] + 7.0*uvel[0] - uvel[1])/12.0;
@@ -591,8 +616,11 @@ int main(int argc, char* argv[]){
             myV(i,j,k,v) = myV(i,j,k,v) + cf.dt*K2(i,j,k,v);
         });
         
-        if (cf.rank==0) printf("%d/%d, %f\n",t+1,cf.nt,time);
-        if ((t+1) % cf.out_freq == 0)
+        if (cf.rank==0){
+            if ((t+1) % cf.out_freq == 0)
+                printf("%d/%d, %f\n",t+1,cf.nt,time);
+        }
+        if ((t+1) % cf.write_freq == 0)
             writeSolution(cf,x,y,z,myV,t+1,time);
     }
 
