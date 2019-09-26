@@ -549,6 +549,10 @@ int main(int argc, char* argv[]){
     double *x = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
     double *y = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
     double *z = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
+
+    float *xSP = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
+    float *ySP = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
+    float *zSP = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
     
 
     /* calculate rank local grid coordinates */
@@ -559,6 +563,10 @@ int main(int argc, char* argv[]){
                 x[idx] = (cf.iStart + i)*cf.dx;
                 y[idx] = (cf.jStart + j)*cf.dy;
                 z[idx] = (cf.kStart + k)*cf.dz;
+
+                xSP[idx] = (float)x[idx];
+                ySP[idx] = (float)y[idx];
+                zSP[idx] = (float)z[idx];
             }
         }
     }
@@ -575,7 +583,8 @@ int main(int argc, char* argv[]){
     if (cf.restart == 1){
         readSolution(cf,myV);
     }else{
-        writeSolution(cf,x,y,z,myV,0,0.00);
+        writeSolution(cf,xSP,ySP,zSP,myV,0,0.00);
+        writeRestart(cf,x,y,z,myV,0,0.00);
     }
 
     for (int t=tstart; t<cf.nt; ++t){
@@ -621,7 +630,9 @@ int main(int argc, char* argv[]){
                 printf("%d/%d, %f\n",t+1,cf.nt,time);
         }
         if ((t+1) % cf.write_freq == 0)
-            writeSolution(cf,x,y,z,myV,t+1,time);
+            writeSolution(cf,xSP,ySP,zSP,myV,t+1,time);
+        if ((t+1) % cf.restart_freq == 0)
+            writeRestart(cf,x,y,z,myV,t+1,time);
     }
 
     //if (cf.rank==0) printf("\n");

@@ -1,6 +1,6 @@
 -- input file
-out_freq = 200
-write_freq = 50
+out_freq = 1
+write_freq = 100
 restart = 0
 time = 0.0
 tstart = 0
@@ -13,7 +13,7 @@ gamma = {1.41, 1.67}
 --M = {0.02897,0.02897} --kg/mol
 M = {0.02897,0.14606} --kg/mol
 
-nt = 20000
+nt = 20
 ng = 3
 dt = 0.0002
 
@@ -29,9 +29,9 @@ dx = Lx/ni
 dy = Ly/nj
 dz = Lz/nk
 
-procsx = 1
+procsx = 2
 procsy = 1
-procsz = 2
+procsz = 1
 xPer = 0
 yPer = 0
 zPer = 0

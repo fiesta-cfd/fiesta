@@ -47,7 +47,7 @@ struct inputConfig {
     int tstart;
     double time;
 
-    int out_freq, write_freq;
+    int out_freq, write_freq, restart_freq;
 };
 
 struct inputConfig executeConfiguration(char * fname);
