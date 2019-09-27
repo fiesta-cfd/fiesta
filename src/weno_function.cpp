@@ -70,7 +70,7 @@ struct calculateVelocityAndPressure {
     V3D rho;
     V3D gamma;
 
-    calculateVelocityAndPressure (V4D &var_,  V3D &uvel_, V3D &vvel_, V3D &wvel_, V3D &p_, V3D &rho_, V3D &gamma_)
+    calculateVelocityAndPressure (V4D var_,  V3D uvel_, V3D vvel_, V3D wvel_, V3D p_, V3D rho_, V3D gamma_)
          : var(var_), uvel(uvel_), vvel(vvel_), wvel(wvel_), p(p_), rho(rho_), gamma(gamma_) {}
 
     KOKKOS_INLINE_FUNCTION
@@ -109,50 +109,50 @@ struct applyWenoFluxes {
         ur = (-uvel(i+2,j,k) + 7.0*uvel(i+1,j,k) + 7.0*uvel(i,j,k) - uvel(i-1,j,k))/12.0;
         vr = (-vvel(i,j+2,k) + 7.0*vvel(i,j+1,k) + 7.0*vvel(i,j,k) - vvel(i,j-1,k))/12.0;
         wr = (-wvel(i,j,k+2) + 7.0*wvel(i,j,k+1) + 7.0*wvel(i,j,k) - wvel(i,j,k-1))/12.0;
-
+        
         for (int v=0; v<=4+ns; ++v){
             for (int idx=0; idx<3; ++idx){
                 if (idx == 0){
                     if (ur < 0.0){
-                        f1 = var(i+3,j,k,v) + (v==3)*p(i+3,j,k);
-                        f2 = var(i+2,j,k,v) + (v==3)*p(i+2,j,k);
-                        f3 = var(i+1,j,k,v) + (v==3)*p(i+1,j,k);
-                        f4 = var(i  ,j,k,v) + (v==3)*p(i  ,j,k);
-                        f5 = var(i-1,j,k,v) + (v==3)*p(i-1,j,k);
-                    }else{                                
-                        f1 = var(i-2,j,k,v) + (v==3)*p(i-2,j,k);
-                        f2 = var(i-1,j,k,v) + (v==3)*p(i-1,j,k);
-                        f3 = var(i  ,j,k,v) + (v==3)*p(i  ,j,k);
-                        f4 = var(i+1,j,k,v) + (v==3)*p(i+1,j,k);
-                        f5 = var(i+2,j,k,v) + (v==3)*p(i+2,j,k);
+                        f1 = var(i+3,j,k,v); + (v==3)*p(i+3,j,k);
+                        f2 = var(i+2,j,k,v); + (v==3)*p(i+2,j,k);
+                        f3 = var(i+1,j,k,v); + (v==3)*p(i+1,j,k);
+                        f4 = var(i  ,j,k,v); + (v==3)*p(i  ,j,k);
+                        f5 = var(i-1,j,k,v); + (v==3)*p(i-1,j,k);
+                    }else{                 ;               
+                        f1 = var(i-2,j,k,v); + (v==3)*p(i-2,j,k);
+                        f2 = var(i-1,j,k,v); + (v==3)*p(i-1,j,k);
+                        f3 = var(i  ,j,k,v); + (v==3)*p(i  ,j,k);
+                        f4 = var(i+1,j,k,v); + (v==3)*p(i+1,j,k);
+                        f5 = var(i+2,j,k,v); + (v==3)*p(i+2,j,k);
                     }
                 } else if (idx == 1) {
                     if (vr < 0.0){
-                        f1 = var(i,j+3,k,v) + (v==3)*p(i+3,j,k);
-                        f2 = var(i,j+2,k,v) + (v==3)*p(i+2,j,k);
-                        f3 = var(i,j+1,k,v) + (v==3)*p(i+1,j,k);
-                        f4 = var(i,j  ,k,v) + (v==3)*p(i  ,j,k);
-                        f5 = var(i,j-1,k,v) + (v==3)*p(i-1,j,k);
-                    }else{                                
-                        f1 = var(i,j-2,k,v) + (v==3)*p(i-2,j,k);
-                        f2 = var(i,j-1,k,v) + (v==3)*p(i-1,j,k);
-                        f3 = var(i,j  ,k,v) + (v==3)*p(i  ,j,k);
-                        f4 = var(i,j+1,k,v) + (v==3)*p(i+1,j,k);
-                        f5 = var(i,j+2,k,v) + (v==3)*p(i+2,j,k);
+                        f1 = var(i,j+3,k,v); + (v==3)*p(i,j+3,k);
+                        f2 = var(i,j+2,k,v); + (v==3)*p(i,j+2,k);
+                        f3 = var(i,j+1,k,v); + (v==3)*p(i,j+1,k);
+                        f4 = var(i,j  ,k,v); + (v==3)*p(i,j  ,k);
+                        f5 = var(i,j-1,k,v); + (v==3)*p(i,j-1,k);
+                    }else{                 ;                 
+                        f1 = var(i,j-2,k,v); + (v==3)*p(i,j-2,k);
+                        f2 = var(i,j-1,k,v); + (v==3)*p(i,j-1,k);
+                        f3 = var(i,j  ,k,v); + (v==3)*p(i,j  ,k);
+                        f4 = var(i,j+1,k,v); + (v==3)*p(i,j+1,k);
+                        f5 = var(i,j+2,k,v); + (v==3)*p(i,j+2,k);
                     }
                 } else {
                     if (wr < 0.0){
-                        f1 = var(i,j,k+3,v) + (v==3)*p(i+3,j,k);
-                        f2 = var(i,j,k+2,v) + (v==3)*p(i+2,j,k);
-                        f3 = var(i,j,k+1,v) + (v==3)*p(i+1,j,k);
-                        f4 = var(i,j,k  ,v) + (v==3)*p(i  ,j,k);
-                        f5 = var(i,j,k-1,v) + (v==3)*p(i-1,j,k);
-                    }else{                                
-                        f1 = var(i,j,k-2,v) + (v==3)*p(i-2,j,k);
-                        f2 = var(i,j,k-1,v) + (v==3)*p(i-1,j,k);
-                        f3 = var(i,j,k  ,v) + (v==3)*p(i  ,j,k);
-                        f4 = var(i,j,k+1,v) + (v==3)*p(i+1,j,k);
-                        f5 = var(i,j,k+2,v) + (v==3)*p(i+2,j,k);
+                        f1 = var(i,j,k+3,v); + (v==3)*p(i,j,k+3);
+                        f2 = var(i,j,k+2,v); + (v==3)*p(i,j,k+2);
+                        f3 = var(i,j,k+1,v); + (v==3)*p(i,j,k+1);
+                        f4 = var(i,j,k  ,v); + (v==3)*p(i,j,k  );
+                        f5 = var(i,j,k-1,v); + (v==3)*p(i,j,k-1);
+                    }else{                 ;                   
+                        f1 = var(i,j,k-2,v); + (v==3)*p(i,j,k-2);
+                        f2 = var(i,j,k-1,v); + (v==3)*p(i,j,k-1);
+                        f3 = var(i,j,k  ,v); + (v==3)*p(i,j,k  );
+                        f4 = var(i,j,k+1,v); + (v==3)*p(i,j,k+1);
+                        f5 = var(i,j,k+2,v); + (v==3)*p(i,j,k+2);
                     }
                 }
 
@@ -171,14 +171,14 @@ struct applyWenoFluxes {
                 w = (w1*p1+w2*p2+w3*p3)/(w1+w2+w3);
 
                 if (idx == 0){
-                    dvar(i,j,k,v) = dvar(i,j,k,v) + ur*w/cd(1);
-                    dvar(i+1,j,k,v) = dvar(i+1,k,j,v) - ur*w/cd(1);
+                    dvar(i,j,k,v) = dvar(i,j,k,v) - ur*w/cd(1);
+                    dvar(i+1,j,k,v) = dvar(i+1,j,k,v) + ur*w/cd(1);
                 } else if (idx == 1) {
-                    dvar(i,j,k,v) = dvar(i,j,k,v) + vr*w/cd(2);
-                    dvar(i,j+1,k,v) = dvar(i,j+1,k,v) - vr*w/cd(2);
+                    dvar(i,j,k,v) = dvar(i,j,k,v) - vr*w/cd(2);
+                    dvar(i,j+1,k,v) = dvar(i,j+1,k,v) + vr*w/cd(2);
                 } else {
-                    dvar(i,j,k,v) = dvar(i,j,k,v) + wr*w/cd(3);
-                    dvar(i,j,k+1,v) = dvar(i,j,k+1,v) - wr*w/cd(3);
+                    dvar(i,j,k,v) = dvar(i,j,k,v) - wr*w/cd(3);
+                    dvar(i,j,k+1,v) = dvar(i,j,k+1,v) + wr*w/cd(3);
                 }
             } //idx
         }// vv
@@ -209,8 +209,9 @@ struct applyPressure {
 };
 
 
-weno_func::weno_func(double dt_, struct inputConfig &cf_, const Kokkos::View<double****> & u_, Kokkos::View<double****> & k_, Kokkos::View<double*> & cd_)
-    : dt(dt_), cf(cf_) , mvar(u_), mdvar(k_) , mcd(cd_) {};
+weno_func::weno_func(struct inputConfig &cf_, const Kokkos::View<double****> & u_,
+                     Kokkos::View<double****> & k_, Kokkos::View<double*> & cd_)
+                     : cf(cf_) , mvar(u_), mdvar(k_) , mcd(cd_) {};
 
 void weno_func::operator()() {
     Kokkos::View<double****> dvar = mdvar;
@@ -237,6 +238,9 @@ void weno_func::operator()() {
         calculateVelocityAndPressure (var,uvel,vvel,wvel,p,rho,gamma));
 
     Kokkos::parallel_for(policy_f({cf.ng-1,cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng}),
+        applyWenoFluxes (var,uvel,vvel,wvel,p,dvar,cd));
+
+    Kokkos::parallel_for(policy_f({cf.ng,cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng}),
         applyPressure (dvar,p,cd));
 }
 

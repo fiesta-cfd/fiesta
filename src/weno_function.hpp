@@ -10,9 +10,9 @@ struct weno_func {
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_f;
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_f4;
     struct inputConfig cf;
-    double dt;
 
-    weno_func(double dt_, struct inputConfig &cf_, const Kokkos::View<double****> & u_, Kokkos::View<double****> & k_, Kokkos::View<double*> & cd_);
+    weno_func(struct inputConfig &cf_, const Kokkos::View<double****> & u_,
+              Kokkos::View<double****> & k_, Kokkos::View<double*> & cd_);
 
     void operator()();
 };

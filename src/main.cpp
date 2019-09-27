@@ -124,7 +124,7 @@ int main(int argc, char* argv[]){
 
         //K1 = dt*f(tmp) dt is member data to f()
         applyBCs(cf,tmp);
-        weno_func f1(cf.dt,cf,tmp,K1, cd);
+        weno_func f1(cf,tmp,K1, cd);
         f1();
         
         //tmp = myV + k1/2
@@ -135,7 +135,7 @@ int main(int argc, char* argv[]){
 
         //K2 = dt*f(tmp) dt is member data to f()
         applyBCs(cf,tmp);
-        weno_func f2(cf.dt,cf,tmp,K2, cd);
+        weno_func f2(cf,tmp,K2, cd);
         f2();
 
         //myV = myV + K2
