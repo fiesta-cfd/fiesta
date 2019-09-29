@@ -279,6 +279,70 @@ struct maxGradFunctor {
             lmax = gradRho(i,j,k,n);
     }
 };
+struct calculateCeqFlux {
+
+    typedef typename Kokkos::View<double****> V4D;
+    typedef typename Kokkos::View<double***> V3D;
+    V4D dvar;
+    V4D var;
+    V4D gradRho;
+    double maxS,maxGradRho,maxTau1,maxTau2,maxTau3,kap,eps;
+    Kokkos::View<double*> cd;
+
+    calculateCeqFlux (V4D dvar_, V4D var_, V4D gradRho_, double maxS_, double maxGradRho_, double maxTau1_,
+                      double maxTau2_, double maxTau3_, Kokkos::View<double*> cd_, double kap_, double eps_)
+        : dvar(dvar_), var(var_), gradRho(gradRho_), maxS(maxS_), maxGradRho(maxGradRho_), maxTau1(maxTau1_),
+          maxTau2(maxTau2_),  maxTau3(maxTau3_), cd(cd_), kap(kap_), eps(eps_) {}
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int j, const int k) const {
+        int nv = (int)cd(0) + 4;
+        int ng = nv;
+        int nt1 = nv+1;
+        int nt2 = nv+2;
+        int nt3 = nv+3;
+
+        double G  = 0.0;
+        double T1 = 0.0;
+        double T2 = 0.0;
+        double T3 = 0.0;
+
+        double dcx,dc1x,dc2x,dc3x;
+        double dcy,dc1y,dc2y,dc3y;
+        double dcz,dc1z,dc2z,dc3z;
+
+        double dxmag = sqrt(cd(1)*cd(1) + cd(2)*cd(2) + cd(3)*cd(3));
+
+        dcx  = (var(i+1,j,k,ng ) - 2*var(i,j,k,ng ) + var(i-1,j,k,ng ))/cd(1);
+        dc1x = (var(i+1,j,k,nt1) - 2*var(i,j,k,nt1) + var(i-1,j,k,nt1))/cd(1);
+        dc2x = (var(i+1,j,k,nt2) - 2*var(i,j,k,nt2) + var(i-1,j,k,nt2))/cd(1);
+        dc3x = (var(i+1,j,k,nt3) - 2*var(i,j,k,nt3) + var(i-1,j,k,nt3))/cd(1);
+
+        dcy  = (var(i,j+1,k,ng ) - 2*var(i,j,k,ng ) + var(i,j-1,k,ng ))/cd(2);
+        dc1y = (var(i,j+1,k,nt1) - 2*var(i,j,k,nt1) + var(i,j-1,k,nt1))/cd(2);
+        dc2y = (var(i,j+1,k,nt2) - 2*var(i,j,k,nt2) + var(i,j-1,k,nt2))/cd(2);
+        dc3y = (var(i,j+1,k,nt3) - 2*var(i,j,k,nt3) + var(i,j-1,k,nt3))/cd(2);
+
+        dcz  = (var(i,j,k+1,ng ) - 2*var(i,j,k,ng ) + var(i,j,k-1,ng ))/cd(3);
+        dc1z = (var(i,j,k+1,nt1) - 2*var(i,j,k,nt1) + var(i,j,k-1,nt1))/cd(3);
+        dc2z = (var(i,j,k+1,nt2) - 2*var(i,j,k,nt2) + var(i,j,k-1,nt2))/cd(3);
+        dc3z = (var(i,j,k+1,nt3) - 2*var(i,j,k,nt3) + var(i,j,k-1,nt3))/cd(3);
+
+        if (maxGradRho > 0.0)
+            G = gradRho(i,j,k,0)/maxGradRho;
+        if (maxTau1 > 0.0)
+            T1 = gradRho(i,j,k,1)/maxTau1;
+        if (maxTau2 > 0.0)
+            T2 = gradRho(i,j,k,2)/maxTau2;
+        if (maxTau3 > 0.0)
+            T3 = gradRho(i,j,k,3)/maxTau3;
+
+        dvar(i,j,k,ng ) = maxS/(eps*dxmag)*(G  - var(i,j,k,ng )) + kap*maxS*dxmag*(dcx +dcy +dcz);
+        dvar(i,j,k,nt1) = maxS/(eps*dxmag)*(T1 - var(i,j,k,nt1)) + kap*maxS*dxmag*(dc1x+dc1y+dc1z);
+        dvar(i,j,k,nt2) = maxS/(eps*dxmag)*(T2 - var(i,j,k,nt2)) + kap*maxS*dxmag*(dc2x+dc2y+dc2z);
+        dvar(i,j,k,nt3) = maxS/(eps*dxmag)*(T3 - var(i,j,k,nt3)) + kap*maxS*dxmag*(dc3x+dc3y+dc3z);
+    }
+};
 
 weno_func::weno_func(struct inputConfig &cf_, const Kokkos::View<double****> & u_,
                      Kokkos::View<double****> & k_, Kokkos::View<double*> & cd_)
@@ -342,11 +406,12 @@ void weno_func::operator()() {
     MPI_Allreduce(&myMaxTau1,&maxTau1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
     Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,2), Kokkos::Max<double>(myMaxTau2));
-    MPI_Allreduce(&myMaxTau2,&maxTau1,2,MPI_DOUBLE,MPI_MAX,cf.comm);
+    MPI_Allreduce(&myMaxTau2,&maxTau2,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
     Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,3), Kokkos::Max<double>(myMaxTau3));
-    MPI_Allreduce(&myMaxTau3,&maxTau1,3,MPI_DOUBLE,MPI_MAX,cf.comm);
+    MPI_Allreduce(&myMaxTau3,&maxTau3,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-    ///Kokkos::parallel_for(cell_pol,calculateCeqFlux(var,maxS,maxGradRho,maxTau1,maxTau2,maxTau3,cd);
+    Kokkos::parallel_for(cell_pol,
+        calculateCeqFlux(dvar,var,gradRho,maxS,maxRhoGrad,maxTau1,maxTau2,maxTau3,cd,1.0,1.0));
 }
 
