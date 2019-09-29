@@ -265,6 +265,21 @@ struct calculateRhoGrad {
     }
 };
 
+struct maxGradFunctor {
+
+    typedef typename Kokkos::View<double****> V4D;
+    V4D gradRho;
+    int n;
+
+    maxGradFunctor(V4D gradRho_, int n_) : gradRho(gradRho_), n(n_) {}
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int j, const int k, double& lmax) const {
+        if (gradRho(i,j,k,n) > lmax)
+            lmax = gradRho(i,j,k,n);
+    }
+};
+
 weno_func::weno_func(struct inputConfig &cf_, const Kokkos::View<double****> & u_,
                      Kokkos::View<double****> & k_, Kokkos::View<double*> & cd_)
                      : cf(cf_) , mvar(u_), mdvar(k_) , mcd(cd_) {};
@@ -320,17 +335,17 @@ void weno_func::operator()() {
 
     Kokkos::parallel_for(cell_pol,calculateRhoGrad(var,rho,gradRho,cd));
 
-    ///Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,0), Kokkos::Max<double>(myMaxRhoGrad));
-    ///MPI_Allreduce(&myMaxRhoGrad,&maxRhoGrad,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+    Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,0), Kokkos::Max<double>(myMaxRhoGrad));
+    MPI_Allreduce(&myMaxRhoGrad,&maxRhoGrad,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-    ///Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,1), Kokkos::Max<double>(myMaxTau1));
-    ///MPI_Allreduce(&myMaxTau1,&maxTau1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+    Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,1), Kokkos::Max<double>(myMaxTau1));
+    MPI_Allreduce(&myMaxTau1,&maxTau1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-    ///Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,2), Kokkos::Max<double>(myMaxTau2));
-    ///MPI_Allreduce(&myMaxTau1,&maxTau1,2,MPI_DOUBLE,MPI_MAX,cf.comm);
+    Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,2), Kokkos::Max<double>(myMaxTau2));
+    MPI_Allreduce(&myMaxTau1,&maxTau1,2,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-    ///Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,3), Kokkos::Max<double>(myMaxTau3));
-    ///MPI_Allreduce(&myMaxTau1,&maxTau1,3,MPI_DOUBLE,MPI_MAX,cf.comm);
+    Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,3), Kokkos::Max<double>(myMaxTau3));
+    MPI_Allreduce(&myMaxTau1,&maxTau1,3,MPI_DOUBLE,MPI_MAX,cf.comm);
 
     ///Kokkos::parallel_for(cell_pol,calculateCeqFlux(var,maxS,maxGradRho,maxTau1,maxTau2,maxTau3,cd);
 }
