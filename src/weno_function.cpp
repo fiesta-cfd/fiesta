@@ -380,6 +380,11 @@ void weno_func::operator()() {
     double myMaxTau2,maxTau2;
     double myMaxTau3,maxTau3;
 
+    double myMaxC, maxC;
+    double myMaxC1, maxC1;
+    double myMaxC2, maxC2;
+    double myMaxC3, maxC3;
+
     // WENO
     Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure(var,p,rho,cd) );
 
@@ -390,6 +395,18 @@ void weno_func::operator()() {
     }
 
     Kokkos::parallel_for( cell_pol, applyPressure(dvar,p,cd) );
+
+    Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+0), Kokkos::Max<double>(myMaxC));
+    MPI_Allreduce(&myMaxC,&maxC,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+
+    Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+1), Kokkos::Max<double>(myMaxC1));
+    MPI_Allreduce(&myMaxC1,&maxC1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+
+    Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+2), Kokkos::Max<double>(myMaxC2));
+    MPI_Allreduce(&myMaxC2,&maxC2,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+
+    Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+3), Kokkos::Max<double>(myMaxC3));
+    MPI_Allreduce(&myMaxC3,&maxC3,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
     ///Kokkos::parallel_for( cell_pol, applyCeq(dvar,p,cd) );
 
@@ -412,6 +429,6 @@ void weno_func::operator()() {
     MPI_Allreduce(&myMaxTau3,&maxTau3,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
     Kokkos::parallel_for(cell_pol,
-        calculateCeqFlux(dvar,var,gradRho,maxS,maxRhoGrad,maxTau1,maxTau2,maxTau3,cd,1.0,1.0));
+        calculateCeqFlux(dvar,var,gradRho,maxS,maxRhoGrad,maxTau1,maxTau2,maxTau3,cd,cf.kap,cf.eps));
 }
 

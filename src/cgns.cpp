@@ -227,6 +227,28 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
             cgp_error_exit();
     }
 
+    //write cequation variables
+    for (int vn=cf.nv; vn<cf.nv+4; ++vn){
+        snprintf(dName,32,"C%d",vn-cf.nv);
+        for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+            for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+                for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+                    int ii = i - cf.ng;
+                    int jj = j - cf.ng;
+                    int kk = k - cf.ng;
+                    idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
+                    v[idx] = hostV(i,j,k,vn);
+                }
+            }
+        }
+        
+        if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealDouble,dName,&index_flow))
+            cgp_error_exit();
+
+        if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+            cgp_error_exit();
+    }
+
     cg_biter_write(cf.cF,cf.cB,"TimeIterValues",1);
     cg_goto(cf.cF,cf.cB,"BaseIterativeData_t",1,"end");
     cg_array_write("TimeValues",CG_RealDouble,1,&dims,&time);
@@ -354,6 +376,28 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
     //write densities
     for (int vn=4; vn<cf.nv; ++vn){
         snprintf(dName,32,"SpeciesDensity%d",vn-3);
+        for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+            for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+                for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+                    int ii = i - cf.ng;
+                    int jj = j - cf.ng;
+                    int kk = k - cf.ng;
+                    idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
+                    v[idx] = hostV(i,j,k,vn);
+                }
+            }
+        }
+        
+        if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,dName,&index_flow))
+            cgp_error_exit();
+
+        if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+            cgp_error_exit();
+    }
+
+    //write cequation variables
+    for (int vn=cf.nv; vn<cf.nv+4; ++vn){
+        snprintf(dName,32,"C%d",vn-cf.nv);
         for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
             for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
                 for (int i=cf.ng; i<cf.nci+cf.ng; ++i){

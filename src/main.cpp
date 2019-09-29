@@ -25,10 +25,10 @@ int main(int argc, char* argv[]){
 
     cf = mpi_init(cf);
 
-    Kokkos::View<double****> myV("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv);
-    Kokkos::View<double****> tmp("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv);
-    Kokkos::View<double****> K1("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv);
-    Kokkos::View<double****> K2("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv);
+    Kokkos::View<double****> myV("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv+4);
+    Kokkos::View<double****> tmp("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv+4);
+    Kokkos::View<double****> K1("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv+4);
+    Kokkos::View<double****> K2("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv+4);
     Kokkos::View<double*> cd("deviceCF",4+cf.ns*2);
     typename Kokkos::View<double*>::HostMirror hostcd = Kokkos::create_mirror_view(cd);
     Kokkos::deep_copy(hostcd, cd);
@@ -128,7 +128,7 @@ int main(int argc, char* argv[]){
         f1();
         
         //tmp = myV + k1/2
-        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv}),
+        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+4}),
                KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
             tmp(i,j,k,v) = myV(i,j,k,v) + cf.dt*K1(i,j,k,v)/2;
         });
@@ -139,7 +139,7 @@ int main(int argc, char* argv[]){
         f2();
 
         //myV = myV + K2
-        Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv}),
+        Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+4}),
                KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
             myV(i,j,k,v) = myV(i,j,k,v) + cf.dt*K2(i,j,k,v);
         });
