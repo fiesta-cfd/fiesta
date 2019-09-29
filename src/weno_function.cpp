@@ -239,6 +239,32 @@ struct maxWaveSpeed {
     }
 };
 
+struct calculateRhoGrad {
+
+    typedef typename Kokkos::View<double****> V4D;
+    typedef typename Kokkos::View<double***> V3D;
+    V4D var;
+    V3D rho;
+    V4D gradRho;
+    Kokkos::View<double*> cd;
+
+    calculateRhoGrad (V4D var_, V3D rho_, V4D gradRho_, Kokkos::View<double*> cd_)
+        : var(var_), rho(rho_), gradRho(gradRho_), cd(cd_) {}
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int j, const int k) const {
+
+        double dxr = (rho(i-2,j,k) - 8.0*rho(i-1,j,k) + 8.0*(i+1,j,k) - rho(i+2,j,k))/(12.0*cd(1));
+        double dyr = (rho(i,j-2,k) - 8.0*rho(i,j-1,k) + 8.0*(i,j+1,k) - rho(i,j+2,k))/(12.0*cd(2));
+        double dzr = (rho(i,j,k-2) - 8.0*rho(i,j,k-1) + 8.0*(i,j,k+1) - rho(i,j,k+2))/(12.0*cd(3));
+
+        gradRho(i,j,k,0) = sqrt(dxr*dxr+dyr*dyr+dzr*dzr);
+        gradRho(i,j,k,1) = sqrt(dyr*dyr+dzr*dzr);
+        gradRho(i,j,k,2) = sqrt(dxr*dxr+dzr*dzr);
+        gradRho(i,j,k,3) = sqrt(dxr*dxr+dyr*dyr);
+    }
+};
+
 weno_func::weno_func(struct inputConfig &cf_, const Kokkos::View<double****> & u_,
                      Kokkos::View<double****> & k_, Kokkos::View<double*> & cd_)
                      : cf(cf_) , mvar(u_), mdvar(k_) , mcd(cd_) {};
@@ -292,7 +318,7 @@ void weno_func::operator()() {
     Kokkos::parallel_reduce(cell_pol,maxWaveSpeed(var,p,rho,cd), Kokkos::Max<double>(myMaxS));
     MPI_Allreduce(&myMaxS,&maxS,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-    ///Kokkos::parallel_for(cell_pol,calculateRhoGrad(var,rho,gradRho,cd));
+    Kokkos::parallel_for(cell_pol,calculateRhoGrad(var,rho,gradRho,cd));
 
     ///Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,0), Kokkos::Max<double>(myMaxRhoGrad));
     ///MPI_Allreduce(&myMaxRhoGrad,&maxRhoGrad,1,MPI_DOUBLE,MPI_MAX,cf.comm);
