@@ -342,10 +342,10 @@ void weno_func::operator()() {
     MPI_Allreduce(&myMaxTau1,&maxTau1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
     Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,2), Kokkos::Max<double>(myMaxTau2));
-    MPI_Allreduce(&myMaxTau1,&maxTau1,2,MPI_DOUBLE,MPI_MAX,cf.comm);
+    MPI_Allreduce(&myMaxTau2,&maxTau1,2,MPI_DOUBLE,MPI_MAX,cf.comm);
 
     Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,3), Kokkos::Max<double>(myMaxTau3));
-    MPI_Allreduce(&myMaxTau1,&maxTau1,3,MPI_DOUBLE,MPI_MAX,cf.comm);
+    MPI_Allreduce(&myMaxTau3,&maxTau1,3,MPI_DOUBLE,MPI_MAX,cf.comm);
 
     ///Kokkos::parallel_for(cell_pol,calculateCeqFlux(var,maxS,maxGradRho,maxTau1,maxTau2,maxTau3,cd);
 }
