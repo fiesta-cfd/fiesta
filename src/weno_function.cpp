@@ -254,9 +254,9 @@ struct calculateRhoGrad {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j, const int k) const {
 
-        double dxr = (rho(i-2,j,k) - 8.0*rho(i-1,j,k) + 8.0*(i+1,j,k) - rho(i+2,j,k))/(12.0*cd(1));
-        double dyr = (rho(i,j-2,k) - 8.0*rho(i,j-1,k) + 8.0*(i,j+1,k) - rho(i,j+2,k))/(12.0*cd(2));
-        double dzr = (rho(i,j,k-2) - 8.0*rho(i,j,k-1) + 8.0*(i,j,k+1) - rho(i,j,k+2))/(12.0*cd(3));
+        double dxr = (rho(i-2,j,k) - 8.0*rho(i-1,j,k) + 8.0*rho(i+1,j,k) - rho(i+2,j,k))/(12.0*cd(1));
+        double dyr = (rho(i,j-2,k) - 8.0*rho(i,j-1,k) + 8.0*rho(i,j+1,k) - rho(i,j+2,k))/(12.0*cd(2));
+        double dzr = (rho(i,j,k-2) - 8.0*rho(i,j,k-1) + 8.0*rho(i,j,k+1) - rho(i,j,k+2))/(12.0*cd(3));
 
         gradRho(i,j,k,0) = sqrt(dxr*dxr+dyr*dyr+dzr*dzr);
         gradRho(i,j,k,1) = sqrt(dyr*dyr+dzr*dzr);
