@@ -206,34 +206,42 @@ weno_func::weno_func(struct inputConfig &cf_, const Kokkos::View<double****> & u
                      : cf(cf_) , mvar(u_), mdvar(k_) , mcd(cd_) {};
 
 void weno_func::operator()() {
-    Kokkos::View<double****> dvar = mdvar;
-    Kokkos::View<double****> var = mvar;
-    Kokkos::View<double*> cd = mcd;
 
+    // Typename acronyms for 3D and 4D variables
     typedef typename Kokkos::View<double****> V4D;
     typedef typename Kokkos::View<double***> V3D;
 
+    // copy input views
+    V4D dvar = mdvar;
+    V4D var = mvar;
+
+    // create configuration data view
+    Kokkos::View<double*> cd = mcd;
+
+    // create temprary views
     V3D p("p",cf.ngi,cf.ngj,cf.ngk);
     V3D rho("rho",cf.ngi,cf.ngj,cf.ngk);
     V3D wenox("wenox",cf.ngi,cf.ngj,cf.ngk);
     V3D wenoy("wenoy",cf.ngi,cf.ngj,cf.ngk);
     V3D wenoz("wenoz",cf.ngi,cf.ngj,cf.ngk);
 
-    //policy_f ghost_pol = policy_f({0,0,0},{cf.ngi, cf.ngj, cf.ngk});
-    //policy_f cell_pol  = policy_f({cf.ng,cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng})
+    // create range policies
+    policy_f ghost_pol = policy_f({0,0,0},{cf.ngi, cf.ngj, cf.ngk});
+    policy_f cell_pol  = policy_f({cf.ng,cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
+    policy_f weno_pol  = policy_f({cf.ng-1,cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
 
-    Kokkos::parallel_for(policy_f({0,0,0},{cf.ngi, cf.ngj, cf.ngk}),
-        calculateRhoAndPressure (var,p,rho,cd));
+    // WENO
+    Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure(var,p,rho,cd) );
 
     for (int v=0; v<cf.nv; ++v){
-        Kokkos::parallel_for(policy_f({cf.ng-1,cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng}),
-            calculateWenoFluxes (var,p,rho,wenox,wenoy,wenoz,cd,v));
+        Kokkos::parallel_for( weno_pol, calculateWenoFluxes(var,p,rho,wenox,wenoy,wenoz,cd,v) );
 
-        Kokkos::parallel_for(policy_f({cf.ng,cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng}),
-            applyWenoFluxes (dvar,wenox,wenoy,wenoz,v));
+        Kokkos::parallel_for( cell_pol, applyWenoFluxes(dvar,wenox,wenoy,wenoz,v) );
     }
 
-    Kokkos::parallel_for(policy_f({cf.ng,cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng}),
-        applyPressure (dvar,p,cd));
+    Kokkos::parallel_for( cell_pol, applyPressure(dvar,p,cd) );
+
+    // CEQ
+    
 }
 
