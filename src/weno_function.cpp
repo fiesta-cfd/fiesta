@@ -200,6 +200,44 @@ struct applyPressure {
     }
 };
 
+struct maxWaveSpeed {
+    
+    typedef typename Kokkos::View<double****> V4D;
+    typedef typename Kokkos::View<double***> V3D;
+    V4D var;
+    V3D p;
+    V3D rho;
+    Kokkos::View<double*> cd;
+
+    maxWaveSpeed (V4D var_, V3D p_, V3D rho_, Kokkos::View<double*> cd_)
+        : var(var_), p(p_), rho(rho_), cd(cd_) {}
+    
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int j, const int k, double& lmax) const {
+        int ns = (int)cd(0);
+        double gamma, gammas, Rs;
+        double Cp = 0;
+        double Cv = 0;
+
+        double a, s;
+
+        for (int s=0; s<ns; ++s){
+            gammas = cd(4+2*s);
+            Rs = cd(4+2*s+1);
+
+            Cp = Cp + (var(i,j,k,4+s)/rho(i,j,k))*( gammas*Rs/(gammas-1) );
+            Cv = Cv + (var(i,j,k,4+s)/rho(i,j,k))*( Rs/(gammas-1) );
+        }
+
+        gamma = Cp/Cv;
+
+        a = sqrt(gamma*p(i,j,k)/rho(i,j,k));
+        s = a + sqrt(var(i,j,k,0)*var(i,j,k,0) + var(i,j,k,1)*var(i,j,k,1) + var(i,j,k,2)*var(i,j,k,2))/rho(i,j,k);
+
+        if (s > lmax)
+            lmax = s;
+    }
+};
 
 weno_func::weno_func(struct inputConfig &cf_, const Kokkos::View<double****> & u_,
                      Kokkos::View<double****> & k_, Kokkos::View<double*> & cd_)
@@ -224,11 +262,18 @@ void weno_func::operator()() {
     V3D wenox("wenox",cf.ngi,cf.ngj,cf.ngk);
     V3D wenoy("wenoy",cf.ngi,cf.ngj,cf.ngk);
     V3D wenoz("wenoz",cf.ngi,cf.ngj,cf.ngk);
+    V4D gradRho("gradRho",cf.ngi,cf.ngj,cf.ngk,4);
 
     // create range policies
     policy_f ghost_pol = policy_f({0,0,0},{cf.ngi, cf.ngj, cf.ngk});
     policy_f cell_pol  = policy_f({cf.ng,cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
     policy_f weno_pol  = policy_f({cf.ng-1,cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
+
+    double myMaxS,maxS;
+    double myMaxRhoGrad,maxRhoGrad;
+    double myMaxTau1,maxTau1;
+    double myMaxTau2,maxTau2;
+    double myMaxTau3,maxTau3;
 
     // WENO
     Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure(var,p,rho,cd) );
@@ -241,7 +286,26 @@ void weno_func::operator()() {
 
     Kokkos::parallel_for( cell_pol, applyPressure(dvar,p,cd) );
 
+    ///Kokkos::parallel_for( cell_pol, applyCeq(dvar,p,cd) );
+
     // CEQ
-    
+    Kokkos::parallel_reduce(cell_pol,maxWaveSpeed(var,p,rho,cd), Kokkos::Max<double>(myMaxS));
+    MPI_Allreduce(&myMaxS,&maxS,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+
+    ///Kokkos::parallel_for(cell_pol,calculateRhoGrad(var,rho,gradRho,cd));
+
+    ///Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,0), Kokkos::Max<double>(myMaxRhoGrad));
+    ///MPI_Allreduce(&myMaxRhoGrad,&maxRhoGrad,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+
+    ///Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,1), Kokkos::Max<double>(myMaxTau1));
+    ///MPI_Allreduce(&myMaxTau1,&maxTau1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+
+    ///Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,2), Kokkos::Max<double>(myMaxTau2));
+    ///MPI_Allreduce(&myMaxTau1,&maxTau1,2,MPI_DOUBLE,MPI_MAX,cf.comm);
+
+    ///Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,3), Kokkos::Max<double>(myMaxTau3));
+    ///MPI_Allreduce(&myMaxTau1,&maxTau1,3,MPI_DOUBLE,MPI_MAX,cf.comm);
+
+    ///Kokkos::parallel_for(cell_pol,calculateCeqFlux(var,maxS,maxGradRho,maxTau1,maxTau2,maxTau3,cd);
 }
 
