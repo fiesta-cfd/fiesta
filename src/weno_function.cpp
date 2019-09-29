@@ -7,82 +7,19 @@
 #include "lsdebug.hpp"
 #include "weno_function.hpp"
 
-struct initializeDvar {
-    
-    typedef typename Kokkos::View<double****> V4D;
-    V4D dvar;
-
-    initializeDvar (V4D dvar_) : dvar(dvar_) {}
-    
-    KOKKOS_INLINE_FUNCTION
-    void operator()(const int i, const int j, const int k, const int v) const {
-        dvar(i,j,k,v) = 0.0;
-    }
-};
-
-struct calculateRhoAndGamma {
-    
+struct calculateRhoAndPressure {
     typedef typename Kokkos::View<double****> V4D;
     typedef typename Kokkos::View<double***> V3D;
     V4D var;
-    V3D rho;
-    V3D gamma;
-    Kokkos::View<double*> cd;
-
-    calculateRhoAndGamma (V4D var_, V3D rho_, V3D gamma_, Kokkos::View<double*> cd_)
-        : var(var_), rho(rho_), gamma(gamma_), cd(cd_) {}
-    
-    KOKKOS_INLINE_FUNCTION
-    void operator()(const int i, const int j, const int k) const {
-
-        double gammas, Rs;
-        int ns = (int)cd(0);
-
-        double Cp = 0;
-        double Cv = 0;
-
-        rho(i,j,k) = 0.0;
-
-        for (int s=0; s<ns; ++s){
-            rho(i,j,k) = rho(i,j,k) + var(i,j,k,4+s);
-        }
-
-        for (int s=0; s<ns; ++s){
-            gammas = cd(4+2*s);
-            Rs = cd(4+2*s+1);
-
-            Cp = Cp + (var(i,j,k,4+s)/rho(i,j,k))*( gammas*Rs/(gammas-1) );
-            Cv = Cv + (var(i,j,k,4+s)/rho(i,j,k))*( Rs/(gammas-1) );
-        }
-
-        gamma(i,j,k) = Cp/Cv;
-    }
-};
-
-struct calculateVelocityAndPressure {
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double***> V3D;
-    V4D var;
-    //V3D uvel;
-    //V3D vvel;
-    //V3D wvel;
     V3D p;
     V3D rho;
-    //V3D gamma;
     Kokkos::View<double*> cd;
 
-    //calculateVelocityAndPressure (V4D var_,  V3D uvel_, V3D vvel_, V3D wvel_, V3D p_, V3D rho_, V3D gamma_)
-    calculateVelocityAndPressure (V4D var_, V3D p_, V3D rho_, Kokkos::View<double*> cd_)
+    calculateRhoAndPressure (V4D var_, V3D p_, V3D rho_, Kokkos::View<double*> cd_)
          : var(var_), p(p_), rho(rho_), cd(cd_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j, const int k) const {
-        //uvel(i,j,k) = var(i,j,k,0)/rho(i,j,k);
-        //vvel(i,j,k) = var(i,j,k,1)/rho(i,j,k);
-        //wvel(i,j,k) = var(i,j,k,2)/rho(i,j,k);
-
-        //p(i,j,k) = (gamma(i,j,k)-1)*( var(i,j,k,3) - 0.5*rho(i,j,k)
-        //          *(uvel(i,j,k)*uvel(i,j,k) + vvel(i,j,k)*vvel(i,j,k) + wvel(i,j,k)*wvel(i,j,k)) );
 
         int ns = (int)cd(0);
         double gamma, gammas, Rs;
@@ -104,7 +41,6 @@ struct calculateVelocityAndPressure {
         }
 
         gamma = Cp/Cv;
-        //gamma = 1.4;
 
         p(i,j,k) = (gamma-1)*( var(i,j,k,3) - (0.5/rho(i,j,k))
                   *(var(i,j,k,0)*var(i,j,k,0) + var(i,j,k,1)*var(i,j,k,1) + var(i,j,k,2)*var(i,j,k,2)) );
@@ -116,9 +52,6 @@ struct calculateWenoFluxes {
     typedef typename Kokkos::View<double****> V4D;
     typedef typename Kokkos::View<double***> V3D;
     V4D var;
-    //V3D uvel;
-    //V3D vvel;
-    //V3D wvel;
     V3D p;
     V3D rho;
     V3D wenox;
@@ -128,10 +61,6 @@ struct calculateWenoFluxes {
     int v;
     double eps = 0.000001;
 
-    //calculateWenoFluxes (V4D var_, V3D uvel_, V3D vvel_, V3D wvel_, V3D p_,
-    //                     V3D wenox_, V3D wenoy_, V3D wenoz_, Kokkos::View<double*> cd_, int v_)
-    //                     : var(var_), uvel(uvel_), vvel(vvel_), wvel(wvel_), p(p_),
-    //                       wenox(wenox_), wenoy(wenoy_), wenoz(wenoz_), cd(cd_), v(v_) {}
     calculateWenoFluxes (V4D var_, V3D p_, V3D rho_,
                          V3D wenox_, V3D wenoy_, V3D wenoz_, Kokkos::View<double*> cd_, int v_)
                          : var(var_), p(p_), rho(rho_),
@@ -143,9 +72,6 @@ struct calculateWenoFluxes {
         int ns = (int)cd(0);
         double ur,vr,wr,w,b1,b2,b3,w1,w2,w3,p1,p2,p3,f1,f2,f3,f4,f5;
 
-        //ur = (-uvel(i+2,j,k) + 7.0*uvel(i+1,j,k) + 7.0*uvel(i,j,k) - uvel(i-1,j,k))/12.0;
-        //vr = (-vvel(i,j+2,k) + 7.0*vvel(i,j+1,k) + 7.0*vvel(i,j,k) - vvel(i,j-1,k))/12.0;
-        //wr = (-wvel(i,j,k+2) + 7.0*wvel(i,j,k+1) + 7.0*wvel(i,j,k) - wvel(i,j,k-1))/12.0;
         ur = ( -     var(i+2,j,k,0)/rho(i+2,j,k) + 7.0*var(i+1,j,k,0)/rho(i+1,j,k)
                + 7.0*var(i  ,j,k,0)/rho(i  ,j,k) -     var(i-1,j,k,0)/rho(i-1,j,k) )/12.0;
 
@@ -287,30 +213,21 @@ void weno_func::operator()() {
     typedef typename Kokkos::View<double****> V4D;
     typedef typename Kokkos::View<double***> V3D;
 
-    //V3D uvel("uvel",cf.ngi,cf.ngj,cf.ngk);
-    //V3D vvel("vvel",cf.ngi,cf.ngj,cf.ngk);
-    //V3D wvel("wvel",cf.ngi,cf.ngj,cf.ngk);
     V3D p("p",cf.ngi,cf.ngj,cf.ngk);
     V3D rho("rho",cf.ngi,cf.ngj,cf.ngk);
     V3D wenox("wenox",cf.ngi,cf.ngj,cf.ngk);
     V3D wenoy("wenoy",cf.ngi,cf.ngj,cf.ngk);
     V3D wenoz("wenoz",cf.ngi,cf.ngj,cf.ngk);
-    //V3D gamma("gamma",cf.ngi,cf.ngj,cf.ngk);
 
-    //Kokkos::parallel_for(policy_f4({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv}),
-    //    initializeDvar (dvar));
-
-    //Kokkos::parallel_for(policy_f({0,0,0},{cf.ngi, cf.ngj, cf.ngk}),
-    //    calculateRhoAndGamma (var,rho,gamma,cd));
+    //policy_f ghost_pol = policy_f({0,0,0},{cf.ngi, cf.ngj, cf.ngk});
+    //policy_f cell_pol  = policy_f({cf.ng,cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng})
 
     Kokkos::parallel_for(policy_f({0,0,0},{cf.ngi, cf.ngj, cf.ngk}),
-        calculateVelocityAndPressure (var,p,rho,cd));
-        //calculateVelocityAndPressure (var,uvel,vvel,wvel,p,rho,gamma));
+        calculateRhoAndPressure (var,p,rho,cd));
 
     for (int v=0; v<cf.nv; ++v){
         Kokkos::parallel_for(policy_f({cf.ng-1,cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng}),
             calculateWenoFluxes (var,p,rho,wenox,wenoy,wenoz,cd,v));
-            //calculateWenoFluxes (var,uvel,vvel,wvel,p,wenox,wenoy,wenoz,cd,v));
 
         Kokkos::parallel_for(policy_f({cf.ng,cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng}),
             applyWenoFluxes (dvar,wenox,wenoy,wenoz,v));
