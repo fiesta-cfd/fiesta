@@ -361,19 +361,108 @@ struct applyCeq {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j, const int k) const {
 
-        double diffu,diffv,diffw;
+        int nv = (int)cd(0) + 4;
+        double diffu;
         double dxmag = sqrt(cd(1)*cd(1) + cd(2)*cd(2) + cd(3)*cd(3));
 
-        beta = beta*(dxmag*dxmag/(mu*mu*maxC);
-        
-        diffu = 0;
-        diffv = 0;
-        diffw = 0;
+        double mbeta = 0;
+        if (mu>1 && maxC>1)
+             mbeta = beta*(dxmag*dxmag/(mu*mu*maxC));
+
+        double rl,rb,rh,rr,rt,rf;
+        double cl,cb,ch,cr,ct,cf;
+        double c1l,c1b,c1h,c1r,c1t,c1f;
+        double c2l,c2b,c2h,c2r,c2t,c2f;
+        double c3l,c3b,c3h,c3r,c3t,c3f;
+        double duxl,duxb,duxh,duxr,duxt,duxf;
+        double duyl,duyb,duyh,duyr,duyt,duyf;
+        double duzl,duzb,duzh,duzr,duzt,duzf;
+
+        rl = (rho(i  ,j  ,k  ) - rho(i-1,j  ,k  ))/2.0;
+        rb = (rho(i  ,j  ,k  ) - rho(i  ,j-1,k  ))/2.0;
+        rh = (rho(i  ,j  ,k  ) - rho(i  ,j  ,k-1))/2.0;
+
+        rr = (rho(i+1,j  ,k  ) - rho(i  ,j  ,k  ))/2.0;
+        rt = (rho(i  ,j+1,k  ) - rho(i  ,j  ,k  ))/2.0;
+        rf = (rho(i  ,j  ,k+1) - rho(i  ,j  ,k  ))/2.0;
+
+        cl = (var(i  ,j  ,k  ,nv  ) - var(i-1,j  ,k  ,nv  ))/2.0;
+        cb = (var(i  ,j  ,k  ,nv  ) - var(i  ,j-1,k  ,nv  ))/2.0;
+        ch = (var(i  ,j  ,k  ,nv  ) - var(i  ,j  ,k-1,nv  ))/2.0;
+
+        cr = (var(i+1,j  ,k  ,nv  ) - var(i  ,j  ,k  ,nv  ))/2.0;
+        ct = (var(i  ,j+1,k  ,nv  ) - var(i  ,j  ,k  ,nv  ))/2.0;
+        cf = (var(i  ,j  ,k+1,nv  ) - var(i  ,j  ,k  ,nv  ))/2.0;
+
+        c1l = (var(i  ,j  ,k  ,nv+1) - var(i-1,j  ,k  ,nv+1))/2.0;
+        c1b = (var(i  ,j  ,k  ,nv+1) - var(i  ,j-1,k  ,nv+1))/2.0;
+        c1h = (var(i  ,j  ,k  ,nv+1) - var(i  ,j  ,k-1,nv+1))/2.0;
+
+        c1r = (var(i+1,j  ,k  ,nv+1) - var(i  ,j  ,k  ,nv+1))/2.0;
+        c1t = (var(i  ,j+1,k  ,nv+1) - var(i  ,j  ,k  ,nv+1))/2.0;
+        c1f = (var(i  ,j  ,k+1,nv+1) - var(i  ,j  ,k  ,nv+1))/2.0;
+
+        c2l = (var(i  ,j  ,k  ,nv+2) - var(i-1,j  ,k  ,nv+2))/2.0;
+        c2b = (var(i  ,j  ,k  ,nv+2) - var(i  ,j-1,k  ,nv+2))/2.0;
+        c2h = (var(i  ,j  ,k  ,nv+2) - var(i  ,j  ,k-1,nv+2))/2.0;
+
+        c2r = (var(i+1,j  ,k  ,nv+2) - var(i  ,j  ,k  ,nv+2))/2.0;
+        c2t = (var(i  ,j+1,k  ,nv+2) - var(i  ,j  ,k  ,nv+2))/2.0;
+        c2f = (var(i  ,j  ,k+1,nv+2) - var(i  ,j  ,k  ,nv+2))/2.0;
+
+        c3l = (var(i  ,j  ,k  ,nv+3) - var(i-1,j  ,k  ,nv+3))/2.0;
+        c3b = (var(i  ,j  ,k  ,nv+3) - var(i  ,j-1,k  ,nv+3))/2.0;
+        c3h = (var(i  ,j  ,k  ,nv+3) - var(i  ,j  ,k-1,nv+3))/2.0;
+
+        c3r = (var(i+1,j  ,k  ,nv+3) - var(i  ,j  ,k  ,nv+3))/2.0;
+        c3t = (var(i  ,j+1,k  ,nv+3) - var(i  ,j  ,k  ,nv+3))/2.0;
+        c3f = (var(i  ,j  ,k+1,nv+3) - var(i  ,j  ,k  ,nv+3))/2.0;
 
 
-        dvar(i,j,k,0) = dvar(i,j,k,0) + diffu;
-        dvar(i,j,k,1) = dvar(i,j,k,1) + diffv;
-        dvar(i,j,k,2) = dvar(i,j,k,2) + diffw;
+        for (int n=0; n<3; ++n){
+            duxl = (var(i  ,j  ,k  ,n)/rho(i  ,j  ,k  ) - var(i-1,j  ,k  ,n)/rho(i-1,j  ,k  ))/cd(1);
+            duyl = (var(i-1,j+1,k  ,n)/rho(i-1,j+1,k  ) + var(i  ,j+1,k  ,n)/rho(i  ,j+1,k  )
+                   +var(i-1,j-1,k  ,n)/rho(i-1,j-1,k  ) + var(i  ,j-1,k  ,n)/rho(i  ,j-1,k  ))/(4*cd(2));
+            duzl = (var(i-1,j  ,k+1,n)/rho(i-1,j  ,k+1) + var(i  ,j  ,k+1,n)/rho(i  ,j  ,k+1)
+                   +var(i-1,j  ,k-1,n)/rho(i-1,j  ,k-1) + var(i  ,j  ,k-1,n)/rho(i  ,j  ,k-1))/(4*cd(3));
+
+            duxb = (var(i-1,j  ,k  ,n)/rho(i-1,j  ,k  ) + var(i+1,j  ,k  ,n)/rho(i+1,j  ,k  )
+                   +var(i-1,j-1,k  ,n)/rho(i-1,j-1,k  ) + var(i+1,j-1,k  ,n)/rho(i+1,j-1,k  ))/(4*cd(1));
+            duyb = (var(i  ,j  ,k  ,n)/rho(i  ,j  ,k  ) - var(i  ,j-1,k  ,n)/rho(i  ,j-1,k  ))/cd(2);
+            duzb = (var(i  ,j  ,k-1,n)/rho(i  ,j  ,k-1) + var(i  ,j  ,k+1,n)/rho(i  ,j  ,k+1)
+                   +var(i  ,j-1,k-1,n)/rho(i  ,j-1,k-1) + var(i  ,j-1,k+1,n)/rho(i  ,j-1,k+1))/(4*cd(3));
+
+            duxh = (var(i-1,j  ,k  ,n)/rho(i-1,j  ,k  ) + var(i+1,j  ,k  ,n)/rho(i+1,j  ,k  )
+                   +var(i-1,j  ,k-1,n)/rho(i-1,j  ,k-1) + var(i+1,j  ,k-1,n)/rho(i+1,j  ,k-1))/(4*cd(1));
+            duyh = (var(i  ,j-1,k  ,n)/rho(i  ,j-1,k  ) + var(i  ,j+1,k  ,n)/rho(i  ,j+1,k  )
+                   +var(i  ,j-1,k-1,n)/rho(i  ,j-1,k-1) + var(i  ,j+1,k-1,n)/rho(i  ,j+1,k-1))/(4*cd(2));
+            duzh = (var(i  ,j  ,k  ,n)/rho(i  ,j  ,k  ) - var(i  ,j  ,k-1,n)/rho(i  ,j  ,k-1))/cd(3);
+
+            duxr = (var(i+1,j  ,k  ,n)/rho(i+1,j  ,k  ) - var(i  ,j  ,k  ,n)/rho(i  ,j  ,k  ))/cd(1);
+            duyr = (var(i  ,j+1,k  ,n)/rho(i  ,j+1,k  ) + var(i+1,j+1,k  ,n)/rho(i+1,j+1,k  )
+                   +var(i  ,j-1,k  ,n)/rho(i  ,j-1,k  ) + var(i+1,j-1,k  ,n)/rho(i+1,j-1,k  ))/(4*cd(2));
+            duzr = (var(i  ,j  ,k+1,n)/rho(i  ,j  ,k+1) + var(i+1,j  ,k+1,n)/rho(i+1,j  ,k+1)
+                   +var(i  ,j  ,k-1,n)/rho(i  ,j  ,k-1) + var(i+1,j  ,k-1,n)/rho(i+1,j  ,k-1))/(4*cd(3));
+
+            duxt = (var(i-1,j+1,k  ,n)/rho(i-1,j+1,k  ) + var(i+1,j+1,k  ,n)/rho(i+1,j+1,k  )
+                   +var(i-1,j  ,k  ,n)/rho(i-1,j  ,k  ) + var(i+1,j  ,k  ,n)/rho(i+1,j  ,k  ))/(4*cd(1));
+            duyt = (var(i  ,j+1,k  ,n)/rho(i  ,j+1,k  ) - var(i  ,j  ,k  ,n)/rho(i  ,j  ,k  ))/cd(2);
+            duzt = (var(i  ,j+1,k-1,n)/rho(i  ,j+1,k-1) + var(i  ,j+1,k+1,n)/rho(i  ,j+1,k+1)
+                   +var(i  ,j  ,k-1,n)/rho(i  ,j  ,k-1) + var(i  ,j  ,k+1,n)/rho(i  ,j  ,k+1))/(4*cd(3));
+
+            duxf = (var(i-1,j  ,k+1,n)/rho(i-1,j  ,k+1) + var(i+1,j  ,k  ,n)/rho(i+1,j  ,k+1)
+                   +var(i-1,j  ,k  ,n)/rho(i-1,j  ,k  ) + var(i+1,j  ,k-1,n)/rho(i+1,j  ,k  ))/(4*cd(1));
+            duyf = (var(i  ,j-1,k+1,n)/rho(i  ,j-1,k+1) + var(i  ,j+1,k  ,n)/rho(i  ,j+1,k+1)
+                   +var(i  ,j-1,k  ,n)/rho(i  ,j-1,k  ) + var(i  ,j+1,k-1,n)/rho(i  ,j+1,k  ))/(4*cd(2));
+            duzf = (var(i  ,j  ,k+1,n)/rho(i  ,j  ,k+1) - var(i  ,j  ,k-1,n)/rho(i  ,j  ,k  ))/cd(3);
+
+            diffu = mbeta*(-(rl*cl*c1l*(c1l*duxl+c2l*duyl+c3l*duzl) - rr*cr*c1r*(c1r*duxr+c2r*duyr+c3r*duzr))/cd(1)
+                           -(rb*cb*c1b*(c1b*duxb+c2b*duyb+c3b*duzb) - rt*ct*c1t*(c1t*duxt+c2t*duyt+c3t*duzt))/cd(2)
+                           -(rh*ch*c1h*(c1h*duxh+c2h*duyh+c3h*duzh) - rf*cf*c1f*(c1f*duxf+c2f*duyf+c3f*duzf))/cd(3));
+
+            dvar(i,j,k,n) = dvar(i,j,k,n) + diffu;
+            //dvar(i,j,k,n) = dvar(i,j,k,n) + 0;
+        }
     }
 };
 
@@ -464,6 +553,7 @@ void weno_func::operator()() {
 
     Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+3), Kokkos::Max<double>(myMaxC3));
     MPI_Allreduce(&myMaxC3,&maxC3,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+
     mu = maxC1;
     if (maxC2 > mu)
         mu = maxC2;
