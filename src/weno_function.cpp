@@ -258,10 +258,11 @@ struct calculateRhoGrad {
         double dyr = (rho(i,j-2,k) - 8.0*rho(i,j-1,k) + 8.0*rho(i,j+1,k) - rho(i,j+2,k))/(12.0*cd(2));
         double dzr = (rho(i,j,k-2) - 8.0*rho(i,j,k-1) + 8.0*rho(i,j,k+1) - rho(i,j,k+2))/(12.0*cd(3));
 
-        gradRho(i,j,k,0) = sqrt(dxr*dxr+dyr*dyr+dzr*dzr);
-        gradRho(i,j,k,1) = sqrt(dyr*dyr+dzr*dzr);
-        gradRho(i,j,k,2) = sqrt(dxr*dxr+dzr*dzr);
-        gradRho(i,j,k,3) = sqrt(dxr*dxr+dyr*dyr);
+        gradRho(i,j,k,0) = dxr*dxr+dyr*dyr+dzr*dzr;
+        gradRho(i,j,k,1) = dyr-dzr;
+        gradRho(i,j,k,2) = dzr-dxr;
+        gradRho(i,j,k,3) = dxr-dyr;
+
     }
 };
 
