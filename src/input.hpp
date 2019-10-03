@@ -46,7 +46,7 @@ struct inputConfig {
     const char * sfName;
     int tstart;
     double time;
-    double kap,eps,beta;
+    double ceq,kap,eps,beta;
 
     int out_freq, write_freq, restart_freq;
 };

@@ -91,6 +91,7 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.sfName      = getglobstr (L, "restartName");
     myConfig.tstart      = getglobint (L, "tstart");
     myConfig.time        = getglobdbl (L, "time");
+    myConfig.ceq         = getglobdbl (L, "ceq");
     myConfig.kap         = getglobdbl (L, "kappa");
     myConfig.eps         = getglobdbl (L, "epsilon");
     myConfig.beta        = getglobdbl (L, "beta");

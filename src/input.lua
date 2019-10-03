@@ -35,9 +35,10 @@ xPer = 0
 yPer = 0
 zPer = 0
 
+ceq = 0
 kappa = 10.0
 epsilon = 1.0
-beta = 0.0
+beta = 15.0
 
 function f(i,j,k,v)
     local angle = 20

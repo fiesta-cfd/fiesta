@@ -520,46 +520,47 @@ void weno_func::operator()() {
 
     Kokkos::parallel_for( cell_pol, applyPressure(dvar,p,cd) );
 
-    // CEQ
-    Kokkos::parallel_reduce(cell_pol,maxWaveSpeed(var,p,rho,cd), Kokkos::Max<double>(myMaxS));
-    MPI_Allreduce(&myMaxS,&maxS,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+    if (cf.ceq != 0){
+        // CEQ
+        Kokkos::parallel_reduce(cell_pol,maxWaveSpeed(var,p,rho,cd), Kokkos::Max<double>(myMaxS));
+        MPI_Allreduce(&myMaxS,&maxS,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-    Kokkos::parallel_for(cell_pol,calculateRhoGrad(var,rho,gradRho,cd));
+        Kokkos::parallel_for(cell_pol,calculateRhoGrad(var,rho,gradRho,cd));
 
-    Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,0), Kokkos::Max<double>(myMaxRhoGrad));
-    MPI_Allreduce(&myMaxRhoGrad,&maxRhoGrad,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,0), Kokkos::Max<double>(myMaxRhoGrad));
+        MPI_Allreduce(&myMaxRhoGrad,&maxRhoGrad,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-    Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,1), Kokkos::Max<double>(myMaxTau1));
-    MPI_Allreduce(&myMaxTau1,&maxTau1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,1), Kokkos::Max<double>(myMaxTau1));
+        MPI_Allreduce(&myMaxTau1,&maxTau1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-    Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,2), Kokkos::Max<double>(myMaxTau2));
-    MPI_Allreduce(&myMaxTau2,&maxTau2,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,2), Kokkos::Max<double>(myMaxTau2));
+        MPI_Allreduce(&myMaxTau2,&maxTau2,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-    Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,3), Kokkos::Max<double>(myMaxTau3));
-    MPI_Allreduce(&myMaxTau3,&maxTau3,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,3), Kokkos::Max<double>(myMaxTau3));
+        MPI_Allreduce(&myMaxTau3,&maxTau3,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-    Kokkos::parallel_for(cell_pol,
-        calculateCeqFlux(dvar,var,gradRho,maxS,maxRhoGrad,maxTau1,maxTau2,maxTau3,cd,cf.kap,cf.eps));
+        Kokkos::parallel_for(cell_pol,
+            calculateCeqFlux(dvar,var,gradRho,maxS,maxRhoGrad,maxTau1,maxTau2,maxTau3,cd,cf.kap,cf.eps));
 
+        // Apply CEQ
+        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+0), Kokkos::Max<double>(myMaxC));
+        MPI_Allreduce(&myMaxC,&maxC,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-    // Apply CEQ
-    Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+0), Kokkos::Max<double>(myMaxC));
-    MPI_Allreduce(&myMaxC,&maxC,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+1), Kokkos::Max<double>(myMaxC1));
+        MPI_Allreduce(&myMaxC1,&maxC1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-    Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+1), Kokkos::Max<double>(myMaxC1));
-    MPI_Allreduce(&myMaxC1,&maxC1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+2), Kokkos::Max<double>(myMaxC2));
+        MPI_Allreduce(&myMaxC2,&maxC2,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-    Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+2), Kokkos::Max<double>(myMaxC2));
-    MPI_Allreduce(&myMaxC2,&maxC2,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+3), Kokkos::Max<double>(myMaxC3));
+        MPI_Allreduce(&myMaxC3,&maxC3,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-    Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+3), Kokkos::Max<double>(myMaxC3));
-    MPI_Allreduce(&myMaxC3,&maxC3,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        mu = maxC1;
+        if (maxC2 > mu)
+            mu = maxC2;
+        if (maxC3 > mu)
+            mu = maxC3;
 
-    mu = maxC1;
-    if (maxC2 > mu)
-        mu = maxC2;
-    if (maxC3 > mu)
-        mu = maxC3;
-
-    Kokkos::parallel_for( cell_pol, applyCeq(dvar,var,rho,cd,maxC,mu,cf.beta) );
+        Kokkos::parallel_for( cell_pol, applyCeq(dvar,var,rho,cd,maxC,mu,cf.beta) );
+    }
 }
