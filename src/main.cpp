@@ -6,6 +6,9 @@
 #include <mpi.h>
 #include "lsdebug.hpp"
 #include "weno_function.hpp"
+#include <iostream>
+#include <cstdio>
+#include <ctime>
 
 void fnExit1(void){
     Kokkos::finalize();
@@ -106,6 +109,12 @@ int main(int argc, char* argv[]){
         writeRestart(cf,x,y,z,myV,0,0.00);
     }
 
+    MPI_Barrier(cf.comm);
+    double total_time,mean_time;
+    std::clock_t start;
+    start = std::clock();
+    MPI_Barrier(cf.comm);
+
     for (int t=tstart; t<cf.nt; ++t){
         time = time + cf.dt;
 
@@ -119,6 +128,7 @@ int main(int argc, char* argv[]){
 //            myV(i,j,k,v) = myV(i,j,k,v) + cf.dt*K1(i,j,k,v);
 //        });
 
+        
         //tmp = myV
         Kokkos::deep_copy(tmp,myV);
 
@@ -154,8 +164,15 @@ int main(int argc, char* argv[]){
             writeRestart(cf,x,y,z,myV,t+1,time);
     }
 
+    MPI_Barrier(cf.comm);
+    total_time = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+    mean_time = total_time/cf.nt;
+
+    if (cf.rank == 0){
+        printf("\nTotal: %f\nMean %f\n",total_time,mean_time);
+    }
+
     //if (cf.rank==0) printf("\n");
-    //MPI_Barrier(cf.comm);
     //MYDBGR
     
     MPI_Finalize();
