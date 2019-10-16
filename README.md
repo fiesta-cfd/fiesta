@@ -11,8 +11,8 @@ to compile with cuda on xena need to
 ```
 export MPICH_CXX=/users/beromer/Kokkos/kokkos/bin/nvcc_wrapper
 ```
-    and kokkos "generate_makefile.sh" should be run with "--with-cuda" and "--arch=Kepler35" and "--kokkos-path=" and "--prefix="
-    kokkos path needs to be in Makefile
+
+and kokkos "generate_makefile.sh" should be run with "--with-cuda" and "--arch=Kepler35" and "--kokkos-path=" and "--prefix=". kokkos path needs to be in Makefile
 
 get kokkos from github.com/kokkos/kokkos.git
 get cgns-3.4 and lua-5.3 from spack install cgns with mpich and gcc-7.4.0
