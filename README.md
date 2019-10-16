@@ -4,11 +4,9 @@ try
 ```
 export OMPI_MCA_fs_ufs_lock_algorithm=1 
 ```
-for nfs filesystems and openmpi if file writing hangs
-see https://github.com/open-mpi/ompi/issues/4446
+for nfs filesystems and openmpi if file writing hangs. see https://github.com/open-mpi/ompi/issues/4446
 
-to compile with cuda on xena need to
-get cgns-3.4 and lua-5.3 from spack install cgns with mpich and gcc-7.4.0
+to compile with cuda on xena need to get cgns-3.4 and lua-5.3 from spack. install cgns with mpich and gcc-7.4.0
 ```
 module load gcc-7.4.0-gcc-8.1.0-j26pfmd
 spack compiler find
