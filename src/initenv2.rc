@@ -1,0 +1,8 @@
+export MPICH_CXX=/users/beromer/Kokkos/kokkos/bin/nvcc_wrapper
+
+module load cgns-3.4.0-gcc-7.4.0-ny2kric
+module load cuda-10.0.130-gcc-7.4.0-7svpedx
+module load mpich-3.3.1-gcc-7.4.0-52vvlix
+module load lua-5.3.5-gcc-8.1.0-yupcteg
+module load gcc-7.4.0-gcc-8.1.0-j26pfmd
+
