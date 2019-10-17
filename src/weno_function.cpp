@@ -474,6 +474,7 @@ weno_func::weno_func(struct inputConfig &cf_, const Kokkos::View<double****> & u
 void weno_func::operator()() {
 
     // Typename acronyms for 3D and 4D variables
+    typedef typename Kokkos::View<double***[3][3]> V6D;
     typedef typename Kokkos::View<double****> V4D;
     typedef typename Kokkos::View<double***> V3D;
 
@@ -491,6 +492,7 @@ void weno_func::operator()() {
     V3D wenoy("wenoy",cf.ngi,cf.ngj,cf.ngk);
     V3D wenoz("wenoz",cf.ngi,cf.ngj,cf.ngk);
     V4D gradRho("gradRho",cf.ngi,cf.ngj,cf.ngk,4);
+    V3D cfluxes("cfluxes",cf.ngi,cf.ngj,cf.ngk);
 
     // create range policies
     policy_f ghost_pol = policy_f({0,0,0},{cf.ngi, cf.ngj, cf.ngk});
