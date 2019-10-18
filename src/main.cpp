@@ -28,10 +28,10 @@ int main(int argc, char* argv[]){
 
     cf = mpi_init(cf);
 
-    Kokkos::View<double****> myV("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv+4);
-    Kokkos::View<double****> tmp("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv+4);
-    Kokkos::View<double****> K1("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv+4);
-    Kokkos::View<double****> K2("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv+4);
+    Kokkos::View<double****> myV("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv+5);
+    Kokkos::View<double****> tmp("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv+5);
+    Kokkos::View<double****> K1("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv+5);
+    Kokkos::View<double****> K2("testView",cf.ngi,cf.ngj,cf.ngk,cf.nv+5);
     Kokkos::View<double*> cd("deviceCF",4+cf.ns*2);
     typename Kokkos::View<double*>::HostMirror hostcd = Kokkos::create_mirror_view(cd);
     Kokkos::deep_copy(hostcd, cd);

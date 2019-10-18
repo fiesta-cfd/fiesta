@@ -254,15 +254,49 @@ struct calculateRhoGrad {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j, const int k) const {
 
+        int indicator = 0;
+
         double dxr = (rho(i-2,j,k) - 8.0*rho(i-1,j,k) + 8.0*rho(i+1,j,k) - rho(i+2,j,k))/(12.0*cd(1));
         double dyr = (rho(i,j-2,k) - 8.0*rho(i,j-1,k) + 8.0*rho(i,j+1,k) - rho(i,j+2,k))/(12.0*cd(2));
         double dzr = (rho(i,j,k-2) - 8.0*rho(i,j,k-1) + 8.0*rho(i,j,k+1) - rho(i,j,k+2))/(12.0*cd(3));
 
-        gradRho(i,j,k,0) = dxr*dxr+dyr*dyr+dzr*dzr;
-        gradRho(i,j,k,1) = dyr-dzr;
-        gradRho(i,j,k,2) = dzr-dxr;
-        gradRho(i,j,k,3) = dxr-dyr;
+        double dxe = (var(i-2,j,k,3) - 8.0*var(i-1,j,k,3) + 8.0*var(i+1,j,k,3) - var(i+2,j,k,3))/(12.0*cd(1));
+        double dye = (var(i,j-2,k,3) - 8.0*var(i,j-1,k,3) + 8.0*var(i,j+1,k,3) - var(i,j+2,k,3))/(12.0*cd(2));
+        double dze = (var(i,j,k-2,3) - 8.0*var(i,j,k-1,3) + 8.0*var(i,j,k+1,3) - var(i,j,k+2,3))/(12.0*cd(3));
 
+        double dxu = (var(i-2,j,k,0) - 8.0*var(i-1,j,k,0) + 8.0*var(i+1,j,k,0) - var(i+2,j,k,0))/(12.0*cd(1));
+        double dyu = (var(i,j-2,k,1) - 8.0*var(i,j-1,k,1) + 8.0*var(i,j+1,k,1) - var(i,j+2,k,1))/(12.0*cd(2));
+        double dzu = (var(i,j,k-2,2) - 8.0*var(i,j,k-1,2) + 8.0*var(i,j,k+1,2) - var(i,j,k+2,2))/(12.0*cd(3));
+
+        double n1 = dxr;
+        double n2 = dyr;
+        double n3 = dzr;
+
+        double rgrad = sqrt(dxr*dxr+dyr*dyr+dzr*dzr);
+        double egrad = sqrt(dxe*dxe+dye*dye+dze*dze);
+        double divu = dxu+dyu+dzu;
+
+        double dnednr = (n1*dxe+n2*dye+n3*dxe)*(n1*dxr+n2*dyr+n3*dxr);
+
+        //compression switch
+        if (dnednr <= 0)
+            indicator = 1;
+        else
+            indicator = 0;
+        
+        // detect shock front (equation 5a)
+        if (divu <= 0)
+            gradRho(i,j,k,0) = (1-indicator)*divu*rgrad;
+        else
+            gradRho(i,j,k,0) = 0;
+
+        // detect contact surface
+        gradRho(i,j,k,1) = indicator*rgrad;
+
+        // gradient components
+        gradRho(i,j,k,2) = dxr;
+        gradRho(i,j,k,3) = dyr;
+        gradRho(i,j,k,4) = dzr;
     }
 };
 
@@ -280,189 +314,308 @@ struct maxGradFunctor {
             lmax = abs(gradRho(i,j,k,n));
     }
 };
-struct calculateCeqFlux {
+struct updateCeq {
 
     typedef typename Kokkos::View<double****> V4D;
     typedef typename Kokkos::View<double***> V3D;
     V4D dvar;
     V4D var;
     V4D gradRho;
-    double maxS,maxGradRho,maxTau1,maxTau2,maxTau3,kap,eps;
+    double maxS,kap,eps;
     Kokkos::View<double*> cd;
 
-    calculateCeqFlux (V4D dvar_, V4D var_, V4D gradRho_, double maxS_, double maxGradRho_, double maxTau1_,
-                      double maxTau2_, double maxTau3_, Kokkos::View<double*> cd_, double kap_, double eps_)
-        : dvar(dvar_), var(var_), gradRho(gradRho_), maxS(maxS_), maxGradRho(maxGradRho_), maxTau1(maxTau1_),
-          maxTau2(maxTau2_),  maxTau3(maxTau3_), cd(cd_), kap(kap_), eps(eps_) {}
+    updateCeq (V4D dvar_, V4D var_, V4D gradRho_, double maxS_, Kokkos::View<double*> cd_,
+                      double kap_, double eps_)
+        : dvar(dvar_), var(var_), gradRho(gradRho_), maxS(maxS_), cd(cd_), kap(kap_), eps(eps_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j, const int k) const {
+        double dx = cd(1);
+        double dy = cd(2);
+        double dz = cd(3);
+
+        // calculate cequation variable indices based on number of species (c variables come after species densities)
         int nv = (int)cd(0) + 4;
-        int ng = nv;
-        int nt1 = nv+1;
-        int nt2 = nv+2;
-        int nt3 = nv+3;
+        int ng  = nv;
+        int ngh = nv+1;
+        int n1  = nv+2;
+        int n2  = nv+3;
+        int n3  = nv+4;
 
-        double G  = 0.0;
-        double T1 = 0.0;
-        double T2 = 0.0;
-        double T3 = 0.0;
+        double dcx,dchx,dc1x,dc2x,dc3x;
+        double dcy,dchy,dc1y,dc2y,dc3y;
+        double dcz,dchz,dc1z,dc2z,dc3z;
 
-        double dcx,dc1x,dc2x,dc3x;
-        double dcy,dc1y,dc2y,dc3y;
-        double dcz,dc1z,dc2z,dc3z;
+        // average cell size
+        double dxmag = pow(dx*dy*dz,1.0/3.0);
+        //double dxmag = sqrt(dx*dx + dy*dy + dz*dz);
 
-        double dxmag = sqrt(cd(1)*cd(1) + cd(2)*cd(2) + cd(3)*cd(3));
+        // c variable x-direction gradients
+        dcx  = (var(i+1,j,k,ng ) - 2*var(i,j,k,ng ) + var(i-1,j,k,ng ))/dx;
+        dchx = (var(i+1,j,k,ngh) - 2*var(i,j,k,ngh) + var(i-1,j,k,ngh))/dx;
+        dc1x = (var(i+1,j,k,n1 ) - 2*var(i,j,k,n1 ) + var(i-1,j,k,n1 ))/dx;
+        dc2x = (var(i+1,j,k,n2 ) - 2*var(i,j,k,n2 ) + var(i-1,j,k,n2 ))/dx;
+        dc3x = (var(i+1,j,k,n3 ) - 2*var(i,j,k,n3 ) + var(i-1,j,k,n3 ))/dx;
 
-        dcx  = (var(i+1,j,k,ng ) - 2*var(i,j,k,ng ) + var(i-1,j,k,ng ))/cd(1);
-        dc1x = (var(i+1,j,k,nt1) - 2*var(i,j,k,nt1) + var(i-1,j,k,nt1))/cd(1);
-        dc2x = (var(i+1,j,k,nt2) - 2*var(i,j,k,nt2) + var(i-1,j,k,nt2))/cd(1);
-        dc3x = (var(i+1,j,k,nt3) - 2*var(i,j,k,nt3) + var(i-1,j,k,nt3))/cd(1);
+        // c variable y-direction gradients
+        dcy  = (var(i,j+1,k,ng ) - 2*var(i,j,k,ng ) + var(i,j-1,k,ng ))/dy;
+        dchy = (var(i,j+1,k,ngh) - 2*var(i,j,k,ngh) + var(i,j-1,k,ngh))/dy;
+        dc1y = (var(i,j+1,k,n1 ) - 2*var(i,j,k,n1 ) + var(i,j-1,k,n1 ))/dy;
+        dc2y = (var(i,j+1,k,n2 ) - 2*var(i,j,k,n2 ) + var(i,j-1,k,n2 ))/dy;
+        dc3y = (var(i,j+1,k,n3 ) - 2*var(i,j,k,n3 ) + var(i,j-1,k,n3 ))/dy;
 
-        dcy  = (var(i,j+1,k,ng ) - 2*var(i,j,k,ng ) + var(i,j-1,k,ng ))/cd(2);
-        dc1y = (var(i,j+1,k,nt1) - 2*var(i,j,k,nt1) + var(i,j-1,k,nt1))/cd(2);
-        dc2y = (var(i,j+1,k,nt2) - 2*var(i,j,k,nt2) + var(i,j-1,k,nt2))/cd(2);
-        dc3y = (var(i,j+1,k,nt3) - 2*var(i,j,k,nt3) + var(i,j-1,k,nt3))/cd(2);
+        // c variable z-direction gradients
+        dcz  = (var(i,j,k+1,ng ) - 2*var(i,j,k,ng ) + var(i,j,k-1,ng ))/dz;
+        dchz = (var(i,j,k+1,ngh) - 2*var(i,j,k,ngh) + var(i,j,k-1,ngh))/dz;
+        dc1z = (var(i,j,k+1,n1 ) - 2*var(i,j,k,n1 ) + var(i,j,k-1,n1 ))/dz;
+        dc2z = (var(i,j,k+1,n2 ) - 2*var(i,j,k,n2 ) + var(i,j,k-1,n2 ))/dz;
+        dc3z = (var(i,j,k+1,n3 ) - 2*var(i,j,k,n3 ) + var(i,j,k-1,n3 ))/dz;
 
-        dcz  = (var(i,j,k+1,ng ) - 2*var(i,j,k,ng ) + var(i,j,k-1,ng ))/cd(3);
-        dc1z = (var(i,j,k+1,nt1) - 2*var(i,j,k,nt1) + var(i,j,k-1,nt1))/cd(3);
-        dc2z = (var(i,j,k+1,nt2) - 2*var(i,j,k,nt2) + var(i,j,k-1,nt2))/cd(3);
-        dc3z = (var(i,j,k+1,nt3) - 2*var(i,j,k,nt3) + var(i,j,k-1,nt3))/cd(3);
+        // update ceq right hand side
+        dvar(i,j,k,ng ) = maxS/(eps*dxmag)*(gradRho(i,j,k,0) - var(i,j,k,ng )) + kap*maxS*dxmag*(dcx +dcy +dcz);
+        dvar(i,j,k,ngh) = maxS/(eps*dxmag)*(gradRho(i,j,k,1) - var(i,j,k,ngh)) + kap*maxS*dxmag*(dchx+dchy+dchz);
+        dvar(i,j,k,n1 ) = maxS/(eps*dxmag)*(gradRho(i,j,k,2) - var(i,j,k,n1 )) + kap*maxS*dxmag*(dc1x+dc1y+dc1z);
+        dvar(i,j,k,n2 ) = maxS/(eps*dxmag)*(gradRho(i,j,k,3) - var(i,j,k,n2 )) + kap*maxS*dxmag*(dc2x+dc2y+dc2z);
+        dvar(i,j,k,n3 ) = maxS/(eps*dxmag)*(gradRho(i,j,k,4) - var(i,j,k,n3 )) + kap*maxS*dxmag*(dc3x+dc3y+dc3z);
+    }
+};
 
-        if (maxGradRho > 0.0)
-            G = gradRho(i,j,k,0)/maxGradRho;
-        if (maxTau1 > 0.0)
-            T1 = gradRho(i,j,k,1)/maxTau1;
-        if (maxTau2 > 0.0)
-            T2 = gradRho(i,j,k,2)/maxTau2;
-        if (maxTau3 > 0.0)
-            T3 = gradRho(i,j,k,3)/maxTau3;
+struct calculateCeqFlux {
 
-        dvar(i,j,k,ng ) = maxS/(eps*dxmag)*(G  - var(i,j,k,ng )) + kap*maxS*dxmag*(dcx +dcy +dcz);
-        dvar(i,j,k,nt1) = maxS/(eps*dxmag)*(T1 - var(i,j,k,nt1)) + kap*maxS*dxmag*(dc1x+dc1y+dc1z);
-        dvar(i,j,k,nt2) = maxS/(eps*dxmag)*(T2 - var(i,j,k,nt2)) + kap*maxS*dxmag*(dc2x+dc2y+dc2z);
-        dvar(i,j,k,nt3) = maxS/(eps*dxmag)*(T3 - var(i,j,k,nt3)) + kap*maxS*dxmag*(dc3x+dc3y+dc3z);
+    typedef typename Kokkos::View<double******> V6D;
+    typedef typename Kokkos::View<double****> V4D;
+    typedef typename Kokkos::View<double***> V3D;
+    V4D var;
+    V3D rho;
+    V6D mFlux;  //(m,n,i,j,k,dir)
+    V4D cFlux; //(i,j,k,dir)
+    Kokkos::View<double*> cd;
+
+    calculateCeqFlux (V4D var_, V3D rho_, V6D mFlux_, V4D cFlux_, Kokkos::View<double*> cd_)
+        : var(var_), rho(rho_), mFlux(mFlux_), cFlux(cFlux_), cd(cd_) {}
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int j, const int k) const {
+
+        int nv = (int)cd(0) + 4;
+        int nc  = nv;
+        int nch = nv+1;
+        int nc1  = nv+2;
+
+        int ip=0;
+        int jp=0;
+        int kp=0;
+
+        double c_left;
+        double c_right;
+        double ch_left;
+        double ch_right;
+
+        double cn_left  [3];
+        double cn_right [3];
+        double cmag_left  = 0;
+        double cmag_right = 0;
+
+        double m_left;
+        double m_right;
+
+        double rho_left;
+        double rho_right;
+
+        //for each direction (i=0, j=1, k=2)
+        for (int dir=0; dir <3; ++dir){
+            if (dir==0) ip=1;
+            if (dir==1) jp=1;
+            if (dir==2) kp=1;
+
+
+            // left is current cell, right is cell in positive direction
+
+            // get right and left components of isotropic C
+            c_left = var(i,j,k,nc);
+            c_right = var(i+ip,j+jp,k+kp,nc);
+
+            // get right and left components of anisotropic C
+            ch_left = var(i,j,k,nch);
+            ch_right = var(i+ip,j+jp,k+kp,nch);
+
+            rho_left  = rho(i   ,j   ,k   );
+            rho_right = rho(i+ip,j+jp,k+kp);
+
+            //get right and left values of each directional C
+            for (int idx=0; idx<3; ++idx){
+                cn_left[idx]  = var(i   ,j   ,k   ,nc1+idx);
+                cn_right[idx] = var(i+ip,j+jp,k+kp,nc1+idx);
+            }
+
+            // calculate magnitude of directional C
+            for (int idx=0; idx<3; ++idx) cmag_left += cn_left[idx]*cn_left[idx];
+            cmag_left  = sqrt(cmag_left);
+            for (int idx=0; idx<3; ++idx) cmag_right += cn_right[idx]*cn_right[idx];
+            cmag_right = sqrt(cmag_right);
+
+            //tensor components
+            for (int m=0; m<3; ++m){
+                for (int n=0; n<3; ++n){
+
+                    //dirac delta
+                    double d = 0;
+                    if (m==n) d=1;
+                    
+                    // calculate right and left tensor components
+                    m_left = d - (cn_left[m]*cn_left[n]/cmag_left);
+                    m_right = d - (cn_right[m]*cn_right[n]/cmag_right);
+
+                    //include isotropic c
+                    m_left = m_left*ch_left;
+                    m_right = m_right*ch_right;
+
+                    //include density
+                    m_left  = m_left *rho_left;
+                    m_right = m_right*rho_right;
+
+                    //find flux
+                    mFlux(m,n,i,j,k,dir) = (m_right - m_left)/2.0;
+                }
+            }
+
+            // calcualte isotropic C flux
+            cFlux(i,j,k,dir) = (c_right*rho_right - c_left*rho_left)/2.0;
+
+            ip=0;
+            jp=0;
+            kp=0;
+            
+        }
+        
     }
 };
 
 struct applyCeq {
 
+    typedef typename Kokkos::View<double******> V6D;
     typedef typename Kokkos::View<double****> V4D;
     typedef typename Kokkos::View<double***> V3D;
     V4D dvar;
     V4D var;
     V3D rho;
-    double maxC,mu,beta;
+    V6D mFlux;  //(m,n,i,j,k,dir)
+    V4D cFlux; //(i,j,k,dir)
+    double alpha,beta,betae;
     Kokkos::View<double*> cd;
 
-    applyCeq (V4D dvar_, V4D var_, V3D rho_, Kokkos::View<double*> cd_,
-                      double maxC_, double mu_, double beta_)
-        : dvar(dvar_), var(var_), rho(rho_), cd(cd_), maxC(maxC_), mu(mu_), beta(beta_) {}
+    applyCeq (V4D dvar_, V4D var_, V3D rho_, V6D mFlux_, V4D cFlux_, Kokkos::View<double*> cd_,
+                      double alpha_, double beta_, double betae_)
+        : dvar(dvar_), var(var_), rho(rho_), mFlux(mFlux_), cFlux(cFlux_),
+          cd(cd_), alpha(alpha_), beta(beta_), betae(betae_) {} 
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j, const int k) const {
 
         int nv = (int)cd(0) + 4;
         double diffu;
-        double dxmag = sqrt(cd(1)*cd(1) + cd(2)*cd(2) + cd(3)*cd(3));
 
-        double mbeta = 0;
-        if (mu>1 && maxC>1)
-             mbeta = beta*(dxmag*dxmag/(mu*mu*maxC));
+        double du_right [3][3]; // face, direction
+        double du_left [3][3];
 
-        double rl,rb,rh,rr,rt,rf;
-        double cl,cb,ch,cr,ct,cf;
-        double c1l,c1b,c1h,c1r,c1t,c1f;
-        double c2l,c2b,c2h,c2r,c2t,c2f;
-        double c3l,c3b,c3h,c3r,c3t,c3f;
-        double duxl,duxb,duxh,duxr,duxt,duxf;
-        double duyl,duyb,duyh,duyr,duyt,duyf;
-        double duzl,duzb,duzh,duzr,duzt,duzf;
+        double dx [3];
 
-        rl = (rho(i  ,j  ,k  ) - rho(i-1,j  ,k  ))/2.0;
-        rb = (rho(i  ,j  ,k  ) - rho(i  ,j-1,k  ))/2.0;
-        rh = (rho(i  ,j  ,k  ) - rho(i  ,j  ,k-1))/2.0;
+        dx[0] = cd(1);
+        dx[1] = cd(2);
+        dx[2] = cd(3);
 
-        rr = (rho(i+1,j  ,k  ) - rho(i  ,j  ,k  ))/2.0;
-        rt = (rho(i  ,j+1,k  ) - rho(i  ,j  ,k  ))/2.0;
-        rf = (rho(i  ,j  ,k+1) - rho(i  ,j  ,k  ))/2.0;
+        double an; //anisotropic part
+        double is; //isotropic part
 
-        cl = (var(i  ,j  ,k  ,nv  ) - var(i-1,j  ,k  ,nv  ))/2.0;
-        cb = (var(i  ,j  ,k  ,nv  ) - var(i  ,j-1,k  ,nv  ))/2.0;
-        ch = (var(i  ,j  ,k  ,nv  ) - var(i  ,j  ,k-1,nv  ))/2.0;
+        int ip,jp,kp;
 
-        cr = (var(i+1,j  ,k  ,nv  ) - var(i  ,j  ,k  ,nv  ))/2.0;
-        ct = (var(i  ,j+1,k  ,nv  ) - var(i  ,j  ,k  ,nv  ))/2.0;
-        cf = (var(i  ,j  ,k+1,nv  ) - var(i  ,j  ,k  ,nv  ))/2.0;
+        // for each velocity component and energy
+        for (int n=0; n<4; ++n){
+            // left face
+            du_left[0][0] = (var(i  ,j  ,k  ,n)/rho(i  ,j  ,k  ) - var(i-1,j  ,k  ,n)/rho(i-1,j  ,k  ))/cd(1);
+            du_left[0][1] = (var(i-1,j+1,k  ,n)/rho(i-1,j+1,k  ) + var(i  ,j+1,k  ,n)/rho(i  ,j+1,k  )
+                            +var(i-1,j-1,k  ,n)/rho(i-1,j-1,k  ) + var(i  ,j-1,k  ,n)/rho(i  ,j-1,k  ))/(4*cd(2));
+            du_left[0][2] = (var(i-1,j  ,k+1,n)/rho(i-1,j  ,k+1) + var(i  ,j  ,k+1,n)/rho(i  ,j  ,k+1)
+                            +var(i-1,j  ,k-1,n)/rho(i-1,j  ,k-1) + var(i  ,j  ,k-1,n)/rho(i  ,j  ,k-1))/(4*cd(3));
 
-        c1l = (var(i  ,j  ,k  ,nv+1) - var(i-1,j  ,k  ,nv+1))/2.0;
-        c1b = (var(i  ,j  ,k  ,nv+1) - var(i  ,j-1,k  ,nv+1))/2.0;
-        c1h = (var(i  ,j  ,k  ,nv+1) - var(i  ,j  ,k-1,nv+1))/2.0;
+            // bottom face
+            du_left[1][0] = (var(i-1,j  ,k  ,n)/rho(i-1,j  ,k  ) + var(i+1,j  ,k  ,n)/rho(i+1,j  ,k  )
+                            +var(i-1,j-1,k  ,n)/rho(i-1,j-1,k  ) + var(i+1,j-1,k  ,n)/rho(i+1,j-1,k  ))/(4*cd(1));
+            du_left[1][1] = (var(i  ,j  ,k  ,n)/rho(i  ,j  ,k  ) - var(i  ,j-1,k  ,n)/rho(i  ,j-1,k  ))/cd(2);
+            du_left[1][2] = (var(i  ,j  ,k-1,n)/rho(i  ,j  ,k-1) + var(i  ,j  ,k+1,n)/rho(i  ,j  ,k+1)
+                            +var(i  ,j-1,k-1,n)/rho(i  ,j-1,k-1) + var(i  ,j-1,k+1,n)/rho(i  ,j-1,k+1))/(4*cd(3));
 
-        c1r = (var(i+1,j  ,k  ,nv+1) - var(i  ,j  ,k  ,nv+1))/2.0;
-        c1t = (var(i  ,j+1,k  ,nv+1) - var(i  ,j  ,k  ,nv+1))/2.0;
-        c1f = (var(i  ,j  ,k+1,nv+1) - var(i  ,j  ,k  ,nv+1))/2.0;
+            // back (hind) face 
+            du_left[2][0] = (var(i-1,j  ,k  ,n)/rho(i-1,j  ,k  ) + var(i+1,j  ,k  ,n)/rho(i+1,j  ,k  )
+                            +var(i-1,j  ,k-1,n)/rho(i-1,j  ,k-1) + var(i+1,j  ,k-1,n)/rho(i+1,j  ,k-1))/(4*cd(1));
+            du_left[2][1] = (var(i  ,j-1,k  ,n)/rho(i  ,j-1,k  ) + var(i  ,j+1,k  ,n)/rho(i  ,j+1,k  )
+                            +var(i  ,j-1,k-1,n)/rho(i  ,j-1,k-1) + var(i  ,j+1,k-1,n)/rho(i  ,j+1,k-1))/(4*cd(2));
+            du_left[2][2] = (var(i  ,j  ,k  ,n)/rho(i  ,j  ,k  ) - var(i  ,j  ,k-1,n)/rho(i  ,j  ,k-1))/cd(3);
 
-        c2l = (var(i  ,j  ,k  ,nv+2) - var(i-1,j  ,k  ,nv+2))/2.0;
-        c2b = (var(i  ,j  ,k  ,nv+2) - var(i  ,j-1,k  ,nv+2))/2.0;
-        c2h = (var(i  ,j  ,k  ,nv+2) - var(i  ,j  ,k-1,nv+2))/2.0;
+            // right face
+            du_right[0][0] = (var(i+1,j  ,k  ,n)/rho(i+1,j  ,k  ) - var(i  ,j  ,k  ,n)/rho(i  ,j  ,k  ))/cd(1);
+            du_right[0][1] = (var(i  ,j+1,k  ,n)/rho(i  ,j+1,k  ) + var(i+1,j+1,k  ,n)/rho(i+1,j+1,k  )
+                             +var(i  ,j-1,k  ,n)/rho(i  ,j-1,k  ) + var(i+1,j-1,k  ,n)/rho(i+1,j-1,k  ))/(4*cd(2));
+            du_right[0][2] = (var(i  ,j  ,k+1,n)/rho(i  ,j  ,k+1) + var(i+1,j  ,k+1,n)/rho(i+1,j  ,k+1)
+                             +var(i  ,j  ,k-1,n)/rho(i  ,j  ,k-1) + var(i+1,j  ,k-1,n)/rho(i+1,j  ,k-1))/(4*cd(3));
 
-        c2r = (var(i+1,j  ,k  ,nv+2) - var(i  ,j  ,k  ,nv+2))/2.0;
-        c2t = (var(i  ,j+1,k  ,nv+2) - var(i  ,j  ,k  ,nv+2))/2.0;
-        c2f = (var(i  ,j  ,k+1,nv+2) - var(i  ,j  ,k  ,nv+2))/2.0;
+            //top face
+            du_right[1][0]= (var(i-1,j+1,k  ,n)/rho(i-1,j+1,k  ) + var(i+1,j+1,k  ,n)/rho(i+1,j+1,k  )
+                            +var(i-1,j  ,k  ,n)/rho(i-1,j  ,k  ) + var(i+1,j  ,k  ,n)/rho(i+1,j  ,k  ))/(4*cd(1));
+            du_right[1][1]= (var(i  ,j+1,k  ,n)/rho(i  ,j+1,k  ) - var(i  ,j  ,k  ,n)/rho(i  ,j  ,k  ))/cd(2);
+            du_right[1][2]= (var(i  ,j+1,k-1,n)/rho(i  ,j+1,k-1) + var(i  ,j+1,k+1,n)/rho(i  ,j+1,k+1)
+                            +var(i  ,j  ,k-1,n)/rho(i  ,j  ,k-1) + var(i  ,j  ,k+1,n)/rho(i  ,j  ,k+1))/(4*cd(3));
 
-        c3l = (var(i  ,j  ,k  ,nv+3) - var(i-1,j  ,k  ,nv+3))/2.0;
-        c3b = (var(i  ,j  ,k  ,nv+3) - var(i  ,j-1,k  ,nv+3))/2.0;
-        c3h = (var(i  ,j  ,k  ,nv+3) - var(i  ,j  ,k-1,nv+3))/2.0;
+            //front face
+            du_right[2][0] = (var(i-1,j  ,k+1,n)/rho(i-1,j  ,k+1) + var(i+1,j  ,k  ,n)/rho(i+1,j  ,k+1)
+                             +var(i-1,j  ,k  ,n)/rho(i-1,j  ,k  ) + var(i+1,j  ,k-1,n)/rho(i+1,j  ,k  ))/(4*cd(1));
+            du_right[2][1] = (var(i  ,j-1,k+1,n)/rho(i  ,j-1,k+1) + var(i  ,j+1,k  ,n)/rho(i  ,j+1,k+1)
+                             +var(i  ,j-1,k  ,n)/rho(i  ,j-1,k  ) + var(i  ,j+1,k-1,n)/rho(i  ,j+1,k  ))/(4*cd(2));
+            du_right[2][2] = (var(i  ,j  ,k+1,n)/rho(i  ,j  ,k+1) - var(i  ,j  ,k-1,n)/rho(i  ,j  ,k  ))/cd(3);
 
-        c3r = (var(i+1,j  ,k  ,nv+3) - var(i  ,j  ,k  ,nv+3))/2.0;
-        c3t = (var(i  ,j+1,k  ,nv+3) - var(i  ,j  ,k  ,nv+3))/2.0;
-        c3f = (var(i  ,j  ,k+1,nv+3) - var(i  ,j  ,k  ,nv+3))/2.0;
+            an = 0;
+            is = 0;
+            ip = 0;
+            jp = 0;
+            kp = 0;
 
+            if (n < 3){
+                diffu = 0;
+                for (int d=0; d<3; ++d){ // each direction for divergence
+                    if (d==0) ip = 1;
+                    if (d==1) jp = 1;
+                    if (d==2) kp = 1;
 
-        for (int n=0; n<3; ++n){
-            duxl = (var(i  ,j  ,k  ,n)/rho(i  ,j  ,k  ) - var(i-1,j  ,k  ,n)/rho(i-1,j  ,k  ))/cd(1);
-            duyl = (var(i-1,j+1,k  ,n)/rho(i-1,j+1,k  ) + var(i  ,j+1,k  ,n)/rho(i  ,j+1,k  )
-                   +var(i-1,j-1,k  ,n)/rho(i-1,j-1,k  ) + var(i  ,j-1,k  ,n)/rho(i  ,j-1,k  ))/(4*cd(2));
-            duzl = (var(i-1,j  ,k+1,n)/rho(i-1,j  ,k+1) + var(i  ,j  ,k+1,n)/rho(i  ,j  ,k+1)
-                   +var(i-1,j  ,k-1,n)/rho(i-1,j  ,k-1) + var(i  ,j  ,k-1,n)/rho(i  ,j  ,k-1))/(4*cd(3));
+                    for (int f=0; f<3; ++f){ //each direction for gradient
+                        an = an + ( mFlux(d,f,i,j,k,d)*du_right[d][f] - mFlux(d,f,i-ip,j-jp,k-kp,d)*du_left[d][f] )/dx[d];
+                        is = is + ( cFlux(i,j,k,d)*du_right[d][f] - cFlux(i-ip,j-jp,k-kp,d)*du_left[d][f] )/dx[d];
+                    }
 
-            duxb = (var(i-1,j  ,k  ,n)/rho(i-1,j  ,k  ) + var(i+1,j  ,k  ,n)/rho(i+1,j  ,k  )
-                   +var(i-1,j-1,k  ,n)/rho(i-1,j-1,k  ) + var(i+1,j-1,k  ,n)/rho(i+1,j-1,k  ))/(4*cd(1));
-            duyb = (var(i  ,j  ,k  ,n)/rho(i  ,j  ,k  ) - var(i  ,j-1,k  ,n)/rho(i  ,j-1,k  ))/cd(2);
-            duzb = (var(i  ,j  ,k-1,n)/rho(i  ,j  ,k-1) + var(i  ,j  ,k+1,n)/rho(i  ,j  ,k+1)
-                   +var(i  ,j-1,k-1,n)/rho(i  ,j-1,k-1) + var(i  ,j-1,k+1,n)/rho(i  ,j-1,k+1))/(4*cd(3));
+                    ip = 0;
+                    jp = 0;
+                    kp = 0;
+                    }
 
-            duxh = (var(i-1,j  ,k  ,n)/rho(i-1,j  ,k  ) + var(i+1,j  ,k  ,n)/rho(i+1,j  ,k  )
-                   +var(i-1,j  ,k-1,n)/rho(i-1,j  ,k-1) + var(i+1,j  ,k-1,n)/rho(i+1,j  ,k-1))/(4*cd(1));
-            duyh = (var(i  ,j-1,k  ,n)/rho(i  ,j-1,k  ) + var(i  ,j+1,k  ,n)/rho(i  ,j+1,k  )
-                   +var(i  ,j-1,k-1,n)/rho(i  ,j-1,k-1) + var(i  ,j+1,k-1,n)/rho(i  ,j+1,k-1))/(4*cd(2));
-            duzh = (var(i  ,j  ,k  ,n)/rho(i  ,j  ,k  ) - var(i  ,j  ,k-1,n)/rho(i  ,j  ,k-1))/cd(3);
+                diffu = alpha*an + beta*is;
 
-            duxr = (var(i+1,j  ,k  ,n)/rho(i+1,j  ,k  ) - var(i  ,j  ,k  ,n)/rho(i  ,j  ,k  ))/cd(1);
-            duyr = (var(i  ,j+1,k  ,n)/rho(i  ,j+1,k  ) + var(i+1,j+1,k  ,n)/rho(i+1,j+1,k  )
-                   +var(i  ,j-1,k  ,n)/rho(i  ,j-1,k  ) + var(i+1,j-1,k  ,n)/rho(i+1,j-1,k  ))/(4*cd(2));
-            duzr = (var(i  ,j  ,k+1,n)/rho(i  ,j  ,k+1) + var(i+1,j  ,k+1,n)/rho(i+1,j  ,k+1)
-                   +var(i  ,j  ,k-1,n)/rho(i  ,j  ,k-1) + var(i+1,j  ,k-1,n)/rho(i+1,j  ,k-1))/(4*cd(3));
+                dvar(i,j,k,n) = dvar(i,j,k,n) + diffu;
+            }else{
+                diffu = 0;
+                for (int d=0; d<3; ++d){ // each direction for divergence
+                    if (d==0) ip = 1;
+                    if (d==1) jp = 1;
+                    if (d==2) kp = 1;
 
-            duxt = (var(i-1,j+1,k  ,n)/rho(i-1,j+1,k  ) + var(i+1,j+1,k  ,n)/rho(i+1,j+1,k  )
-                   +var(i-1,j  ,k  ,n)/rho(i-1,j  ,k  ) + var(i+1,j  ,k  ,n)/rho(i+1,j  ,k  ))/(4*cd(1));
-            duyt = (var(i  ,j+1,k  ,n)/rho(i  ,j+1,k  ) - var(i  ,j  ,k  ,n)/rho(i  ,j  ,k  ))/cd(2);
-            duzt = (var(i  ,j+1,k-1,n)/rho(i  ,j+1,k-1) + var(i  ,j+1,k+1,n)/rho(i  ,j+1,k+1)
-                   +var(i  ,j  ,k-1,n)/rho(i  ,j  ,k-1) + var(i  ,j  ,k+1,n)/rho(i  ,j  ,k+1))/(4*cd(3));
+                    for (int f=0; f<3; ++f){ // each direction for gradient 
+                        diffu = diffu + ( cFlux(i,j,k,d)*du_right[d][f] - cFlux(i-ip,j-jp,k-kp,d)*du_left[d][f] )/dx[d];
+                    }
 
-            duxf = (var(i-1,j  ,k+1,n)/rho(i-1,j  ,k+1) + var(i+1,j  ,k  ,n)/rho(i+1,j  ,k+1)
-                   +var(i-1,j  ,k  ,n)/rho(i-1,j  ,k  ) + var(i+1,j  ,k-1,n)/rho(i+1,j  ,k  ))/(4*cd(1));
-            duyf = (var(i  ,j-1,k+1,n)/rho(i  ,j-1,k+1) + var(i  ,j+1,k  ,n)/rho(i  ,j+1,k+1)
-                   +var(i  ,j-1,k  ,n)/rho(i  ,j-1,k  ) + var(i  ,j+1,k-1,n)/rho(i  ,j+1,k  ))/(4*cd(2));
-            duzf = (var(i  ,j  ,k+1,n)/rho(i  ,j  ,k+1) - var(i  ,j  ,k-1,n)/rho(i  ,j  ,k  ))/cd(3);
-
-            diffu = mbeta*(-(rl*cl*c1l*(c1l*duxl+c2l*duyl+c3l*duzl) - rr*cr*c1r*(c1r*duxr+c2r*duyr+c3r*duzr))/cd(1)
-                           -(rb*cb*c1b*(c1b*duxb+c2b*duyb+c3b*duzb) - rt*ct*c1t*(c1t*duxt+c2t*duyt+c3t*duzt))/cd(2)
-                           -(rh*ch*c1h*(c1h*duxh+c2h*duyh+c3h*duzh) - rf*cf*c1f*(c1f*duxf+c2f*duyf+c3f*duzf))/cd(3));
-
-            dvar(i,j,k,n) = dvar(i,j,k,n) + diffu;
-            //dvar(i,j,k,n) = dvar(i,j,k,n) + 0;
+                    ip = 0;
+                    jp = 0;
+                    kp = 0;
+                }
+                dvar(i,j,k,n) = dvar(i,j,k,n) + betae*diffu;
+            }
         }
     }
 };
@@ -474,7 +627,7 @@ weno_func::weno_func(struct inputConfig &cf_, const Kokkos::View<double****> & u
 void weno_func::operator()() {
 
     // Typename acronyms for 3D and 4D variables
-    typedef typename Kokkos::View<double***[3][3]> V6D;
+    typedef typename Kokkos::View<double******> V6D;
     typedef typename Kokkos::View<double****> V4D;
     typedef typename Kokkos::View<double***> V3D;
 
@@ -491,8 +644,9 @@ void weno_func::operator()() {
     V3D wenox("wenox",cf.ngi,cf.ngj,cf.ngk);
     V3D wenoy("wenoy",cf.ngi,cf.ngj,cf.ngk);
     V3D wenoz("wenoz",cf.ngi,cf.ngj,cf.ngk);
-    V4D gradRho("gradRho",cf.ngi,cf.ngj,cf.ngk,4);
-    V3D cfluxes("cfluxes",cf.ngi,cf.ngj,cf.ngk);
+    V4D gradRho("gradRho",cf.ngi,cf.ngj,cf.ngk,5);
+    V6D mFlux("mFlux",3,3,cf.ngi,cf.ngj,cf.ngk,3);
+    V4D cFlux("cFlux",cf.ngi,cf.ngj,cf.ngk,3);
 
     // create range policies
     policy_f ghost_pol = policy_f({0,0,0},{cf.ngi, cf.ngj, cf.ngk});
@@ -500,18 +654,14 @@ void weno_func::operator()() {
     policy_f weno_pol  = policy_f({cf.ng-1,cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
 
     double myMaxS,maxS;
-    double myMaxRhoGrad,maxRhoGrad;
-    double myMaxTau1,maxTau1;
-    double myMaxTau2,maxTau2;
-    double myMaxTau3,maxTau3;
 
-    double myMaxC, maxC;
-    double myMaxC1, maxC1;
-    double myMaxC2, maxC2;
-    double myMaxC3, maxC3;
-    double mu;
+    //double myMaxC, maxC;
+    //double myMaxC1, maxC1;
+    //double myMaxC2, maxC2;
+    //double myMaxC3, maxC3;
+    //double mu;
 
-    // WENO
+    /**** WENO ****/
     Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure(var,p,rho,cd) );
 
     for (int v=0; v<cf.nv; ++v){
@@ -523,46 +673,40 @@ void weno_func::operator()() {
     Kokkos::parallel_for( cell_pol, applyPressure(dvar,p,cd) );
 
     if (cf.ceq != 0){
-        // CEQ
+        /**** CEQ ****/
+        //find mac wavespeed
         Kokkos::parallel_reduce(cell_pol,maxWaveSpeed(var,p,rho,cd), Kokkos::Max<double>(myMaxS));
         MPI_Allreduce(&myMaxS,&maxS,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
+        //calculate density and energy gradients and find ceq source terms
         Kokkos::parallel_for(cell_pol,calculateRhoGrad(var,rho,gradRho,cd));
 
-        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,0), Kokkos::Max<double>(myMaxRhoGrad));
-        MPI_Allreduce(&myMaxRhoGrad,&maxRhoGrad,1,MPI_DOUBLE,MPI_MAX,cf.comm);
-
-        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,1), Kokkos::Max<double>(myMaxTau1));
-        MPI_Allreduce(&myMaxTau1,&maxTau1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
-
-        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,2), Kokkos::Max<double>(myMaxTau2));
-        MPI_Allreduce(&myMaxTau2,&maxTau2,1,MPI_DOUBLE,MPI_MAX,cf.comm);
-
-        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(gradRho,3), Kokkos::Max<double>(myMaxTau3));
-        MPI_Allreduce(&myMaxTau3,&maxTau3,1,MPI_DOUBLE,MPI_MAX,cf.comm);
-
+        // update c equations
         Kokkos::parallel_for(cell_pol,
-            calculateCeqFlux(dvar,var,gradRho,maxS,maxRhoGrad,maxTau1,maxTau2,maxTau3,cd,cf.kap,cf.eps));
+            updateCeq(dvar,var,gradRho,maxS,cd,cf.kap,cf.eps));
 
-        // Apply CEQ
-        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+0), Kokkos::Max<double>(myMaxC));
-        MPI_Allreduce(&myMaxC,&maxC,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        /**** Apply CEQ ****/
+        //  Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+0), Kokkos::Max<double>(myMaxC));
+        //  MPI_Allreduce(&myMaxC,&maxC,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+1), Kokkos::Max<double>(myMaxC1));
-        MPI_Allreduce(&myMaxC1,&maxC1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        //  Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+1), Kokkos::Max<double>(myMaxC1));
+        //  MPI_Allreduce(&myMaxC1,&maxC1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+2), Kokkos::Max<double>(myMaxC2));
-        MPI_Allreduce(&myMaxC2,&maxC2,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        //  Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+2), Kokkos::Max<double>(myMaxC2));
+        //  MPI_Allreduce(&myMaxC2,&maxC2,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+3), Kokkos::Max<double>(myMaxC3));
-        MPI_Allreduce(&myMaxC3,&maxC3,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        //  Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+3), Kokkos::Max<double>(myMaxC3));
+        //  MPI_Allreduce(&myMaxC3,&maxC3,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-        mu = maxC1;
-        if (maxC2 > mu)
-            mu = maxC2;
-        if (maxC3 > mu)
-            mu = maxC3;
+        //  mu = maxC1;
+        //  if (maxC2 > mu)
+        //      mu = maxC2;
+        //  if (maxC3 > mu)
+        //      mu = maxC3;
+        
+        Kokkos::parallel_for(weno_pol,
+            calculateCeqFlux(var,rho,mFlux,cFlux,cd));
 
-        Kokkos::parallel_for( cell_pol, applyCeq(dvar,var,rho,cd,maxC,mu,cf.beta) );
+        Kokkos::parallel_for( cell_pol, applyCeq(dvar,var,rho,mFlux,cFlux,cd,cf.alpha,cf.beta,cf.betae) );
     }
 }
