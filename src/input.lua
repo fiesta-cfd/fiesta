@@ -1,44 +1,59 @@
--- input file
-out_freq = 5
-restart_freq = 1000
-write_freq = 50
-restart = 0
-time = 0.0
-tstart = 0
-restartName = "sol-001000.cgns"
+-- Input File
 
-R = 8.314462 --J/(K*mol)
-ns = 2
-gamma = {1.40, 1.60}
-M = {0.02897,0.14606} --kg/mol
+--Restart and Output Options
+out_freq = 5                          --Screen Output Interval
+restart_freq = 1000                   --Restart Write Interval
+write_freq = 10                       --Solution Write Interval
+restart = 0                           --Whether or not to use restart file
+time = 0.0                            --Start time of simulation
+tstart = 0                            --Start time index of simulation
+restartName = "restart-000000.cgns"   --Restart File Name
 
-nt = 3000
+--Gas Properties
+R = 8.314462                          --Universal Gas Constant [J/(K*mol)]
+ns = 2                                --Number of Gas Species
+gamma = {1.40, 1.60}                  --Array of Species Ration of Specifi Heats
+M = {0.02897,0.14606}                 --Array of Species Molar Masses [kg/mol]
+
+--Time
+nt = 100                              --Time Step at which to end simulation
+dt = 0.001                            --Time Step Size [s]
+
+--Number of Ghost Points (Don't Change)
 ng = 3
-dt = 0.001
 
+--User Parameters
 Lx = 3.0
 Ly = 1.5
 Lz = 0.7
 
-ni = 300
-nj = 150
-nk = 70
+--Number of cells
+ni = 300            --Simulation size in x direction
+nj = 150            --Simulation Size in y direction
+nk = 70             --Simulation Size in z direction
 
+--Cell Sizes
 dx = Lx/ni
 dy = Ly/nj
 dz = Lz/nk
 
+--MPI Processors
 procsx = 2
 procsy = 1
 procsz = 1
+
+--Boundary Conditions
 xPer = 0
 yPer = 0
 zPer = 0
 
-ceq = 0
-kappa = 10.0
-epsilon = 1.0
-beta = 15.0
+-- C-Equation Coefficients
+ceq = 1             --Enable/Disable Cequation
+kappa = 10.0        --Smoothness Factor
+epsilon = 1.0       --Support Factor
+alpha = 1.0         --Anisotropic Coefficient
+beta = 15.0         --Isotropic Coefficient
+betae = 1.0         --Energy Equation Isotropic Coefficient
 
 function f(i,j,k,v)
     local angle = 20

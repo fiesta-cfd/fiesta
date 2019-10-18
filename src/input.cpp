@@ -94,7 +94,9 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.ceq         = getglobdbl (L, "ceq");
     myConfig.kap         = getglobdbl (L, "kappa");
     myConfig.eps         = getglobdbl (L, "epsilon");
+    myConfig.alpha       = getglobdbl (L, "alpha");
     myConfig.beta        = getglobdbl (L, "beta");
+    myConfig.betae       = getglobdbl (L, "betae");
 
     myConfig.gamma = (double*)malloc(myConfig.ns*sizeof(double));
     myConfig.M = (double*)malloc(myConfig.ns*sizeof(double));
