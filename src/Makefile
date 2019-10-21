@@ -14,7 +14,7 @@ CXX = mpicxx
 CXXFLAGS = -O3 -llua53 -lm -ldl -lcgns --expt-extended-lambda
 LINK = ${CXX}
 LDFLAGS = 
-EXE = unmcode.cuda
+EXE = fiesta.cuda
 KOKKOS_DEVICES = "Cuda,OpenMP"
 KOKKOS_ARCH = "SNB,Kepler35"
 KOKKOS_CUDA_OPTIONS += "enable_lambda"
@@ -24,7 +24,7 @@ CXX = mpicxx
 CXXFLAGS = -O3 -llua53 -lm -ldl -lcgns --expt-extended-lambda
 LINK = ${CXX}
 LDFLAGS =  
-EXE = unmcode.host
+EXE = fiesta.host
 KOKKOS_DEVICES = "OpenMP"
 KOKKOS_ARCH = "SNB"
 endif
