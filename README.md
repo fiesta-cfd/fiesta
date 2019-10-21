@@ -1,22 +1,28 @@
 # FIESTA
-Fast Interfacial instabilities, Explosions, Shocks and Turbulent transition in the Atmosphere
+A Fast code for Interfacial instabilities, Explosions, Shocks and Turbulent transition in the Atmosphere
 
 
-try 
-```
-export OMPI_MCA_fs_ufs_lock_algorithm=1 
-```
-for nfs filesystems and openmpi if file writing hangs. see https://github.com/open-mpi/ompi/issues/4446
+## Install
 
-to compile with cuda on xena need to get cgns-3.4 and lua-5.3 from spack. install cgns with mpich and gcc-7.4.0
+### Dependency Installation on Xena
+
+Compiling with Cuda support on Xena requires cgns-3.4, lua-5.3 and kokkos which are not already present on the system.
+Spack can be used to install cgns and Lua on Xena with mpich and gcc-7.4.0.  Newer gcc versions cannot be used because they are not supported by Cuda.
+
 ```
 module load gcc-7.4.0-gcc-8.1.0-j26pfmd
 spack compiler find
 spack install cgns%gcc@7.4.0 ^mpich@3.3.1
 spack install lua@5.3%gcc@7.4.0
 ```
+The system provided mpich or openmpi installationis can be used by providing their paths in .spack/packages.yaml as appropriate.  The above commands will build mpich-3.3.1 from source.
 
-get kokkos from github.com/kokkos/kokkos.git
+Kokkos can be obtained from github.com/kokkos/kokkos.git
+```
+git clone https://github.com/kokkos/kokkos.git
+cd $BUILD_DIRECTORY
+$KOKKOS_DIR/generate_makefile.sh --with-cuda --arch=Kepler35 --kokkos-path=$KOKKOS_DIR --prefix=
+```
 
 use cuda 10.0 with gcc 7.4.0 built in modules on xena
 ```
@@ -26,6 +32,11 @@ export MPICH_CXX=/users/beromer/Kokkos/kokkos/bin/nvcc_wrapper
 and kokkos "generate_makefile.sh" should be run with "--with-cuda" and "--arch=Kepler35" and "--kokkos-path=" and "--prefix=". kokkos path needs to be in Makefile
 
 
+try 
+```
+export OMPI_MCA_fs_ufs_lock_algorithm=1 
+```
+for nfs filesystems and openmpi if file writing hangs. see https://github.com/open-mpi/ompi/issues/4446
 
 example multi-gpu nvprof
 ```
