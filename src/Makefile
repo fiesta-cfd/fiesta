@@ -2,7 +2,7 @@ KOKKOS_PATH = /users/beromer/Kokkos/kokkos
 KOKKOS_SRC_PATH = ${KOKKOS_PATH}
 #KOKKOS_DEVICES="OpenMP"
 KOKKOS_DEVICES="Cuda"
-SRC = $(wildcard /users/beromer/src/loboshok/src/*.cpp)
+SRC = $(wildcard /users/beromer/src/fiesta/src/*.cpp)
 vpath %.cpp $(sort $(dir $(SRC)))
 
 default: build
