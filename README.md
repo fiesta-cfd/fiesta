@@ -1,6 +1,5 @@
 # FIESTA
-A Fast code for Interfacial instabilities, Explosions, Shocks and Turbulent transition in the Atmosphere
-
+**F**ast **I**nterfaces, **E**xplosions, **S**hocks and **T**ransport in the **A**tmosphere
 
 ## Install
 
@@ -15,13 +14,13 @@ spack compiler find
 spack install cgns%gcc@7.4.0 ^mpich@3.3.1
 spack install lua@5.3%gcc@7.4.0
 ```
-The system provided mpich or openmpi installationis can be used by providing their paths in .spack/packages.yaml as appropriate.  The above commands will build mpich-3.3.1 from source.
+The system provided mpich or openmpi installationis can be used by setting their paths in .spack/packages.yaml as appropriate.  The above commands will build mpich-3.3.1 from source.
 
 Kokkos can be obtained from github.com/kokkos/kokkos.git
 ```
 git clone https://github.com/kokkos/kokkos.git
 cd $BUILD_DIRECTORY
-$KOKKOS_DIR/generate_makefile.sh --with-cuda --arch=Kepler35 --kokkos-path=$KOKKOS_DIR --prefix=
+$KOKKOS_SOURCE_DIR/generate_makefile.sh --with-cuda --with-openmp --with-serial --arch=Kepler35 --kokkos_cuda_opt=enable_lambda --kokkos-path=$KOKKOS_SOURCE_DIR --prefix=$KOKKOS_INSTALL_DIR
 ```
 
 use cuda 10.0 with gcc 7.4.0 built in modules on xena
