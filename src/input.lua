@@ -1,9 +1,9 @@
 -- Input File
 
 --Restart and Output Options
-out_freq = 5                          --Screen Output Interval
+out_freq = 10                         --Screen Output Interval
 restart_freq = 1000                   --Restart Write Interval
-write_freq = 10                       --Solution Write Interval
+write_freq = 100                      --Solution Write Interval
 restart = 0                           --Whether or not to use restart file
 time = 0.0                            --Start time of simulation
 tstart = 0                            --Start time index of simulation
@@ -12,7 +12,7 @@ restartName = "restart-000000.cgns"   --Restart File Name
 --Gas Properties
 R = 8.314462                          --Universal Gas Constant [J/(K*mol)]
 ns = 2                                --Number of Gas Species
-gamma = {1.40, 1.60}                  --Array of Species Ratio of Specific Heats
+gamma = {1.40, 1.60} --air,sf6--      --Array of Species Ratio of Specific Heats
 M = {0.02897,0.14606}                 --Array of Species Molar Masses [kg/mol]
 
 --Time
@@ -25,9 +25,9 @@ Ly = 1.5
 Lz = 0.7
 
 --Number of cells
-ni = 300            --Simulation size in x direction
-nj = 150            --Simulation Size in y direction
-nk = 70             --Simulation Size in z direction
+ni = 150            --Simulation size in x direction
+nj = 75             --Simulation Size in y direction
+nk = 35             --Simulation Size in z direction
 
 --Cell Sizes
 dx = Lx/ni
