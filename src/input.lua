@@ -81,7 +81,7 @@ function f(i,j,k,v)
     local xabs = (dx/2)+dx*i
 
     --setup shock wave
-    if xabs < 0.2 then
+    if xabs < 0.1 then
         if v==0 then return 1      end
         if v==1 then return 0      end
         if v==2 then return 0      end

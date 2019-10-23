@@ -227,26 +227,28 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
             cgp_error_exit();
     }
 
-    //write cequation variables
-    for (int vn=cf.nv; vn<cf.nv+5; ++vn){
-        snprintf(dName,32,"C%d",vn-cf.nv);
-        for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
-            for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-                for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                    int ii = i - cf.ng;
-                    int jj = j - cf.ng;
-                    int kk = k - cf.ng;
-                    idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,vn);
+    if (cf.ceq != 0){
+        //write cequation variables
+        for (int vn=cf.nv; vn<cf.nv+5; ++vn){
+            snprintf(dName,32,"C%d",vn-cf.nv);
+            for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+                for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+                    for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+                        int ii = i - cf.ng;
+                        int jj = j - cf.ng;
+                        int kk = k - cf.ng;
+                        idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
+                        v[idx] = hostV(i,j,k,vn);
+                    }
                 }
             }
-        }
-        
-        if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealDouble,dName,&index_flow))
-            cgp_error_exit();
+            
+            if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealDouble,dName,&index_flow))
+                cgp_error_exit();
 
-        if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
-            cgp_error_exit();
+            if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+                cgp_error_exit();
+        }
     }
 
     cg_biter_write(cf.cF,cf.cB,"TimeIterValues",1);
@@ -395,26 +397,28 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
             cgp_error_exit();
     }
 
+    if (cf.ceq != 0){
     //write cequation variables
-    for (int vn=cf.nv; vn<cf.nv+5; ++vn){
-        snprintf(dName,32,"C%d",vn-cf.nv);
-        for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
-            for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-                for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                    int ii = i - cf.ng;
-                    int jj = j - cf.ng;
-                    int kk = k - cf.ng;
-                    idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,vn);
+        for (int vn=cf.nv; vn<cf.nv+5; ++vn){
+            snprintf(dName,32,"C%d",vn-cf.nv);
+            for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+                for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+                    for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+                        int ii = i - cf.ng;
+                        int jj = j - cf.ng;
+                        int kk = k - cf.ng;
+                        idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
+                        v[idx] = hostV(i,j,k,vn);
+                    }
                 }
             }
-        }
-        
-        if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,dName,&index_flow))
-            cgp_error_exit();
+            
+            if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,dName,&index_flow))
+                cgp_error_exit();
 
-        if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
-            cgp_error_exit();
+            if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+                cgp_error_exit();
+        }
     }
 
     cg_biter_write(cf.cF,cf.cB,"TimeIterValues",1);
