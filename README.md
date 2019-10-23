@@ -1,12 +1,10 @@
 # FIESTA
 **F**ast **I**nterfaces, **E**xplosions, **S**hocks and **T**ransport in the **A**tmosphere
 
-## Install
-
-### Dependency Installation on Xena
+## Installation on Xena at UNM Carc
 
 Compiling with Cuda support on Xena requires cgns-3.4, lua-5.3 and kokkos which are not already present on the system.
-Spack can be used to install cgns and Lua on Xena with mpich and gcc-7.4.0.  Newer gcc versions cannot be used because they are not supported by Cuda.
+Spack can be used to install cgns and Lua on Xena with mpich and gcc-7.4.0.  Newer gcc versions cannot be used because they are not supported by Cuda 10.0.
 
 ```
 module load gcc-7.4.0-gcc-8.1.0-j26pfmd
@@ -23,21 +21,33 @@ cd $BUILD_DIRECTORY
 $KOKKOS_SOURCE_DIR/generate_makefile.sh --with-cuda --with-openmp --with-serial --arch=Kepler35 --kokkos_cuda_opt=enable_lambda --kokkos-path=$KOKKOS_SOURCE_DIR --prefix=$KOKKOS_INSTALL_DIR
 ```
 
-use cuda 10.0 with gcc 7.4.0 built in modules on xena
+Now the run command scripts can be used to setup the environment.  These may need to be edited to reflect your module names.  These files load modules and export the mpi compiler environment variable
+
 ```
-export MPICH_CXX=/users/beromer/Kokkos/kokkos/bin/nvcc_wrapper
+source mpich.rc
 ```
 
-and kokkos "generate_makefile.sh" should be run with "--with-cuda" and "--arch=Kepler35" and "--kokkos-path=" and "--prefix=". kokkos path needs to be in Makefile
+The makefile will need to be edited to reflect the kokkos paths and the installation path.  The code can then be built with 
 
+```
+make -j
+```
 
-try 
+## Running on Xena at UNM Carc
+```
+qsub -I -q dualGPU -l walltime=48:00:00
+fiesta.cuda input.lua --kokkos-ndevices=2
+```
+
+There is an example PBS batch script included.
+
+## Other Commands
+For NFS filesystems (like at UNM CARC) file writing may hang when using OpenMPI.  Try the following if this happens. See: https://github.com/open-mpi/ompi/issues/4446
 ```
 export OMPI_MCA_fs_ufs_lock_algorithm=1 
 ```
-for nfs filesystems and openmpi if file writing hangs. see https://github.com/open-mpi/ompi/issues/4446
 
 example multi-gpu nvprof
 ```
-mpirun -np 2 nvprof --output-profile profile.%q{OMPI_COMM_WORLD_RANK} ../loboshok.cuda input.lua --kokkos-ndevices=2
+mpirun -np 2 nvprof --output-profile profile.%q{OMPI_COMM_WORLD_RANK} ../fiesta.cuda input.lua --kokkos-ndevices=2
 ```
