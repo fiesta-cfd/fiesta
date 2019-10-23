@@ -1,45 +1,39 @@
-KOKKOS_PATH = /users/beromer/Kokkos/kokkos
-KOKKOS_SRC_PATH = ${KOKKOS_PATH}
-#KOKKOS_DEVICES="OpenMP"
+KOKKOS_PATH = /users/beromer/src/fiesta-dev/kokkos-install
+PREFIX = /users/beromer/opt
+FIESTA_SRC = /users/beromer/src/fiesta-dev/fiesta/src
 KOKKOS_DEVICES="Cuda"
-SRC = $(wildcard /users/beromer/src/fiesta/src/*.cpp)
+#KOKKOS_DEVICES="Serial"
+
+KOKKOS_SRC_PATH = ${KOKKOS_PATH}
+SRC = $(wildcard $(FIESTA_SRC)/*.cpp)
 vpath %.cpp $(sort $(dir $(SRC)))
 
-default: build
-	echo "Start Build"
-
 ifneq (,$(findstring Cuda,$(KOKKOS_DEVICES)))
-#CXX = ${KOKKOS_PATH}/bin/nvcc_wrapper
 CXX = mpicxx
-CXXFLAGS = -O3 -llua53 -lm -ldl -lcgns --expt-extended-lambda
+CXXFLAGS = -O3 -llua53 -lm -ldl -lcgns
 LINK = ${CXX}
-LDFLAGS = 
+#LDFLAGS = 
 EXE = fiesta.cuda
-KOKKOS_DEVICES = "Cuda,OpenMP"
-KOKKOS_ARCH = "SNB,Kepler35"
-KOKKOS_CUDA_OPTIONS += "enable_lambda"
+KOKKOS_DEVICES=Cuda
+KOKKOS_ARCH=Kepler35
 else
 CXX = mpicxx
-#CXX = g++
-CXXFLAGS = -O3 -llua53 -lm -ldl -lcgns --expt-extended-lambda
+CXXFLAGS = -O3 -llua53 -lm -ldl -lcgns
 LINK = ${CXX}
-LDFLAGS =  
-EXE = fiesta.host
-KOKKOS_DEVICES = "OpenMP"
-KOKKOS_ARCH = "SNB"
+#LDFLAGS =  
+EXE = fiesta.serial
+KOKKOS_DEVICES=Serial
+KOKKOS_ARCH=HSW
 endif
 
-DEPFLAGS = -M
-
 OBJ = $(notdir $(SRC:.cpp=.o))
-LIB =
+#LIB =
+
+default: build
 
 include $(KOKKOS_PATH)/Makefile.kokkos
 
 build: $(EXE)
-
-test: $(EXE)
-	./$(EXE)
 
 $(EXE): $(OBJ) $(KOKKOS_LINK_DEPENDS)
 	$(LINK) $(KOKKOS_LDFLAGS) $(LDFLAGS) $(EXTRA_PATH) $(OBJ) $(KOKKOS_LIBS) $(LIB) -o $(EXE) $(CXXFLAGS)
@@ -47,8 +41,8 @@ $(EXE): $(OBJ) $(KOKKOS_LINK_DEPENDS)
 clean: kokkos-clean 
 	rm -f *.o *.cuda *.host *.rocm
 
-# Compilation rules
+install:
+	cp fiesta.* $(PREFIX)/bin/.
 
 %.o:%.cpp $(KOKKOS_CPP_DEPENDS)
 	$(CXX) $(KOKKOS_CPPFLAGS) $(KOKKOS_CXXFLAGS) $(EXTRA_INC) -c $< -o $(notdir $@) $(CXXFLAGS)
-	#$(CXX) $(KOKKOS_CPPFLAGS) $(KOKKOS_CXXFLAGS) $(CXXFLAGS) $(EXTRA_INC) -c $< -o $(notdir $@)
