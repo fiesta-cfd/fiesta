@@ -1,5 +1,5 @@
-#PBS -lnodes=2:ppn=1
-#PBS -lwalltime=1:00:00
+#PBS -lnodes=8:ppn=1
+#PBS -lwalltime=48:00:00
 #PBS -S /bin/bash
 #PBS -j oe
 ##source /etc/profile.d/module.sh
@@ -12,4 +12,4 @@ module load mpich-3.3.1-gcc-7.4.0-52vvlix
 module load lua-5.3.5-gcc-8.1.0-yupcteg
 module load gcc-7.4.0-gcc-8.1.0-j26pfmd
 
-time mpirun -n 2 -wdir /users/beromer/Research/loboshok/test -machinefile $PBS_NODEFILE ~/src/loboshok/src/loboshok.cuda input.lua --kokkos-ndevices=1
+time mpirun -n 8 -wdir /users/beromer/Research/fiesta-test -machinefile $PBS_NODEFILE /users/beromer/opt/bin/fiesta.cuda input.lua --kokkos-ndevices=1
