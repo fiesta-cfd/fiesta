@@ -56,17 +56,34 @@ beta = 15.0         --Isotropic Coefficient
 betae = 1.0         --Energy Equation Isotropic Coefficient
 
 function f(i,j,k,v)
+    --[[
+    
+    Apply initial conditions:  this function is called for every cell (but not ghost cells) and for each flow variable.
+    Flow variables are indexed as follows:
+
+    x-momentum:        0
+    y-momentum:        1
+    z-momentum:        2
+    energy:            3
+    species density 1: 4
+    species density 2: 5
+    species density n: n+3
+
+    --]]
+    
+
+    --Inclined gass cylinder example
+    
+    --find position and distance from cylinder axis
     local angle = 20
     local topdist = (Ly - ((dy/2)+dy*j))
     local xcenter = 0.6 + topdist*math.tan(angle*math.pi/180)
     local xdist = math.abs(xcenter-((dx/2)+dx*i))
     local zdist = math.abs(Lz/2-((dz/2)+dz*k))
     local rdist = math.sqrt(xdist*xdist + zdist*zdist)
-
     local xabs = (dx/2)+dx*i
 
-    Eref = 0.9478
-    Rref = 0.4555
+    --setup shock wave
     if xabs < 0.2 then
         if v==0 then return 1      end
         if v==1 then return 0      end
@@ -76,13 +93,15 @@ function f(i,j,k,v)
         if v==5 then return 0      end
     end
 
+    --setup cylinder
     if rdist < 0.3 then
         if v==0 then return 0      end
         if v==1 then return 0      end
         if v==2 then return 0      end
-        if v==3 then return energy(rdist,Eref)   end
-        if v==4 then return density1(rdist,Rref) end
-        if v==5 then return density2(rdist,Rref) end
+        if v==3 then return 0.6319 end
+        if v==4 then return 0      end
+        if v==5 then return 1.8784 end
+    --ambient conditions
     else
         if v==0 then return 0      end
         if v==1 then return 0      end
@@ -91,31 +110,4 @@ function f(i,j,k,v)
         if v==4 then return 0.4555 end
         if v==5 then return 0      end
     end
-end
-
-function density1(rad,Rref)
-    mfs = mf(rad)
-    M_mix = mfs*M[2]+(1-mfs)*M[1];
-    return (1-mfs)*Rref*(M_mix/M[1])
-end
-
-function density2(rad,Rref)
-    mfs = mf(rad)
-    M_mix = mfs*M[2]+(1-mfs)*M[1];
-    return mfs*Rref*(M_mix/M[1])
-end
-
-function energy(rad,Eref)
-    mfs = mf(rad)
-    Cps = (gamma[2]*R)/(M[2]*(gamma[2]-1))
-    Cpa = (gamma[1]*R)/(M[1]*(gamma[1]-1))
-    Cvs = R/(M[2]*(gamma[2]-1))
-    Cva = R/(M[1]*(gamma[1]-1))
-    gamma_mix = (mfs*Cps + (1-mfs)*Cpa)/(mfs*Cvs+(1-mfs)*Cva)
-    return ((gamma[1]-1)/(gamma_mix-1))*Eref
-end
-
-function mf(rad)
-    x = rad/0.150
-    return math.exp(-math.pi*x*x)
 end
