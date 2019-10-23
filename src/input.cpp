@@ -83,7 +83,8 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.xProcs      = getglobint (L, "procsx");
     myConfig.yProcs      = getglobint (L, "procsy");
     myConfig.zProcs      = getglobint (L, "procsz");
-    myConfig.ng          = getglobint (L, "ng" );
+    //myConfig.ng          = getglobint (L, "ng" );
+    myConfig.ng = 3;
     myConfig.xPer        = getglobint (L, "xPer" );
     myConfig.yPer        = getglobint (L, "yPer" );
     myConfig.zPer        = getglobint (L, "zPer" );
