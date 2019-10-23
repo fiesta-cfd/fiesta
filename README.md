@@ -51,3 +51,4 @@ example multi-gpu nvprof
 ```
 mpirun -np 2 nvprof --output-profile profile.%q{OMPI_COMM_WORLD_RANK} ../fiesta.cuda input.lua --kokkos-ndevices=2
 ```
+The profile.n files can now be viewed in nvvp.
