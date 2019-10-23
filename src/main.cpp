@@ -1,5 +1,5 @@
 #include "input.hpp"
-#include "mpi_init.hpp"
+#include "mpi.hpp"
 #include "cgns.hpp"
 #include "bc.hpp"
 #include "Kokkos_Core.hpp"

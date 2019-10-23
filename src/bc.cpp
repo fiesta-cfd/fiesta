@@ -1,7 +1,7 @@
 #include "Kokkos_Core.hpp"
 #include "lsdebug.hpp"
 #include "input.hpp"
-#include "mpi_init.hpp"
+#include "mpi.hpp"
 #include <mpi.h>
 
 struct bc_L {
