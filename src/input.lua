@@ -12,15 +12,12 @@ restartName = "restart-000000.cgns"   --Restart File Name
 --Gas Properties
 R = 8.314462                          --Universal Gas Constant [J/(K*mol)]
 ns = 2                                --Number of Gas Species
-gamma = {1.40, 1.60}                  --Array of Species Ration of Specifi Heats
+gamma = {1.40, 1.60}                  --Array of Species Ratio of Specific Heats
 M = {0.02897,0.14606}                 --Array of Species Molar Masses [kg/mol]
 
 --Time
 nt = 100                              --Time Step at which to end simulation
 dt = 0.001                            --Time Step Size [s]
-
---Number of Ghost Points (Don't Change)
-ng = 3
 
 --User Parameters
 Lx = 3.0
@@ -48,12 +45,12 @@ yPer = 0
 zPer = 0
 
 -- C-Equation Coefficients
-ceq = 1             --Enable/Disable Cequation
+ceq = 0             --Enable/Disable Cequation
 kappa = 10.0        --Smoothness Factor
 epsilon = 1.0       --Support Factor
-alpha = 1.0         --Anisotropic Coefficient
+alpha = 10.0        --Anisotropic Coefficient
 beta = 15.0         --Isotropic Coefficient
-betae = 1.0         --Energy Equation Isotropic Coefficient
+betae = 2.0         --Energy Equation Isotropic Coefficient
 
 function f(i,j,k,v)
     --[[
@@ -72,7 +69,7 @@ function f(i,j,k,v)
     --]]
     
 
-    --Inclined gass cylinder example
+    ---Inclined gass cylinder example---
     
     --find position and distance from cylinder axis
     local angle = 20
