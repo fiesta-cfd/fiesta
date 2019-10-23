@@ -30,7 +30,7 @@ source mpich.rc
 The makefile will need to be edited to reflect the kokkos paths and the installation path.  The code can then be built with 
 
 ```
-make -j
+make install -j
 ```
 
 ## Running on Xena at UNM Carc
