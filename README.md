@@ -41,7 +41,10 @@ fiesta.cuda input.lua --kokkos-ndevices=2
 
 There is an example PBS batch script included.
 
-## Other Commands
+## Visualizing
+Output files are written in the CFD Generalized Notation System standard (CGNS) and can be viewed with paraview, tecplot, visit, etc.  Solution files are single precision and include the grid in every solution file.  Restart files are double precision.
+
+## Other Comments
 For NFS filesystems (like at UNM CARC) file writing may hang when using OpenMPI.  Try the following if this happens. See: https://github.com/open-mpi/ompi/issues/4446
 ```
 export OMPI_MCA_fs_ufs_lock_algorithm=1 
