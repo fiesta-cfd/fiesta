@@ -41,7 +41,7 @@ $(EXE): $(OBJ) $(KOKKOS_LINK_DEPENDS)
 clean: kokkos-clean 
 	rm -f *.o *.cuda *.host *.rocm
 
-install:
+install: build
 	cp fiesta.* $(PREFIX)/bin/.
 
 %.o:%.cpp $(KOKKOS_CPP_DEPENDS)
