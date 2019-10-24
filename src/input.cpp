@@ -88,6 +88,12 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.xPer        = getglobint (L, "xPer" );
     myConfig.yPer        = getglobint (L, "yPer" );
     myConfig.zPer        = getglobint (L, "zPer" );
+    myConfig.bcL         = getglobint (L, "bcXmin" );
+    myConfig.bcR         = getglobint (L, "bcXmax" );
+    myConfig.bcB         = getglobint (L, "bcYmin" );
+    myConfig.bcT         = getglobint (L, "bcYmax" );
+    myConfig.bcH         = getglobint (L, "bcZmin" );
+    myConfig.bcF         = getglobint (L, "bcZmax" );
     myConfig.restart     = getglobint (L, "restart");
     myConfig.sfName      = getglobstr (L, "restartName");
     myConfig.tstart      = getglobint (L, "tstart");

@@ -47,6 +47,7 @@ struct inputConfig {
     int tstart;
     double time;
     double ceq,kap,eps,alpha,beta,betae;
+    int bcL,bcR,bcB,bcT,bcH,bcF;
 
     int out_freq, write_freq, restart_freq;
 };
