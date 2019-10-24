@@ -64,10 +64,6 @@ struct inputConfig mpi_init(struct inputConfig cf){
 }
 
 void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV){
-    //typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
-    //typename Kokkos::View<double****>::HostMirror hostV;
-    //hostV = Kokkos::create_mirror_view(deviceV);
-    //Kokkos::deep_copy(hostV,deviceV);
 
     Kokkos::View<double****> leftSend("leftSend",cf.ng,cf.ngj,cf.ngk,cf.nv+4);
     Kokkos::View<double****> leftRecv("leftRecv",cf.ng,cf.ngj,cf.ngk,cf.nv+4);
@@ -97,78 +93,23 @@ void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV){
     typename Kokkos::View<double****>::HostMirror frontSend_H = Kokkos::create_mirror_view(frontSend);
     typename Kokkos::View<double****>::HostMirror frontRecv_H = Kokkos::create_mirror_view(frontRecv);
 
-    //double *leftOut   = (double*)malloc(cf.ng*cf.ngj*cf.ngk*(cf.nv+4)*sizeof(double));
-    //double *leftIn    = (double*)malloc(cf.ng*cf.ngj*cf.ngk*(cf.nv+4)*sizeof(double));
-    //double *rightOut  = (double*)malloc(cf.ng*cf.ngj*cf.ngk*(cf.nv+4)*sizeof(double));
-    //double *rightIn   = (double*)malloc(cf.ng*cf.ngj*cf.ngk*(cf.nv+4)*sizeof(double));
-    //
-    //double *bottomOut = (double*)malloc(cf.ngi*cf.ng*cf.ngk*(cf.nv+4)*sizeof(double));
-    //double *bottomIn  = (double*)malloc(cf.ngi*cf.ng*cf.ngk*(cf.nv+4)*sizeof(double));
-    //double *topOut    = (double*)malloc(cf.ngi*cf.ng*cf.ngk*(cf.nv+4)*sizeof(double));
-    //double *topIn     = (double*)malloc(cf.ngi*cf.ng*cf.ngk*(cf.nv+4)*sizeof(double));
-
-    //double *backOut   = (double*)malloc(cf.ngi*cf.ngj*cf.ng*(cf.nv+4)*sizeof(double));
-    //double *backIn    = (double*)malloc(cf.ngi*cf.ngj*cf.ng*(cf.nv+4)*sizeof(double));
-    //double *frontOut  = (double*)malloc(cf.ngi*cf.ngj*cf.ng*(cf.nv+4)*sizeof(double));
-    //double *frontIn   = (double*)malloc(cf.ngi*cf.ngj*cf.ng*(cf.nv+4)*sizeof(double));
-    
-
-    //int idx;
     MPI_Request reqs[12];
-
-    //for (int v=0; v<cf.nv+4; ++v){
-    //    for (int k=0; k<cf.ngk; ++k){
-    //        for (int j=0; j<cf.ngj; ++j){
-    //            for (int i=cf.ng; i<cf.ng+cf.ng; ++i){
-    //                idx = v*cf.ng*cf.ngj*cf.ngk + k*cf.ng*cf.ngj + j*cf.ng + (i-cf.ng);
-    //                leftOut[idx]  = hostV(i,j,k,v);
-    //                rightOut[idx] = hostV(i+cf.nci-cf.ng,j,k,v);
-    //            }
-    //        }
-    //    }
-    //}
-    //
-    //for (int v=0; v<cf.nv+4; ++v){
-    //    for (int k=0; k<cf.ngk; ++k){
-    //        for (int j=cf.ng; j<cf.ng+cf.ng; ++j){
-    //            for (int i=0; i<cf.ngi; ++i){
-    //                idx = v*cf.ngi*cf.ng*cf.ngk + k*cf.ngi*cf.ng + (j-cf.ng)*cf.ngi + i;
-    //                bottomOut[idx]  = hostV(i,j,k,v);
-    //                topOut[idx] = hostV(i,j+cf.ncj-cf.ng,k,v);
-    //            }
-    //        }
-    //    }
-    //}
-    //
-    //for (int v=0; v<cf.nv+4; ++v){
-    //    for (int k=cf.ng; k<cf.ng+cf.ng; ++k){
-    //        for (int j=0; j<cf.ngj; ++j){
-    //            for (int i=0; i<cf.ngi; ++i){
-    //                idx = v*cf.ngi*cf.ngj*cf.ng + (k-cf.ng)*cf.ngi*cf.ngj + j*cf.ngi + i;
-    //                backOut[idx]  = hostV(i,j,k,v);
-    //                frontOut[idx] = hostV(i,j,k+cf.nck-cf.ng,v);
-    //            }
-    //        }
-    //    }
-    //}
-    
-    //MPI_Barrier(cf.comm);
 
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_rind;
     policy_rind xPol = policy_rind({0,0,0,0},{cf.ng ,cf.ngj,cf.ngk,cf.nv+4});
     policy_rind yPol = policy_rind({0,0,0,0},{cf.ngi,cf.ng ,cf.ngk,cf.nv+4});
     policy_rind zPol = policy_rind({0,0,0,0},{cf.ngi,cf.ngj,cf.ng ,cf.nv+4});
     
-    Kokkos::parallel_for( xPol, KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v){
+    Kokkos::parallel_for( xPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
         leftSend(i,j,k,v) = deviceV(cf.ng+i,j,k,v);
         rightSend(i,j,k,v) = deviceV(i+cf.nci,j,k,v);
     });
-    Kokkos::parallel_for( yPol, KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v){
-        bottomSend(i,j,k,v) = deviceV(i,j,k,v);
+    Kokkos::parallel_for( yPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
+        bottomSend(i,j,k,v) = deviceV(i,cf.ng+j,k,v);
         topSend(i,j,k,v) = deviceV(i,j+cf.ncj,k,v);
     });
-    Kokkos::parallel_for( zPol, KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v){
-        backSend(i,j,k,v) = deviceV(i,j,k,v);
+    Kokkos::parallel_for( zPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
+        backSend(i,j,k,v) = deviceV(i,j,cf.ng+k,v);
         frontSend(i,j,k,v) = deviceV(i,j,k+cf.nck,v);
     });
     
@@ -202,30 +143,6 @@ void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV){
     //send and recieve front
     MPI_Isend(frontSend_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nv+4), MPI_DOUBLE, cf.zPlus,           0, cf.comm, &reqs[10]);
     MPI_Irecv(frontRecv_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nv+4), MPI_DOUBLE, cf.zPlus, MPI_ANY_TAG, cf.comm, &reqs[11]);
-
-    // //send and recieve left
-    // MPI_Isend(leftOut, cf.ng*cf.ngj*cf.ngk*(cf.nv+4), MPI_DOUBLE, cf.xMinus,           0, cf.comm, &reqs[0]);
-    // MPI_Irecv(leftIn,  cf.ng*cf.ngj*cf.ngk*(cf.nv+4), MPI_DOUBLE, cf.xMinus, MPI_ANY_TAG, cf.comm, &reqs[1]);
-
-    // //send and recieve right
-    // MPI_Isend(rightOut, cf.ng*cf.ngj*cf.ngk*(cf.nv+4), MPI_DOUBLE, cf.xPlus,           0, cf.comm, &reqs[2]);
-    // MPI_Irecv(rightIn,  cf.ng*cf.ngj*cf.ngk*(cf.nv+4), MPI_DOUBLE, cf.xPlus, MPI_ANY_TAG, cf.comm, &reqs[3]);
-    // 
-    // //send and recieve bottom
-    // MPI_Isend(bottomOut, cf.ngi*cf.ng*cf.ngk*(cf.nv+4), MPI_DOUBLE, cf.yMinus,           0, cf.comm, &reqs[4]);
-    // MPI_Irecv(bottomIn,  cf.ngi*cf.ng*cf.ngk*(cf.nv+4), MPI_DOUBLE, cf.yMinus, MPI_ANY_TAG, cf.comm, &reqs[5]);
-    // 
-    // //send and recieve top
-    // MPI_Isend(topOut, cf.ngi*cf.ng*cf.ngk*(cf.nv+4), MPI_DOUBLE, cf.yPlus,           0, cf.comm, &reqs[6]);
-    // MPI_Irecv(topIn,  cf.ngi*cf.ng*cf.ngk*(cf.nv+4), MPI_DOUBLE, cf.yPlus, MPI_ANY_TAG, cf.comm, &reqs[7]);
-    // 
-    // //send and recieve back
-    // MPI_Isend(backOut, cf.ngi*cf.ngj*cf.ng*(cf.nv+4), MPI_DOUBLE, cf.zMinus,           0, cf.comm, &reqs[8]);
-    // MPI_Irecv(backIn,  cf.ngi*cf.ngj*cf.ng*(cf.nv+4), MPI_DOUBLE, cf.zMinus, MPI_ANY_TAG, cf.comm, &reqs[9]);
-    // 
-    // //send and recieve front
-    // MPI_Isend(frontOut, cf.ngi*cf.ngj*cf.ng*(cf.nv+4), MPI_DOUBLE, cf.zPlus,           0, cf.comm, &reqs[10]);
-    // MPI_Irecv(frontIn,  cf.ngi*cf.ngj*cf.ng*(cf.nv+4), MPI_DOUBLE, cf.zPlus, MPI_ANY_TAG, cf.comm, &reqs[11]);
     
     MPI_Waitall(12,reqs, MPI_STATUSES_IGNORE);
 
@@ -236,109 +153,16 @@ void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV){
     Kokkos::deep_copy(backRecv,  backRecv_H  );
     Kokkos::deep_copy(frontRecv, frontRecv_H );
 
-    Kokkos::parallel_for( xPol, KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v){
+    Kokkos::parallel_for( xPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
         deviceV(i,j,k,v) = leftRecv(i,j,k,v);
         deviceV(cf.ngi-cf.ng+i,j,k,v) = rightRecv(i,j,k,v);
     });
-    Kokkos::parallel_for( yPol, KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v){
+    Kokkos::parallel_for( yPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
         deviceV(i,j,k,v) = bottomRecv(i,j,k,v);
         deviceV(i,cf.ngj-cf.ng+j,k,v) = topRecv(i,j,k,v);
     });
-    Kokkos::parallel_for( zPol, KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v){
+    Kokkos::parallel_for( zPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
         deviceV(i,j,k,v) = backRecv(i,j,k,v);
         deviceV(i,j,cf.ngk-cf.ng+k,v) = frontRecv(i,j,k,v);
     });
-
-    //if (cf.xMinus >= 0){
-    //    for (int v=0; v<cf.nv+4; ++v){
-    //        for (int k=0; k<cf.ngk; ++k){
-    //            for (int j=0; j<cf.ngj; ++j){
-    //                for (int i=0; i<cf.ng; ++i){
-    //                    idx = v*cf.ng*cf.ngj*cf.ngk + k*cf.ng*cf.ngj + j*cf.ng + i;
-    //                    hostV(i,j,k,v) = leftIn[idx];
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-    //    
-    //if (cf.yMinus >= 0){
-    //    for (int v=0; v<cf.nv+4; ++v){
-    //        for (int k=0; k<cf.ngk; ++k){
-    //            for (int j=0; j<cf.ng; ++j){
-    //                for (int i=0; i<cf.ngi; ++i){
-    //                    idx = v*cf.ngi*cf.ng*cf.ngk + k*cf.ngi*cf.ng + j*cf.ngi + i;
-    //                    hostV(i,j,k,v) = bottomIn[idx];
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-    //
-    //if (cf.zMinus >= 0){
-    //    for (int v=0; v<cf.nv+4; ++v){
-    //        for (int k=0; k<cf.ng; ++k){
-    //            for (int j=0; j<cf.ngj; ++j){
-    //                for (int i=0; i<cf.ngi; ++i){
-    //                    idx = v*cf.ngi*cf.ngj*cf.ng + k*cf.ngi*cf.ngj + j*cf.ngi + i;
-    //                    hostV(i,j,k,v) = backIn[idx];
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-
-    //if (cf.xPlus >= 0){
-    //    for (int v=0; v<cf.nv+4; ++v){
-    //        for (int k=0; k<cf.ngk; ++k){
-    //            for (int j=0; j<cf.ngj; ++j){
-    //                for (int i=0; i<cf.ng; ++i){
-    //                    idx = v*cf.ng*cf.ngj*cf.ngk + k*cf.ng*cf.ngj + j*cf.ng + i;
-    //                    hostV(i+cf.nci+cf.ng,j,k,v) = rightIn[idx];
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-    //
-    //if (cf.yPlus >= 0){
-    //    for (int v=0; v<cf.nv+4; ++v){
-    //        for (int k=0; k<cf.ngk; ++k){
-    //            for (int j=0; j<cf.ng; ++j){
-    //                for (int i=0; i<cf.ngi; ++i){
-    //                    idx = v*cf.ngi*cf.ng*cf.ngk + k*cf.ngi*cf.ng + j*cf.ngi + i;
-    //                    hostV(i,j+cf.ncj+cf.ng,k,v) = topIn[idx];
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-    //
-    //if (cf.zPlus >= 0){
-    //    for (int v=0; v<cf.nv+4; ++v){
-    //        for (int k=0; k<cf.ng; ++k){
-    //            for (int j=0; j<cf.ngj; ++j){
-    //                for (int i=0; i<cf.ngi; ++i){
-    //                    idx = v*cf.ngi*cf.ngj*cf.ng + k*cf.ngi*cf.ngj + j*cf.ngi + i;
-    //                    hostV(i,j,k+cf.nck+cf.ng,v) = frontIn[idx];
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-
-    //Kokkos::deep_copy(deviceV,hostV);
-
-    //free(leftOut);
-    //free(leftIn);
-    //free(rightOut);
-    //free(rightIn);
-    //free(bottomOut);
-    //free(bottomIn);
-    //free(topOut);
-    //free(topIn);
-    //free(backOut);
-    //free(backIn);
-    //free(frontOut);
-    //free(frontIn);
 }
