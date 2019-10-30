@@ -2,8 +2,8 @@
 
 --Restart and Output Options
 out_freq = 10                         --Screen Output Interval
-restart_freq = 1000                   --Restart Write Interval
-write_freq = 100                      --Solution Write Interval
+restart_freq = 10000                  --Restart Write Interval
+write_freq = 200                      --Solution Write Interval
 restart = 0                           --Whether or not to use restart file
 time = 0.0                            --Start time of simulation
 tstart = 0                            --Start time index of simulation
@@ -11,23 +11,24 @@ restartName = "restart-000000.cgns"   --Restart File Name
 
 --Gas Properties
 R = 8.314462                          --Universal Gas Constant [J/(K*mol)]
-ns = 2                                --Number of Gas Species
-gamma = {1.40, 1.60} --air,sf6--      --Array of Species Ratio of Specific Heats
-M = {0.02897,0.14606}                 --Array of Species Molar Masses [kg/mol]
+ns = 1                                --Number of Gas Species
+gamma = {1.40, 1.40}                  --Array of Species Ratio of Specific Heats
+M = {0.02897,0.02897}                 --Array of Species Molar Masses [kg/mol]
+--M = {0.02897,0.14606}                 --Array of Species Molar Masses [kg/mol]
 
 --Time
-nt = 100                              --Time Step at which to end simulation
-dt = 0.001                            --Time Step Size [s]
+nt = 10000                            --Time Step at which to end simulation
+dt = 0.0000001                        --Time Step Size [s]
 
 --User Parameters
-Lx = 3.0
-Ly = 1.5
-Lz = 0.7
+Lx = 10.0
+Ly = 10.0
+Lz = 0.05
 
 --Number of cells
-ni = 150            --Simulation size in x direction
-nj = 75             --Simulation Size in y direction
-nk = 35             --Simulation Size in z direction
+ni = 1000           --Simulation size in x direction
+nj = 1000           --Simulation Size in y direction
+nk = 5              --Simulation Size in z direction
 
 --Cell Sizes
 dx = Lx/ni
@@ -69,42 +70,33 @@ function f(i,j,k,v)
     --]]
     
 
-    ---Inclined gass cylinder example---
+    ---Quasi 2D ideal expansion---
     
-    --find position and distance from cylinder axis
-    local angle = 20
-    local topdist = (Ly - ((dy/2)+dy*j))
-    local xcenter = 0.6 + topdist*math.tan(angle*math.pi/180)
-    local xdist = math.abs(xcenter-((dx/2)+dx*i))
-    local zdist = math.abs(Lz/2-((dz/2)+dz*k))
-    local rdist = math.sqrt(xdist*xdist + zdist*zdist)
-    local xabs = (dx/2)+dx*i
+    --find position and distance from expansion center
+    local xdist = math.abs(0   -( (dx/2)+dx*i ))
+    local ydist = math.abs(Ly/2-( (dy/2)+dy*j ))
+    local rdist = math.sqrt(xdist*xdist + ydist*ydist)
 
-    --setup shock wave
-    if xabs < 0.2 then
-        if v==0 then return 1      end
-        if v==1 then return 0      end
-        if v==2 then return 0      end
-        if v==3 then return 3.5329 end
-        if v==4 then return 1      end
-        if v==5 then return 0      end
-    end
+    local Cv_air = R/(M[1]*(gamma[1]-1))
+    local Cv_exp = R/(M[1]*(gamma[1]-1))
+    Eair = 300 *Cv_air*1.0
+    Eexp = 3000*Cv_exp*1000.0
 
-    --setup cylinder
-    if rdist < 0.1 then
+    --setup energy pill
+    if rdist < 0.2 then
         if v==0 then return 0      end
         if v==1 then return 0      end
         if v==2 then return 0      end
-        if v==3 then return 0.6319 end
-        if v==4 then return 0      end
-        if v==5 then return 1.8784 end
+        if v==3 then return Eexp   end
+        if v==4 then return 1000.0 end
+        if v==5 then return 0      end
     --ambient conditions
     else
         if v==0 then return 0      end
         if v==1 then return 0      end
         if v==2 then return 0      end
-        if v==3 then return 0.9478 end
-        if v==4 then return 0.4555 end
+        if v==3 then return Eair   end
+        if v==4 then return 1.0000 end
         if v==5 then return 0      end
     end
 end

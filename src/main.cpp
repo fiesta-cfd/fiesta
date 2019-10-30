@@ -118,17 +118,18 @@ int main(int argc, char* argv[]){
     for (int t=tstart; t<cf.nt; ++t){
         time = time + cf.dt;
 
+/********** Forward Euler **************/
 //        applyBCs(cf,myV);
-//        rhs_func f1(cf.dt,cf,myV,K1, cd);
+//        weno_func f1(cf,myV,K1, cd);
 //        f1();
 //
-//        //myV = myV + K2
-//        Kokkos::parallel_for("Loop2", policy_1({cf.ng,cf.ng,cf.ng,0},{cf.ngi-cf.ng,cf.ngj-cf.ng,cf.ngk-cf.ng,cf.nv}),
-//               KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
+//        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+5}),
+//               KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
 //            myV(i,j,k,v) = myV(i,j,k,v) + cf.dt*K1(i,j,k,v);
 //        });
 
         
+/********** Runga Kutta 2 **************/
         //tmp = myV
         Kokkos::deep_copy(tmp,myV);
 
@@ -138,8 +139,8 @@ int main(int argc, char* argv[]){
         f1();
         
         //tmp = myV + k1/2
-        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+4}),
-               KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
+        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+5}),
+               KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
             tmp(i,j,k,v) = myV(i,j,k,v) + cf.dt*K1(i,j,k,v)/2;
         });
 
@@ -149,8 +150,8 @@ int main(int argc, char* argv[]){
         f2();
 
         //myV = myV + K2
-        Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+4}),
-               KOKKOS_LAMBDA __device__ (const int i, const int j, const int k, const int v) {
+        Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+5}),
+               KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
             myV(i,j,k,v) = myV(i,j,k,v) + cf.dt*K2(i,j,k,v);
         });
         

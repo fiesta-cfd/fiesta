@@ -13,8 +13,8 @@ struct bc_L {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int j, const int k, const int v) const {
         for (int i=0; i<ng; ++i)
-            if (v==0 && bc_type==1) u(n-i-1,j,k,v) = -u(n+i+1,j,k,v);
-            else u(n-i-1,j,k,v) = u(n+i+1,j,k,v);
+            if (v==0 && bc_type==1) u(n-i-1,j,k,v) = -u(n+i,j,k,v);
+            else u(n-i-1,j,k,v) = u(n+i,j,k,v);
     }
 };
 
@@ -27,8 +27,8 @@ struct bc_R {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int j, const int k, const int v) const {
         for (int i=0; i<ng; ++i)
-            if (v==0 && bc_type==1) u(n+i,j,k,v) = -u(n-i-2,j,k,v);
-            else u(n+i,j,k,v) = u(n-i-2,j,k,v);
+            if (v==0 && bc_type==1) u(n+i,j,k,v) = -u(n-i-1,j,k,v);
+            else u(n+i,j,k,v) = u(n-i-1,j,k,v);
     }
 };
 
@@ -41,8 +41,8 @@ struct bc_B {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int k, const int v) const {
         for (int j=0; j<ng; ++j)
-            if (v==1 && bc_type==1) u(i,n-j-1,k,v) = -u(i,n+j+1,k,v);
-            else u(i,n-j-1,k,v) = u(i,n+j+1,k,v);
+            if (v==1 && bc_type==1) u(i,n-j-1,k,v) = -u(i,n+j,k,v);
+            else u(i,n-j-1,k,v) = u(i,n+j,k,v);
     }
 };
 
@@ -55,8 +55,8 @@ struct bc_T {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int k, const int v) const {
         for (int j=0; j<ng; ++j)
-            if (v==1 && bc_type==1) u(i,n+j,k,v) = -u(i,n-j-2,k,v);
-            else u(i,n+j,k,v) = u(i,n-j-2,k,v);
+            if (v==1 && bc_type==1) u(i,n+j,k,v) = -u(i,n-j-1,k,v);
+            else u(i,n+j,k,v) = u(i,n-j-1,k,v);
     }
 };
 
@@ -69,8 +69,8 @@ struct bc_H {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j, const int v) const {
         for (int k=0; k<ng; ++k)
-            if (v==2 && bc_type==1) u(i,j,n-k-1,v) = -u(i,j,n+k+1,v);
-            else u(i,j,n-k-1,v) = u(i,j,n+k+1,v);
+            if (v==2 && bc_type==1) u(i,j,n-k-1,v) = -u(i,j,n+k,v);
+            else u(i,j,n-k-1,v) = u(i,j,n+k,v);
     }
 };
 
@@ -83,8 +83,8 @@ struct bc_F {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j, const int v) const {
         for (int k=0; k<ng; ++k)
-            if (v==2 && bc_type==1) u(i,j,n+k,v) = -u(i,j,n-k-2,v);
-            else u(i,j,n+k,v) = u(i,j,n-k-2,v);
+            if (v==2 && bc_type==1) u(i,j,n+k,v) = -u(i,j,n-k-1,v);
+            else u(i,j,n+k,v) = u(i,j,n-k-1,v);
     }
 };
 
@@ -95,26 +95,26 @@ void applyBCs(struct inputConfig cf, Kokkos::View<double****> &u){
     haloExchange(cf,u);
 
     if (cf.xMinus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngj,cf.ngk,cf.nv+4}), bc_L(cf.ng,cf.ng,cf.bcL,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngj,cf.ngk,cf.nv+5}), bc_L(cf.ng,cf.ng,cf.bcL,u));
     }
 
     if (cf.xPlus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngj,cf.ngk,cf.nv+4}), bc_R(cf.ng+cf.nci,cf.ng,cf.bcR,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngj,cf.ngk,cf.nv+5}), bc_R(cf.ng+cf.nci,cf.ng,cf.bcR,u));
     }
 
     if (cf.yMinus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngk,cf.nv+4}), bc_B(cf.ng,cf.ng,cf.bcB,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngk,cf.nv+5}), bc_B(cf.ng,cf.ng,cf.bcB,u));
     }
 
     if (cf.yPlus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngk,cf.nv+4}), bc_T(cf.ng+cf.ncj,cf.ng,cf.bcT,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngk,cf.nv+5}), bc_T(cf.ng+cf.ncj,cf.ng,cf.bcT,u));
     }
 
     if (cf.zMinus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngj,cf.nv+4}), bc_H(cf.ng,cf.ng,cf.bcH,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngj,cf.nv+5}), bc_H(cf.ng,cf.ng,cf.bcH,u));
     }
 
     if (cf.zPlus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngj,cf.nv+4}), bc_F(cf.ng+cf.nck,cf.ng,cf.bcF,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngj,cf.nv+5}), bc_F(cf.ng+cf.nck,cf.ng,cf.bcF,u));
     }
 }

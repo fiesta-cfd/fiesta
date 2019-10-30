@@ -256,25 +256,67 @@ struct calculateRhoGrad {
 
         int indicator = 0;
 
+        double u1 = var(i-2,j,k,0)/rho(i-2,j,k);
+        double u2 = var(i-1,j,k,0)/rho(i-1,j,k);
+        double u3 = var(i+1,j,k,0)/rho(i+1,j,k);
+        double u4 = var(i+2,j,k,0)/rho(i+2,j,k);
+
+        double v1 = var(i,j-2,k,0)/rho(i,j-2,k);
+        double v2 = var(i,j-1,k,0)/rho(i,j-1,k);
+        double v3 = var(i,j+1,k,0)/rho(i,j+1,k);
+        double v4 = var(i,j+2,k,0)/rho(i,j+2,k);
+
+        double w1 = var(i,j,k-2,0)/rho(i,j,k-2);
+        double w2 = var(i,j,k-1,0)/rho(i,j,k-1);
+        double w3 = var(i,j,k+1,0)/rho(i,j,k+1);
+        double w4 = var(i,j,k+2,0)/rho(i,j,k+2);
+
+        double ex1 = var(i-2,j,k,3)/rho(i,j,k-2)-0.5*(1/(rho(i-2,j,k)*rho(i-2,j,k)))*
+            (var(i-2,j,k,0)*var(i-2,j,k,0) + var(i-2,j,k,1)*var(i-2,j,k,1) + var(i-2,j,k,2)*var(i-2,j,k,2));
+        double ex2 = var(i-1,j,k,3)/rho(i,j,k-1)-0.5*(1/(rho(i-1,j,k)*rho(i-1,j,k)))*
+            (var(i-1,j,k,0)*var(i-1,j,k,0) + var(i-1,j,k,1)*var(i-1,j,k,1) + var(i-1,j,k,2)*var(i-1,j,k,2));
+        double ex3 = var(i+1,j,k,3)/rho(i,j,k+1)-0.5*(1/(rho(i+1,j,k)*rho(i+1,j,k)))*
+            (var(i+1,j,k,0)*var(i+1,j,k,0) + var(i+1,j,k,1)*var(i+1,j,k,1) + var(i+1,j,k,2)*var(i+1,j,k,2));
+        double ex4 = var(i+2,j,k,3)/rho(i,j,k+2)-0.5*(1/(rho(i+2,j,k)*rho(i+2,j,k)))*
+            (var(i+2,j,k,0)*var(i+2,j,k,0) + var(i+2,j,k,1)*var(i+2,j,k,1) + var(i+2,j,k,2)*var(i+2,j,k,2));
+
+        double ey1 = var(i,j-2,k,3)/rho(i,j,k-2)-0.5*(1/(rho(i,j-2,k)*rho(i,j-2,k)))*
+            (var(i,j-2,k,0)*var(i,j-2,k,0) + var(i,j-2,k,1)*var(i,j-2,k,1) + var(i,j-2,k,2)*var(i,j-2,k,2));
+        double ey2 = var(i,j-1,k,3)/rho(i,j,k-1)-0.5*(1/(rho(i,j-1,k)*rho(i,j-1,k)))*
+            (var(i,j-1,k,0)*var(i,j-1,k,0) + var(i,j-1,k,1)*var(i,j-1,k,1) + var(i,j-1,k,2)*var(i,j-1,k,2));
+        double ey3 = var(i,j+1,k,3)/rho(i,j,k+1)-0.5*(1/(rho(i,j+1,k)*rho(i,j+1,k)))*
+            (var(i,j+1,k,0)*var(i,j+1,k,0) + var(i,j+1,k,1)*var(i,j+1,k,1) + var(i,j+1,k,2)*var(i,j+1,k,2));
+        double ey4 = var(i,j+2,k,3)/rho(i,j,k+2)-0.5*(1/(rho(i,j+2,k)*rho(i,j+2,k)))*
+            (var(i,j+2,k,0)*var(i,j+2,k,0) + var(i,j+2,k,1)*var(i,j+2,k,1) + var(i,j+2,k,2)*var(i,j+2,k,2));
+
+        double ez1 = var(i,j,k-2,3)/rho(i,j,k-2)-0.5*(1/(rho(i,j,k-2)*rho(i,j,k-2)))*
+            (var(i,j,k-2,0)*var(i,j,k-2,0) + var(i,j,k-2,1)*var(i,j,k-2,1) + var(i,j,k-2,2)*var(i,j,k-2,2));
+        double ez2 = var(i,j,k-1,3)/rho(i,j,k-1)-0.5*(1/(rho(i,j,k-1)*rho(i,j,k-1)))*
+            (var(i,j,k-1,0)*var(i,j,k-1,0) + var(i,j,k-1,1)*var(i,j,k-1,1) + var(i,j,k-1,2)*var(i,j,k-1,2));
+        double ez3 = var(i,j,k+1,3)/rho(i,j,k+1)-0.5*(1/(rho(i,j,k+1)*rho(i,j,k+1)))*
+            (var(i,j,k+1,0)*var(i,j,k+1,0) + var(i,j,k+1,1)*var(i,j,k+1,1) + var(i,j,k+1,2)*var(i,j,k+1,2));
+        double ez4 = var(i,j,k+2,3)/rho(i,j,k+2)-0.5*(1/(rho(i,j,k+2)*rho(i,j,k+2)))*
+            (var(i,j,k+2,0)*var(i,j,k+2,0) + var(i,j,k+2,1)*var(i,j,k+2,1) + var(i,j,k+2,2)*var(i,j,k+2,2));
+
+
         double dxr = (rho(i-2,j,k) - 8.0*rho(i-1,j,k) + 8.0*rho(i+1,j,k) - rho(i+2,j,k))/(12.0*cd(1));
         double dyr = (rho(i,j-2,k) - 8.0*rho(i,j-1,k) + 8.0*rho(i,j+1,k) - rho(i,j+2,k))/(12.0*cd(2));
         double dzr = (rho(i,j,k-2) - 8.0*rho(i,j,k-1) + 8.0*rho(i,j,k+1) - rho(i,j,k+2))/(12.0*cd(3));
 
-        double dxe = (var(i-2,j,k,3) - 8.0*var(i-1,j,k,3) + 8.0*var(i+1,j,k,3) - var(i+2,j,k,3))/(12.0*cd(1));
-        double dye = (var(i,j-2,k,3) - 8.0*var(i,j-1,k,3) + 8.0*var(i,j+1,k,3) - var(i,j+2,k,3))/(12.0*cd(2));
-        double dze = (var(i,j,k-2,3) - 8.0*var(i,j,k-1,3) + 8.0*var(i,j,k+1,3) - var(i,j,k+2,3))/(12.0*cd(3));
+        double dxe = (ex1 - 8.0*ex2 + 8.0*ex3 - ex4)/(12.0*cd(1));
+        double dye = (ey1 - 8.0*ey2 + 8.0*ey3 - ey4)/(12.0*cd(2));
+        double dze = (ez1 - 8.0*ez2 + 8.0*ez3 - ez4)/(12.0*cd(3));
 
-        double dxu = (var(i-2,j,k,0) - 8.0*var(i-1,j,k,0) + 8.0*var(i+1,j,k,0) - var(i+2,j,k,0))/(12.0*cd(1));
-        double dyu = (var(i,j-2,k,1) - 8.0*var(i,j-1,k,1) + 8.0*var(i,j+1,k,1) - var(i,j+2,k,1))/(12.0*cd(2));
-        double dzu = (var(i,j,k-2,2) - 8.0*var(i,j,k-1,2) + 8.0*var(i,j,k+1,2) - var(i,j,k+2,2))/(12.0*cd(3));
+        double dxu = (u1 - 8.0*u2 + 8.0*u3 - u4)/(12.0*cd(1));
+        double dyv = (v1 - 8.0*v2 + 8.0*v3 - v4)/(12.0*cd(2));
+        double dzw = (w1 - 8.0*w2 + 8.0*w3 - w4)/(12.0*cd(3));
 
         double n1 = dxr;
         double n2 = dyr;
         double n3 = dzr;
 
         double rgrad = sqrt(dxr*dxr+dyr*dyr+dzr*dzr);
-        double egrad = sqrt(dxe*dxe+dye*dye+dze*dze);
-        double divu = dxu+dyu+dzu;
+        double divu = dxu+dyv+dzw;
 
         double dnednr = (n1*dxe+n2*dye+n3*dze)*(n1*dxr+n2*dyr+n3*dzr);
 
@@ -286,7 +328,8 @@ struct calculateRhoGrad {
         
         // detect shock front (equation 5a)
         if (divu <= 0)
-            gradRho(i,j,k,0) = (1-indicator)*divu*rgrad;
+            gradRho(i,j,k,0) = (1-indicator)*rgrad;
+            //gradRho(i,j,k,0) = (1-indicator)*divu*rgrad;
         else
             gradRho(i,j,k,0) = 0;
 
@@ -314,6 +357,7 @@ struct maxGradFunctor {
             lmax = abs(gradRho(i,j,k,n));
     }
 };
+
 struct updateCeq {
 
     typedef typename Kokkos::View<double****> V4D;
@@ -455,11 +499,11 @@ struct calculateCeqFlux {
             // left is current cell, right is cell in positive direction
 
             // get right and left components of isotropic C
-            c_left = var(i,j,k,nc);
+            c_left  = var(i   ,j   ,k   ,nc);
             c_right = var(i+ip,j+jp,k+kp,nc);
 
             // get right and left components of anisotropic C
-            ch_left = var(i,j,k,nch);
+            ch_left  = var(i   ,j   ,k   ,nch);
             ch_right = var(i+ip,j+jp,k+kp,nch);
 
             rho_left  = rho(i   ,j   ,k   );
@@ -477,7 +521,7 @@ struct calculateCeqFlux {
             for (int idx=0; idx<3; ++idx) cmag_right += cn_right[idx]*cn_right[idx];
             //cmag_right = sqrt(cmag_right);
 
-            if (cmag_left==0 || cmag_right==0){
+            if (cmag_left<=0.000001 || cmag_right<=0.000001){
                 for (int m=0; m<3; ++m){
                     for (int n=0; n<3; ++n){
                         mFlux(m,n,i,j,k,dir) = 0.0;
@@ -718,19 +762,19 @@ void weno_func::operator()() {
             updateCeq(dvar,var,gradRho,maxS,cd,cf.kap,cf.eps));
 
         /**** Apply CEQ ****/
-        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+0), Kokkos::Max<double>(myMaxC));
+        Kokkos::parallel_reduce(cell_pol,maxGradFunctor(var,cf.nv+0), Kokkos::Max<double>(myMaxC));
         MPI_Allreduce(&myMaxC,&maxC,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+0), Kokkos::Max<double>(myMaxCh));
+        Kokkos::parallel_reduce(cell_pol,maxGradFunctor(var,cf.nv+1), Kokkos::Max<double>(myMaxCh));
         MPI_Allreduce(&myMaxCh,&maxCh,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+1), Kokkos::Max<double>(myMaxC1));
+        Kokkos::parallel_reduce(cell_pol,maxGradFunctor(var,cf.nv+2), Kokkos::Max<double>(myMaxC1));
         MPI_Allreduce(&myMaxC1,&maxC1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+2), Kokkos::Max<double>(myMaxC2));
+        Kokkos::parallel_reduce(cell_pol,maxGradFunctor(var,cf.nv+3), Kokkos::Max<double>(myMaxC2));
         MPI_Allreduce(&myMaxC2,&maxC2,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
-        Kokkos::parallel_reduce(ghost_pol,maxGradFunctor(var,cf.nv+3), Kokkos::Max<double>(myMaxC3));
+        Kokkos::parallel_reduce(cell_pol,maxGradFunctor(var,cf.nv+4), Kokkos::Max<double>(myMaxC3));
         MPI_Allreduce(&myMaxC3,&maxC3,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 
         mu = maxC1;
@@ -743,13 +787,17 @@ void weno_func::operator()() {
         beta = 0.0;
         betae = 0.0;
 
-        double dxmag = cf.dx*cf.dx+cf.dy*cf.dy+cf.dz*cf.dz;
+        double dxmag = sqrt(cf.dx*cf.dx+cf.dy*cf.dy+cf.dz*cf.dz);
         if (mu>0 && maxCh>0)
             alpha = (dxmag/(mu*mu*maxCh))*cf.alpha;
         if (maxC>0){
             beta = (dxmag/maxC)*cf.beta;
             betae = (dxmag/maxC)*cf.betae;
         }
+
+        //if (cf.rank == 0)
+        //    printf("%.4f,%.4f,%.4f,%.4f,%.4f\n",maxC,maxCh,maxC1,maxC2,maxC3);
+        //    //printf("alpha = %f, beta = %f, betae = %f\n",alpha,beta,betae);
         
         Kokkos::parallel_for(weno_pol,
             calculateCeqFlux(var,rho,mFlux,cFlux,cd));
