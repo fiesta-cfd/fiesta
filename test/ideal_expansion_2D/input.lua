@@ -41,6 +41,13 @@ procsy = 1
 procsz = 1
 
 --Boundary Conditions
+bcXmin = 0
+bcXmax = 0
+bcYmin = 0
+bcYmax = 0
+bcZmin = 0
+bcZmax = 0
+
 xPer = 0
 yPer = 0
 zPer = 0
