@@ -1,6 +1,7 @@
-FIESTA_PATH = /home/beromer/src/fiesta-dev/fiesta
-BUILD_DIR = /home/beromer/src/fiesta-dev/build
-PREFIX = /home/beromer/.local
+#FIESTA_PATH = /home/beromer/src/fiesta-dev/fiesta
+#BUILD_DIR = /home/beromer/src/fiesta-dev/build
+#PREFIX = /home/beromer/.local
+include make.vars
 FIESTA_SRC = $(FIESTA_PATH)/src
 
 
