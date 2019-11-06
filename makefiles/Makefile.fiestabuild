@@ -10,7 +10,7 @@ vpath %.cpp $(sort $(dir $(SRC)))
 
 CXX = mpicxx
 CXXFLAGS = -O3 -llua -lm -ldl -lcgns 
-EXTRA_INC = -I$(BUILD_DIR)/cgns-build/include
+EXTRA_INC = -I$(BUILD_DIR)/lua-build/src -I$(BUILD_DIR)/cgns-build/include
 LINK = ${CXX}
 LDFLAGS = -L$(BUILD_DIR)/lua-build/src -L$(BUILD_DIR)/cgns-build/lib
 EXE = fiesta
