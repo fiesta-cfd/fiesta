@@ -1,6 +1,7 @@
-FIESTA_PATH = /home/beromer/src/fiesta-dev/fiesta
-BUILD_DIR = /home/beromer/src/fiesta-dev/build
-PREFIX = /home/beromer/.local
+#FIESTA_PATH = /home/beromer/src/fiesta-dev/fiesta
+#BUILD_DIR = /home/beromer/src/fiesta-dev/build
+#PREFIX = /home/beromer/.local
+include ../make.vars
 FIESTA_SRC = $(FIESTA_PATH)/src
 
 #KOKKOS_SRC_PATH = ${KOKKOS_PATH}
@@ -8,13 +9,14 @@ SRC = $(wildcard $(FIESTA_SRC)/*.cpp)
 vpath %.cpp $(sort $(dir $(SRC)))
 
 CXX = mpicxx
-CXXFLAGS = -O3 -llua53 -lm -ldl -lcgns
+CXXFLAGS = -O3 -llua -lm -ldl -lcgns 
+EXTRA_INC = -I$(BUILD_DIR)/cgns-build/include
 LINK = ${CXX}
-LDFLAGS =  
+LDFLAGS = -L$(BUILD_DIR)/lua-build/src -L$(BUILD_DIR)/cgns-build/lib
 EXE = fiesta
 
 OBJ = $(notdir $(SRC:.cpp=.o))
-LIB =
+LIB = 
 
 default: build
 
