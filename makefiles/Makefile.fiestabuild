@@ -1,0 +1,35 @@
+FIESTA_PATH = /home/beromer/src/fiesta-dev/fiesta
+BUILD_DIR = /home/beromer/src/fiesta-dev/build
+PREFIX = /home/beromer/.local
+FIESTA_SRC = $(FIESTA_PATH)/src
+
+#KOKKOS_SRC_PATH = ${KOKKOS_PATH}
+SRC = $(wildcard $(FIESTA_SRC)/*.cpp)
+vpath %.cpp $(sort $(dir $(SRC)))
+
+CXX = mpicxx
+CXXFLAGS = -O3 -llua53 -lm -ldl -lcgns
+LINK = ${CXX}
+LDFLAGS =  
+EXE = fiesta
+
+OBJ = $(notdir $(SRC:.cpp=.o))
+LIB =
+
+default: build
+
+include $(BUILD_DIR)/kokkos-build/Makefile.kokkos
+
+build: $(EXE)
+
+$(EXE): $(OBJ) $(KOKKOS_LINK_DEPENDS)
+	$(LINK) $(KOKKOS_LDFLAGS) $(LDFLAGS) $(EXTRA_PATH) $(OBJ) $(KOKKOS_LIBS) $(LIB) -o $(EXE) $(CXXFLAGS)
+
+clean:
+	rm -f *.o *.cuda *.host *.rocm
+
+install: build
+	cp fiesta $(PREFIX)/bin/.
+
+%.o:%.cpp $(KOKKOS_CPP_DEPENDS)
+	$(CXX) $(KOKKOS_CPPFLAGS) $(KOKKOS_CXXFLAGS) $(EXTRA_INC) -c $< -o $(notdir $@) $(CXXFLAGS)

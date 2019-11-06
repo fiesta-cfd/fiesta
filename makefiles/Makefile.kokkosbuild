@@ -1,0 +1,10 @@
+FIESTA_PATH = /home/beromer/src/fiesta-dev/fiesta
+BUILD_DIR = /home/beromer/src/fiesta-dev/build
+PREFIX = /home/beromer/.local
+FIESTA_SRC = $(FIESTA_PATH)/src
+
+default: kokkos
+
+kokkos:
+	$(FIESTA_PATH)/kokkos/generate_makefile.bash --with-serial --prefix=$(BUILD_DIR)/kokkos-build
+	make install -j -C $(BUILD_DIR)/kokkos-build
