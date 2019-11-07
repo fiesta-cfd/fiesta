@@ -1,5 +1,6 @@
 --
--- 2D (Thin 3D) Ideal Expansion
+-- 3D Ideal Expansion
+--
 
 --Restart and Output Options
 out_freq = 10                         --Screen Output Interval
@@ -18,18 +19,18 @@ M = {0.02897,0.02897}                 --Array of Species Molar Masses [kg/mol]
 --M = {0.02897,0.14606}                 --Array of Species Molar Masses [kg/mol]
 
 --Time
-nt = 10000                            --Time Step at which to end simulation
-dt = 0.0000001                        --Time Step Size [s]
+nt = 1000                             --Time Step at which to end simulation
+dt = 0.000001                         --Time Step Size [s]
 
 --User Parameters
 Lx = 10.0
 Ly = 10.0
-Lz = 0.05
+Lz = 10.0
 
 --Number of cells
-ni = 1000           --Simulation size in x direction
-nj = 1000           --Simulation Size in y direction
-nk = 5              --Simulation Size in z direction
+ni = 100            --Simulation size in x direction
+nj = 100            --Simulation Size in y direction
+nk = 100            --Simulation Size in z direction
 
 --Cell Sizes
 dx = Lx/ni
@@ -37,16 +38,16 @@ dy = Ly/nj
 dz = Lz/nk
 
 --MPI Processors
-procsx = 4
+procsx = 2
 procsy = 2
-procsz = 1
+procsz = 2
 
---Boundary Conditions
+--Boundary Conditions (0 - Freeflow, 1 - Reflective)
 bcXmin = 1
 bcXmax = 0
-bcYmin = 0
+bcYmin = 1
 bcYmax = 0
-bcZmin = 0
+bcZmin = 1
 bcZmax = 0
 
 xPer = 0
@@ -81,9 +82,10 @@ function f(i,j,k,v)
     ---Quasi 2D ideal expansion---
     
     --find position and distance from expansion center
-    local xdist = math.abs(0   -( (dx/2)+dx*i ))
-    local ydist = math.abs(Ly/2-( (dy/2)+dy*j ))
-    local rdist = math.sqrt(xdist*xdist + ydist*ydist)
+    local xdist = math.abs(0 -( (dx/2)+dx*i ))
+    local ydist = math.abs(0 -( (dy/2)+dy*j ))
+    local zdist = math.abs(0 -( (dz/2)+dz*k ))
+    local rdist = math.sqrt(xdist*xdist + ydist*ydist + zdist*zdist)
 
     local Cv_air = R/(M[1]*(gamma[1]-1))
     local Cv_exp = R/(M[1]*(gamma[1]-1))
@@ -91,7 +93,7 @@ function f(i,j,k,v)
     Eexp = 3000*Cv_exp*1000.0
 
     --setup energy pill
-    if rdist < 0.2 then
+    if rdist < 0.5 then
         if v==0 then return 0      end
         if v==1 then return 0      end
         if v==2 then return 0      end
