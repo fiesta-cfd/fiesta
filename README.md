@@ -106,7 +106,7 @@ Kokkos can be obtained from github.com/kokkos/kokkos.git
 ```
 git clone https://github.com/kokkos/kokkos.git
 cd $BUILD_DIRECTORY
-$KOKKOS_SOURCE_DIR/generate_makefile.sh --with-cuda --with-openmp --with-serial --arch=Kepler35 --kokkos_cuda_opt=enable_lambda --kokkos-path=$KOKKOS_SOURCE_DIR --prefix=$KOKKOS_INSTALL_DIR
+$KOKKOS_SOURCE_DIR/generate_makefile.sh --with-cuda --arch=Kepler35 --kokkos_cuda_opt=enable_lambda --kokkos-path=$KOKKOS_SOURCE_DIR --prefix=$KOKKOS_INSTALL_DIR
 ```
 
 Now the run command scripts can be used to setup the environment.  These may need to be edited to reflect your module names.  These files load modules and export the mpi compiler environment variable
@@ -115,24 +115,26 @@ Now the run command scripts can be used to setup the environment.  These may nee
 source mpich.rc
 ```
 
-The makefile will need to be edited to reflect the kokkos paths and the installation path.  The code can then be built with 
+The makefile in the fiesta/src directory will need to be edited to reflect the kokkos paths and the installation path.  The code can then be built with 
 
 ```
 make install -j
 ```
 
-## Running on Xena at UNM Carc
+### Running on Xena at UNM Carc
 ```
 qsub -I -q dualGPU -l walltime=48:00:00
 fiesta.cuda input.lua --kokkos-ndevices=2
 ```
 
+There is an example pbs batch script that will run on Xena.  The modules can be modified to  run on Wheeler if the '--with-serial' was used during the kokkos makefile generation step instead of --with-cuda.
+
 There is an example PBS batch script included.
 
-## Visualizing
+### Visualizing
 Output files are written in the CFD Generalized Notation System standard (CGNS) and can be viewed with paraview, tecplot, visit, etc.  Solution files are single precision and include the grid in every solution file.  Restart files are double precision.
 
-## Other Comments
+### Other Comments
 For NFS filesystems (like at UNM CARC) file writing may hang when using OpenMPI.  Try the following if this happens. See: https://github.com/open-mpi/ompi/issues/4446
 ```
 export OMPI_MCA_fs_ufs_lock_algorithm=1 
