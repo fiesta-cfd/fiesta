@@ -1,5 +1,65 @@
 # FIESTA
-**F**ast **I**nterfaces, **E**xplosions, **S**hocks and **T**ransport in the **A**tmosphere
+**F**ast **I**nterfac**ES** and **T**ransport in the **A**tmosphere
+
+## Building on Kodiak
+
+There is a new bash script and makefile system for building Fiesta.  Tested and working on Kodiak and local workstations.  Does not work on any UNM CARC machines.
+
+Pick a working directory:
+```
+mkdir ~/fiesta-dev && cd ~/fiesta-dev
+```
+
+Get fiesta:
+```
+git clone git@github.com:beromer/fiesta.git
+```
+
+Create Build Directory:
+```
+mkdir build && cd build
+```
+
+Get Interactive Node:
+```
+salloc -N1 -t 4:00:00
+```
+
+Load Required Modules:
+```
+module load gcc/7.4.0 openmpi/2.1.2 cudatoolkit/10.0 cmake/3.14.6
+module load hdf5-parallel/1.8.16
+```
+
+Configure and Generate Makefiles
+```
+../fiesta/configure.sh --device=Cuda --arch=Pascal60
+```
+Options for device are currently 'Serial' and 'Cuda' for cpu and gpu versions of the code.  For Kodiak use '--arch=BDW' for 'Serial' device and '--arch=Pascal60' for 'Cuda' device.
+
+Build the code:
+```
+make
+```
+
+An executable should now exist in the 'fiesta-build' subdirectory.  However, an issue with the static cgns library prevents static linking, so we have to include the synamic library in the path using:
+```
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/fiesta-dev/build/cgns-build/lib
+```
+
+This must also be included in any batch script. See fiesta repository root directory for example pbs and slurm batch scripts.
+
+Submit a batch script:
+```
+cd /your/users/scratch/directory
+mkdir fiesta-test && cd fiesta-test
+cp /fiesta/repository/path/fiesta.slurm .
+cp /fiesta/repository/path/test/ideal_expansion_3D/input.lua .
+sbatch fiesta.slurm
+```
+
+Once the batch file executes, the simulation will produce restart files and solution files.  Both are in the CGNS format and can be viewed with Paraview, Tecplot or any other mainstream visualization package.  The format is fairly well standardized.
+
 
 ## Installation on Xena at UNM Carc
 
