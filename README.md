@@ -42,12 +42,36 @@ Build the code:
 make
 ```
 
-An executable should now exist in the 'fiesta-build' subdirectory.  However, an issue with the static cgns library prevents static linking, so we have to include the synamic library in the path using:
+An executable should now exist in the 'fiesta-build' subdirectory.  However, an issue with the static cgns library prevents static linking, so we have to include the dynamic library in the path using:
 ```
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/fiesta-dev/build/cgns-build/lib
 ```
 
 This must also be included in any batch script. See fiesta repository root directory for example pbs and slurm batch scripts.
+
+### Run an interactive job
+
+Assuming that the code is built, the library path has been updated and the modules are still loaded, then running on a single interactive node is straight forward.
+```
+cd /your/users/scratch/directory
+mkdir fiesta-test && cd fiesta-test
+cp /fiesta/repository/path/test/ideal_expansion_3D/input.lua .
+```
+
+Edit the 'input.lua' file to change the number of mpi processes for 4 GPUs.  e.g.:
+```
+procsx = 2
+procsy = 2
+procsz = 1
+```
+
+Then run the code with:
+```
+mpirun -n 4 ~/fiesta-dev/build/fiesta-build/fiesta input.lua --kokkos-ndevices=4
+```
+The simulation will produce restart files and solution files.  Both are in the CGNS format and can be viewed with Paraview, Tecplot or any other mainstream visualization package.  The format is fairly well standardized.
+
+### Run a batch job
 
 Submit a batch script:
 ```
@@ -55,6 +79,10 @@ cd /your/users/scratch/directory
 mkdir fiesta-test && cd fiesta-test
 cp /fiesta/repository/path/fiesta.slurm .
 cp /fiesta/repository/path/test/ideal_expansion_3D/input.lua .
+```
+
+Edit the 'fiesta.slurm' batch file to reflect your directories. Then submit with:
+```
 sbatch fiesta.slurm
 ```
 
