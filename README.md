@@ -35,7 +35,7 @@ Configure and Generate Makefiles
 ```
 ../fiesta/configure.sh --device=Cuda --arch=Pascal60
 ```
-Options for device are currently 'Serial' and 'Cuda' for cpu and gpu versions of the code.  For Kodiak use '--arch=BDW' for 'Serial' device and '--arch=Pascal60' for 'Cuda' device.
+Options for device are currently 'Serial' and 'Cuda' for cpu and gpu versions of the code.  For Kodiak use '--arch=BDW' for 'Serial' device and '--arch=Pascal60' for 'Cuda' device.  'BDW' stands for Intel Broadwell architecture.
 
 Build the code:
 ```
