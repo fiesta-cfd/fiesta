@@ -24,6 +24,7 @@ double getglobdbl(lua_State *L, const char *var);
 //configuration structure
 struct inputConfig {
     char inputFname[32];
+    int ndim;
     int glbl_ni,glbl_nj,glbl_nk;
     int glbl_nci,glbl_ncj,glbl_nck;
     double *gamma;

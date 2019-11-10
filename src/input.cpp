@@ -70,30 +70,25 @@ struct inputConfig executeConfiguration(char * fname){
         error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
 
     /* get global variables from Lua results */
+    myConfig.ndim        = getglobint (L, "ndim" );
     myConfig.nt          = getglobint (L, "nt" );
     myConfig.glbl_nci    = getglobint (L, "ni" );
     myConfig.glbl_ncj    = getglobint (L, "nj" );
-    myConfig.glbl_nck    = getglobint (L, "nk" );
     myConfig.ns          = getglobint (L, "ns" );
     myConfig.dt          = getglobdbl (L, "dt" );
     myConfig.dx          = getglobdbl (L, "dx" );
     myConfig.dy          = getglobdbl (L, "dy" );
-    myConfig.dz          = getglobdbl (L, "dz" );
     myConfig.R           = getglobdbl (L, "R" );
     myConfig.xProcs      = getglobint (L, "procsx");
     myConfig.yProcs      = getglobint (L, "procsy");
-    myConfig.zProcs      = getglobint (L, "procsz");
     //myConfig.ng          = getglobint (L, "ng" );
     myConfig.ng = 3;
     myConfig.xPer        = getglobint (L, "xPer" );
     myConfig.yPer        = getglobint (L, "yPer" );
-    myConfig.zPer        = getglobint (L, "zPer" );
     myConfig.bcL         = getglobint (L, "bcXmin" );
     myConfig.bcR         = getglobint (L, "bcXmax" );
     myConfig.bcB         = getglobint (L, "bcYmin" );
     myConfig.bcT         = getglobint (L, "bcYmax" );
-    myConfig.bcH         = getglobint (L, "bcZmin" );
-    myConfig.bcF         = getglobint (L, "bcZmax" );
     myConfig.restart     = getglobint (L, "restart");
     myConfig.sfName      = getglobstr (L, "restartName");
     myConfig.tstart      = getglobint (L, "tstart");
@@ -104,6 +99,14 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.alpha       = getglobdbl (L, "alpha");
     myConfig.beta        = getglobdbl (L, "beta");
     myConfig.betae       = getglobdbl (L, "betae");
+    if (myConfig.ndim == 3){
+        myConfig.glbl_nck    = getglobint (L, "nk" );
+        myConfig.dz          = getglobdbl (L, "dz" );
+        myConfig.zProcs      = getglobint (L, "procsz");
+        myConfig.zPer        = getglobint (L, "zPer" );
+        myConfig.bcH         = getglobint (L, "bcZmin" );
+        myConfig.bcF         = getglobint (L, "bcZmax" );
+    }
 
     myConfig.gamma = (double*)malloc(myConfig.ns*sizeof(double));
     myConfig.M = (double*)malloc(myConfig.ns*sizeof(double));
@@ -128,12 +131,23 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.out_freq    = getglobint (L, "out_freq");
     myConfig.write_freq    = getglobint (L, "write_freq");
     myConfig.restart_freq    = getglobint (L, "restart_freq");
+
     myConfig.nv = 4 + myConfig.ns;
 
     snprintf(myConfig.inputFname,32,"%s",fname);
 
     /* Done with Lua */
     lua_close(L);
+
+    if (myConfig.ndim == 2){
+        myConfig.nv = 3 + myConfig.ns;
+        myConfig.dz = myConfig.dx;
+        myConfig.zProcs = 1;
+        myConfig.glbl_nck = 1;
+        myConfig.bcH = 0;
+        myConfig.bcF = 0;
+        myConfig.zPer = 0;
+    }
 
     /* calculate number of nodes from number of cells */
     myConfig.glbl_ni = myConfig.glbl_nci + 1;

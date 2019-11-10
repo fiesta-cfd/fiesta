@@ -6,6 +6,7 @@
 #include <mpi.h>
 #include "lsdebug.hpp"
 #include "weno_function.hpp"
+#include "weno2d.hpp"
 #include <iostream>
 #include <cstdio>
 #include <ctime>
@@ -28,19 +29,24 @@ int main(int argc, char* argv[]){
 
     cf = mpi_init(cf);
 
-    Kokkos::View<double****> myV("myV",cf.ngi,cf.ngj,cf.ngk,cf.nv+5);
-    Kokkos::View<double****> tmp("RK_tmp",cf.ngi,cf.ngj,cf.ngk,cf.nv+5);
-    Kokkos::View<double****> K1("RK_K1",cf.ngi,cf.ngj,cf.ngk,cf.nv+5);
-    Kokkos::View<double****> K2("RK_K2",cf.ngi,cf.ngj,cf.ngk,cf.nv+5);
-    Kokkos::View<double*> cd("deviceCF",4+cf.ns*2);
+    int cv = 0;
+    if (cf.ceq == 1)
+        cv = 5;
+
+    Kokkos::View<double****> myV("myV",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
+    Kokkos::View<double****> tmp("RK_tmp",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
+    Kokkos::View<double****> K1("RK_K1",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
+    Kokkos::View<double****> K2("RK_K2",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
+    Kokkos::View<double*> cd("deviceCF",5+cf.ns*2);
     typename Kokkos::View<double*>::HostMirror hostcd = Kokkos::create_mirror_view(cd);
     Kokkos::deep_copy(hostcd, cd);
     hostcd(0) = cf.ns;
     hostcd(1) = cf.dx;
     hostcd(2) = cf.dy;
     hostcd(3) = cf.dz;
+    hostcd(4) = cf.nv;
     
-    int sdx = 4;
+    int sdx = 5;
     for (int s=0; s<cf.ns; ++s){
         hostcd(sdx) = cf.gamma[s];
         hostcd(sdx+1) = cf.R/cf.M[s];
@@ -135,22 +141,32 @@ int main(int argc, char* argv[]){
 
         //K1 = dt*f(tmp) dt is member data to f()
         applyBCs(cf,tmp);
-        weno_func f1(cf,tmp,K1, cd);
-        f1();
+        if (cf.ndim == 3){
+            weno_func f1(cf,tmp,K1, cd);
+            f1();
+        }else{
+            weno2d_func f1(cf,tmp,K1, cd);
+            f1();
+        }
         
         //tmp = myV + k1/2
-        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+5}),
+        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+cv}),
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
             tmp(i,j,k,v) = myV(i,j,k,v) + cf.dt*K1(i,j,k,v)/2;
         });
 
         //K2 = dt*f(tmp) dt is member data to f()
         applyBCs(cf,tmp);
-        weno_func f2(cf,tmp,K2, cd);
-        f2();
+        if (cf.ndim == 3){
+            weno_func f2(cf,tmp,K2, cd);
+            f2();
+        }else{
+            weno2d_func f2(cf,tmp,K2, cd);
+            f2();
+        }
 
         //myV = myV + K2
-        Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+5}),
+        Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+cv}),
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
             myV(i,j,k,v) = myV(i,j,k,v) + cf.dt*K2(i,j,k,v);
         });

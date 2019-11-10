@@ -206,8 +206,8 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
         cgp_error_exit();
 
     //write densities
-    for (int vn=4; vn<cf.nv; ++vn){
-        snprintf(dName,32,"SpeciesDensity%d",vn-3);
+    for (int vn=cf.ndim+1; vn<cf.nv; ++vn){
+        snprintf(dName,32,"SpeciesDensity%d",vn-cf.ndim);
         for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
             for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
                 for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
@@ -376,8 +376,8 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
         cgp_error_exit();
 
     //write densities
-    for (int vn=4; vn<cf.nv; ++vn){
-        snprintf(dName,32,"SpeciesDensity%d",vn-3);
+    for (int vn=cf.ndim+1; vn<cf.nv; ++vn){
+        snprintf(dName,32,"SpeciesDensity%d",vn-cf.ndim);
         for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
             for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
                 for (int i=cf.ng; i<cf.nci+cf.ng; ++i){

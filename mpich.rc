@@ -1,4 +1,4 @@
-export MPICH_CXX=/users/beromer/Kokkos/kokkos/bin/nvcc_wrapper
+export MPICH_CXX=/users/beromer/fiesta-dev/kokkos-install/bin/nvcc_wrapper
 
 module load cgns-3.4.0-gcc-7.4.0-ny2kric
 module load cuda-10.0.130-gcc-7.4.0-7svpedx
