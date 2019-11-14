@@ -7,8 +7,9 @@ struct weno2d_func {
     Kokkos::View<double****> mdvar;
     Kokkos::View<double*> mcd;
 
-    typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>> policy_f;
-    typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_f4;
+    typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>> policy_f2;
+    typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_fv2;
+    //typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_f24;
     struct inputConfig cf;
 
     weno2d_func(struct inputConfig &cf_, const Kokkos::View<double****> & u_,

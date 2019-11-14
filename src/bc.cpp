@@ -114,7 +114,7 @@ void applyBCs(struct inputConfig cf, Kokkos::View<double****> &u){
         Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngk,cf.nv+cv}), bc_T(cf.ng+cf.ncj,cf.ng,cf.bcT,u));
     }
 
-    if (cf.ndim == 4){
+    if (cf.ndim == 3){
         if (cf.zMinus < 0){
             Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngj,cf.nv+cv}), bc_H(cf.ng,cf.ng,cf.bcH,u));
         }

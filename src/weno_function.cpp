@@ -22,6 +22,7 @@ struct calculateRhoAndPressure {
     void operator()(const int i, const int j, const int k) const {
 
         int ns = (int)cd(0);
+        int nv = (int)cd(4);
         double gamma, gammas, Rs;
         double Cp = 0;
         double Cv = 0;
@@ -33,8 +34,8 @@ struct calculateRhoAndPressure {
         }
 
         for (int s=0; s<ns; ++s){
-            gammas = cd(4+2*s);
-            Rs = cd(4+2*s+1);
+            gammas = cd(5+2*s);
+            Rs = cd(5+2*s+1);
 
             Cp = Cp + (var(i,j,k,4+s)/rho(i,j,k))*( gammas*Rs/(gammas-1) );
             Cv = Cv + (var(i,j,k,4+s)/rho(i,j,k))*( Rs/(gammas-1) );
@@ -222,8 +223,8 @@ struct maxWaveSpeed {
         double a, s;
 
         for (int s=0; s<ns; ++s){
-            gammas = cd(4+2*s);
-            Rs = cd(4+2*s+1);
+            gammas = cd(5+2*s);
+            Rs = cd(5+2*s+1);
 
             Cp = Cp + (var(i,j,k,4+s)/rho(i,j,k))*( gammas*Rs/(gammas-1) );
             Cv = Cv + (var(i,j,k,4+s)/rho(i,j,k))*( Rs/(gammas-1) );

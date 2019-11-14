@@ -48,17 +48,22 @@ struct inputConfig mpi_init(struct inputConfig cf){
     cf.nj = cf.ncj + 1;
     cf.ngj = cf.ncj + 2*cf.ng;
 
-    rem = cf.glbl_nck % cf.zProcs;
-    cf.nck = floor(cf.glbl_nck/cf.zProcs);
-    if (coords[2] < rem){
-        cf.nck = cf.nck + 1;
-        cf.kStart = cf.nck*coords[2];
+    if (cf.ndim == 2){
+        cf.ngk = 1;
     }else{
-        cf.kStart = rem*(cf.nck+1) + (coords[2]-rem)*cf.nck;
+        rem = cf.glbl_nck % cf.zProcs;
+        cf.nck = floor(cf.glbl_nck/cf.zProcs);
+        if (coords[2] < rem){
+            cf.nck = cf.nck + 1;
+            cf.kStart = cf.nck*coords[2];
+        }else{
+            cf.kStart = rem*(cf.nck+1) + (coords[2]-rem)*cf.nck;
+        }
+        cf.kEnd = cf.kStart + cf.nck;
+        cf.nk = cf.nck + 1;
+        cf.ngk = cf.nck + 2*cf.ng;
     }
-    cf.kEnd = cf.kStart + cf.nck;
-    cf.nk = cf.nck + 1;
-    cf.ngk = cf.nck + 2*cf.ng;
+
 
     return cf;
 }

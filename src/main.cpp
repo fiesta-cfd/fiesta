@@ -37,6 +37,7 @@ int main(int argc, char* argv[]){
     Kokkos::View<double****> tmp("RK_tmp",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
     Kokkos::View<double****> K1("RK_K1",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
     Kokkos::View<double****> K2("RK_K2",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
+        
     Kokkos::View<double*> cd("deviceCF",5+cf.ns*2);
     typename Kokkos::View<double*>::HostMirror hostcd = Kokkos::create_mirror_view(cd);
     Kokkos::deep_copy(hostcd, cd);
@@ -115,6 +116,7 @@ int main(int argc, char* argv[]){
         writeRestart(cf,x,y,z,myV,0,0.00);
     }
 
+
     MPI_Barrier(cf.comm);
     double total_time,mean_time;
     std::clock_t start;
@@ -190,7 +192,6 @@ int main(int argc, char* argv[]){
     }
 
     //if (cf.rank==0) printf("\n");
-    //MYDBGR
     
     MPI_Finalize();
     //Kokkos::finalize();
