@@ -201,8 +201,8 @@ void weno2d_func::operator()() {
     policy_f2 ghost_pol2 = policy_f2({0,0},{cf.ngi, cf.ngj});
     policy_f2 cell_pol2  = policy_f2({cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng});
     policy_f2 weno_pol2  = policy_f2({cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng});
-    policy_fv2 cell_pol_v2 = policy_fv2({cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng,cf.nv});
-    policy_fv2 weno_pol_v2 = policy_fv2({cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng,cf.nv});
+    policy_fv2 cell_pol_v2 = policy_fv2({cf.ng,cf.ng,0},{cf.ngi-cf.ng, cf.ngj-cf.ng,cf.nv});
+    policy_fv2 weno_pol_v2 = policy_fv2({cf.ng-1,cf.ng-1,0},{cf.ngi-cf.ng, cf.ngj-cf.ng,cf.nv});
 
 
     /**** WENO ****/
