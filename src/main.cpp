@@ -17,6 +17,12 @@ void fnExit1(void){
 
 int main(int argc, char* argv[]){
     MPI_Init(NULL,NULL);
+
+    int temp_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD,&temp_rank);
+    if (temp_rank == 0) printf("\n----------  Fiesta ----------\n");
+    if (temp_rank == 0) printf("\nInitializing...\n");
+
     Kokkos::initialize(argc, argv);
 
     atexit(fnExit1);
@@ -28,6 +34,7 @@ int main(int argc, char* argv[]){
     cf = executeConfiguration(argv[1]);
 
     cf = mpi_init(cf);
+    MPI_Barrier(cf.comm);
 
     int cv = 0;
     if (cf.ceq == 1)
@@ -55,24 +62,40 @@ int main(int argc, char* argv[]){
     }
     Kokkos::deep_copy(cd,hostcd);
 
-    if (cf.restart == 0)
-        loadInitialConditions(cf,myV);
-    
+    MPI_Barrier(cf.comm);
     if (cf.rank == 0){
-        printf("loboSHOK - %s\n",cf.inputFname);
-        printf("Restart File: %d | %s\n",cf.restart,cf.sfName);
+        printf("%s\n",cf.inputFname);
+        if (cf.restart)
+            printf("Running from Restart File: %d | %s\n",cf.restart,cf.sfName);
         printf("-----------------------\n");
         printf("Running %d processes as (%d,%d,%d)\n",cf.numProcs,cf.xProcs,cf.yProcs,cf.zProcs);
-        printf("nt = %d, dt = %f\n",cf.nt,cf.dt);
-        printf("glbl_ni = %d, dx = %f\n",cf.glbl_ni,cf.dx);
-        printf("glbl_nj = %d, dy = %f\n",cf.glbl_nj,cf.dy);
-        printf("glbl_nk = %d, dz = %f\n",cf.glbl_nk,cf.dz);
+        printf("nt = %d, dt = %.2e\n",cf.nt,cf.dt);
+        printf("Num Cells X = %d, dx = %.2e\n",cf.glbl_nci,cf.dx);
+        printf("Num Cells Y = %d, dy = %.2e\n",cf.glbl_ncj,cf.dy);
+        if (cf.ndim == 3)
+            printf("Num Cells Z = %d, dz = %.2e\n",cf.glbl_nck,cf.dz);
+        if (cf.ceq)
+            printf("C-Equation Enables");
+        else
+            printf("C-Equation Disabled");
         printf("Number of Species = %d:\n",cf.ns);
         for (int s=0; s<cf.ns; ++s)
             printf("    Species %d, Gamma = %4.2f, M = %6.4f\n",s+1,cf.gamma[s],cf.M[s]);
         printf("-----------------------\n");
     }
     
+    MPI_Barrier(cf.comm);
+    if (cf.rank == 0) printf("\nLoading Initial Conditions...\n");
+    double total_time,mean_time;
+    std::clock_t start;
+    start = std::clock();
+    if (cf.restart == 0)
+        loadInitialConditions(cf,myV);
+    total_time = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+
+    if (cf.rank == 0){
+        printf("Loaded Initial Conditions in %.1fs\n",total_time);
+    }
 
     /* allocate grid coordinate and flow variables */
     double *x = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
@@ -110,16 +133,21 @@ int main(int argc, char* argv[]){
     MPI_Barrier(cf.comm);
 
     if (cf.restart == 1){
+        if (cf.rank == 0) printf("\nReading Restart File...\n");
         readSolution(cf,myV);
     }else{
-        writeSolution(cf,xSP,ySP,zSP,myV,0,0.00);
-        writeRestart(cf,x,y,z,myV,0,0.00);
+        if (cf.rank == 0)
+            if (cf.write_freq >0 || cf.restart_freq>0)
+                printf("\nWriting Initial Conditions...\n");
+        if (cf.write_freq >0)
+            writeSolution(cf,xSP,ySP,zSP,myV,0,0.00);
+        if (cf.restart_freq >0)
+            writeRestart(cf,x,y,z,myV,0,0.00);
     }
 
 
+    if (cf.rank == 0) printf("\nStarting Simulation...\n");
     MPI_Barrier(cf.comm);
-    double total_time,mean_time;
-    std::clock_t start;
     start = std::clock();
     MPI_Barrier(cf.comm);
 
@@ -174,13 +202,16 @@ int main(int argc, char* argv[]){
         });
         
         if (cf.rank==0){
-            if ((t+1) % cf.out_freq == 0)
-                printf("%d/%d, %f\n",t+1,cf.nt,time);
+            if (cf.out_freq > 0)
+                if ((t+1) % cf.out_freq == 0)
+                    printf("%d/%d, %f\n",t+1,cf.nt,time);
         }
-        if ((t+1) % cf.write_freq == 0)
-            writeSolution(cf,xSP,ySP,zSP,myV,t+1,time);
-        if ((t+1) % cf.restart_freq == 0)
-            writeRestart(cf,x,y,z,myV,t+1,time);
+        if (cf.write_freq > 0)
+            if ((t+1) % cf.write_freq == 0)
+                writeSolution(cf,xSP,ySP,zSP,myV,t+1,time);
+        if (cf.restart_freq > 0)
+            if ((t+1) % cf.restart_freq == 0)
+                writeRestart(cf,x,y,z,myV,t+1,time);
     }
 
     MPI_Barrier(cf.comm);
@@ -188,7 +219,8 @@ int main(int argc, char* argv[]){
     mean_time = total_time/cf.nt;
 
     if (cf.rank == 0){
-        printf("\nTotal: %f\nMean %f\n",total_time,mean_time);
+        printf("\nSimulation Complete\n");
+        printf("Total Time: %.2fs\nMean Time Step: %.2es\n",total_time,mean_time);
     }
 
     //if (cf.rank==0) printf("\n");
