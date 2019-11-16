@@ -204,7 +204,7 @@ int main(int argc, char* argv[]){
         if (cf.rank==0){
             if (cf.out_freq > 0)
                 if ((t+1) % cf.out_freq == 0)
-                    printf("%d/%d, %f\n",t+1,cf.nt,time);
+                    printf("%d/%d, %.2e\n",t+1,cf.nt,time);
         }
         if (cf.write_freq > 0)
             if ((t+1) % cf.write_freq == 0)
