@@ -77,7 +77,7 @@ int main(int argc, char* argv[]){
         if (cf.ceq)
             printf("C-Equation Enables");
         else
-            printf("C-Equation Disabled");
+            printf("C-Equation Disabled\n");
         printf("Number of Species = %d:\n",cf.ns);
         for (int s=0; s<cf.ns; ++s)
             printf("    Species %d, Gamma = %4.2f, M = %6.4f\n",s+1,cf.gamma[s],cf.M[s]);
