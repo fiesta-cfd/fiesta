@@ -5,7 +5,7 @@
 --Restart and Output Options
 out_freq = 10                         --Screen Output Interval
 restart_freq = 10000                  --Restart Write Interval
-write_freq = 200                      --Solution Write Interval
+write_freq = 100                      --Solution Write Interval
 restart = 0                           --Whether or not to use restart file
 time = 0.0                            --Start time of simulation
 tstart = 0                            --Start time index of simulation
@@ -14,13 +14,13 @@ restartName = "restart-000000.cgns"   --Restart File Name
 --Gas Properties
 R = 8.314462                          --Universal Gas Constant [J/(K*mol)]
 ns = 1                                --Number of Gas Species
-gamma = {1.40, 1.40}                  --Array of Species Ratio of Specific Heats
-M = {0.02897,0.02897}                 --Array of Species Molar Masses [kg/mol]
+gamma = {1.400}                  --Array of Species Ratio of Specific Heats
+M = {0.02897}                 --Array of Species Molar Masses [kg/mol]
 --M = {0.02897,0.14606}                 --Array of Species Molar Masses [kg/mol]
 
 --Time
 nt = 3000                             --Time Step at which to end simulation
-dt = 0.000001                         --Time Step Size [s]
+dt = 1e-6                             --Time Step Size [s]
 
 --User Parameters
 Lx = 10.0
@@ -80,25 +80,31 @@ function f(i,j,k,v)
     --]]
     
 
-    ---Quasi 2D ideal expansion---
+    ---3D ideal expansion---
     
-    --find position and distance from expansion center
+    --find position and distance from expansion center (0,0,0)
     local xdist = math.abs(0 -( (dx/2)+dx*i ))
     local ydist = math.abs(0 -( (dy/2)+dy*j ))
     local zdist = math.abs(0 -( (dz/2)+dz*k ))
+    --find radial distance from center
     local rdist = math.sqrt(xdist*xdist + ydist*ydist + zdist*zdist)
 
+    --calcualte heat capacity of ambient and hot regions
     local Cv_air = R/(M[1]*(gamma[1]-1))
-    local Cv_exp = R/(M[1]*(gamma[1]-1))
+    local Cv_hot = R/(M[1]*(gamma[1]-1))
+    
+    --calculate internal energies
+    --Air at 300[k] 1.0[kg/m^3]
     Eair = 300 *Cv_air*1.0
-    Eexp = 3000*Cv_exp*1000.0
+    --Air at 3000[k] 1000[kg/m^3]
+    Ehot = 3000*Cv_hot*1000.0
 
-    --setup energy pill
+    --setup hot region
     if rdist < 0.5 then
         if v==0 then return 0      end
         if v==1 then return 0      end
         if v==2 then return 0      end
-        if v==3 then return Eexp   end
+        if v==3 then return Ehot   end
         if v==4 then return 1000.0 end
         if v==5 then return 0      end
     --ambient conditions
