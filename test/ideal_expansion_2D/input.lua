@@ -1,5 +1,6 @@
 --
--- 2D (Thin 3D) Ideal Expansion
+-- 2D Ideal Expansion
+--
 
 --Restart and Output Options
 out_freq = 0                          --Screen Output Interval

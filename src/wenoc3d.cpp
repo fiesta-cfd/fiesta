@@ -5,7 +5,7 @@
 #include "Kokkos_Core.hpp"
 #include <mpi.h>
 #include "lsdebug.hpp"
-#include "weno_function.hpp"
+#include "wenoc3d.hpp"
 
 struct calculateRhoAndPressure {
     typedef typename Kokkos::View<double****> V4D;
@@ -696,11 +696,9 @@ struct applyCeq {
     }
 };
 
-weno_func::weno_func(struct inputConfig &cf_, const Kokkos::View<double****> & u_,
-                     Kokkos::View<double****> & k_, Kokkos::View<double*> & cd_)
-                     : cf(cf_) , mvar(u_), mdvar(k_) , mcd(cd_) {};
+wenoc3d_func::wenoc3d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_) {};
 
-void weno_func::operator()() {
+void wenoc3d_func::compute(const Kokkos::View<double****> & mvar, Kokkos::View<double****> & mdvar) {
 
     // Typename acronyms for 3D and 4D variables
     typedef typename Kokkos::View<double******> V6D;

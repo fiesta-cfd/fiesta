@@ -7,7 +7,7 @@
 #include "lsdebug.hpp"
 #include "weno2d.hpp"
 
-struct calculateRhoAndPressure {
+struct calculateRhoAndPressure2d {
     typedef typename Kokkos::View<double****> V4D;
     typedef typename Kokkos::View<double**> V2D;
     V4D var;
@@ -15,7 +15,7 @@ struct calculateRhoAndPressure {
     V2D rho;
     Kokkos::View<double*> cd;
 
-    calculateRhoAndPressure (V4D var_, V2D p_, V2D rho_, Kokkos::View<double*> cd_)
+    calculateRhoAndPressure2d (V4D var_, V2D p_, V2D rho_, Kokkos::View<double*> cd_)
          : var(var_), p(p_), rho(rho_), cd(cd_) {}
 
     KOKKOS_INLINE_FUNCTION
@@ -48,7 +48,7 @@ struct calculateRhoAndPressure {
     }
 };
 
-struct calculateWenoFluxes {
+struct calculateWenoFluxes2d {
     
     typedef typename Kokkos::View<double****> V4D;
     typedef typename Kokkos::View<double**> V2D;
@@ -61,7 +61,7 @@ struct calculateWenoFluxes {
     int v;
     double eps = 0.000001;
 
-    calculateWenoFluxes (V4D var_, V2D p_, V2D rho_,
+    calculateWenoFluxes2d (V4D var_, V2D p_, V2D rho_,
                          V2D wenox_, V2D wenoy_, Kokkos::View<double*> cd_, int v_)
                          : var(var_), p(p_), rho(rho_),
                            wenox(wenox_), wenoy(wenoy_), cd(cd_), v(v_) {}
@@ -134,7 +134,7 @@ struct calculateWenoFluxes {
     }
 };
 
-struct applyWenoFluxes {
+struct applyWenoFluxes2d {
     
     typedef typename Kokkos::View<double****> V4D;
     typedef typename Kokkos::View<double**> V2D;
@@ -144,7 +144,7 @@ struct applyWenoFluxes {
     int v;
     
 
-    applyWenoFluxes (V4D dvar_, V2D wenox_, V2D wenoy_, int v_)
+    applyWenoFluxes2d (V4D dvar_, V2D wenox_, V2D wenoy_, int v_)
         : dvar(dvar_), wenox(wenox_), wenoy(wenoy_), v(v_) {}
     
     KOKKOS_INLINE_FUNCTION
@@ -155,7 +155,7 @@ struct applyWenoFluxes {
     }
 };
 
-struct applyPressure {
+struct applyPressure2d {
     
     typedef typename Kokkos::View<double****> V4D;
     typedef typename Kokkos::View<double**> V2D;
@@ -163,7 +163,7 @@ struct applyPressure {
     V2D p;
     Kokkos::View<double*> cd;
 
-    applyPressure (V4D dvar_, V2D p_, Kokkos::View<double*> cd_)
+    applyPressure2d (V4D dvar_, V2D p_, Kokkos::View<double*> cd_)
         : dvar(dvar_), p(p_), cd(cd_) {}
     
     KOKKOS_INLINE_FUNCTION
@@ -176,43 +176,55 @@ struct applyPressure {
     }
 };
 
-weno2d_func::weno2d_func(struct inputConfig &cf_, const Kokkos::View<double****> & u_,
-                     Kokkos::View<double****> & k_, Kokkos::View<double*> & cd_)
-                     : cf(cf_) , mvar(u_), mdvar(k_) , mcd(cd_) {};
+//weno2d_func::weno2d_func(struct inputConfig &cf_, const Kokkos::View<double****> & u_,
+//                     Kokkos::View<double****> & k_, Kokkos::View<double*> & cd_)
+//                     : cf(cf_) , mvar(u_), mdvar(k_) , mcd(cd_) {};
+//
+//void weno2d_func::operator()() {
+//
+weno2d_func::weno2d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){};
 
-void weno2d_func::operator()() {
+void weno2d_func::compute(const Kokkos::View<double****> & mvar, Kokkos::View<double****> & mdvar){
 
-    // Typename acronyms for 3D and 4D variables
+    // Typename acronyms for 2D and 4D variables
     typedef typename Kokkos::View<double****> V4D;
     typedef typename Kokkos::View<double**> V2D;
 
-    // copy input views
-    V4D dvar = mdvar;
+    // Copy input and output views
     V4D var = mvar;
+    V4D dvar = mdvar;
 
-    // create configuration data view
+    // Copy Configuration Data
     Kokkos::View<double*> cd = mcd;
 
-    // create temprary views
-    V2D p("p",cf.ngi,cf.ngj);
-    V2D rho("rho",cf.ngi,cf.ngj);
-    V2D wenox("wenox",cf.ngi,cf.ngj);
-    V2D wenoy("wenoy",cf.ngi,cf.ngj);
+    /*** Temporary Views ***/
+    V2D p("p",cf.ngi,cf.ngj);          // Pressure
+    V2D rho("rho",cf.ngi,cf.ngj);      // Total Density
+    V2D wenox("wenox",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
+    V2D wenoy("wenoy",cf.ngi,cf.ngj);  // Weno Fluxes in Y direction
 
-    // create range policies
+    /*** Range Policies ***/
+
+    // Physical and Ghost cells
     policy_f ghost_pol = policy_f({0,0},{cf.ngi, cf.ngj});
+    // Physical Cells only
     policy_f cell_pol  = policy_f({cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng});
+    // Cell Faces
     policy_f weno_pol  = policy_f({cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng});
 
 
     /**** WENO ****/
-    Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure(var,p,rho,cd) );
 
+    // Calcualte Total Density and Pressure Fields
+    Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure2d(var,p,rho,cd) );
+
+    // Calculate and apply weno fluxes for each variable
     for (int v=0; v<cf.nv; ++v){
-        Kokkos::parallel_for( weno_pol, calculateWenoFluxes(var,p,rho,wenox,wenoy,cd,v) );
+        Kokkos::parallel_for( weno_pol, calculateWenoFluxes2d(var,p,rho,wenox,wenoy,cd,v) );
 
-        Kokkos::parallel_for( cell_pol, applyWenoFluxes(dvar,wenox,wenoy,v) );
+        Kokkos::parallel_for( cell_pol, applyWenoFluxes2d(dvar,wenox,wenoy,v) );
     }
 
-    Kokkos::parallel_for( cell_pol, applyPressure(dvar,p,cd) );
+    // Apply Pressure Gradient Term
+    Kokkos::parallel_for( cell_pol, applyPressure2d(dvar,p,cd) );
 }

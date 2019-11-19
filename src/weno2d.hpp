@@ -1,18 +1,15 @@
 #include "input.hpp"
+#include "rkfunction.hpp"
 #include "Kokkos_Core.hpp"
 
-struct weno2d_func {
+class weno2d_func : public rk_func {
 
-    Kokkos::View<double****> mvar;
-    Kokkos::View<double****> mdvar;
-    Kokkos::View<double*> mcd;
+public:
+    weno2d_func(struct inputConfig &cf_, Kokkos::View<double*> &cd_);
 
+    void compute(const Kokkos::View<double****> & mvar, Kokkos::View<double****> & mdvar);
+
+private:
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>> policy_f;
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_f4;
-    struct inputConfig cf;
-
-    weno2d_func(struct inputConfig &cf_, const Kokkos::View<double****> & u_,
-              Kokkos::View<double****> & k_, Kokkos::View<double*> & cd_);
-
-    void operator()();
 };

@@ -5,8 +5,9 @@
 #include "Kokkos_Core.hpp"
 #include <mpi.h>
 #include "lsdebug.hpp"
-#include "weno_function.hpp"
+#include "wenoc3d.hpp"
 #include "weno2d.hpp"
+#include "rkfunction.hpp"
 #include <iostream>
 #include <cstdio>
 #include <ctime>
@@ -145,11 +146,19 @@ int main(int argc, char* argv[]){
             writeRestart(cf,x,y,z,myV,0,0.00);
     }
 
+    /*** Choose Scheme ***/
+    rk_func *f;
+    if (cf.ndim == 3){
+        f = new wenoc3d_func(cf,cd);
+    }else{
+        f = new weno2d_func(cf,cd);
+    }
 
     if (cf.rank == 0) printf("\nStarting Simulation...\n");
     MPI_Barrier(cf.comm);
     start = std::clock();
     MPI_Barrier(cf.comm);
+
 
     for (int t=tstart; t<cf.nt; ++t){
         time = time + cf.dt;
@@ -171,13 +180,14 @@ int main(int argc, char* argv[]){
 
         //K1 = dt*f(tmp) dt is member data to f()
         applyBCs(cf,tmp);
-        if (cf.ndim == 3){
-            weno_func f1(cf,tmp,K1, cd);
-            f1();
-        }else{
-            weno2d_func f1(cf,tmp,K1, cd);
-            f1();
-        }
+        //if (cf.ndim == 3){
+        //    weno_func f1(cf,tmp,K1, cd);
+        //    f1();
+        //}else{
+        //    weno2d_func f1(cf,tmp,K1, cd);
+        //    f1();
+        //}
+        f->compute(tmp,K1);
         
         //tmp = myV + k1/2
         Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+cv}),
@@ -187,13 +197,14 @@ int main(int argc, char* argv[]){
 
         //K2 = dt*f(tmp) dt is member data to f()
         applyBCs(cf,tmp);
-        if (cf.ndim == 3){
-            weno_func f2(cf,tmp,K2, cd);
-            f2();
-        }else{
-            weno2d_func f2(cf,tmp,K2, cd);
-            f2();
-        }
+        //if (cf.ndim == 3){
+        //    weno_func f2(cf,tmp,K2, cd);
+        //    f2();
+        //}else{
+        //    weno2d_func f2(cf,tmp,K2, cd);
+        //    f2();
+        //}
+        f->compute(tmp,K2);
 
         //myV = myV + K2
         Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+cv}),
