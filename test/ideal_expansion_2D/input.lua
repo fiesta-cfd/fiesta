@@ -1,6 +1,5 @@
 --
--- 2D Ideal Expansion
---
+-- 2D (Thin 3D) Ideal Expansion
 
 --Restart and Output Options
 out_freq = 0                          --Screen Output Interval
@@ -36,7 +35,7 @@ dy = Ly/nj
 
 --MPI Processors
 procsx = 2
-procsy = 2
+procsy = 1
 
 --Boundary Conditions (0: Freeflow, 1: Reflective)
 bcXmin = 1

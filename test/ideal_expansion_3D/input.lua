@@ -19,7 +19,7 @@ M = {0.02897,0.02897}                 --Array of Species Molar Masses [kg/mol]
 --M = {0.02897,0.14606}                 --Array of Species Molar Masses [kg/mol]
 
 --Time
-nt = 1000                             --Time Step at which to end simulation
+nt = 3000                             --Time Step at which to end simulation
 dt = 0.000001                         --Time Step Size [s]
 
 --User Parameters
@@ -28,9 +28,10 @@ Ly = 10.0
 Lz = 10.0
 
 --Number of cells
-ni = 100            --Simulation size in x direction
-nj = 100            --Simulation Size in y direction
-nk = 100            --Simulation Size in z direction
+ndim = 3
+ni = 75             --Simulation size in x direction
+nj = 75             --Simulation Size in y direction
+nk = 75             --Simulation Size in z direction
 
 --Cell Sizes
 dx = Lx/ni
@@ -39,8 +40,8 @@ dz = Lz/nk
 
 --MPI Processors
 procsx = 2
-procsy = 2
-procsz = 2
+procsy = 1
+procsz = 1
 
 --Boundary Conditions (0 - Freeflow, 1 - Reflective)
 bcXmin = 1
