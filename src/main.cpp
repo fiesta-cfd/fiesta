@@ -64,6 +64,7 @@ int main(int argc, char* argv[]){
     Kokkos::deep_copy(cd,hostcd);
 
     MPI_Barrier(cf.comm);
+    /*** Output runtime information ***/
     if (cf.rank == 0){
         printf("%s\n",cf.inputFname);
         if (cf.restart)
@@ -124,15 +125,14 @@ int main(int argc, char* argv[]){
         }
     }
     
-    //typedef typename Kokkos::View<double****> ViewType;
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_1;
-    //Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_1({0,0,0},{cf.nci, cf.ncj, cf.nck});
     
     double time = cf.time;
     int tstart = cf.tstart;
     
     MPI_Barrier(cf.comm);
 
+    /*** Read Restart or Write initial conditions ***/
     if (cf.restart == 1){
         if (cf.rank == 0) printf("\nReading Restart File...\n");
         readSolution(cf,myV);
@@ -159,35 +159,13 @@ int main(int argc, char* argv[]){
     start = std::clock();
     MPI_Barrier(cf.comm);
 
-
     for (int t=tstart; t<cf.nt; ++t){
         time = time + cf.dt;
 
-/********** Forward Euler **************/
-//        applyBCs(cf,myV);
-//        weno_func f1(cf,myV,K1, cd);
-//        f1();
-//
-//        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+5}),
-//               KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
-//            myV(i,j,k,v) = myV(i,j,k,v) + cf.dt*K1(i,j,k,v);
-//        });
-
-        
-/********** Runga Kutta 2 **************/
-        //tmp = myV
-        Kokkos::deep_copy(tmp,myV);
-
-        //K1 = dt*f(tmp) dt is member data to f()
-        applyBCs(cf,tmp);
-        //if (cf.ndim == 3){
-        //    weno_func f1(cf,tmp,K1, cd);
-        //    f1();
-        //}else{
-        //    weno2d_func f1(cf,tmp,K1, cd);
-        //    f1();
-        //}
-        f->compute(tmp,K1);
+        /****** Low Storage Runge-Kutta 2nd order ******/
+        //K1 = f(myV)
+        applyBCs(cf,myV);
+        f->compute(myV,K1);
         
         //tmp = myV + k1/2
         Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+cv}),
@@ -195,15 +173,8 @@ int main(int argc, char* argv[]){
             tmp(i,j,k,v) = myV(i,j,k,v) + cf.dt*K1(i,j,k,v)/2;
         });
 
-        //K2 = dt*f(tmp) dt is member data to f()
+        //K2 = f(tmp)
         applyBCs(cf,tmp);
-        //if (cf.ndim == 3){
-        //    weno_func f2(cf,tmp,K2, cd);
-        //    f2();
-        //}else{
-        //    weno2d_func f2(cf,tmp,K2, cd);
-        //    f2();
-        //}
         f->compute(tmp,K2);
 
         //myV = myV + K2
@@ -212,10 +183,12 @@ int main(int argc, char* argv[]){
             myV(i,j,k,v) = myV(i,j,k,v) + cf.dt*K2(i,j,k,v);
         });
         
+        
+        /****** Output Control ******/
         if (cf.rank==0){
             if (cf.out_freq > 0)
                 if ((t+1) % cf.out_freq == 0)
-                    printf("%d/%d, %.2e\n",t+1,cf.nt,time);
+                    printf("Iteration: %d/%d, Sim Time: %.2e\n",t+1,cf.nt,time);
         }
         if (cf.write_freq > 0)
             if ((t+1) % cf.write_freq == 0)

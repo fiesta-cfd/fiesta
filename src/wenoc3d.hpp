@@ -10,5 +10,4 @@ public:
 
 protected:
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_f;
-    struct inputConfig cf;
 };

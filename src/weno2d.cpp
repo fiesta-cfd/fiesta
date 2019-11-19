@@ -29,20 +29,23 @@ struct calculateRhoAndPressure2d {
 
         rho(i,j) = 0.0;
 
+        // Total Density for this cell
         for (int s=0; s<ns; ++s){
             rho(i,j) = rho(i,j) + var(i,j,0,3+s);
         }
 
+        // Calculate mixture ratio of specific heats
         for (int s=0; s<ns; ++s){
             gammas = cd(5+2*s);
             Rs = cd(5+2*s+1);
 
+            // accumulate mixture heat capacity by mass fraction weights
             Cp = Cp + (var(i,j,0,3+s)/rho(i,j))*( gammas*Rs/(gammas-1) );
             Cv = Cv + (var(i,j,0,3+s)/rho(i,j))*( Rs/(gammas-1) );
         }
-
         gamma = Cp/Cv;
 
+        // calculate pressure assuming perfect gas
         p(i,j) = (gamma-1)*( var(i,j,0,2) - (0.5/rho(i,j))
                   *(var(i,j,0,0)*var(i,j,0,0) + var(i,j,0,1)*var(i,j,0,1)) );
     }
@@ -71,14 +74,21 @@ struct calculateWenoFluxes2d {
 
         int ns = (int)cd(0);
         double ur,vr,w,b1,b2,b3,w1,w2,w3,p1,p2,p3,f1,f2,f3,f4,f5;
+        double dx = cd(1);
+        double dy = cd(2);
 
+        //calculate cell face velocities (in positive direction) with 4th order interpolation
+        //velocity is momentum divided by total density
         ur = ( -     var(i+2,j,0,0)/rho(i+2,j) + 7.0*var(i+1,j,0,0)/rho(i+1,j)
                + 7.0*var(i  ,j,0,0)/rho(i  ,j) -     var(i-1,j,0,0)/rho(i-1,j) )/12.0;
 
         vr = ( -     var(i,j+2,0,1)/rho(i,j+2) + 7.0*var(i,j+1,0,1)/rho(i,j+1)
                + 7.0*var(i,j  ,0,1)/rho(i,j  ) -     var(i,j-1,0,1)/rho(i,j-1) )/12.0;
 
+        //for each direction
         for (int idx=0; idx<2; ++idx){
+            //get stencil data.  the flux for the energy equation includes pressure so only add 
+            //pressure for the energy variable (index 2 for 2d problem)
             if (idx == 0){
                 if (ur < 0.0){
                     f1 = var(i+3,j,0,v) + (v==2)*p(i+3,j);
@@ -110,6 +120,7 @@ struct calculateWenoFluxes2d {
                 }
             }
 
+            // calculate weights and other weno stuff
             b1 = (13/12)*pow((f1-2.0*f2+f3),2.0) + (0.25)*pow((f1-4.0*f2+3.0*f3),2.0);
             b2 = (13/12)*pow((f2-2.0*f3+f4),2.0) + (0.25)*pow((f2-f4),2.0);
             b3 = (13/12)*pow((f3-2.0*f4+f5),2.0) + (0.25)*pow((3.0*f3-4.0*f4+f5),2.0);
@@ -124,11 +135,12 @@ struct calculateWenoFluxes2d {
 
             w = (w1*p1+w2*p2+w3*p3)/(w1+w2+w3);
 
+            //calculate weno flux
             if (idx == 0){
-                wenox(i,j) = ur*w/cd(1);
+                wenox(i,j) = ur*w/dx;
             }
             if (idx == 1) {
-                wenoy(i,j) = vr*w/cd(2);
+                wenoy(i,j) = vr*w/dy;
             }
         }
     }
@@ -150,6 +162,7 @@ struct applyWenoFluxes2d {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j) const {
 
+        //apply weno fluxes to right hand side of Euler equation dV/dt = ...
         dvar(i,j,0,v) = -( (wenox(i,j) - wenox(i-1,j))
                           +(wenoy(i,j) - wenoy(i,j-1)) );
     }
@@ -168,20 +181,19 @@ struct applyPressure2d {
     
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j) const {
-        double dxp = ( p(i-2,j) - 8.0*p(i-1,j) + 8.0*p(i+1,j) - p(i+2,j) )/(12.0*cd(1));
-        double dyp = ( p(i,j-2) - 8.0*p(i,j-1) + 8.0*p(i,j+1) - p(i,j+2) )/(12.0*cd(2));
+        double dx = cd(1);
+        double dy = cd(2);
+        // calculate pressure gradient across cell in each direction using 4th order
+        // central difference
+        double dxp = ( p(i-2,j) - 8.0*p(i-1,j) + 8.0*p(i+1,j) - p(i+2,j) )/(12.0*dx);
+        double dyp = ( p(i,j-2) - 8.0*p(i,j-1) + 8.0*p(i,j+1) - p(i,j+2) )/(12.0*dy);
 
+        //apply pressure gradient term to right hand side of Euler equation dV/dt = ...
         dvar(i,j,0,0) = dvar(i,j,0,0) - dxp;
         dvar(i,j,0,1) = dvar(i,j,0,1) - dyp;
     }
 };
 
-//weno2d_func::weno2d_func(struct inputConfig &cf_, const Kokkos::View<double****> & u_,
-//                     Kokkos::View<double****> & k_, Kokkos::View<double*> & cd_)
-//                     : cf(cf_) , mvar(u_), mdvar(k_) , mcd(cd_) {};
-//
-//void weno2d_func::operator()() {
-//
 weno2d_func::weno2d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){};
 
 void weno2d_func::compute(const Kokkos::View<double****> & mvar, Kokkos::View<double****> & mdvar){
