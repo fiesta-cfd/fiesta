@@ -157,7 +157,7 @@ struct inputConfig executeConfiguration(char * fname){
     return myConfig;
 }
 
-int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> deviceV){
+int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double**> deviceV){
     
     double z;
     int isnum;
@@ -169,7 +169,7 @@ int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> 
     if (luaL_loadfile(L,cf.inputFname) || lua_pcall(L,0,0,0))
         error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
 
-    typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
+    typename Kokkos::View<double**>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
     for (int v=0; v<cf.nv; ++v){
         if (cf.ndim == 3){
             for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
@@ -190,7 +190,8 @@ int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> 
                             error(L, "function 'f' should return a number");
                         lua_pop(L,1);
                         
-                        hostV(i,j,k,v) = z;
+                        int index = i + j * cf.ngi + k * cf.ngi * cf.ngj;
+                        hostV(index,v) = z;
                     }
                 }
             }
@@ -211,7 +212,8 @@ int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> 
                         error(L, "function 'f' should return a number");
                     lua_pop(L,1);
                     
-                    hostV(i,j,0,v) = z;
+                    int index = i + j * cf.ngi;
+                    hostV(index,v) = z;
                 }
             }
         }

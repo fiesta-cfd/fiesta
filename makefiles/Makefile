@@ -1,6 +1,6 @@
-#FIESTA_PATH = /home/beromer/src/fiesta-dev/fiesta
-#BUILD_DIR = /home/beromer/src/fiesta-dev/build
-#PREFIX = /home/beromer/.local
+#FIESTA_PATH = /home/ddunning/fiesta-dev/fiesta
+#BUILD_DIR = /home/ddunning/fiesta-dev/build
+#PREFIX = /home/ddunning/.local
 include make.vars
 FIESTA_SRC = $(FIESTA_PATH)/src
 
@@ -22,5 +22,5 @@ cgns:
 	make install -j -C $(BUILD_DIR)/cgns-build
 
 clean:
-	cd $(BUILD_DIR)/fiesta-dev && rm -f *.o *.cuda *.host *.rocm
+	cd $(BUILD_DIR) && rm -f *.o *.cuda *.host *.rocm
 

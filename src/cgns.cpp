@@ -92,7 +92,7 @@ struct inputConfig writeSPGrid(struct inputConfig cf, float *x, float *y, float 
     return cf;
 }
 
-void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const Kokkos::View<double****> deviceV, int tdx, double time){
+void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const Kokkos::View<double**> deviceV, int tdx, double time){
     int index_sol, index_flow;
 
     char dName[32];
@@ -115,7 +115,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
     cgsize_t endc[3] = {cf.iEnd,cf.jEnd,cf.kEnd};
 
-    typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
+    typename Kokkos::View<double**>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
     Kokkos::deep_copy(hostV,deviceV);
 
     /* open cgns file and write cell centered flow variable */
@@ -138,7 +138,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
                     int jj = j - cf.ng;
                     int kk = k - cf.ng;
                     idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,0);
+                    v[idx] = hostV(idx,0);
                 }
             }
         }
@@ -148,7 +148,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
                 int ii = i - cf.ng;
                 int jj = j - cf.ng;
                 idx = cf.nci*jj+ii;
-                v[idx] = hostV(i,j,0,0);
+                v[idx] = hostV(idx,0);
             }
         }
     }
@@ -168,7 +168,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
                     int jj = j - cf.ng;
                     int kk = k - cf.ng;
                     idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,1);
+                    v[idx] = hostV(idx,1);
                 }
             }
         }
@@ -178,7 +178,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
                 int ii = i - cf.ng;
                 int jj = j - cf.ng;
                 idx = cf.nci*jj+ii;
-                v[idx] = hostV(i,j,0,1);
+                v[idx] = hostV(idx,1);
             }
         }
     }
@@ -198,7 +198,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
                     int jj = j - cf.ng;
                     int kk = k - cf.ng;
                     idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,2);
+                    v[idx] = hostV(idx,2);
                 }
             }
         }
@@ -228,7 +228,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
                     int jj = j - cf.ng;
                     int kk = k - cf.ng;
                     idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,cf.ndim);
+                    v[idx] = hostV(idx,cf.ndim);
                 }
             }
         }
@@ -238,7 +238,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
                 int ii = i - cf.ng;
                 int jj = j - cf.ng;
                 idx = cf.nci*jj+ii;
-                v[idx] = hostV(i,j,0,cf.ndim);
+                v[idx] = hostV(idx,cf.ndim);
             }
         }
     }
@@ -260,7 +260,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
                         int jj = j - cf.ng;
                         int kk = k - cf.ng;
                         idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                        v[idx] = hostV(i,j,k,vn);
+                        v[idx] = hostV(idx,vn);
                     }
                 }
             }
@@ -270,7 +270,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
                     int ii = i - cf.ng;
                     int jj = j - cf.ng;
                     idx = cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,0,vn);
+                    v[idx] = hostV(idx,vn);
                 }
             }
         }
@@ -294,7 +294,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
                             int jj = j - cf.ng;
                             int kk = k - cf.ng;
                             idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                            v[idx] = hostV(i,j,k,vn);
+                            v[idx] = hostV(idx,vn);
                         }
                     }
                 }
@@ -304,7 +304,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
                         int ii = i - cf.ng;
                         int jj = j - cf.ng;
                         idx = cf.nci*jj+ii;
-                        v[idx] = hostV(i,j,0,vn);
+                        v[idx] = hostV(idx,vn);
                     }
                 }
             }
@@ -328,7 +328,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
     cgp_close(cf.cF);
 }
 
-void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Kokkos::View<double****> deviceV, int tdx, double time){
+void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Kokkos::View<double**> deviceV, int tdx, double time){
     int index_sol, index_flow;
 
     char dName[32];
@@ -351,7 +351,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
     cgsize_t endc[3] = {cf.iEnd,cf.jEnd,cf.kEnd};
 
-    typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
+    typename Kokkos::View<double**>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
     Kokkos::deep_copy(hostV,deviceV);
 
     /* open cgns file and write cell centered flow variable */
@@ -374,7 +374,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
                     int jj = j - cf.ng;
                     int kk = k - cf.ng;
                     idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,0);
+                    v[idx] = hostV(idx,0);
                 }
             }
         }
@@ -384,7 +384,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
                 int ii = i - cf.ng;
                 int jj = j - cf.ng;
                 idx = cf.nci*jj+ii;
-                v[idx] = hostV(i,j,0,0);
+                v[idx] = hostV(idx,0);
             }
         }
     }
@@ -404,7 +404,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
                     int jj = j - cf.ng;
                     int kk = k - cf.ng;
                     idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,1);
+                    v[idx] = hostV(idx,1);
                 }
             }
         }
@@ -414,7 +414,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
                 int ii = i - cf.ng;
                 int jj = j - cf.ng;
                 idx = cf.nci*jj+ii;
-                v[idx] = hostV(i,j,0,1);
+                v[idx] = hostV(idx,1);
             }
         }
     }
@@ -434,7 +434,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
                     int jj = j - cf.ng;
                     int kk = k - cf.ng;
                     idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,2);
+                    v[idx] = hostV(idx,2);
                 }
             }
         }
@@ -464,7 +464,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
                     int jj = j - cf.ng;
                     int kk = k - cf.ng;
                     idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,cf.ndim);
+                    v[idx] = hostV(idx,cf.ndim);
                 }
             }
         }
@@ -474,7 +474,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
                 int ii = i - cf.ng;
                 int jj = j - cf.ng;
                 idx = cf.nci*jj+ii;
-                v[idx] = hostV(i,j,0,cf.ndim);
+                v[idx] = hostV(idx,cf.ndim);
             }
         }
     }
@@ -496,7 +496,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
                         int jj = j - cf.ng;
                         int kk = k - cf.ng;
                         idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                        v[idx] = hostV(i,j,k,vn);
+                        v[idx] = hostV(idx,vn);
                     }
                 }
             }
@@ -506,7 +506,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
                     int ii = i - cf.ng;
                     int jj = j - cf.ng;
                     idx = cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,0,vn);
+                    v[idx] = hostV(idx,vn);
                 }
             }
         }
@@ -530,7 +530,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
                             int jj = j - cf.ng;
                             int kk = k - cf.ng;
                             idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                            v[idx] = hostV(i,j,k,vn);
+                            v[idx] = hostV(idx,vn);
                         }
                     }
                 }
@@ -540,7 +540,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
                         int ii = i - cf.ng;
                         int jj = j - cf.ng;
                         idx = cf.nci*jj+ii;
-                        v[idx] = hostV(i,j,0,vn);
+                        v[idx] = hostV(idx,vn);
                     }
                 }
             }
@@ -564,8 +564,8 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
     cgp_close(cf.cF);
 }
 
-void readSolution(struct inputConfig cf, const Kokkos::View<double****> deviceV){
-    typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
+void readSolution(struct inputConfig cf, const Kokkos::View<double**> deviceV){
+    typename Kokkos::View<double**>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
     Kokkos::deep_copy(hostV,deviceV);
 
     /* open cgns file for reading restart information */
@@ -590,7 +590,7 @@ void readSolution(struct inputConfig cf, const Kokkos::View<double****> deviceV)
                         int jj = j - cf.ng;
                         int kk = k - cf.ng;
                         idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                        hostV(i,j,k,v) = readV[idx];
+                        hostV(idx,v) = readV[idx];
                     }
                 }
             }
@@ -600,7 +600,7 @@ void readSolution(struct inputConfig cf, const Kokkos::View<double****> deviceV)
                     int ii = i - cf.ng;
                     int jj = j - cf.ng;
                     idx = cf.nci*jj+ii;
-                    hostV(i,j,0,v) = readV[idx];
+                    hostV(idx,v) = readV[idx];
                 }
             }
         }

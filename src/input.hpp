@@ -55,6 +55,6 @@ struct inputConfig {
 
 struct inputConfig executeConfiguration(char * fname);
 
-int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> v);
+int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double**> v);
 
 #endif

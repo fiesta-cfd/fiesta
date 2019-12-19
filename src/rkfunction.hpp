@@ -21,11 +21,11 @@ class rk_func
 public:
     rk_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_);
 
-    virtual void compute(const Kokkos::View<double****> & mvar, Kokkos::View<double****> & mdvar) = 0;
+    virtual void compute(const Kokkos::View<double**> & mvar, Kokkos::View<int*> nlft, Kokkos::View<int*> nrht, Kokkos::View<int*> nbot, Kokkos::View<int*> ntop, Kokkos::View<int*> nbak, Kokkos::View<int*> nfrt, Kokkos::View<int*> cell_type, Kokkos::View<double**> & mdvar, int ncells) = 0;
 
 protected:
-    Kokkos::View<double****> mvar;
-    Kokkos::View<double****> mdvar;
+    Kokkos::View<double**> mvar;
+    Kokkos::View<double**> mdvar;
     Kokkos::View<double*> mcd;
     struct inputConfig cf;
 };

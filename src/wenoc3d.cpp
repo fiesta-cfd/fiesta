@@ -698,7 +698,7 @@ struct applyCeq {
 
 wenoc3d_func::wenoc3d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_) {};
 
-void wenoc3d_func::compute(const Kokkos::View<double****> & mvar, Kokkos::View<double****> & mdvar) {
+void wenoc3d_func::compute(const Kokkos::View<double****> & mvar, Kokkos::View<int*> nlft, Kokkos::View<int*> nrht, Kokkos::View<int*> nbot, Kokkos::View<int*> ntop, Kokkos::View<int*> nbak, Kokkos::View<int*> nfrt, Kokkos::View<int*> cell_type, Kokkos::View<double****> & mdvar, int ncells){
 
     // Typename acronyms for 3D and 4D variables
     typedef typename Kokkos::View<double******> V6D;

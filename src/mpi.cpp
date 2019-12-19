@@ -72,39 +72,39 @@ struct inputConfig mpi_init(struct inputConfig cf){
     return cf;
 }
 
-void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV){
+void haloExchange(struct inputConfig cf, Kokkos::View<double**> &deviceV){
     int cv = 0;
     if (cf.ceq == 1){
         cv = 5;
     }
 
-    Kokkos::View<double****> leftSend("leftSend",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
-    Kokkos::View<double****> leftRecv("leftRecv",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
-    Kokkos::View<double****> rightSend("rightSend",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
-    Kokkos::View<double****> rightRecv("rightRecv",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
+    Kokkos::View<double**> leftSend("leftSend",cf.ng*cf.ngj*cf.ngk,cf.nv+cv);
+    Kokkos::View<double**> leftRecv("leftRecv",cf.ng*cf.ngj*cf.ngk,cf.nv+cv);
+    Kokkos::View<double**> rightSend("rightSend",cf.ng*cf.ngj*cf.ngk,cf.nv+cv);
+    Kokkos::View<double**> rightRecv("rightRecv",cf.ng*cf.ngj*cf.ngk,cf.nv+cv);
 
-    Kokkos::View<double****> bottomSend("bottomSend",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
-    Kokkos::View<double****> bottomRecv("bottomRecv",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
-    Kokkos::View<double****> topSend("topSend",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
-    Kokkos::View<double****> topRecv("topRecv",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
+    Kokkos::View<double**> bottomSend("bottomSend",cf.ngi*cf.ng*cf.ngk,cf.nv+cv);
+    Kokkos::View<double**> bottomRecv("bottomRecv",cf.ngi*cf.ng*cf.ngk,cf.nv+cv);
+    Kokkos::View<double**> topSend("topSend",cf.ngi*cf.ng*cf.ngk,cf.nv+cv);
+    Kokkos::View<double**> topRecv("topRecv",cf.ngi*cf.ng*cf.ngk,cf.nv+cv);
 
-    typename Kokkos::View<double****>::HostMirror leftSend_H = Kokkos::create_mirror_view(leftSend);
-    typename Kokkos::View<double****>::HostMirror leftRecv_H = Kokkos::create_mirror_view(leftRecv);
-    typename Kokkos::View<double****>::HostMirror rightSend_H = Kokkos::create_mirror_view(rightSend);
-    typename Kokkos::View<double****>::HostMirror rightRecv_H = Kokkos::create_mirror_view(rightRecv);
-    typename Kokkos::View<double****>::HostMirror bottomSend_H = Kokkos::create_mirror_view(bottomSend);
-    typename Kokkos::View<double****>::HostMirror bottomRecv_H = Kokkos::create_mirror_view(bottomRecv);
-    typename Kokkos::View<double****>::HostMirror topSend_H = Kokkos::create_mirror_view(topSend);
-    typename Kokkos::View<double****>::HostMirror topRecv_H = Kokkos::create_mirror_view(topRecv);
+    typename Kokkos::View<double**>::HostMirror leftSend_H = Kokkos::create_mirror_view(leftSend);
+    typename Kokkos::View<double**>::HostMirror leftRecv_H = Kokkos::create_mirror_view(leftRecv);
+    typename Kokkos::View<double**>::HostMirror rightSend_H = Kokkos::create_mirror_view(rightSend);
+    typename Kokkos::View<double**>::HostMirror rightRecv_H = Kokkos::create_mirror_view(rightRecv);
+    typename Kokkos::View<double**>::HostMirror bottomSend_H = Kokkos::create_mirror_view(bottomSend);
+    typename Kokkos::View<double**>::HostMirror bottomRecv_H = Kokkos::create_mirror_view(bottomRecv);
+    typename Kokkos::View<double**>::HostMirror topSend_H = Kokkos::create_mirror_view(topSend);
+    typename Kokkos::View<double**>::HostMirror topRecv_H = Kokkos::create_mirror_view(topRecv);
     //if (cf.ndim == 3){
-        Kokkos::View<double****> backSend("backSend",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
-        Kokkos::View<double****> backRecv("backRecv",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
-        Kokkos::View<double****> frontSend("frontSend",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
-        Kokkos::View<double****> frontRecv("frontRecv",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
-        typename Kokkos::View<double****>::HostMirror backSend_H = Kokkos::create_mirror_view(backSend);
-        typename Kokkos::View<double****>::HostMirror backRecv_H = Kokkos::create_mirror_view(backRecv);
-        typename Kokkos::View<double****>::HostMirror frontSend_H = Kokkos::create_mirror_view(frontSend);
-        typename Kokkos::View<double****>::HostMirror frontRecv_H = Kokkos::create_mirror_view(frontRecv);
+        Kokkos::View<double**> backSend("backSend",cf.ngi*cf.ngj*cf.ng,cf.nv+cv);
+        Kokkos::View<double**> backRecv("backRecv",cf.ngi*cf.ngj*cf.ng,cf.nv+cv);
+        Kokkos::View<double**> frontSend("frontSend",cf.ngi*cf.ngj*cf.ng,cf.nv+cv);
+        Kokkos::View<double**> frontRecv("frontRecv",cf.ngi*cf.ngj*cf.ng,cf.nv+cv);
+        typename Kokkos::View<double**>::HostMirror backSend_H = Kokkos::create_mirror_view(backSend);
+        typename Kokkos::View<double**>::HostMirror backRecv_H = Kokkos::create_mirror_view(backRecv);
+        typename Kokkos::View<double**>::HostMirror frontSend_H = Kokkos::create_mirror_view(frontSend);
+        typename Kokkos::View<double**>::HostMirror frontRecv_H = Kokkos::create_mirror_view(frontRecv);
     //}
 
 
@@ -114,17 +114,26 @@ void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV){
     policy_rind zPol = policy_rind({0,0,0,0},{cf.ngi,cf.ngj,cf.ng ,cf.nv+cv});
     
     Kokkos::parallel_for( xPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
-        leftSend(i,j,k,v) = deviceV(cf.ng+i,j,k,v);
-        rightSend(i,j,k,v) = deviceV(i+cf.nci,j,k,v);
+        int idxl   = cf.ng + i + j * cf.ngi + k * cf.ngi * cf.ngj;
+        int idxr   = i + cf.nci + j * cf.ngi + k * cf.ngi * cf.ngj;
+        int idx_bc = i + j * cf.ng + k * cf.ng * cf.ngj;
+        leftSend(idx_bc,v) = deviceV(idxl,v);
+        rightSend(idx_bc,v) = deviceV(idxr,v);
     });
     Kokkos::parallel_for( yPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
-        bottomSend(i,j,k,v) = deviceV(i,cf.ng+j,k,v);
-        topSend(i,j,k,v) = deviceV(i,j+cf.ncj,k,v);
+        int idxb   = i + (cf.ng + j) * cf.ngi + k * cf.ngi * cf.ngj;
+        int idxt   = i + (j + cf.ncj) * cf.ngi + k * cf.ngi * cf.ngj;
+        int idx_bc = i + j * cf.ngi + k * cf.ngi * cf.ng;
+        bottomSend(idx_bc,v) = deviceV(idxb,v);
+        topSend(idx_bc,v) = deviceV(idxt,v);
     });
     if (cf.ndim == 3){
         Kokkos::parallel_for( zPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
-            backSend(i,j,k,v) = deviceV(i,j,cf.ng+k,v);
-            frontSend(i,j,k,v) = deviceV(i,j,k+cf.nck,v);
+            int idxb   = i + j * cf.ngi + (cf.ng + k) * cf.ngi * cf.ngj;
+            int idxf   = i + j * cf.ngi + (k + cf.nck) * cf.ngi * cf.ngj;
+            int idx_bc = i + j * cf.ngi + k * cf.ngi * cf.ngj;
+            backSend(idx_bc,v) = deviceV(idxb,v);
+            frontSend(idx_bc,v) = deviceV(idxf,v);
         });
     }
     
@@ -181,17 +190,26 @@ void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV){
     }
 
     Kokkos::parallel_for( xPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
-        deviceV(i,j,k,v) = leftRecv(i,j,k,v);
-        deviceV(cf.ngi-cf.ng+i,j,k,v) = rightRecv(i,j,k,v);
+        int idxl   = i + j * cf.ngi + k * cf.ngi * cf.ngj;
+        int idxr   = cf.ngi - cf.ng + i + j * cf.ngi + k * cf.ngi * cf.ngj;
+        int idx_bc = i + j * cf.ng + k * cf.ng * cf.ngj;
+        deviceV(idxl,v) = leftRecv(idx_bc,v);
+        deviceV(idxr,v) = rightRecv(idx_bc,v);
     });
     Kokkos::parallel_for( yPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
-        deviceV(i,j,k,v) = bottomRecv(i,j,k,v);
-        deviceV(i,cf.ngj-cf.ng+j,k,v) = topRecv(i,j,k,v);
+        int idxb   = i + j * cf.ngi + k * cf.ngi * cf.ngj;
+        int idxt   = i + (cf.ngj - cf.ng + j) * cf.ngi + k * cf.ngi * cf.ngj;
+        int idx_bc = i + j * cf.ng + k * cf.ng * cf.ngj;
+        deviceV(idxb,v) = bottomRecv(idx_bc,v);
+        deviceV(idxt,v) = topRecv(idx_bc,v);
     });
     if (cf.ndim == 3){
         Kokkos::parallel_for( zPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
-            deviceV(i,j,k,v) = backRecv(i,j,k,v);
-            deviceV(i,j,cf.ngk-cf.ng+k,v) = frontRecv(i,j,k,v);
+            int idxb   = i + j * cf.ngi + k * cf.ngi * cf.ngj;
+            int idxf   = i + j * cf.ngi + (cf.ngk - cf.ng + k) * cf.ngi * cf.ngj;
+            int idx_bc = i + j * cf.ng + k * cf.ng * cf.ngj;
+            deviceV(idxb,v) = backRecv(idx_bc,v);
+            deviceV(idxf,v) = frontRecv(idx_bc,v);
         });
     }
 }
