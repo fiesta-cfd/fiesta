@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
+include(ExternalProject)
 
 if (CUDA)
   set(CMAKE_CXX_COMPILER "${CMAKE_SOURCE_DIR}/kokkos/bin/nvcc_wrapper")
@@ -26,18 +27,46 @@ include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 include_directories(lua/src)
 add_subdirectory(lua)
 
+# hdf5
+set(installDir ${CMAKE_CURRENT_BINARY_DIR}/install)
+ExternalProject_Add(hdf5Parallel
+  SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/hdf5
+  INSTALL_DIR ${installDir}
+  CMAKE_ARGS -D BUILD_SHARED_LIBS:BOOL=OFF
+             -D HDF5_ENABLE_PARALLEL:BOOL=ON
+             -D HDF5_BUILD_CPP_LIB:BOOL=OFF
+             -D CMAKE_INSTALL_PREFIX:PATH=${installDir}
+)
+
 # cgns
-set(CGNS_BUILD_SHARED OFF CACHE BOOL "build cgns static")
-set(CGNS_ENABLE_64BIT ON CACHE BOOL "build cgns 64bit")
-set(CGNS_ENABLE_HDF5 ON CACHE BOOL "enable hdf5")
-set(HDF5_NEED_MPI ON CACHE BOOL "hdf5 mpi")
-set(CGNS_ENABLE_PARALLEL ON CACHE BOOL "cgns parallel")
-set(CGNS_ENABLE_SCOPING ON CACHE BOOL "cgns scoping")
+ExternalProject_Add(cgnsParallel
+  SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/cgns
+  INSTALL_DIR ${installDir}
+  CMAKE_ARGS -D CGNS_BUILD_SHARED:BOOL=OFF
+             -D CGNS_USE_SHARED:BOOL=OFF
+             -D CGNS_ENABLE_64BIT:BOOL=ON
+             -D CGNS_ENABLE_HDF5:BOOL=ON
+             -D HDF5_NEED_MPI:BOOL=ON
+             -D CGNS_ENABLE_PARALLEL:BOOL=ON
+             -D CGNS_ENABLE_SCOPING:BOOL=ON
+#             -D HDF5_DIR:PATH=${installDir}
+             -D CMAKE_INSTALL_PREFIX:PATH=${installDir}
+             -D CMAKE_PREFIX_PATH:PATH=${installDir}
+)
 
-add_subdirectory(cgns)
-
+ExternalProject_Add_StepDependencies(cgnsParallel configure hdf5Parallel)
+include_directories(${installDir}/include)
 
 # fiesta
 set(FIESTA_SRCS src/bc.cpp src/cgns.cpp src/input.cpp src/main.cpp src/mpi.cpp src/rkfunction.cpp src/weno2d.cpp src/wenoc3d.cpp)
 add_executable(fiesta ${FIESTA_SRCS})
-target_link_libraries(fiesta kokkos ${MPI_CXX_LIBRARIES} cgns lua)
+add_dependencies(fiesta cgnsParallel)
+target_link_libraries(fiesta
+                      kokkos
+                      ${MPI_CXX_LIBRARIES}
+                      ${installDir}/lib/libcgns.a
+                      ${installDir}/lib/libhdf5.a
+                      ${installDir}/lib/libhdf5_hl.a
+                      ${installDir}/lib/libhdf5_tools.a
+                      lua
+)
