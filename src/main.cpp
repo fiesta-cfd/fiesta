@@ -154,6 +154,9 @@ int main(int argc, char* argv[]){
         f = new weno2d_func(cf,cd);
     }
 
+    // create mpi buffers
+    mpiBuffers m(cf);
+
     if (cf.rank == 0) printf("\nStarting Simulation...\n");
     MPI_Barrier(cf.comm);
     start = std::clock();
@@ -164,7 +167,7 @@ int main(int argc, char* argv[]){
 
         /****** Low Storage Runge-Kutta 2nd order ******/
         //K1 = f(myV)
-        applyBCs(cf,myV);
+        applyBCs(cf,myV,m);
         f->compute(myV,K1);
         
         //tmp = myV + k1/2
@@ -174,7 +177,7 @@ int main(int argc, char* argv[]){
         });
 
         //K2 = f(tmp)
-        applyBCs(cf,tmp);
+        applyBCs(cf,tmp,m);
         f->compute(tmp,K2);
 
         //myV = myV + K2

@@ -72,41 +72,46 @@ struct inputConfig mpi_init(struct inputConfig cf){
     return cf;
 }
 
-void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV){
+mpiBuffers::mpiBuffers(struct inputConfig cf){
     int cv = 0;
     if (cf.ceq == 1){
         cv = 5;
     }
 
-    Kokkos::View<double****> leftSend("leftSend",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
-    Kokkos::View<double****> leftRecv("leftRecv",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
-    Kokkos::View<double****> rightSend("rightSend",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
-    Kokkos::View<double****> rightRecv("rightRecv",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
+    leftSend   = Kokkos::View<double****>("leftSend",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
+    leftRecv   = Kokkos::View<double****>("leftRecv",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
+    rightSend  = Kokkos::View<double****>("rightSend",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
+    rightRecv  = Kokkos::View<double****>("rightRecv",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
 
-    Kokkos::View<double****> bottomSend("bottomSend",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
-    Kokkos::View<double****> bottomRecv("bottomRecv",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
-    Kokkos::View<double****> topSend("topSend",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
-    Kokkos::View<double****> topRecv("topRecv",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
+    bottomSend = Kokkos::View<double****>("bottomSend",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
+    bottomRecv = Kokkos::View<double****>("bottomRecv",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
+    topSend    = Kokkos::View<double****>("topSend",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
+    topRecv    = Kokkos::View<double****>("topRecv",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
+    backSend   = Kokkos::View<double****>("backSend",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
+    backRecv   = Kokkos::View<double****>("backRecv",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
+    frontSend  = Kokkos::View<double****>("frontSend",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
+    frontRecv  = Kokkos::View<double****>("frontRecv",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
+    leftSend_H = Kokkos::create_mirror_view(leftSend);
+    leftRecv_H = Kokkos::create_mirror_view(leftRecv);
+    rightSend_H = Kokkos::create_mirror_view(rightSend);
+    rightRecv_H = Kokkos::create_mirror_view(rightRecv);
+    bottomSend_H = Kokkos::create_mirror_view(bottomSend);
+    bottomRecv_H = Kokkos::create_mirror_view(bottomRecv);
+    topSend_H = Kokkos::create_mirror_view(topSend);
+    topRecv_H = Kokkos::create_mirror_view(topRecv);
+    backSend_H = Kokkos::create_mirror_view(backSend);
+    backRecv_H = Kokkos::create_mirror_view(backRecv);
+    frontSend_H = Kokkos::create_mirror_view(frontSend);
+    frontRecv_H = Kokkos::create_mirror_view(frontRecv);
 
-    typename Kokkos::View<double****>::HostMirror leftSend_H = Kokkos::create_mirror_view(leftSend);
-    typename Kokkos::View<double****>::HostMirror leftRecv_H = Kokkos::create_mirror_view(leftRecv);
-    typename Kokkos::View<double****>::HostMirror rightSend_H = Kokkos::create_mirror_view(rightSend);
-    typename Kokkos::View<double****>::HostMirror rightRecv_H = Kokkos::create_mirror_view(rightRecv);
-    typename Kokkos::View<double****>::HostMirror bottomSend_H = Kokkos::create_mirror_view(bottomSend);
-    typename Kokkos::View<double****>::HostMirror bottomRecv_H = Kokkos::create_mirror_view(bottomRecv);
-    typename Kokkos::View<double****>::HostMirror topSend_H = Kokkos::create_mirror_view(topSend);
-    typename Kokkos::View<double****>::HostMirror topRecv_H = Kokkos::create_mirror_view(topRecv);
-    //if (cf.ndim == 3){
-        Kokkos::View<double****> backSend("backSend",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
-        Kokkos::View<double****> backRecv("backRecv",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
-        Kokkos::View<double****> frontSend("frontSend",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
-        Kokkos::View<double****> frontRecv("frontRecv",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
-        typename Kokkos::View<double****>::HostMirror backSend_H = Kokkos::create_mirror_view(backSend);
-        typename Kokkos::View<double****>::HostMirror backRecv_H = Kokkos::create_mirror_view(backRecv);
-        typename Kokkos::View<double****>::HostMirror frontSend_H = Kokkos::create_mirror_view(frontSend);
-        typename Kokkos::View<double****>::HostMirror frontRecv_H = Kokkos::create_mirror_view(frontRecv);
-    //}
 
+}
+
+void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV, class mpiBuffers &m){
+    int cv = 0;
+    if (cf.ceq == 1){
+        cv = 5;
+    }
 
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_rind;
     policy_rind xPol = policy_rind({0,0,0,0},{cf.ng ,cf.ngj,cf.ngk,cf.nv+cv});
@@ -114,27 +119,27 @@ void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV){
     policy_rind zPol = policy_rind({0,0,0,0},{cf.ngi,cf.ngj,cf.ng ,cf.nv+cv});
     
     Kokkos::parallel_for( xPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
-        leftSend(i,j,k,v) = deviceV(cf.ng+i,j,k,v);
-        rightSend(i,j,k,v) = deviceV(i+cf.nci,j,k,v);
+        m.leftSend(i,j,k,v) = deviceV(cf.ng+i,j,k,v);
+        m.rightSend(i,j,k,v) = deviceV(i+cf.nci,j,k,v);
     });
     Kokkos::parallel_for( yPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
-        bottomSend(i,j,k,v) = deviceV(i,cf.ng+j,k,v);
-        topSend(i,j,k,v) = deviceV(i,j+cf.ncj,k,v);
+        m.bottomSend(i,j,k,v) = deviceV(i,cf.ng+j,k,v);
+        m.topSend(i,j,k,v) = deviceV(i,j+cf.ncj,k,v);
     });
     if (cf.ndim == 3){
         Kokkos::parallel_for( zPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
-            backSend(i,j,k,v) = deviceV(i,j,cf.ng+k,v);
-            frontSend(i,j,k,v) = deviceV(i,j,k+cf.nck,v);
+            m.backSend(i,j,k,v) = deviceV(i,j,cf.ng+k,v);
+            m.frontSend(i,j,k,v) = deviceV(i,j,k+cf.nck,v);
         });
     }
     
-    Kokkos::deep_copy(leftSend_H,  leftSend  );
-    Kokkos::deep_copy(rightSend_H, rightSend );
-    Kokkos::deep_copy(bottomSend_H,bottomSend);
-    Kokkos::deep_copy(topSend_H,   topSend   );
+    Kokkos::deep_copy(m.leftSend_H,  m.leftSend  );
+    Kokkos::deep_copy(m.rightSend_H, m.rightSend );
+    Kokkos::deep_copy(m.bottomSend_H,m.bottomSend);
+    Kokkos::deep_copy(m.topSend_H,   m.topSend   );
     if (cf.ndim == 3){
-        Kokkos::deep_copy(backSend_H,  backSend  );
-        Kokkos::deep_copy(frontSend_H, frontSend );
+        Kokkos::deep_copy(m.backSend_H,  m.backSend  );
+        Kokkos::deep_copy(m.frontSend_H, m.frontSend );
     }
 
     int wait_count = 8;
@@ -144,54 +149,54 @@ void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV){
     
 
     //send and recieve left
-    MPI_Isend(leftSend_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.xMinus,           0, cf.comm, &reqs[0]);
-    MPI_Irecv(leftRecv_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.xMinus, MPI_ANY_TAG, cf.comm, &reqs[1]);
+    MPI_Isend(m.leftSend_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.xMinus,           0, cf.comm, &reqs[0]);
+    MPI_Irecv(m.leftRecv_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.xMinus, MPI_ANY_TAG, cf.comm, &reqs[1]);
 
     //send and recieve right
-    MPI_Isend(rightSend_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.xPlus,           0, cf.comm, &reqs[2]);
-    MPI_Irecv(rightRecv_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.xPlus, MPI_ANY_TAG, cf.comm, &reqs[3]);
+    MPI_Isend(m.rightSend_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.xPlus,           0, cf.comm, &reqs[2]);
+    MPI_Irecv(m.rightRecv_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.xPlus, MPI_ANY_TAG, cf.comm, &reqs[3]);
     
     //send and recieve bottom
-    MPI_Isend(bottomSend_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.yMinus,           0, cf.comm, &reqs[4]);
-    MPI_Irecv(bottomRecv_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.yMinus, MPI_ANY_TAG, cf.comm, &reqs[5]);
+    MPI_Isend(m.bottomSend_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.yMinus,           0, cf.comm, &reqs[4]);
+    MPI_Irecv(m.bottomRecv_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.yMinus, MPI_ANY_TAG, cf.comm, &reqs[5]);
     
     //send and recieve top
-    MPI_Isend(topSend_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.yPlus,           0, cf.comm, &reqs[6]);
-    MPI_Irecv(topRecv_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.yPlus, MPI_ANY_TAG, cf.comm, &reqs[7]);
+    MPI_Isend(m.topSend_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.yPlus,           0, cf.comm, &reqs[6]);
+    MPI_Irecv(m.topRecv_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.yPlus, MPI_ANY_TAG, cf.comm, &reqs[7]);
     
     if (cf.ndim == 3){
         //send and recieve back
-        MPI_Isend(backSend_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nv+cv), MPI_DOUBLE, cf.zMinus,           0, cf.comm, &reqs[8]);
-        MPI_Irecv(backRecv_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nv+cv), MPI_DOUBLE, cf.zMinus, MPI_ANY_TAG, cf.comm, &reqs[9]);
+        MPI_Isend(m.backSend_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nv+cv), MPI_DOUBLE, cf.zMinus,           0, cf.comm, &reqs[8]);
+        MPI_Irecv(m.backRecv_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nv+cv), MPI_DOUBLE, cf.zMinus, MPI_ANY_TAG, cf.comm, &reqs[9]);
         
         //send and recieve front
-        MPI_Isend(frontSend_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nv+cv), MPI_DOUBLE, cf.zPlus,           0, cf.comm, &reqs[10]);
-        MPI_Irecv(frontRecv_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nv+cv), MPI_DOUBLE, cf.zPlus, MPI_ANY_TAG, cf.comm, &reqs[11]);
+        MPI_Isend(m.frontSend_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nv+cv), MPI_DOUBLE, cf.zPlus,           0, cf.comm, &reqs[10]);
+        MPI_Irecv(m.frontRecv_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nv+cv), MPI_DOUBLE, cf.zPlus, MPI_ANY_TAG, cf.comm, &reqs[11]);
     }
     
     MPI_Waitall(wait_count,reqs, MPI_STATUSES_IGNORE);
 
-    Kokkos::deep_copy(leftRecv,  leftRecv_H  );
-    Kokkos::deep_copy(rightRecv, rightRecv_H );
-    Kokkos::deep_copy(bottomRecv,bottomRecv_H);
-    Kokkos::deep_copy(topRecv,   topRecv_H   );
+    Kokkos::deep_copy(m.leftRecv,  m.leftRecv_H  );
+    Kokkos::deep_copy(m.rightRecv, m.rightRecv_H );
+    Kokkos::deep_copy(m.bottomRecv,m.bottomRecv_H);
+    Kokkos::deep_copy(m.topRecv,   m.topRecv_H   );
     if (cf.ndim == 3){
-        Kokkos::deep_copy(backRecv,  backRecv_H  );
-        Kokkos::deep_copy(frontRecv, frontRecv_H );
+        Kokkos::deep_copy(m.backRecv,  m.backRecv_H  );
+        Kokkos::deep_copy(m.frontRecv, m.frontRecv_H );
     }
 
     Kokkos::parallel_for( xPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
-        deviceV(i,j,k,v) = leftRecv(i,j,k,v);
-        deviceV(cf.ngi-cf.ng+i,j,k,v) = rightRecv(i,j,k,v);
+        deviceV(i,j,k,v) = m.leftRecv(i,j,k,v);
+        deviceV(cf.ngi-cf.ng+i,j,k,v) = m.rightRecv(i,j,k,v);
     });
     Kokkos::parallel_for( yPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
-        deviceV(i,j,k,v) = bottomRecv(i,j,k,v);
-        deviceV(i,cf.ngj-cf.ng+j,k,v) = topRecv(i,j,k,v);
+        deviceV(i,j,k,v) = m.bottomRecv(i,j,k,v);
+        deviceV(i,cf.ngj-cf.ng+j,k,v) = m.topRecv(i,j,k,v);
     });
     if (cf.ndim == 3){
         Kokkos::parallel_for( zPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
-            deviceV(i,j,k,v) = backRecv(i,j,k,v);
-            deviceV(i,j,cf.ngk-cf.ng+k,v) = frontRecv(i,j,k,v);
+            deviceV(i,j,k,v) = m.backRecv(i,j,k,v);
+            deviceV(i,j,cf.ngk-cf.ng+k,v) = m.frontRecv(i,j,k,v);
         });
     }
 }

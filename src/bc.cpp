@@ -88,11 +88,11 @@ struct bc_F {
     }
 };
 
-void applyBCs(struct inputConfig cf, Kokkos::View<double****> &u){
+void applyBCs(struct inputConfig cf, Kokkos::View<double****> &u, class mpiBuffers &m){
 
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_bl;
 
-    haloExchange(cf,u);
+    haloExchange(cf,u,m);
 
     int cv = 0;
     if (cf.ceq == 1)
