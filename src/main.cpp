@@ -21,7 +21,17 @@ int main(int argc, char* argv[]){
 
     int temp_rank;
     MPI_Comm_rank(MPI_COMM_WORLD,&temp_rank);
-    if (temp_rank == 0) printf("\n----------  Fiesta ----------\n");
+    if (temp_rank == 0){
+        printf("--------------------------------------\n");
+        printf("|     _____ _           _            |\n");
+        printf("|    |  ___(_) ___  ___| |_ __ _     |\n");
+        printf("|    | |_  | |/ _ \\/ __| __/ _` |    |\n");
+        printf("|    |  _| | |  __/\\__ \\ || (_| |    |\n");
+        printf("|    |_|   |_|\\___||___/\\__\\__,_|    |\n");
+        printf("|                                    |\n");
+        printf("--------------------------------------\n");
+    }
+    //if (temp_rank == 0) printf("\n----------  Fiesta ----------\n");
     if (temp_rank == 0) printf("\nInitializing...\n");
 
     Kokkos::initialize(argc, argv);
