@@ -1,3 +1,4 @@
+![](logo.jpg?raw=true)
 # FIESTA
 **F**ast **I**nterfac**ES** and **T**ransport in the **A**tmosphere
 
