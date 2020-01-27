@@ -29,26 +29,20 @@ salloc -N1 -t 4:00:00
 Load Required Modules:
 ```
 module load gcc/7.4.0 openmpi/2.1.2 cudatoolkit/10.0 cmake/3.14.6
-module load hdf5-parallel/1.8.16
 ```
 
-Configure and Generate Makefiles
+Configure with CMAKE
 ```
-../fiesta/configure.sh --device=Cuda --arch=Pascal60
+cmake ../fiesta -DCUDA -KOKKOS_ARCH=Pascal60
 ```
-Options for device are currently 'Serial' and 'Cuda' for cpu and gpu versions of the code.  For Kodiak use '--arch=BDW' for 'Serial' device and '--arch=Pascal60' for 'Cuda' device.  'BDW' stands for Intel Broadwell architecture.
+With no options, Fiesta will be built with serial cpu kokkos.  Use -DCUDA for nvidia GPUs.  For pascal GPUs, the architecture must be specified with -KOKKOS_ARCH=Pascal60.  For Volta GPUs, use -KOKKOS_ARCH=Volta70. Other kokkos options are passed through, so other devices can be specified with -DDEVICE="device".
 
 Build the code:
 ```
-make
+make -j
 ```
 
-An executable should now exist in the 'fiesta-build' subdirectory.  However, an issue with the static cgns library prevents static linking, so we have to include the dynamic library in the path using:
-```
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/fiesta-dev/build/cgns-build/lib
-```
-
-This must also be included in any batch script. See fiesta repository root directory for example pbs and slurm batch scripts.
+An executable should now exist in the build directory. The executable is statically linked, so there is no need to keep the third party libraries in the path, e.g.  "export LD_LIBRARY_PATH" is not necessary. 
 
 ### Run an interactive job
 
