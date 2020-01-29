@@ -33,7 +33,7 @@ module load gcc/7.4.0 openmpi/2.1.2 cudatoolkit/10.0 cmake/3.14.6
 
 Configure with CMAKE
 ```
-cmake ../fiesta -DCUDA -KOKKOS_ARCH=Pascal60
+cmake ../fiesta -DCUDA=on -DKOKKOS_ARCH=Pascal60
 ```
 With no options, Fiesta will be built with serial cpu kokkos.  Use -DCUDA for nvidia GPUs.  For pascal GPUs, the architecture must be specified with -KOKKOS_ARCH=Pascal60.  For Volta GPUs, use -KOKKOS_ARCH=Volta70. Other kokkos options are passed through, so other devices can be specified with -DDEVICE="device".
 
