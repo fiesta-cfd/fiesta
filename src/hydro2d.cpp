@@ -4,8 +4,8 @@
 #include "bc.hpp"
 #include "Kokkos_Core.hpp"
 #include <mpi.h>
-#include "lsdebug.hpp"
-#include "weno2d.hpp"
+#include "debug.hpp"
+#include "hydro2d.hpp"
 
 struct calculateRhoAndPressure2d {
     typedef typename Kokkos::View<double****> V4D;
@@ -194,9 +194,9 @@ struct applyPressure2d {
     }
 };
 
-weno2d_func::weno2d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){};
+hydro2d_func::hydro2d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){};
 
-void weno2d_func::compute(const Kokkos::View<double****> & mvar, Kokkos::View<double****> & mdvar){
+void hydro2d_func::compute(const Kokkos::View<double****> & mvar, Kokkos::View<double****> & mdvar){
 
     // Typename acronyms for 2D and 4D variables
     typedef typename Kokkos::View<double****> V4D;

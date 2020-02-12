@@ -1,6 +1,6 @@
 #include "input.hpp"
 #include "Kokkos_Core.hpp"
-#include "lsdebug.hpp"
+#include "debug.hpp"
 #include "string.h"
 
 // Lua error function

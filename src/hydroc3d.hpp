@@ -2,10 +2,10 @@
 #include "rkfunction.hpp"
 #include "Kokkos_Core.hpp"
 
-class wenoc3d_func : public rk_func{
+class hydroc3d_func : public rk_func{
 
 public:
-    wenoc3d_func(struct inputConfig &cf, Kokkos::View<double*> & mcd);
+    hydroc3d_func(struct inputConfig &cf, Kokkos::View<double*> & mcd);
     void compute(const Kokkos::View<double****> & mvar, Kokkos::View<double****> & mdvar);
 
 protected:

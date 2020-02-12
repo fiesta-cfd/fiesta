@@ -1,5 +1,5 @@
 #include "mpi.hpp"
-#include "lsdebug.hpp"
+#include "debug.hpp"
 
 struct inputConfig mpi_init(struct inputConfig cf){
 

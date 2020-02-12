@@ -1,5 +1,5 @@
 #include "cgns.hpp"
-#include "lsdebug.hpp"
+#include "debug.hpp"
 
 struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y, double *z,char * fname){
 

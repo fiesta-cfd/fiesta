@@ -1,5 +1,5 @@
 #include "Kokkos_Core.hpp"
-#include "lsdebug.hpp"
+#include "debug.hpp"
 #include "input.hpp"
 #include "mpi.hpp"
 #include <mpi.h>

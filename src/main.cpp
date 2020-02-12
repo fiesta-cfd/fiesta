@@ -4,9 +4,9 @@
 #include "bc.hpp"
 #include "Kokkos_Core.hpp"
 #include <mpi.h>
-#include "lsdebug.hpp"
-#include "wenoc3d.hpp"
-#include "weno2d.hpp"
+#include "debug.hpp"
+#include "hydroc3d.hpp"
+#include "hydro2d.hpp"
 #include "rkfunction.hpp"
 #include <iostream>
 #include <cstdio>
@@ -159,9 +159,9 @@ int main(int argc, char* argv[]){
     /*** Choose Scheme ***/
     rk_func *f;
     if (cf.ndim == 3){
-        f = new wenoc3d_func(cf,cd);
+        f = new hydroc3d_func(cf,cd);
     }else{
-        f = new weno2d_func(cf,cd);
+        f = new hydro2d_func(cf,cd);
     }
 
     // create mpi buffers
