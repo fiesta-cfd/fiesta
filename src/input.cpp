@@ -79,6 +79,7 @@ struct inputConfig executeConfiguration(char * fname){
     myConfig.dx          = getglobdbl (L, "dx" );
     myConfig.dy          = getglobdbl (L, "dy" );
     myConfig.R           = getglobdbl (L, "R" );
+    myConfig.visc        = getglobdbl (L, "visc" );
     myConfig.xProcs      = getglobint (L, "procsx");
     myConfig.yProcs      = getglobint (L, "procsy");
     //myConfig.ng          = getglobint (L, "ng" );

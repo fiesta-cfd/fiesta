@@ -30,6 +30,7 @@ struct inputConfig {
     double *gamma;
     double *M;
     double R;
+    int visc;
     double dt,dx,dy,dz;
     int xProcs,yProcs,zProcs,numProcs;
     int xPlus,yPlus,zPlus;

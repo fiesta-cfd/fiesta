@@ -7,6 +7,7 @@
 #include "debug.hpp"
 #include "hydroc3d.hpp"
 #include "hydro2d.hpp"
+#include "hydro2dvisc.hpp"
 #include "rkfunction.hpp"
 #include <iostream>
 #include <cstdio>
@@ -161,7 +162,10 @@ int main(int argc, char* argv[]){
     if (cf.ndim == 3){
         f = new hydroc3d_func(cf,cd);
     }else{
-        f = new hydro2d_func(cf,cd);
+        if (cf.visc == 1)
+            f = new hydro2dvisc_func(cf,cd);
+        else
+            f = new hydro2d_func(cf,cd);
     }
 
     // create mpi buffers
