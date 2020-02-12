@@ -51,57 +51,68 @@ struct calculateRhoAndPressure2dv {
     }
 };
 
-struct advect2dv {
+struct computeFluxes2dv {
     
     typedef typename Kokkos::View<double****> V4D;
     typedef typename Kokkos::View<double**> V2D;
-    V4D dvar;
     V4D var;
     V2D p;
     V2D rho;
+    V2D fluxx;
+    V2D fluxy;
     Kokkos::View<double*> cd;
     int v;
 
-    advect2dv (V4D dvar_, V4D var_, V2D p_, V2D rho_, Kokkos::View<double*> cd_, int v_)
-                         : dvar(dvar_), var(var_), p(p_), rho(rho_), cd(cd_), v(v_) {}
+    computeFluxes2dv (V4D var_, V2D p_, V2D rho_, V2D fx_, V2D fy_, Kokkos::View<double*> cd_, int v_)
+                         : var(var_), p(p_), rho(rho_), fluxx(fx_), fluxy(fy_), cd(cd_), v(v_) {}
     
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j) const {
 
         double dx = cd(1);
         double dy = cd(2);
-        double ur,vr,w,f1,f2,f3,f4;
+        double ur,vr,x1,x2,y1,y2;
 
-        ur = var(i,j,0,0)/rho(i,j);
-        vr = var(i,j,0,1)/rho(i,j);
+        ur = ( -     var(i+2,j,0,0)/rho(i+2,j) + 7.0*var(i+1,j,0,0)/rho(i+1,j)
+               + 7.0*var(i  ,j,0,0)/rho(i  ,j) -     var(i-1,j,0,0)/rho(i-1,j) )/12.0;
 
-        //for each direction
-        for (int idx=0; idx<2; ++idx){
-            //get stencil data.  the flux for the energy equation includes pressure so only add 
-            //pressure for the energy variable (index 2 for 2d problem)
-            if (idx == 0){
-                f1 = var(i-2,j,0,v) + (v==2)*p(i-2,j);
-                f2 = var(i-1,j,0,v) + (v==2)*p(i-1,j);
-                f3 = var(i+1,j,0,v) + (v==2)*p(i+1,j);
-                f4 = var(i+2,j,0,v) + (v==2)*p(i+2,j);
-            } 
-            if (idx == 1) {
-                f1 = var(i,j-2,0,v) + (v==2)*p(i,j-2);
-                f2 = var(i,j-1,0,v) + (v==2)*p(i,j-1);
-                f3 = var(i,j+1,0,v) + (v==2)*p(i,j+1);
-                f4 = var(i,j+2,0,v) + (v==2)*p(i,j+2);
-            }
+        vr = ( -     var(i,j+2,0,1)/rho(i,j+2) + 7.0*var(i,j+1,0,1)/rho(i,j+1)
+               + 7.0*var(i,j  ,0,1)/rho(i,j  ) -     var(i,j-1,0,1)/rho(i,j-1) )/12.0;
 
-            w = (f1 - 8.0*f2 + 8.0*f3 - f4)/12.0;
-            //calculate advection flux
-            if (idx == 0){
-                dvar(i,j,0,v) = ur*w/dx;
-            }
-            if (idx == 1) {
-                dvar(i,j,0,v) = vr*w/dy;
-            }
+        //ur = (var(i,j,0,0)/rho(i,j) + var(i+1,j,0,0)/rho(i,j))/2;
+        //vr = (var(i,j,0,0)/rho(i,j) + var(i,j+1,0,0)/rho(i,j))/2;
 
-        }
+        x1 = var(i  ,j,0,v) + (v==2)*p(i  ,j);
+        x2 = var(i+1,j,0,v) + (v==2)*p(i+1,j);
+
+        y1 = var(i,j  ,0,v) + (v==2)*p(i,j  );
+        y2 = var(i,j+1,0,v) + (v==2)*p(i,j+1);
+
+        fluxx(i,j) = ur*(x2-x1)/dx;
+        fluxy(i,j) = vr*(y2-y1)/dy;
+
+    }
+};
+
+struct advect2dv {
+    
+    typedef typename Kokkos::View<double****> V4D;
+    typedef typename Kokkos::View<double**> V2D;
+    V4D dvar;
+    V2D fluxx;
+    V2D fluxy;
+    Kokkos::View<double*> cd;
+    int v;
+
+    advect2dv (V4D dvar_, V2D fx_, V2D fy_, Kokkos::View<double*> cd_, int v_)
+        : dvar(dvar_), fluxx(fx_), fluxy(fy_), cd(cd_), v(v_) {}
+    
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int j) const {
+
+        dvar(i,j,0,v) = -( (fluxx(i,j) - fluxx(i-1,j))
+                          +(fluxy(i,j) - fluxy(i,j-1)) );
+
     }
 };
 
@@ -223,8 +234,8 @@ void hydro2dvisc_func::compute(const Kokkos::View<double****> & mvar, Kokkos::Vi
     /*** Temporary Views ***/
     V2D p("p",cf.ngi,cf.ngj);          // Pressure
     V2D rho("rho",cf.ngi,cf.ngj);      // Total Density
-    V2D wenox("wenox",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
-    V2D wenoy("wenoy",cf.ngi,cf.ngj);  // Weno Fluxes in Y direction
+    V2D fluxx("fluxx",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
+    V2D fluxy("fluxy",cf.ngi,cf.ngj);  // Weno Fluxes in Y direction
     V4D stressx("stressx",cf.ngi,cf.ngj,2,2);  // stress tensor on x faces
     V4D stressy("stressy",cf.ngi,cf.ngj,2,2);  // stress tensor on y faces
 
@@ -245,7 +256,8 @@ void hydro2dvisc_func::compute(const Kokkos::View<double****> & mvar, Kokkos::Vi
 
     // Calculate and apply weno fluxes for each variable
     for (int v=0; v<cf.nv; ++v){
-        Kokkos::parallel_for( cell_pol, advect2dv(dvar,var,p,rho,cd,v) );
+        Kokkos::parallel_for( weno_pol, computeFluxes2dv(var,p,rho,fluxx,fluxy,cd,v) );
+        Kokkos::parallel_for( cell_pol, advect2dv(dvar,fluxx,fluxy,cd,v) );
     }
 
     // Apply Pressure Gradient Term
