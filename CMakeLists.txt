@@ -13,6 +13,8 @@ list(APPEND CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -O3)
 if (CUDA)
   set(KOKKOS_ENABLE_CUDA ON)
   set(KOKKOS_ENABLE_CUDA_LAMBDA ON)
+elseif(OPENMP)
+  set(KOKKOS_ENABLE_OPENMP ON)
 endif()
 add_subdirectory(kokkos)
 
@@ -33,6 +35,9 @@ ExternalProject_Add(hdf5Parallel
   SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/hdf5
   INSTALL_DIR ${installDir}
   CMAKE_ARGS -D BUILD_SHARED_LIBS:BOOL=OFF
+             -D BUILD_TESTING:BOOL=OFF
+             -D HDF5_BUILD_EXAMPLES:BOOL=OFF
+             -D HDF5_DISABLE_COMPILER_WARNINGS:BOOL=ON
              -D HDF5_ENABLE_PARALLEL:BOOL=ON
              -D HDF5_BUILD_CPP_LIB:BOOL=OFF
              -D CMAKE_INSTALL_PREFIX:PATH=${installDir}
@@ -43,7 +48,6 @@ ExternalProject_Add(cgnsParallel
   SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/cgns
   INSTALL_DIR ${installDir}
   CMAKE_ARGS -D CGNS_BUILD_SHARED:BOOL=OFF
-#             -D CGNS_BUILD_CGNSTOOLS:BOOL=ON
              -D CGNS_USE_SHARED:BOOL=OFF
              -D CGNS_ENABLE_64BIT:BOOL=ON
              -D CGNS_ENABLE_HDF5:BOOL=ON
@@ -59,7 +63,7 @@ ExternalProject_Add_StepDependencies(cgnsParallel configure hdf5Parallel)
 include_directories(${installDir}/include)
 
 # fiesta
-set(FIESTA_SRCS src/bc.cpp src/cgns.cpp src/input.cpp src/main.cpp src/mpi.cpp src/rkfunction.cpp src/weno2d.cpp src/wenoc3d.cpp)
+set(FIESTA_SRCS src/bc.cpp src/cgns.cpp src/input.cpp src/main.cpp src/mpi.cpp src/rkfunction.cpp src/hydro2d.cpp src/hydroc3d.cpp)
 add_executable(fiesta ${FIESTA_SRCS})
 add_dependencies(fiesta cgnsParallel)
 target_link_libraries(fiesta
@@ -71,3 +75,5 @@ target_link_libraries(fiesta
                       ${installDir}/lib/libhdf5_tools.a
                       lua
 )
+install(TARGETS fiesta
+        RUNTIME DESTINATION)
