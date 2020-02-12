@@ -12,11 +12,12 @@ struct calculateRhoAndPressure2dv {
     typedef typename Kokkos::View<double**> V2D;
     V4D var;
     V2D p;
+    V2D T;
     V2D rho;
     Kokkos::View<double*> cd;
 
-    calculateRhoAndPressure2dv (V4D var_, V2D p_, V2D rho_, Kokkos::View<double*> cd_)
-         : var(var_), p(p_), rho(rho_), cd(cd_) {}
+    calculateRhoAndPressure2dv (V4D var_, V2D p_, V2D rho_, V2D T_, Kokkos::View<double*> cd_)
+         : var(var_), p(p_), rho(rho_), T(T_), cd(cd_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j) const {
@@ -48,6 +49,8 @@ struct calculateRhoAndPressure2dv {
         // calculate pressure assuming perfect gas
         p(i,j) = (gamma-1)*( var(i,j,0,2) - (0.5/rho(i,j))
                   *(var(i,j,0,0)*var(i,j,0,0) + var(i,j,0,1)*var(i,j,0,1)) );
+
+        T(i,j) = Rs*p(i,j)/rho(i,j);
     }
 };
 
@@ -79,17 +82,14 @@ struct computeFluxes2dv {
         vr = ( -     var(i,j+2,0,1)/rho(i,j+2) + 7.0*var(i,j+1,0,1)/rho(i,j+1)
                + 7.0*var(i,j  ,0,1)/rho(i,j  ) -     var(i,j-1,0,1)/rho(i,j-1) )/12.0;
 
-        //ur = (var(i,j,0,0)/rho(i,j) + var(i+1,j,0,0)/rho(i,j))/2;
-        //vr = (var(i,j,0,0)/rho(i,j) + var(i,j+1,0,0)/rho(i,j))/2;
+        x1 = ( -     var(i+2,j,0,v) + 7.0*var(i+1,j,0,v)
+               + 7.0*var(i  ,j,0,v) -     var(i-1,j,0,v) )/12.0;
 
-        x1 = var(i  ,j,0,v) + (v==2)*p(i  ,j);
-        x2 = var(i+1,j,0,v) + (v==2)*p(i+1,j);
+        y1 = ( -     var(i+2,j,0,v) + 7.0*var(i+1,j,0,v)
+               + 7.0*var(i  ,j,0,v) -     var(i-1,j,0,v) )/12.0;
 
-        y1 = var(i,j  ,0,v) + (v==2)*p(i,j  );
-        y2 = var(i,j+1,0,v) + (v==2)*p(i,j+1);
-
-        fluxx(i,j) = ur*(x2-x1)/dx;
-        fluxy(i,j) = vr*(y2-y1)/dy;
+        fluxx(i,j) = ur*x1/dx;
+        fluxy(i,j) = vr*y1/dy;
 
     }
 };
@@ -150,10 +150,11 @@ struct calculateStressTensor2dv {
     V2D rho;
     V4D stressx;
     V4D stressy;
+    V2D T;
     Kokkos::View<double*> cd;
 
-    calculateStressTensor2dv (V4D var_, V2D rho_, V4D strx_, V4D stry_, Kokkos::View<double*> cd_)
-        : var(var_), rho(rho_), stressx(strx_), stressy(stry_), cd(cd_) {}
+    calculateStressTensor2dv (V4D var_, V2D rho_, V2D T_, V4D strx_, V4D stry_, Kokkos::View<double*> cd_)
+        : var(var_), rho(rho_), T(T_), stressx(strx_), stressy(stry_), cd(cd_) {}
     
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j) const {
@@ -163,22 +164,30 @@ struct calculateStressTensor2dv {
         double dudx,dvdy;
 
         //xface
-        dudx = (var(i+1,j,0,0)/rho(i,j) - var(i,j,0,0)/rho(i,j))/dx;
-        dvdy = ( (var(i+1,j+1,0,1)/rho(i,j) + var(i,j+1,0,1)/rho(i,j))
-                -(var(i+1,j-1,0,1)/rho(i,j) + var(i,j-1,0,1)/rho(i,j)) )/(4*dy);
+        dudx = (var(i+1,j,0,0)/rho(i+1,j) - var(i,j,0,0)/rho(i,j))/dx;
+        dvdy = ( (var(i+1,j+1,0,1)/rho(i+1,j+1) + var(i,j+1,0,1)/rho(i,j+1))
+                -(var(i+1,j-1,0,1)/rho(i+1,j-1) + var(i,j-1,0,1)/rho(i,j-1)) )/(4.0*dy);
         
-        stressx(i,j,0,0) = (2/3)*mu*(2*dudx-dvdy);
-        stressx(i,j,1,1) = (2/3)*mu*(2*dvdy-dudx);
+        stressx(i,j,0,0) = (4.0/3.0)*mu*dudx;
+        //if (stressx(i,j,0,0) > 0 || stressx(i,j,0,0) < 0)
+        //    printf("%f\n",stressx(i,j,0,0));
+        //if (dudx >0 || dudx < 0)
+        //    printf("dudx: %.25f\n",dudx);
+        //stressx(i,j,0,0) = (2.0/3.0)*mu*(2.0*dudx-dvdy);
+        stressx(i,j,1,1) = 0;
+        //stressx(i,j,1,1) = (2.0/3.0)*mu*(2.0*dvdy-dudx);
         stressx(i,j,0,1) = 0;
         stressx(i,j,1,0) = 0;
 
         //yface
-        dudx = ( (var(i+1,j+1,0,0)/rho(i,j) + var(i+1,j,0,0)/rho(i,j))
-                -(var(i-1,j+1,0,0)/rho(i,j) + var(i-1,j,0,0)/rho(i,j)) )/(4*dx);
-        dvdy = (var(i,j+1,0,1)/rho(i,j) - var(i,j,0,1)/rho(i,j))/dy;
+        dudx = ( (var(i+1,j+1,0,0)/rho(i+1,j+1) + var(i+1,j,0,0)/rho(i+1,j))
+                -(var(i-1,j+1,0,0)/rho(i-1,j+1) + var(i-1,j,0,0)/rho(i-1,j)) )/(4.0*dx);
+        dvdy = (var(i,j+1,0,1)/rho(i,j+1) - var(i,j,0,1)/rho(i,j))/dy;
 
-        stressy(i,j,0,0) = (2/3)*mu*(2*dudx-dvdy);
-        stressy(i,j,1,1) = (2/3)*mu*(2*dvdy-dudx);
+        stressy(i,j,0,0) = (2.0/3.0)*mu*(2.0*dudx);
+        //stressy(i,j,0,0) = (2.0/3.0)*mu*(2.0*dudx-dvdy);
+        stressy(i,j,1,1) = 0;
+        //stressy(i,j,1,1) = (2.0/3.0)*mu*(2.0*dvdy-dudx);
         stressy(i,j,0,1) = 0;
         stressy(i,j,1,0) = 0;
     }
@@ -202,17 +211,27 @@ struct applyViscousTerm2dv {
     void operator()(const int i, const int j) const {
         double dx = cd(1);
         double dy = cd(2);
+        double a1,a2,a3;
 
-        double ur = (var(i+1,j,0,0)/rho(i,j) - var(i,j,0,0)/rho(i,j))/2;
-        double ul = (var(i,j,0,0)/rho(i,j) - var(i-1,j,0,0)/rho(i,j))/2;
-        double vt = (var(i,j+1,0,1)/rho(i,j) - var(i,j,0,1)/rho(i,j))/2;
-        double vb = (var(i,j,0,1)/rho(i,j) - var(i,j-1,0,1)/rho(i,j))/2;
+        double ur = (var(i+1,j,0,0)/rho(i+1,j) - var(i,j,0,0)/rho(i,j))/2.0;
+        double ul = (var(i,j,0,0)/rho(i,j) - var(i-1,j,0,0)/rho(i-1,j))/2.0;
+        double vt = (var(i,j+1,0,1)/rho(i,j+1) - var(i,j,0,1)/rho(i,j))/2.0;
+        double vb = (var(i,j,0,1)/rho(i,j) - var(i,j-1,0,1)/rho(i,j-1))/2.0;
 
-        dvar(i,j,0,0) += (stressx(i,j,0,0)+stressx(i,j,0,0))/dx;
-        dvar(i,j,0,1) += (stressx(i,j,1,1)+stressx(i,j,1,1))/dy;
-        dvar(i,j,0,2) += (ur*stressx(i,j,0,0)-ul*stressx(i-1,j,0,0))/dx
-                        +(vt*stressy(i,j,0,1)-vb*stressy(i-1,j,0,0))/dy;
+        a1 += (stressx(i,j,0,0)-stressx(i-1,j,0,0))/dx;
+        a2 += (stressx(i,j,1,1)-stressx(i,j-1,1,1))/dy;
+        a3 += (ur*stressx(i,j,0,0)-ul*stressx(i-1,j,0,0))/dx
+                        +(vt*stressy(i,j,0,1)-vb*stressy(i,j-1,0,0))/dy;
+
+        dvar(i,j,0,0) += a1;
+        dvar(i,j,0,1) += a2;
+        dvar(i,j,0,2) += a3;
+
+        //if (i == 2000)
+        //    printf("%f, %f, %f\n",a1,a2,a3);
     }
+
+
 };
 
 
@@ -233,11 +252,13 @@ void hydro2dvisc_func::compute(const Kokkos::View<double****> & mvar, Kokkos::Vi
 
     /*** Temporary Views ***/
     V2D p("p",cf.ngi,cf.ngj);          // Pressure
+    V2D T("T",cf.ngi,cf.ngj);          // Pressure
     V2D rho("rho",cf.ngi,cf.ngj);      // Total Density
     V2D fluxx("fluxx",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
     V2D fluxy("fluxy",cf.ngi,cf.ngj);  // Weno Fluxes in Y direction
     V4D stressx("stressx",cf.ngi,cf.ngj,2,2);  // stress tensor on x faces
     V4D stressy("stressy",cf.ngi,cf.ngj,2,2);  // stress tensor on y faces
+    
 
     /*** Range Policies ***/
 
@@ -252,7 +273,7 @@ void hydro2dvisc_func::compute(const Kokkos::View<double****> & mvar, Kokkos::Vi
     /**** WENO ****/
 
     // Calcualte Total Density and Pressure Fields
-    Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure2dv(var,p,rho,cd) );
+    Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure2dv(var,p,rho,T,cd) );
 
     // Calculate and apply weno fluxes for each variable
     for (int v=0; v<cf.nv; ++v){
@@ -263,7 +284,7 @@ void hydro2dvisc_func::compute(const Kokkos::View<double****> & mvar, Kokkos::Vi
     // Apply Pressure Gradient Term
     Kokkos::parallel_for( cell_pol, applyPressure2dv(dvar,p,cd) );
 
-    Kokkos::parallel_for( weno_pol, calculateStressTensor2dv(var,rho,stressx,stressy,cd) );
+    Kokkos::parallel_for( weno_pol, calculateStressTensor2dv(var,rho,T,stressx,stressy,cd) );
 
     Kokkos::parallel_for( cell_pol, applyViscousTerm2dv(dvar,var,rho,stressx,stressy,cd) );
 }
