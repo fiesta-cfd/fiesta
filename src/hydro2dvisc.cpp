@@ -131,6 +131,39 @@ struct applyPressure2dv {
     }
 };
 
+struct calculateVelocityGradients2dv {
+    
+    typedef typename Kokkos::View<double****> V4D;
+    typedef typename Kokkos::View<double**> V2D;
+    V4D var;
+    V2D rho;
+    V4D velgradx;
+    V4D velgrady;
+    Kokkos::View<double*> cd;
+
+    calculateVelocityGradients2dv (V4D var_, V2D rho_, V4D vgradx_, V4D vgrady_, Kokkos::View<double*> cd_)
+        : var(var_), rho(rho_), velgradx(vgradx_), velgrady(vgrady_), cd(cd_) {}
+    
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int j) const {
+        double dx = cd(1);
+        double dy = cd(2);
+
+        velgradx(i,j,0,0) = (var(i+1,j,0,0)/rho(i,j) - var(i,j,0,0)/rho(i,j))/dx;
+        velgradx(i,j,1,1) = ( (var(i+1,j+1,0,1)/rho(i,j) - var(i,j+1,0,1)/rho(i,j))-
+                              (var(i+1,j-1,0,1)/rho(i,j) - var(i,j-1,0,1)/rho(i,j)) )/(4*dy);
+        velgradx(i,j,0,1) = 0;
+        velgradx(i,j,1,0) = 0;
+
+        velgrady(i,j,0,0) = ( (var(i+1,j+1,0,0)/rho(i,j) - var(i+1,j,0,0)/rho(i,j))-
+                              (var(i-1,j+1,0,0)/rho(i,j) - var(i-1,j,0,0)/rho(i,j)) )/(4*dx);
+        velgrady(i,j,1,1) = (var(i,j+1,0,1)/rho(i,j) - var(i,j,0,1)/rho(i,j))/dy;
+        velgrady(i,j,0,1) = 0;
+        velgrady(i,j,1,0) = 0;
+    }
+};
+
+
 hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){};
 
 void hydro2dvisc_func::compute(const Kokkos::View<double****> & mvar, Kokkos::View<double****> & mdvar){
@@ -151,6 +184,8 @@ void hydro2dvisc_func::compute(const Kokkos::View<double****> & mvar, Kokkos::Vi
     V2D rho("rho",cf.ngi,cf.ngj);      // Total Density
     V2D wenox("wenox",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
     V2D wenoy("wenoy",cf.ngi,cf.ngj);  // Weno Fluxes in Y direction
+    V4D velgradx("velgradx",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
+    V4D velgrady("velgrady",cf.ngi,cf.ngj);  // Weno Fluxes in Y direction
 
     /*** Range Policies ***/
 
@@ -174,4 +209,6 @@ void hydro2dvisc_func::compute(const Kokkos::View<double****> & mvar, Kokkos::Vi
 
     // Apply Pressure Gradient Term
     Kokkos::parallel_for( cell_pol, applyPressure2dv(dvar,p,cd) );
+
+    Kokkos::parallel_for( weno_pol, calculateVelocityGradients2dv(var,rho,velgradx,velgrady,cd) );
 }
