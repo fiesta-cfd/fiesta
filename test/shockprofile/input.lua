@@ -4,11 +4,11 @@
 --Restart and Output Options
 out_freq = 0                          --Screen Output Interval
 restart_freq = 10000                  --Restart Write Interval
-write_freq = 500                      --Solution Write Interval
+write_freq = 100                      --Solution Write Interval
 restart = 0                           --Whether or not to use restart file
-time = 0.0                            --Start time of simulation
-tstart = 0                            --Start time index of simulation
-restartName = "restart-000000.cgns"   --Restart File Name
+time = 4.0e-7                            --Start time of simulation
+tstart = 20000                         --Start time index of simulation
+restartName = "restart-020000.cgns"   --Restart File Name
 
 --Gas Properties
 R = 8.314462                          --Universal Gas Constant [J/(K*mol)]
@@ -18,8 +18,8 @@ M = {0.02897}                         --Array of Species Molar Masses [kg/mol]
 visc = 1
 
 --Time
-nt = 20000                            --Time Step at which to end simulation
-dt = 5e-11                            --Time Step Size [s]
+nt = 80000                              --Time Step at which to end simulation
+dt = 2e-11                            --Time Step Size [s]
 
 --Number of cells
 ndim = 2
@@ -35,7 +35,7 @@ procsx = 1
 procsy = 1
 
 --Boundary Conditions (0: Freeflow, 1: Reflective)
-bcXmin = 1
+bcXmin = 0
 bcXmax = 0
 bcYmin = 0
 bcYmax = 0
@@ -54,7 +54,7 @@ betae = 2.0         --Energy Equation Isotropic Coefficient
 
 
 -- problem statement
-gam = 5/3
+gam = 5.0/3.0
 cp = 520
 rmachinit = 3.38
 tempinit = 300
