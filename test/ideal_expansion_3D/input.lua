@@ -17,6 +17,7 @@ ns = 1                                --Number of Gas Species
 gamma = {1.400}                  --Array of Species Ratio of Specific Heats
 M = {0.02897}                 --Array of Species Molar Masses [kg/mol]
 --M = {0.02897,0.14606}                 --Array of Species Molar Masses [kg/mol]
+visc=0
 
 --Time
 nt = 3000                             --Time Step at which to end simulation

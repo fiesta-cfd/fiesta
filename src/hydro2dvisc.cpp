@@ -51,120 +51,57 @@ struct calculateRhoAndPressure2dv {
     }
 };
 
-struct calculateFluxes2dv {
+struct advect2dv {
     
     typedef typename Kokkos::View<double****> V4D;
     typedef typename Kokkos::View<double**> V2D;
+    V4D dvar;
     V4D var;
     V2D p;
     V2D rho;
-    V2D wenox;
-    V2D wenoy;
     Kokkos::View<double*> cd;
     int v;
-    double eps = 0.000001;
 
-    calculateFluxes2dv (V4D var_, V2D p_, V2D rho_,
-                         V2D wenox_, V2D wenoy_, Kokkos::View<double*> cd_, int v_)
-                         : var(var_), p(p_), rho(rho_),
-                           wenox(wenox_), wenoy(wenoy_), cd(cd_), v(v_) {}
+    advect2dv (V4D dvar_, V4D var_, V2D p_, V2D rho_, Kokkos::View<double*> cd_, int v_)
+                         : dvar(dvar_), var(var_), p(p_), rho(rho_), cd(cd_), v(v_) {}
     
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j) const {
 
-        int ns = (int)cd(0);
-        double ur,vr,w,b1,b2,b3,w1,w2,w3,p1,p2,p3,f1,f2,f3,f4,f5;
         double dx = cd(1);
         double dy = cd(2);
+        double ur,vr,w,f1,f2,f3,f4;
 
-        //calculate cell face velocities (in positive direction) with 4th order interpolation
-        //velocity is momentum divided by total density
-        ur = ( -     var(i+2,j,0,0)/rho(i+2,j) + 7.0*var(i+1,j,0,0)/rho(i+1,j)
-               + 7.0*var(i  ,j,0,0)/rho(i  ,j) -     var(i-1,j,0,0)/rho(i-1,j) )/12.0;
-
-        vr = ( -     var(i,j+2,0,1)/rho(i,j+2) + 7.0*var(i,j+1,0,1)/rho(i,j+1)
-               + 7.0*var(i,j  ,0,1)/rho(i,j  ) -     var(i,j-1,0,1)/rho(i,j-1) )/12.0;
+        ur = var(i,j,0,0)/rho(i,j);
+        vr = var(i,j,0,1)/rho(i,j);
 
         //for each direction
         for (int idx=0; idx<2; ++idx){
             //get stencil data.  the flux for the energy equation includes pressure so only add 
             //pressure for the energy variable (index 2 for 2d problem)
             if (idx == 0){
-                if (ur < 0.0){
-                    f1 = var(i+3,j,0,v) + (v==2)*p(i+3,j);
-                    f2 = var(i+2,j,0,v) + (v==2)*p(i+2,j);
-                    f3 = var(i+1,j,0,v) + (v==2)*p(i+1,j);
-                    f4 = var(i  ,j,0,v) + (v==2)*p(i  ,j);
-                    f5 = var(i-1,j,0,v) + (v==2)*p(i-1,j);
-                }else{
-                    f1 = var(i-2,j,0,v) + (v==2)*p(i-2,j);
-                    f2 = var(i-1,j,0,v) + (v==2)*p(i-1,j);
-                    f3 = var(i  ,j,0,v) + (v==2)*p(i  ,j);
-                    f4 = var(i+1,j,0,v) + (v==2)*p(i+1,j);
-                    f5 = var(i+2,j,0,v) + (v==2)*p(i+2,j);
-                }
+                f1 = var(i-2,j,0,v) + (v==2)*p(i-2,j);
+                f2 = var(i-1,j,0,v) + (v==2)*p(i-1,j);
+                f3 = var(i+1,j,0,v) + (v==2)*p(i+1,j);
+                f4 = var(i+2,j,0,v) + (v==2)*p(i+2,j);
             } 
             if (idx == 1) {
-                if (vr < 0.0){
-                    f1 = var(i,j+3,0,v) + (v==2)*p(i,j+3);
-                    f2 = var(i,j+2,0,v) + (v==2)*p(i,j+2);
-                    f3 = var(i,j+1,0,v) + (v==2)*p(i,j+1);
-                    f4 = var(i,j  ,0,v) + (v==2)*p(i,j  );
-                    f5 = var(i,j-1,0,v) + (v==2)*p(i,j-1);
-                }else{
-                    f1 = var(i,j-2,0,v) + (v==2)*p(i,j-2);
-                    f2 = var(i,j-1,0,v) + (v==2)*p(i,j-1);
-                    f3 = var(i,j  ,0,v) + (v==2)*p(i,j  );
-                    f4 = var(i,j+1,0,v) + (v==2)*p(i,j+1);
-                    f5 = var(i,j+2,0,v) + (v==2)*p(i,j+2);
-                }
+                f1 = var(i,j-2,0,v) + (v==2)*p(i,j-2);
+                f2 = var(i,j-1,0,v) + (v==2)*p(i,j-1);
+                f3 = var(i,j+1,0,v) + (v==2)*p(i,j+1);
+                f4 = var(i,j+2,0,v) + (v==2)*p(i,j+2);
             }
 
-            // calculate weights and other weno stuff
-            b1 = (13/12)*pow((f1-2.0*f2+f3),2.0) + (0.25)*pow((f1-4.0*f2+3.0*f3),2.0);
-            b2 = (13/12)*pow((f2-2.0*f3+f4),2.0) + (0.25)*pow((f2-f4),2.0);
-            b3 = (13/12)*pow((f3-2.0*f4+f5),2.0) + (0.25)*pow((3.0*f3-4.0*f4+f5),2.0);
-
-            w1 = (0.1)/pow((eps+b1),2.0);
-            w2 = (0.6)/pow((eps+b2),2.0);
-            w3 = (0.3)/pow((eps+b3),2.0);
-
-            p1 = ( 1.0/3.0)*f1 + (-7.0/6.0)*f2 + (11.0/6.0)*f3;
-            p2 = (-1.0/6.0)*f2 + ( 5.0/6.0)*f3 + ( 1.0/3.0)*f4;
-            p3 = ( 1.0/3.0)*f3 + ( 5.0/6.0)*f4 + (-1.0/6.0)*f5;
-
-            w = (w1*p1+w2*p2+w3*p3)/(w1+w2+w3);
-
-            //calculate weno flux
+            w = (f1 - 8.0*f2 + 8.0*f3 - f4)/12.0;
+            //calculate advection flux
             if (idx == 0){
-                wenox(i,j) = ur*w/dx;
+                dvar(i,j,0,v) = ur*w/dx;
             }
             if (idx == 1) {
-                wenoy(i,j) = vr*w/dy;
+                dvar(i,j,0,v) = vr*w/dy;
             }
+
         }
-    }
-};
-
-struct applyFluxes2dv {
-    
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double**> V2D;
-    V4D dvar;
-    V2D wenox;
-    V2D wenoy;
-    int v;
-    
-
-    applyFluxes2dv (V4D dvar_, V2D wenox_, V2D wenoy_, int v_)
-        : dvar(dvar_), wenox(wenox_), wenoy(wenoy_), v(v_) {}
-    
-    KOKKOS_INLINE_FUNCTION
-    void operator()(const int i, const int j) const {
-
-        //apply weno fluxes to right hand side of Euler equation dV/dt = ...
-        dvar(i,j,0,v) = -( (wenox(i,j) - wenox(i-1,j))
-                          +(wenoy(i,j) - wenoy(i,j-1)) );
     }
 };
 
@@ -232,9 +169,7 @@ void hydro2dvisc_func::compute(const Kokkos::View<double****> & mvar, Kokkos::Vi
 
     // Calculate and apply weno fluxes for each variable
     for (int v=0; v<cf.nv; ++v){
-        Kokkos::parallel_for( weno_pol, calculateFluxes2dv(var,p,rho,wenox,wenoy,cd,v) );
-
-        Kokkos::parallel_for( cell_pol, applyFluxes2dv(dvar,wenox,wenoy,v) );
+        Kokkos::parallel_for( cell_pol, advect2dv(dvar,var,p,rho,cd,v) );
     }
 
     // Apply Pressure Gradient Term

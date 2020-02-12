@@ -15,6 +15,7 @@ R = 8.314462                          --Universal Gas Constant [J/(K*mol)]
 ns = 1                                --Number of Gas Species
 gamma = {1.40}                        --Array of Species Ratio of Specific Heats
 M = {0.02897}                         --Array of Species Molar Masses [kg/mol]
+visc=0
 
 --Time
 nt = 4000                             --Time Step at which to end simulation
