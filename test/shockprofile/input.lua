@@ -2,24 +2,24 @@
 -- 2D Ideal Expansion
 
 --Restart and Output Options
-out_freq = 0                          --Screen Output Interval
+out_freq = 200                        --Screen Output Interval
 restart_freq = 10000                  --Restart Write Interval
-write_freq = 100                      --Solution Write Interval
+write_freq = 5000                     --Solution Write Interval
 restart = 0                           --Whether or not to use restart file
-time = 4.0e-7                            --Start time of simulation
-tstart = 20000                         --Start time index of simulation
+time = 0.0                               --Start time of simulation
+tstart = 0                             --Start time index of simulation
 restartName = "restart-020000.cgns"   --Restart File Name
 
 --Gas Properties
 R = 8.314462                          --Universal Gas Constant [J/(K*mol)]
 ns = 1                                --Number of Gas Species
 gamma = {1.6667}                        --Array of Species Ratio of Specific Heats
-M = {0.02897}                         --Array of Species Molar Masses [kg/mol]
+M = {0.0398}                         --Array of Species Molar Masses [kg/mol]
 visc = 1
 
 --Time
-nt = 80000                              --Time Step at which to end simulation
-dt = 2e-11                            --Time Step Size [s]
+nt = 100000                              --Time Step at which to end simulation
+dt = 5e-11                            --Time Step Size [s]
 
 --Number of cells
 ndim = 2
