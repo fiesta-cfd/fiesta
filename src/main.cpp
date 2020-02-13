@@ -269,10 +269,12 @@ int main(int argc, char* argv[]){
         if (cf.rank == 0)
             if (cf.write_freq >0 || cf.restart_freq>0)
                 printf("\nWriting Initial Conditions...\n");
+        /*
         if (cf.write_freq >0)
             writeSolution(cf,xSP,ySP,zSP,myV,0,0.00);
         if (cf.restart_freq >0)
             writeRestart(cf,x,y,z,myV,0,0.00);
+        */
     }
 
     //printf("Here4\n");
@@ -287,6 +289,9 @@ int main(int argc, char* argv[]){
 
     //printf("Here5\n");
     
+    // create mpi buffers
+    mpiBuffers m(cf);
+
     if (cf.rank == 0) printf("\nStarting Simulation...\n");
     MPI_Barrier(cf.comm);
     start = std::clock();
@@ -297,7 +302,7 @@ int main(int argc, char* argv[]){
 
         /****** Low Storage Runge-Kutta 2nd order ******/
         //K1 = f(myV)
-        applyBCs(cf,myV,nlft,nrht,nbot,ntop,nbak,nfrt,celltype,ncells);
+        applyBCs(cf,myV,m,nlft,nrht,nbot,ntop,nbak,nfrt,celltype,ncells);
         //if (t == 0) printf("Here6\n");
     
         f->compute(myV,nlft,nrht,nbot,ntop,nbak,nfrt,celltype,K1,ncells);
@@ -311,7 +316,7 @@ int main(int argc, char* argv[]){
         });
 
         //K2 = f(tmp)
-        applyBCs(cf,tmp,nlft,nrht,nbot,ntop,nbak,nfrt,celltype,ncells);
+        applyBCs(cf,tmp,m,nlft,nrht,nbot,ntop,nbak,nfrt,celltype,ncells);
         f->compute(tmp,nlft,nrht,nbot,ntop,nbak,nfrt,celltype,K2,ncells);
 
         //myV = myV + K2
@@ -329,12 +334,14 @@ int main(int argc, char* argv[]){
                 if ((t+1) % cf.out_freq == 0)
                     printf("Iteration: %d/%d, Sim Time: %.2e\n",t+1,cf.nt,time);
         }
+        /*
         if (cf.write_freq > 0)
             if ((t+1) % cf.write_freq == 0)
                 writeSolution(cf,xSP,ySP,zSP,myV,t+1,time);
         if (cf.restart_freq > 0)
             if ((t+1) % cf.restart_freq == 0)
                 writeRestart(cf,x,y,z,myV,t+1,time);
+        */
     }
 
     MPI_Barrier(cf.comm);

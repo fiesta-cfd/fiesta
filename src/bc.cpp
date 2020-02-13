@@ -233,12 +233,12 @@ struct bc_F {
     }
 };
 
-void applyBCs(struct inputConfig cf, Kokkos::View<double**> &u, Kokkos::View<int*> nlft, Kokkos::View<int*> nrht, Kokkos::View<int*> nbot, Kokkos::View<int*> ntop, Kokkos::View<int*> nbak, Kokkos::View<int*> nfrt, Kokkos::View<int*> cell_type, int ncells){
+void applyBCs(struct inputConfig cf, Kokkos::View<double**> &u, class mpiBuffers &m, Kokkos::View<int*> nlft, Kokkos::View<int*> nrht, Kokkos::View<int*> nbot, Kokkos::View<int*> ntop, Kokkos::View<int*> nbak, Kokkos::View<int*> nfrt, Kokkos::View<int*> cell_type, int ncells){
 
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_bl;
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>> policy_b2;
 
-    haloExchange(cf,u);
+    haloExchange(cf,u,m);
 
     int cv = 0;
     if (cf.ceq == 1)
