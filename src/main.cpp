@@ -176,6 +176,7 @@ int main(int argc, char* argv[]){
     start = std::clock();
     MPI_Barrier(cf.comm);
 
+
     for (int t=tstart; t<cf.nt; ++t){
         time = time + cf.dt;
 
@@ -187,7 +188,7 @@ int main(int argc, char* argv[]){
         //tmp = myV + k1/2
         Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+cv}),
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
-            tmp(i,j,k,v) = myV(i,j,k,v) + cf.dt*K1(i,j,k,v)/2;
+            tmp(i,j,k,v) = myV(i,j,k,v) + cf.dt*K1(i,j,k,v);
         });
 
         //K2 = f(tmp)
@@ -197,9 +198,8 @@ int main(int argc, char* argv[]){
         //myV = myV + K2
         Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+cv}),
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
-            myV(i,j,k,v) = myV(i,j,k,v) + cf.dt*K2(i,j,k,v);
+            myV(i,j,k,v) = myV(i,j,k,v) + cf.dt*(K1(i,j,k,v) + K2(i,j,k,v))/2.0;
         });
-        
         
         /****** Output Control ******/
         if (cf.rank==0){

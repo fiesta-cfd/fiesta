@@ -221,6 +221,7 @@ int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> 
     lua_close(L);
     
     Kokkos::deep_copy(deviceV,hostV);
+    //printf("cells: %f, %f, %f\n",hostV(2001,3,0,0),hostV(2002,3,0,0),hostV(2003,3,0,0));
     
     return 0;
 }

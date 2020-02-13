@@ -74,19 +74,33 @@ struct computeFluxes2dv {
 
         double dx = cd(1);
         double dy = cd(2);
-        double ur,vr,x1,x2,y1,y2;
+        double ur,vr,x1,y1;
+        double px,py;
+        ur = 0.0;
+        vr = 0.0;
+        x1 = 0.0;
+        y1 = 0.0;
 
-        ur = ( -     var(i+2,j,0,0)/rho(i+2,j) + 7.0*var(i+1,j,0,0)/rho(i+1,j)
-               + 7.0*var(i  ,j,0,0)/rho(i  ,j) -     var(i-1,j,0,0)/rho(i-1,j) )/12.0;
+        ur = ( 0.0 - var(i+2,j,0,0)/rho(i+2,j) + 7.0*var(i+1,j,0,0)/rho(i+1,j)
+               + 7.0*var(i  ,j,0,0)/rho(i  ,j) - var(i-1,j,0,0)/rho(i-1,j) )/12.0;
 
-        vr = ( -     var(i,j+2,0,1)/rho(i,j+2) + 7.0*var(i,j+1,0,1)/rho(i,j+1)
-               + 7.0*var(i,j  ,0,1)/rho(i,j  ) -     var(i,j-1,0,1)/rho(i,j-1) )/12.0;
+        vr = ( 0.0 - var(i,j+2,0,1)/rho(i,j+2) + 7.0*var(i,j+1,0,1)/rho(i,j+1)
+               + 7.0*var(i,j  ,0,1)/rho(i,j  ) - var(i,j-1,0,1)/rho(i,j-1) )/12.0;
 
-        x1 = ( -     var(i+2,j,0,v) + 7.0*var(i+1,j,0,v)
+        px =  (0.0 - p(i+2,j) + 7.0*p(i+1,j) + 7.0*p(i  ,j) - p(i-1,j) )/12.0;
+
+        py =  (0.0 - p(i,j+2) + 7.0*p(i,j+1) + 7.0*p(i  ,j) - p(i,j-1) )/12.0;
+
+        x1 = ( 0.0 - var(i+2,j,0,v) + 7.0*var(i+1,j,0,v)
                + 7.0*var(i  ,j,0,v) -     var(i-1,j,0,v) )/12.0;
 
-        y1 = ( -     var(i+2,j,0,v) + 7.0*var(i+1,j,0,v)
-               + 7.0*var(i  ,j,0,v) -     var(i-1,j,0,v) )/12.0;
+        y1 = (0.0 - var(i,j+2,0,v) + 7.0*var(i,j+1,0,v)
+               + 7.0*var(i  ,j,0,v) -     var(i,j-1,0,v) )/12.0;
+
+        if (v == 2){
+            x1 = x1+px;
+            y1 = y1+py;
+        }
 
         fluxx(i,j) = ur*x1/dx;
         fluxy(i,j) = vr*y1/dy;
@@ -110,9 +124,14 @@ struct advect2dv {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j) const {
 
-        dvar(i,j,0,v) = -( (fluxx(i,j) - fluxx(i-1,j))
+        double a;
+
+        a = -( (fluxx(i,j) - fluxx(i-1,j))
                           +(fluxy(i,j) - fluxy(i,j-1)) );
 
+        //if (i==2002 && j==3)
+        //    printf("adv %d: %f\n",v,a);
+        dvar(i,j,0,v) = a;
     }
 };
 
@@ -137,8 +156,15 @@ struct applyPressure2dv {
         double dyp = ( p(i,j-2) - 8.0*p(i,j-1) + 8.0*p(i,j+1) - p(i,j+2) )/(12.0*dy);
 
         //apply pressure gradient term to right hand side of Euler equation dV/dt = ...
-        dvar(i,j,0,0) = dvar(i,j,0,0) - dxp;
-        dvar(i,j,0,1) = dvar(i,j,0,1) - dyp;
+        double p1,p2;
+        p1 = dvar(i,j,0,0) - dxp;
+        p2 = dvar(i,j,0,1) - dyp;
+
+        //if (i==1999 && j==3)
+            //printf("pres %f %f\n",dxp,dyp);
+
+        dvar(i,j,0,0) = p1;
+        dvar(i,j,0,1) = p2;
     }
 };
 
@@ -162,34 +188,48 @@ struct calculateStressTensor2dv {
         double dy = cd(2);
         double mu = 2.295e-5;
         double dudx,dvdy;
+        double rhox,rhoy;
+
+        rhox = ( -     rho(i+2,j) + 7.0*rho(i+1,j)
+                 + 7.0*rho(i  ,j) -     rho(i-1,j) )/12.0;
+
+        rhoy = ( -     rho(i,j+2) + 7.0*rho(i,j+1)
+                 + 7.0*rho(i  ,j) -     rho(i,j-1) )/12.0;
 
         //xface
         dudx = (var(i+1,j,0,0)/rho(i+1,j) - var(i,j,0,0)/rho(i,j))/dx;
+
         dvdy = ( (var(i+1,j+1,0,1)/rho(i+1,j+1) + var(i,j+1,0,1)/rho(i,j+1))
                 -(var(i+1,j-1,0,1)/rho(i+1,j-1) + var(i,j-1,0,1)/rho(i,j-1)) )/(4.0*dy);
         
-        stressx(i,j,0,0) = (4.0/3.0)*mu*dudx;
+        //stressx(i,j,0,0) = (4.0/3.0)*mu*dudx;
+        stressx(i,j,0,0) = mu*dudx;
         //if (stressx(i,j,0,0) > 0 || stressx(i,j,0,0) < 0)
         //    printf("%f\n",stressx(i,j,0,0));
         //if (dudx >0 || dudx < 0)
         //    printf("dudx: %.25f\n",dudx);
         //stressx(i,j,0,0) = (2.0/3.0)*mu*(2.0*dudx-dvdy);
-        stressx(i,j,1,1) = 0;
+        stressx(i,j,1,1) = 0.0;
         //stressx(i,j,1,1) = (2.0/3.0)*mu*(2.0*dvdy-dudx);
-        stressx(i,j,0,1) = 0;
-        stressx(i,j,1,0) = 0;
+        stressx(i,j,0,1) = 0.0;
+        stressx(i,j,1,0) = 0.0;
+
+        //if (i==2002 && j==3)
+        //    printf("FACE: %f = %f * %f * %f\n",stressx(2002,3,0,0),dudx,rhox,mu);
 
         //yface
         dudx = ( (var(i+1,j+1,0,0)/rho(i+1,j+1) + var(i+1,j,0,0)/rho(i+1,j))
                 -(var(i-1,j+1,0,0)/rho(i-1,j+1) + var(i-1,j,0,0)/rho(i-1,j)) )/(4.0*dx);
+
         dvdy = (var(i,j+1,0,1)/rho(i,j+1) - var(i,j,0,1)/rho(i,j))/dy;
 
-        stressy(i,j,0,0) = (2.0/3.0)*mu*(2.0*dudx);
+        //stressy(i,j,0,0) = (2.0/3.0)*rhoy*mu*(2.0*dudx);
+        stressy(i,j,0,0) = 0.0;
         //stressy(i,j,0,0) = (2.0/3.0)*mu*(2.0*dudx-dvdy);
-        stressy(i,j,1,1) = 0;
+        stressy(i,j,1,1) = 0.0;
         //stressy(i,j,1,1) = (2.0/3.0)*mu*(2.0*dvdy-dudx);
-        stressy(i,j,0,1) = 0;
-        stressy(i,j,1,0) = 0;
+        stressy(i,j,0,1) = 0.0;
+        stressy(i,j,1,0) = 0.0;
     }
 };
 
@@ -213,27 +253,27 @@ struct applyViscousTerm2dv {
         double dy = cd(2);
         double a1,a2,a3;
 
-        double ur = (var(i+1,j,0,0)/rho(i+1,j) - var(i,j,0,0)/rho(i,j))/2.0;
-        double ul = (var(i,j,0,0)/rho(i,j) - var(i-1,j,0,0)/rho(i-1,j))/2.0;
-        double vt = (var(i,j+1,0,1)/rho(i,j+1) - var(i,j,0,1)/rho(i,j))/2.0;
-        double vb = (var(i,j,0,1)/rho(i,j) - var(i,j-1,0,1)/rho(i,j-1))/2.0;
+        double ur = (var(i+1,j  ,0,0)/rho(i+1,j  ) + var(i  ,j  ,0,0)/rho(i  ,j  ))/2.0;
+        double ul = (var(i  ,j  ,0,0)/rho(i  ,j  ) + var(i-1,j  ,0,0)/rho(i-1,j  ))/2.0;
+        double vt = (var(i  ,j+1,0,1)/rho(i  ,j+1) + var(i  ,j  ,0,1)/rho(i  ,j  ))/2.0;
+        double vb = (var(i  ,j  ,0,1)/rho(i  ,j  ) + var(i  ,j-1,0,1)/rho(i  ,j-1))/2.0;
 
-        a1 += (stressx(i,j,0,0)-stressx(i-1,j,0,0))/dx;
-        a2 += (stressx(i,j,1,1)-stressx(i,j-1,1,1))/dy;
-        a3 += (ur*stressx(i,j,0,0)-ul*stressx(i-1,j,0,0))/dx
-                        +(vt*stressy(i,j,0,1)-vb*stressy(i,j-1,0,0))/dy;
+        a1 = (stressx(i,j,0,0)-stressx(i-1,j,0,0))/dx;
+        a2 = (stressx(i,j,1,1)-stressx(i,j-1,1,1))/dy;
 
-        dvar(i,j,0,0) += a1;
-        dvar(i,j,0,1) += a2;
-        dvar(i,j,0,2) += a3;
+        a3 =  (ur*stressx(i,j,0,0)-ul*stressx(i-1,j,0,0))/dx
+             +(vt*stressy(i,j,1,1)-vb*stressy(i,j-1,1,1))/dy;
+
+        //if (i==2002 && j==3)
+        //    printf("div %f: %f, %f\n",a1,stressx(i-1,j,0,0),stressx(i,j,0,0));
+        dvar(i,j,0,0) = dvar(i,j,0,0) + a1;
+        dvar(i,j,0,1) = dvar(i,j,0,1) + a2;
+        dvar(i,j,0,2) = dvar(i,j,0,2) + a3;
 
         //if (i == 2000)
         //    printf("%f, %f, %f\n",a1,a2,a3);
     }
-
-
 };
-
 
 hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){};
 
@@ -259,7 +299,6 @@ void hydro2dvisc_func::compute(const Kokkos::View<double****> & mvar, Kokkos::Vi
     V4D stressx("stressx",cf.ngi,cf.ngj,2,2);  // stress tensor on x faces
     V4D stressy("stressy",cf.ngi,cf.ngj,2,2);  // stress tensor on y faces
     
-
     /*** Range Policies ***/
 
     // Physical and Ghost cells
@@ -268,7 +307,6 @@ void hydro2dvisc_func::compute(const Kokkos::View<double****> & mvar, Kokkos::Vi
     policy_f cell_pol  = policy_f({cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng});
     // Cell Faces
     policy_f weno_pol  = policy_f({cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng});
-
 
     /**** WENO ****/
 
