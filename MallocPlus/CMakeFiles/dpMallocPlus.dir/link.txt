@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdpMallocPlus.a  CMakeFiles/dpMallocPlus.dir/MallocPlus.cpp.o CMakeFiles/dpMallocPlus.dir/FMallocPlus.F90.o
+/usr/bin/ranlib libdpMallocPlus.a

@@ -1,0 +1,1 @@
+/projects/opt/x86_64/gcc/9.2.0/bin/gcc -fPIC -O3 -DNDEBUG -g -O3 -g -O3 -fstrict-aliasing -ftree-vectorize -fopt-info-vec-optimized -fopenmp-simd -march=native -mtune=native  -shared -Wl,-soname,libpowerstats.so.2 -o libpowerstats.so.2.0.7 CMakeFiles/powerstats.dir/powerstats.c.o CMakeFiles/powerstats.dir/rapl_read.c.o 

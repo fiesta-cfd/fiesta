@@ -1,0 +1,1 @@
+/projects/opt/x86_64/gcc/9.2.0/bin/gcc -fPIC -O3 -DNDEBUG -g -O3 -g -O3  -shared -Wl,-soname,libkdtree.so.2 -o libkdtree.so.2.0.0 CMakeFiles/kdtree.dir/Bounds.c.o CMakeFiles/kdtree.dir/KDTree.c.o 

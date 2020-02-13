@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcrux.a  CMakeFiles/crux.dir/crux.cpp.o
+/usr/bin/ranlib libcrux.a

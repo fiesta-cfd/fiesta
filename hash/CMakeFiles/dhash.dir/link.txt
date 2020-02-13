@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdhash.a  CMakeFiles/dhash.dir/hash.c.o
+/usr/bin/ranlib libdhash.a

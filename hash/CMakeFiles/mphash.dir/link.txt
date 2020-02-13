@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmphash.a  CMakeFiles/mphash.dir/hash.c.o
+/usr/bin/ranlib libmphash.a

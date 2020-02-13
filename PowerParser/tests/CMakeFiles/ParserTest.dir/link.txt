@@ -1,0 +1,1 @@
+/projects/opt/x86_64/gcc/9.2.0/bin/g++  -O3 -DNDEBUG -g -O3  -rdynamic CMakeFiles/ParserTest.dir/ParserTest.cc.o  -o ParserTest -Wl,-rpath,/projects/opt/x86_64/openmpi/4.0.2-gcc_9.2.0/lib ../libPowerParser.a /projects/opt/x86_64/openmpi/4.0.2-gcc_9.2.0/lib/libmpi.so -lgfortran -lquadmath 

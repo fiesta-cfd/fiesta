@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmesh.a  CMakeFiles/mesh.dir/mesh.cpp.o CMakeFiles/mesh.dir/partition.cpp.o CMakeFiles/mesh.dir/reduce.c.o
+/usr/bin/ranlib libmesh.a

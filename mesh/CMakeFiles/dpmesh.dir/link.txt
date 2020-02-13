@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdpmesh.a  CMakeFiles/dpmesh.dir/mesh.cpp.o CMakeFiles/dpmesh.dir/partition.cpp.o CMakeFiles/dpmesh.dir/reduce.c.o
+/usr/bin/ranlib libdpmesh.a
