@@ -1558,6 +1558,7 @@ void Mesh::init(int nx, int ny, real_t circ_radius, partition_method initial_ord
    } else {
        int istart = 1,
            jstart = 1,
+           bounds = 0,
            iend   = nx,
            jend   = ny,
            nxx    = nx,
@@ -1565,12 +1566,14 @@ void Mesh::init(int nx, int ny, real_t circ_radius, partition_method initial_ord
        if (have_boundary) {
           istart = 0;
           jstart = 0;
-          iend   = nx + 1;
-          jend   = ny + 1;
-          nxx    = nx + 2;
-          nyy    = ny + 2;
+          bounds = 1;
+          iend   = nx + ghosts;
+          jend   = ny + ghosts;
+          nxx    = nx + ghosts*ndim;
+          nyy    = ny + ghosts*ndim;
        }
 
+       //Dan look
        if (ndim == TWO_DIMENSIONAL) ncells = nxx * nyy - have_boundary * 4;
        else                         ncells = nxx * nyy;
 
@@ -1600,10 +1603,10 @@ void Mesh::init(int nx, int ny, real_t circ_radius, partition_method initial_ord
 
        for (int jj = jstart; jj <= jend; jj++) {
           for (int ii = istart; ii <= iend; ii++) {
-             if (have_boundary && ii == 0    && jj == 0   ) continue;
-             if (have_boundary && ii == 0    && jj == jend) continue;
-             if (have_boundary && ii == iend && jj == 0   ) continue;
-             if (have_boundary && ii == iend && jj == jend) continue;
+             if (have_boundary && ii < bounds    && jj < bounds   ) continue;
+             if (have_boundary && ii < bounds    && jj > jend - bounds) continue;
+             if (have_boundary && ii > iend - bounds && jj < bounds   ) continue;
+             if (have_boundary && ii > iend - bounds && jj > jend - bounds) continue;
 
              if (ic >= (int)noffset && ic < (int)(ncells+noffset)){
                 int iclocal = ic-noffset;
