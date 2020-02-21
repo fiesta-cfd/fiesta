@@ -190,7 +190,7 @@ struct calculateStressTensor2dv {
         double dx = cd(1);
         double dy = cd(2);
         double mu = 2.295e-5;
-        double dudx,dvdy;
+        double dudx,dvdy,dudy,dvdx;
         double rhox,rhoy;
 
         rhox = ( -     rho(i+2,j) + 7.0*rho(i+1,j)
@@ -204,19 +204,26 @@ struct calculateStressTensor2dv {
 
         dvdy = ( (var(i+1,j+1,0,1)/rho(i+1,j+1) + var(i,j+1,0,1)/rho(i,j+1))
                 -(var(i+1,j-1,0,1)/rho(i+1,j-1) + var(i,j-1,0,1)/rho(i,j-1)) )/(4.0*dy);
+
+        dvdx = (var(i+1,j,0,1)/rho(i+1,j) - var(i,j,0,1)/rho(i,j))/dx;
+
+        dudy = ( (var(i+1,j+1,0,0)/rho(i+1,j+1) + var(i,j+1,0,0)/rho(i,j+1))
+                -(var(i+1,j-1,0,0)/rho(i+1,j-1) + var(i,j-1,0,0)/rho(i,j-1)) )/(4.0*dy);
         
         //stressx(i,j,0,0) = (4.0/3.0)*mu*dudx;
-        stressx(i,j,0,0) = mu*dudx;
+        //stressx(i,j,0,0) = mu*dudx;
+        //stressx(i,j,0,0) = (2.0/3.0)*mu*(2.0*dudx-dvdy);
+        //stressx(i,j,0,1) = 0.0;
+        //stressx(i,j,1,0) = 0.0;
+        stressx(i,j,1,1) = 0.0;
+        stressx(i,j,1,1) = (2.0/3.0)*mu*(2.0*dvdy-dudx);
+        stressx(i,j,0,1) = mu*(dudy+dvdx);
+        stressx(i,j,1,0) =stressx(i,j,0,1);
+
         //if (stressx(i,j,0,0) > 0 || stressx(i,j,0,0) < 0)
         //    printf("%f\n",stressx(i,j,0,0));
         //if (dudx >0 || dudx < 0)
         //    printf("dudx: %.25f\n",dudx);
-        //stressx(i,j,0,0) = (2.0/3.0)*mu*(2.0*dudx-dvdy);
-        stressx(i,j,1,1) = 0.0;
-        //stressx(i,j,1,1) = (2.0/3.0)*mu*(2.0*dvdy-dudx);
-        stressx(i,j,0,1) = 0.0;
-        stressx(i,j,1,0) = 0.0;
-
         //if (i==2002 && j==3)
         //    printf("FACE: %f = %f * %f * %f\n",stressx(2002,3,0,0),dudx,rhox,mu);
 
@@ -226,13 +233,20 @@ struct calculateStressTensor2dv {
 
         dvdy = (var(i,j+1,0,1)/rho(i,j+1) - var(i,j,0,1)/rho(i,j))/dy;
 
+        dvdx = ( (var(i+1,j+1,0,1)/rho(i+1,j+1) + var(i+1,j,0,1)/rho(i+1,j))
+                -(var(i-1,j+1,0,1)/rho(i-1,j+1) + var(i-1,j,0,1)/rho(i-1,j)) )/(4.0*dx);
+
+        dudy = (var(i,j+1,0,0)/rho(i,j+1) - var(i,j,0,0)/rho(i,j))/dy;
+
         //stressy(i,j,0,0) = (2.0/3.0)*rhoy*mu*(2.0*dudx);
-        stressy(i,j,0,0) = 0.0;
+        //stressy(i,j,0,0) = 0.0;
         //stressy(i,j,0,0) = (2.0/3.0)*mu*(2.0*dudx-dvdy);
-        stressy(i,j,1,1) = 0.0;
-        //stressy(i,j,1,1) = (2.0/3.0)*mu*(2.0*dvdy-dudx);
-        stressy(i,j,0,1) = 0.0;
-        stressy(i,j,1,0) = 0.0;
+        //stressy(i,j,0,1) = 0.0;
+        //stressy(i,j,1,0) = 0.0;
+        //stressy(i,j,1,1) = 0.0;
+        stressy(i,j,1,1) = (2.0/3.0)*mu*(2.0*dvdy-dudx);
+        stressy(i,j,0,1) = mu*(dudy+dvdx);
+        stressy(i,j,1,0) = stressy(i,j,0,1);
     }
 };
 struct calculateHeatFlux2dv {
@@ -285,27 +299,37 @@ struct applyViscousTerm2dv {
     void operator()(const int i, const int j) const {
         double dx = cd(1);
         double dy = cd(2);
-        double a1,a2,a3,a4;
+        double a,b,c1,c2;
 
         double ur = (var(i+1,j  ,0,0)/rho(i+1,j  ) + var(i  ,j  ,0,0)/rho(i  ,j  ))/2.0;
         double ul = (var(i  ,j  ,0,0)/rho(i  ,j  ) + var(i-1,j  ,0,0)/rho(i-1,j  ))/2.0;
+        double vr = (var(i+1,j  ,0,1)/rho(i+1,j  ) + var(i  ,j  ,0,1)/rho(i  ,j  ))/2.0;
+        double vl = (var(i  ,j  ,0,1)/rho(i  ,j  ) + var(i-1,j  ,0,1)/rho(i-1,j  ))/2.0;
+
+        double ut = (var(i  ,j+1,0,0)/rho(i  ,j+1) + var(i  ,j  ,0,0)/rho(i  ,j  ))/2.0;
+        double ub = (var(i  ,j  ,0,0)/rho(i  ,j  ) + var(i  ,j-1,0,0)/rho(i  ,j-1))/2.0;
         double vt = (var(i  ,j+1,0,1)/rho(i  ,j+1) + var(i  ,j  ,0,1)/rho(i  ,j  ))/2.0;
         double vb = (var(i  ,j  ,0,1)/rho(i  ,j  ) + var(i  ,j-1,0,1)/rho(i  ,j-1))/2.0;
 
-        a1 = (stressx(i,j,0,0)-stressx(i-1,j,0,0))/dx;
-        a2 = (stressx(i,j,1,1)-stressx(i,j-1,1,1))/dy;
+        a = (stressx(i,j,0,0)-stressx(i-1,j,0,0))/dx
+            +(stressx(i,j,0,1)-stressx(i-1,j,0,1))/dy;
 
-        a3 =  (ur*stressx(i,j,0,0)-ul*stressx(i-1,j,0,0))/dx
+        b = (stressx(i,j,1,0)-stressx(i,j-1,1,0))/dx
+            +(stressx(i,j,1,1)-stressx(i,j-1,1,1))/dy;
+
+        c1 =  (ur*stressx(i,j,0,0)-ul*stressx(i-1,j,0,0))/dx
+             +(vl*stressy(i,j,0,1)-vl*stressy(i,j-1,0,1))/dx
+             +(ut*stressy(i,j,1,0)-ub*stressy(i,j-1,1,0))/dy
              +(vt*stressy(i,j,1,1)-vb*stressy(i,j-1,1,1))/dy;
 
-        a4 =  (qx(i,j)-qx(i-1,j))/dx
+        c2 =  (qx(i,j)-qx(i-1,j))/dx
              +(qy(i,j)-qy(i,j-1))/dy;
 
         //if (i==2002 && j==3)
         //    printf("div %f: %f, %f\n",a1,stressx(i-1,j,0,0),stressx(i,j,0,0));
-        dvar(i,j,0,0) = dvar(i,j,0,0) + a1;
-        dvar(i,j,0,1) = dvar(i,j,0,1) + a2;
-        dvar(i,j,0,2) = dvar(i,j,0,2) + a3 - a4;
+        dvar(i,j,0,0) = dvar(i,j,0,0) + a;
+        dvar(i,j,0,1) = dvar(i,j,0,1) + b;
+        dvar(i,j,0,2) = dvar(i,j,0,2) + c1 - c2;
 
         //if (i == 2000)
         //    printf("%f, %f, %f\n",a1,a2,a3);
