@@ -2,24 +2,24 @@
 -- 2D Ideal Expansion
 
 --Restart and Output Options
-out_freq = 200                        --Screen Output Interval
-restart_freq = 10000                  --Restart Write Interval
-write_freq = 5000                     --Solution Write Interval
+out_freq = 50                         --Screen Output Interval
+restart_freq = 0                      --Restart Write Interval
+write_freq = 500                      --Solution Write Interval
 restart = 0                           --Whether or not to use restart file
 time = 0.0                               --Start time of simulation
-tstart = 0                             --Start time index of simulation
+tstart = 0                           --Start time index of simulation
 restartName = "restart-020000.cgns"   --Restart File Name
 
 --Gas Properties
 R = 8.314462                          --Universal Gas Constant [J/(K*mol)]
 ns = 1                                --Number of Gas Species
 gamma = {1.6667}                        --Array of Species Ratio of Specific Heats
-M = {0.0398}                         --Array of Species Molar Masses [kg/mol]
+M = {0.02897}                         --Array of Species Molar Masses [kg/mol]
 visc = 1
 
 --Time
-nt = 100000                              --Time Step at which to end simulation
-dt = 5e-11                            --Time Step Size [s]
+nt = 36500
+dt = 2e-11                            --Time Step Size [s]
 
 --Number of cells
 ndim = 2
@@ -54,29 +54,57 @@ betae = 2.0         --Energy Equation Isotropic Coefficient
 
 
 -- problem statement
+
+--gam = 5.0/3.0
+--cp = 520
+--rmachinit = 3.38
+--tempinit = 300
+--rhoinit = 0.0001068
+--
+--cv = cp/gam
+--rg = cp-cv
+--
+--term = rmachinit*rmachinit
+--
+--densitytmp = (gam+1)/(gam-1+2/term)
+--utmp = 2*(rmachinit^2-1)/((gam+1)*rmachinit)
+--prtmp = 1+2*gam/(gam+1)*(rmachinit^2-1)
+--ertmp = tempinit*cv*rhoinit
+--
+--cr = math.sqrt(gam*(gam-1)*ertmp)
+--prb = rg*rhoinit*tempinit
+--sound = math.sqrt(gam*prb/rhoinit)
+--
+--rke = 0.5*sound*utmp*densitytmp*rhoinit*sound*utmp
+--temp = prb*prtmp/(rg*densitytmp*rhoinit)
+
 gam = 5.0/3.0
-cp = 520
-rmachinit = 3.38
-tempinit = 300
-rhoinit = 0.0001068
+Cp = 520
+M1 = 3.38
+T1 = 300
+r1 = 0.0001068
 
-cv = cp/gam
-rg = cp-cv
+Cv = Cp/gam
+R  = Cp-Cv
 
-term = rmachinit*rmachinit
+M2 = math.sqrt( (M1^2+(2/gam-1)) / (2*gam/(gam-1)*M1^2-1) )
+p_ratio = 2*gam/(gam+1)*M1^2 - (gam-1)/(gam+1)
+r_ratio = ((gam+1)*M1^2) / (((gam-1)*M1^2) + 2)
+T_ratio = (1+((gam-1)/2)*M1^2) / (1+((gam-1)/2)*M2^2)
 
-densitytmp = (gam+1)/(gam-1+2/term)
-utmp = 2*(rmachinit^2-1)/((gam+1)*rmachinit)
-prtmp = 1+2*gam/(gam+1)*(rmachinit^2-1)
-ertmp = tempinit*cv*rhoinit
+T2 = T_ratio*T1
+r2 = r_ratio*r1
 
-cr = math.sqrt(gam*(gam-1)*ertmp)
-prb = rg*rhoinit*tempinit
-sound = math.sqrt(gam*prb/rhoinit)
+a1 = math.sqrt(gam*R*T1)
+a2 = math.sqrt(gam*R*T2)
 
-rke = 0.5*sound*utmp*densitytmp*rhoinit*sound*utmp
-temp = prb*prtmp/(rg*densitytmp*rhoinit)
+u1 = 0
+us = M1*a1
+u2p = M2*a2
+u2 = us - u2p
 
+e1 = r1*Cv*T1
+e2 = r2*Cv*T2 + (r2/2)*u2^2
 
 --initial conditions
 function f(i,j,k,v)
@@ -86,15 +114,15 @@ function f(i,j,k,v)
     
     if xdist < 0.02 then
         --setup hot region
-        if v==0 then return sound*utmp*densitytmp*rhoinit end
+        if v==0 then return r2*u2 end
         if v==1 then return 0      end
-        if v==2 then return cv*temp*densitytmp*rhoinit+rke end
-        if v==3 then return rhoinit*densitytmp   end
+        if v==2 then return e2 end
+        if v==3 then return r2   end
     else
         --ambient conditions
-        if v==0 then return 0      end
+        if v==0 then return r2*u1     end
         if v==1 then return 0      end
-        if v==2 then return ertmp end
-        if v==3 then return rhoinit end
+        if v==2 then return e1 end
+        if v==3 then return r1 end
     end
 end
