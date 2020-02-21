@@ -215,7 +215,7 @@ struct calculateStressTensor2dv {
         //stressx(i,j,0,0) = (2.0/3.0)*mu*(2.0*dudx-dvdy);
         //stressx(i,j,0,1) = 0.0;
         //stressx(i,j,1,0) = 0.0;
-        stressx(i,j,1,1) = 0.0;
+        //stressx(i,j,1,1) = 0.0;
         stressx(i,j,1,1) = (2.0/3.0)*mu*(2.0*dvdy-dudx);
         stressx(i,j,0,1) = mu*(dudy+dvdx);
         stressx(i,j,1,0) =stressx(i,j,0,1);
