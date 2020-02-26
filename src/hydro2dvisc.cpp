@@ -187,11 +187,20 @@ struct calculateStressTensor2dv {
     
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j) const {
+        int ns = (int)cd(0);
         double dx = cd(1);
         double dy = cd(2);
-        double mu = 2.295e-5;
+        double mu1 = 2.928e-5;
+        double mu2 = 1.610e-5;
         double dudx,dvdy,dudy,dvdx;
         double rhox,rhoy;
+
+        double muij = (var(i,j,0,3)*mu1 + var(i,j,0,4)*mu2)/rho(i,j);
+        double muip = (var(i+1,j,0,3)*mu1 + var(i+1,j,0,4)*mu2)/rho(i+1,j);
+        double mujp = (var(i,j+1,0,3)*mu1 + var(i,j+1,0,4)*mu2)/rho(i,j+1);
+
+        double mur = (muip + muij)/2;
+        double mut = (mujp + muij)/2;
 
         rhox = ( -     rho(i+2,j) + 7.0*rho(i+1,j)
                  + 7.0*rho(i  ,j) -     rho(i-1,j) )/12.0;
@@ -216,8 +225,8 @@ struct calculateStressTensor2dv {
         //stressx(i,j,0,1) = 0.0;
         //stressx(i,j,1,0) = 0.0;
         //stressx(i,j,1,1) = 0.0;
-        stressx(i,j,1,1) = (2.0/3.0)*mu*(2.0*dvdy-dudx);
-        stressx(i,j,0,1) = mu*(dudy+dvdx);
+        stressx(i,j,1,1) = (2.0/3.0)*mur*(2.0*dvdy-dudx);
+        stressx(i,j,0,1) = mur*(dudy+dvdx);
         stressx(i,j,1,0) =stressx(i,j,0,1);
 
         //if (stressx(i,j,0,0) > 0 || stressx(i,j,0,0) < 0)
@@ -244,8 +253,8 @@ struct calculateStressTensor2dv {
         //stressy(i,j,0,1) = 0.0;
         //stressy(i,j,1,0) = 0.0;
         //stressy(i,j,1,1) = 0.0;
-        stressy(i,j,1,1) = (2.0/3.0)*mu*(2.0*dvdy-dudx);
-        stressy(i,j,0,1) = mu*(dudy+dvdx);
+        stressy(i,j,1,1) = (2.0/3.0)*mut*(2.0*dvdy-dudx);
+        stressy(i,j,0,1) = mut*(dudy+dvdx);
         stressy(i,j,1,0) = stressy(i,j,0,1);
     }
 };
