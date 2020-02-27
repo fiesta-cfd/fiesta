@@ -85,7 +85,7 @@ int main(int argc, char* argv[]){
         }
         printf("-----------------------\n");
         printf("Running %d processes as (%d,%d,%d)\n",cf.numProcs,cf.xProcs,cf.yProcs,cf.zProcs);
-        printf("nt = %d, dt = %.2e\n",cf.nt,cf.dt);
+        printf("tstart = %d, nt = %d, tend = %d, dt = %.2e\n",cf.tstart,cf.nt,cf.tend,cf.dt);
         printf("Num Cells X = %d, dx = %.2e\n",cf.glbl_nci,cf.dx);
         printf("Num Cells Y = %d, dy = %.2e\n",cf.glbl_ncj,cf.dy);
         if (cf.ndim == 3)
@@ -180,7 +180,7 @@ int main(int argc, char* argv[]){
     MPI_Barrier(cf.comm);
 
 
-    for (int t=tstart; t<cf.nt; ++t){
+    for (int t=tstart; t<cf.tend; ++t){
         time = time + cf.dt;
 
         /****** Low Storage Runge-Kutta 2nd order ******/
@@ -208,7 +208,7 @@ int main(int argc, char* argv[]){
         if (cf.rank==0){
             if (cf.out_freq > 0)
                 if ((t+1) % cf.out_freq == 0)
-                    printf("Iteration: %d/%d, Sim Time: %.2e\n",t+1,cf.nt,time);
+                    printf("Iteration: %d/%d, Sim Time: %.2e\n",t+1,cf.tend,time);
         }
         if (cf.write_freq > 0)
             if ((t+1) % cf.write_freq == 0)

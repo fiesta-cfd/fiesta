@@ -111,6 +111,7 @@ struct inputConfig executeConfiguration(char * fname){
 
     myConfig.gamma = (double*)malloc(myConfig.ns*sizeof(double));
     myConfig.M = (double*)malloc(myConfig.ns*sizeof(double));
+    myConfig.tend = myConfig.tstart+myConfig.nt;
 
     int isnum;
 

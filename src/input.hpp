@@ -46,7 +46,7 @@ struct inputConfig {
     int xPer,yPer,zPer;
     int restart;
     const char * sfName;
-    int tstart;
+    int tstart,tend;
     double time;
     double ceq,kap,eps,alpha,beta,betae;
     int bcL,bcR,bcB,bcT,bcH,bcF;
