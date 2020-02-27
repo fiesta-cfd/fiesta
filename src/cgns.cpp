@@ -587,7 +587,7 @@ void readSolution(struct inputConfig cf, const Kokkos::View<double****> deviceV)
     if (cgp_open(cf.sfName, CG_MODE_MODIFY, &cf.cF))
         cgp_error_exit();
 
-    int idx;
+    int idx,vv;
     
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
     cgsize_t endc[3] = {cf.iEnd,cf.jEnd,cf.kEnd};
@@ -596,7 +596,11 @@ void readSolution(struct inputConfig cf, const Kokkos::View<double****> deviceV)
     readV = (double *)malloc(cf.nci*cf.ncj*cf.nck*cf.nv*sizeof(double));
 
     for (int v=0; v<cf.nv; ++v){
-        cgp_field_read_data(cf.cF,1,1,1,v+1,start,endc,readV);
+        if (cf.ndim == 2 && v > 1)
+            vv = v+1;
+        else
+            vv = v;
+        cgp_field_read_data(cf.cF,1,1,1,vv+1,start,endc,readV);
         if (cf.ndim == 3){
             for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
                 for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){

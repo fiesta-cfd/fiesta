@@ -77,9 +77,12 @@ int main(int argc, char* argv[]){
     MPI_Barrier(cf.comm);
     /*** Output runtime information ***/
     if (cf.rank == 0){
-        printf("%s\n",cf.inputFname);
-        if (cf.restart)
-            printf("Running from Restart File: %d | %s\n",cf.restart,cf.sfName);
+        printf("Input File Name: %s\n",cf.inputFname);
+        if (cf.restart){
+            printf("Running from Restart File: %s\n",cf.sfName);
+            printf("Start Time is %.2e\n",cf.time);
+            printf("Start Index is %d\n",cf.tstart);
+        }
         printf("-----------------------\n");
         printf("Running %d processes as (%d,%d,%d)\n",cf.numProcs,cf.xProcs,cf.yProcs,cf.zProcs);
         printf("nt = %d, dt = %.2e\n",cf.nt,cf.dt);
