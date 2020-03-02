@@ -1,6 +1,7 @@
 #ifndef RKFUNCTION_H
 #define RKFUNCTION_H
 
+#include "fiesta.hpp"
 #include "input.hpp"
 #include "Kokkos_Core.hpp"
 
@@ -21,11 +22,11 @@ class rk_func
 public:
     rk_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_);
 
-    virtual void compute(const Kokkos::View<double****> & mvar, Kokkos::View<double****> & mdvar) = 0;
+    virtual void compute(const FS4D & mvar, FS4D & mdvar) = 0;
 
 protected:
-    Kokkos::View<double****> mvar;
-    Kokkos::View<double****> mdvar;
+    FS4D mvar;
+    FS4D mdvar;
     Kokkos::View<double*> mcd;
     struct inputConfig cf;
 };
