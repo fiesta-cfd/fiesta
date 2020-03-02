@@ -1,3 +1,4 @@
+#include "fiesta.hpp"
 #include "cgns.hpp"
 #include "debug.hpp"
 #include <iostream>
@@ -94,7 +95,7 @@ struct inputConfig writeSPGrid(struct inputConfig cf, float *x, float *y, float 
     return cf;
 }
 
-void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const Kokkos::View<double****> deviceV, int tdx, double time){
+void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const FS4D deviceV, int tdx, double time){
     int index_sol, index_flow;
 
     char dName[32];
@@ -117,7 +118,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
     cgsize_t endc[3] = {cf.iEnd,cf.jEnd,cf.kEnd};
 
-    typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
+    FS4DH hostV = Kokkos::create_mirror_view(deviceV);
     Kokkos::deep_copy(hostV,deviceV);
 
     /* open cgns file and write cell centered flow variable */
@@ -330,7 +331,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
     cgp_close(cf.cF);
 }
 
-void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Kokkos::View<double****> deviceV, int tdx, double time){
+void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const FS4D deviceV, int tdx, double time){
     int index_sol, index_flow;
 
     char dName[32];
@@ -353,7 +354,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
     cgsize_t endc[3] = {cf.iEnd,cf.jEnd,cf.kEnd};
 
-    typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
+    FS4DH hostV = Kokkos::create_mirror_view(deviceV);
     Kokkos::deep_copy(hostV,deviceV);
 
     /* open cgns file and write cell centered flow variable */
@@ -579,8 +580,8 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
 
 }
 
-void readSolution(struct inputConfig cf, const Kokkos::View<double****> deviceV){
-    typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
+void readSolution(struct inputConfig cf, const FS4D deviceV){
+    FS4DH hostV = Kokkos::create_mirror_view(deviceV);
     Kokkos::deep_copy(hostV,deviceV);
 
     /* open cgns file for reading restart information */
