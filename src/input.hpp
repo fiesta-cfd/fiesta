@@ -1,6 +1,7 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+#include "fiesta.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -56,6 +57,6 @@ struct inputConfig {
 
 struct inputConfig executeConfiguration(char * fname);
 
-int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> v);
+int loadInitialConditions(struct inputConfig cf, const FS4D v);
 
 #endif

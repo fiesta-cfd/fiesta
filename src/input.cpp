@@ -1,3 +1,4 @@
+#include "fiesta.hpp"
 #include "input.hpp"
 #include "Kokkos_Core.hpp"
 #include "debug.hpp"
@@ -159,7 +160,7 @@ struct inputConfig executeConfiguration(char * fname){
     return myConfig;
 }
 
-int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> deviceV){
+int loadInitialConditions(struct inputConfig cf, const FS4D deviceV){
     
     double z;
     int isnum;
@@ -171,7 +172,7 @@ int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> 
     if (luaL_loadfile(L,cf.inputFname) || lua_pcall(L,0,0,0))
         error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
 
-    typename Kokkos::View<double****>::HostMirror hostV = Kokkos::create_mirror_view(deviceV);
+    FS4DH hostV = Kokkos::create_mirror_view(deviceV);
     for (int v=0; v<cf.nv; ++v){
         if (cf.ndim == 3){
             for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
