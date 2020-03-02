@@ -1,3 +1,4 @@
+#include "fiesta.hpp"
 #include "input.hpp"
 #include "rkfunction.hpp"
 #include "Kokkos_Core.hpp"
