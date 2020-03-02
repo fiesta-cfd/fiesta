@@ -1,3 +1,4 @@
+#include "fiesta.hpp"
 #include "Kokkos_Core.hpp"
 #include "debug.hpp"
 #include "input.hpp"
@@ -5,10 +6,10 @@
 #include <mpi.h>
 
 struct bc_L {
-    Kokkos::View<double****> u;
+    FS4D u;
     int n, ng, bc_type;
 
-    bc_L(int n_, int ng_, int bc_type_, Kokkos::View<double****> u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
+    bc_L(int n_, int ng_, int bc_type_, FS4D u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int j, const int k, const int v) const {
@@ -19,10 +20,10 @@ struct bc_L {
 };
 
 struct bc_R {
-    Kokkos::View<double****> u;
+    FS4D u;
     int n, ng, bc_type;
 
-    bc_R(int n_, int ng_, int bc_type_, Kokkos::View<double****> u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
+    bc_R(int n_, int ng_, int bc_type_, FS4D u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int j, const int k, const int v) const {
@@ -33,10 +34,10 @@ struct bc_R {
 };
 
 struct bc_B {
-    Kokkos::View<double****> u;
+    FS4D u;
     int n, ng, bc_type;
 
-    bc_B(int n_, int ng_, int bc_type_, Kokkos::View<double****> u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
+    bc_B(int n_, int ng_, int bc_type_, FS4D u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int k, const int v) const {
@@ -47,10 +48,10 @@ struct bc_B {
 };
 
 struct bc_T {
-    Kokkos::View<double****> u;
+    FS4D u;
     int n, ng, bc_type;
 
-    bc_T(int n_, int ng_, int bc_type_, Kokkos::View<double****> u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
+    bc_T(int n_, int ng_, int bc_type_, FS4D u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int k, const int v) const {
@@ -61,10 +62,10 @@ struct bc_T {
 };
 
 struct bc_H {
-    Kokkos::View<double****> u;
+    FS4D u;
     int n, ng, bc_type;
 
-    bc_H(int n_, int ng_, int bc_type_, Kokkos::View<double****> u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
+    bc_H(int n_, int ng_, int bc_type_, FS4D u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j, const int v) const {
@@ -75,10 +76,10 @@ struct bc_H {
 };
 
 struct bc_F {
-    Kokkos::View<double****> u;
+    FS4D u;
     int n, ng, bc_type;
 
-    bc_F(int n_, int ng_, int bc_type_, Kokkos::View<double****> u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
+    bc_F(int n_, int ng_, int bc_type_, FS4D u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j, const int v) const {
@@ -88,7 +89,7 @@ struct bc_F {
     }
 };
 
-void applyBCs(struct inputConfig cf, Kokkos::View<double****> &u, class mpiBuffers &m){
+void applyBCs(struct inputConfig cf, FS4D &u, class mpiBuffers &m){
 
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_bl;
 
