@@ -6,9 +6,9 @@
 #include "Kokkos_Core.hpp"
 #include <mpi.h>
 #include "debug.hpp"
-#include "hydroc3d.hpp"
+//#include "hydroc3d.hpp"
 #include "hydro2d.hpp"
-#include "hydro2dvisc.hpp"
+//#include "hydro2dvisc.hpp"
 #include "rkfunction.hpp"
 #include <iostream>
 #include <cstdio>
@@ -54,10 +54,10 @@ int main(int argc, char* argv[]){
     if (cf.ceq == 1)
         cv = 5;
 
-    FS4D myV("myV",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
-    FS4D tmp("RK_tmp",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
-    FS4D K1("RK_K1",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
-    FS4D K2("RK_K2",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
+    //FS4D myV("myV",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
+    //FS4D tmp("RK_tmp",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
+    //FS4D K1("RK_K1",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
+    //FS4D K2("RK_K2",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
         
     Kokkos::View<double*> cd("deviceCF",5+cf.ns*2);
     typename Kokkos::View<double*>::HostMirror hostcd = Kokkos::create_mirror_view(cd);
@@ -101,6 +101,8 @@ int main(int argc, char* argv[]){
             printf("    Species %d, Gamma = %4.2f, M = %6.4f\n",s+1,cf.gamma[s],cf.M[s]);
         printf("-----------------------\n");
     }
+
+    hydro2d_func f(cf,cd);
     
     MPI_Barrier(cf.comm);
     if (cf.rank == 0) printf("\nLoading Initial Conditions...\n");
@@ -108,7 +110,7 @@ int main(int argc, char* argv[]){
     std::clock_t start;
     start = std::clock();
     if (cf.restart == 0)
-        loadInitialConditions(cf,myV);
+        loadInitialConditions(cf,f.var);
     total_time = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
 
     if (cf.rank == 0){
@@ -151,27 +153,27 @@ int main(int argc, char* argv[]){
     /*** Read Restart or Write initial conditions ***/
     if (cf.restart == 1){
         if (cf.rank == 0) printf("\nReading Restart File...\n");
-        readSolution(cf,myV);
+        readSolution(cf,f.var);
     }else{
         if (cf.rank == 0)
             if (cf.write_freq >0 || cf.restart_freq>0)
                 printf("\nWriting Initial Conditions...\n");
         if (cf.write_freq >0)
-            writeSolution(cf,xSP,ySP,zSP,myV,0,0.00);
+            writeSolution(cf,xSP,ySP,zSP,f.var,0,0.00);
         if (cf.restart_freq >0)
-            writeRestart(cf,x,y,z,myV,0,0.00);
+            writeRestart(cf,x,y,z,f.var,0,0.00);
     }
 
     /*** Choose Scheme ***/
-    rk_func *f;
-    if (cf.ndim == 3){
-        f = new hydroc3d_func(cf,cd);
-    }else{
-        if (cf.visc == 1)
-            f = new hydro2dvisc_func(cf,cd);
-        else
-            f = new hydro2d_func(cf,cd);
-    }
+    //rk_func *f;
+    //if (cf.ndim == 3){
+    //    f = new hydroc3d_func(cf,cd);
+    //}else{
+    //    if (cf.visc == 1)
+    //        f = new hydro2dvisc_func(cf,cd);
+    //    else
+    //        f = new hydro2d_func(cf,cd);
+    //}
 
     // create mpi buffers
     mpiBuffers m(cf);
@@ -187,23 +189,28 @@ int main(int argc, char* argv[]){
 
         /****** Low Storage Runge-Kutta 2nd order ******/
         //K1 = f(myV)
-        applyBCs(cf,myV,m);
-        f->compute(myV,K1);
+        applyBCs(cf,f.var,m);
+        f.compute();
+        //f->compute(myV,K1);
         
         //tmp = myV + k1/2
         Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+cv}),
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
-            tmp(i,j,k,v) = myV(i,j,k,v) + cf.dt*K1(i,j,k,v);
+            f.tmp1(i,j,k,v) = f.var(i,j,k,v);
+            f.var(i,j,k,v) = f.var(i,j,k,v) + 0.5*cf.dt*f.dvar(i,j,k,v);
+            //tmp(i,j,k,v) = myV(i,j,k,v) + cf.dt*K1(i,j,k,v);
         });
 
         //K2 = f(tmp)
-        applyBCs(cf,tmp,m);
-        f->compute(tmp,K2);
+        applyBCs(cf,f.var,m);
+        f.compute();
+        //f->compute(tmp,K2);
 
         //myV = myV + K2
         Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+cv}),
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
-            myV(i,j,k,v) = myV(i,j,k,v) + cf.dt*(K1(i,j,k,v) + K2(i,j,k,v))/2.0;
+            f.var(i,j,k,v) = f.var(i,j,k,v) + cf.dt*f.dvar(i,j,k,v);
+            //myV(i,j,k,v) = myV(i,j,k,v) + cf.dt*(K1(i,j,k,v) + K2(i,j,k,v))/2.0;
         });
         
         /****** Output Control ******/
@@ -214,10 +221,10 @@ int main(int argc, char* argv[]){
         }
         if (cf.write_freq > 0)
             if ((t+1) % cf.write_freq == 0)
-                writeSolution(cf,xSP,ySP,zSP,myV,t+1,time);
+                writeSolution(cf,xSP,ySP,zSP,f.var,t+1,time);
         if (cf.restart_freq > 0)
             if ((t+1) % cf.restart_freq == 0)
-                writeRestart(cf,x,y,z,myV,t+1,time);
+                writeRestart(cf,x,y,z,f.var,t+1,time);
     }
 
     MPI_Barrier(cf.comm);

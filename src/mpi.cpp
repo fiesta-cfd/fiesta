@@ -78,19 +78,18 @@ mpiBuffers::mpiBuffers(struct inputConfig cf){
         cv = 5;
     }
 
-    leftSend   = Kokkos::View<double****>("leftSend",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
-    leftRecv   = Kokkos::View<double****>("leftRecv",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
-    rightSend  = Kokkos::View<double****>("rightSend",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
-    rightRecv  = Kokkos::View<double****>("rightRecv",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
-
-    bottomSend = Kokkos::View<double****>("bottomSend",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
-    bottomRecv = Kokkos::View<double****>("bottomRecv",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
-    topSend    = Kokkos::View<double****>("topSend",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
-    topRecv    = Kokkos::View<double****>("topRecv",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
-    backSend   = Kokkos::View<double****>("backSend",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
-    backRecv   = Kokkos::View<double****>("backRecv",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
-    frontSend  = Kokkos::View<double****>("frontSend",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
-    frontRecv  = Kokkos::View<double****>("frontRecv",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
+    leftSend   = Kokkos::View<double****,FS_LAYOUT>("leftSend",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
+    leftRecv   = Kokkos::View<double****,FS_LAYOUT>("leftRecv",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
+    rightSend  = Kokkos::View<double****,FS_LAYOUT>("rightSend",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
+    rightRecv  = Kokkos::View<double****,FS_LAYOUT>("rightRecv",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
+    bottomSend = Kokkos::View<double****,FS_LAYOUT>("bottomSend",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
+    bottomRecv = Kokkos::View<double****,FS_LAYOUT>("bottomRecv",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
+    topSend    = Kokkos::View<double****,FS_LAYOUT>("topSend",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
+    topRecv    = Kokkos::View<double****,FS_LAYOUT>("topRecv",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
+    backSend   = Kokkos::View<double****,FS_LAYOUT>("backSend",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
+    backRecv   = Kokkos::View<double****,FS_LAYOUT>("backRecv",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
+    frontSend  = Kokkos::View<double****,FS_LAYOUT>("frontSend",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
+    frontRecv  = Kokkos::View<double****,FS_LAYOUT>("frontRecv",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
     leftSend_H = Kokkos::create_mirror_view(leftSend);
     leftRecv_H = Kokkos::create_mirror_view(leftRecv);
     rightSend_H = Kokkos::create_mirror_view(rightSend);
@@ -107,7 +106,7 @@ mpiBuffers::mpiBuffers(struct inputConfig cf){
 
 }
 
-void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV, class mpiBuffers &m){
+void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m){
     int cv = 0;
     if (cf.ceq == 1){
         cv = 5;

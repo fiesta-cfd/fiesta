@@ -186,34 +186,25 @@ struct applyPressure2d {
     }
 };
 
-hydro2d_func::hydro2d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){};
+hydro2d_func::hydro2d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){
 
-void hydro2d_func::compute(const FS4D & mvar, FS4D & mdvar){
+    var     = Kokkos::View<double****,FS_LAYOUT>("var",cf.ngi,cf.ngj,cf.ngk,cf.nv); // Primary Variable Array
+    tmp1    = Kokkos::View<double****,FS_LAYOUT>("tmp1",cf.ngi,cf.ngj,cf.ngk,cf.nv); // Temporary Variable Arrayr1
+    tmp2    = Kokkos::View<double****,FS_LAYOUT>("tmp2",cf.ngi,cf.ngj,cf.ngk,cf.nv); // Temporary Variable Array2
+    dvar    = Kokkos::View<double****,FS_LAYOUT>("dvar",cf.ngi,cf.ngj,cf.ngk,cf.nv); // RHS Output
+    p       = Kokkos::View<double**,FS_LAYOUT>("p",cf.ngi,cf.ngj);             // Pressure
+    rho     = Kokkos::View<double**,FS_LAYOUT>("rho",cf.ngi,cf.ngj);           // Total Density
+    wenox   = Kokkos::View<double**,FS_LAYOUT>("wenox",cf.ngi,cf.ngj);           // Total Density
+    wenoy   = Kokkos::View<double**,FS_LAYOUT>("wenoy",cf.ngi,cf.ngj);           // Total Density
+    cd = mcd;
 
-    // Typename acronyms for 2D and 4D variables
+};
 
-    // Copy input and output views
-    FS4D var = mvar;
-    FS4D dvar = mdvar;
-
-    // Copy Configuration Data
-    Kokkos::View<double*> cd = mcd;
-
-    /*** Temporary Views ***/
-    FS2D p("p",cf.ngi,cf.ngj);          // Pressure
-    FS2D rho("rho",cf.ngi,cf.ngj);      // Total Density
-    FS2D wenox("wenox",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
-    FS2D wenoy("wenoy",cf.ngi,cf.ngj);  // Weno Fluxes in Y direction
-
-    /*** Range Policies ***/
-
-    // Physical and Ghost cells
+//void hydro2d_func::compute(const FS4D & mvar, FS4D & mdvar){
+void hydro2d_func::compute(){
     policy_f ghost_pol = policy_f({0,0},{cf.ngi, cf.ngj});
-    // Physical Cells only
     policy_f cell_pol  = policy_f({cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng});
-    // Cell Faces
-    policy_f weno_pol  = policy_f({cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng});
-
+    policy_f face_pol  = policy_f({cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng});
 
     /**** WENO ****/
 
@@ -222,7 +213,7 @@ void hydro2d_func::compute(const FS4D & mvar, FS4D & mdvar){
 
     // Calculate and apply weno fluxes for each variable
     for (int v=0; v<cf.nv; ++v){
-        Kokkos::parallel_for( weno_pol, calculateWenoFluxes2d(var,p,rho,wenox,wenoy,cd,v) );
+        Kokkos::parallel_for( face_pol, calculateWenoFluxes2d(var,p,rho,wenox,wenoy,cd,v) );
 
         Kokkos::parallel_for( cell_pol, applyWenoFluxes2d(dvar,wenox,wenoy,v) );
     }

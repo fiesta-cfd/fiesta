@@ -7,7 +7,7 @@ class hydroc3d_func : public rk_func{
 
 public:
     hydroc3d_func(struct inputConfig &cf, Kokkos::View<double*> & mcd);
-    void compute(const Kokkos::View<double****> & mvar, Kokkos::View<double****> & mdvar);
+    void compute(const FS4D & mvar, FS4D & mdvar);
 
 protected:
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_f;

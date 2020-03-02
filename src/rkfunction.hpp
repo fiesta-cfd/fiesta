@@ -22,11 +22,15 @@ class rk_func
 public:
     rk_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_);
 
-    virtual void compute(const FS4D & mvar, FS4D & mdvar) = 0;
+    virtual void compute() = 0;
+    //virtual void compute(const FS4D & mvar, FS4D & mdvar) = 0;
+    
+    FS4D var;
+    FS4D dvar;
+    FS4D tmp1;
+    FS4D tmp2;
 
 protected:
-    FS4D mvar;
-    FS4D mdvar;
     Kokkos::View<double*> mcd;
     struct inputConfig cf;
 };
