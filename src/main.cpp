@@ -1,3 +1,4 @@
+#include "fiesta.hpp"
 #include "input.hpp"
 #include "mpi.hpp"
 #include "cgns.hpp"
@@ -12,6 +13,7 @@
 #include <iostream>
 #include <cstdio>
 #include <ctime>
+
 
 void fnExit1(void){
     Kokkos::finalize();
@@ -52,10 +54,10 @@ int main(int argc, char* argv[]){
     if (cf.ceq == 1)
         cv = 5;
 
-    Kokkos::View<double****> myV("myV",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
-    Kokkos::View<double****> tmp("RK_tmp",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
-    Kokkos::View<double****> K1("RK_K1",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
-    Kokkos::View<double****> K2("RK_K2",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
+    FS4D myV("myV",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
+    FS4D tmp("RK_tmp",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
+    FS4D K1("RK_K1",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
+    FS4D K2("RK_K2",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
         
     Kokkos::View<double*> cd("deviceCF",5+cf.ns*2);
     typename Kokkos::View<double*>::HostMirror hostcd = Kokkos::create_mirror_view(cd);
