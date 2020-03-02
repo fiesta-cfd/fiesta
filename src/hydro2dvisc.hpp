@@ -7,7 +7,7 @@ class hydro2dvisc_func : public rk_func {
 public:
     hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*> &cd_);
 
-    void compute(const Kokkos::View<double****> & mvar, Kokkos::View<double****> & mdvar);
+    void compute(const FS4D & mvar, FS4D & mdvar);
 
 private:
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>> policy_f;

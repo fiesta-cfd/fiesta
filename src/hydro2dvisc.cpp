@@ -8,15 +8,13 @@
 #include "hydro2dvisc.hpp"
 
 struct calculateRhoAndPressure2dv {
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double**> V2D;
-    V4D var;
-    V2D p;
-    V2D T;
-    V2D rho;
+    FS4D var;
+    FS2D p;
+    FS2D T;
+    FS2D rho;
     Kokkos::View<double*> cd;
 
-    calculateRhoAndPressure2dv (V4D var_, V2D p_, V2D rho_, V2D T_, Kokkos::View<double*> cd_)
+    calculateRhoAndPressure2dv (FS4D var_, FS2D p_, FS2D rho_, FS2D T_, Kokkos::View<double*> cd_)
          : var(var_), p(p_), rho(rho_), T(T_), cd(cd_) {}
 
     KOKKOS_INLINE_FUNCTION
@@ -59,17 +57,15 @@ struct calculateRhoAndPressure2dv {
 
 struct computeFluxes2dv {
     
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double**> V2D;
-    V4D var;
-    V2D p;
-    V2D rho;
-    V2D fluxx;
-    V2D fluxy;
+    FS4D var;
+    FS2D p;
+    FS2D rho;
+    FS2D fluxx;
+    FS2D fluxy;
     Kokkos::View<double*> cd;
     int v;
 
-    computeFluxes2dv (V4D var_, V2D p_, V2D rho_, V2D fx_, V2D fy_, Kokkos::View<double*> cd_, int v_)
+    computeFluxes2dv (FS4D var_, FS2D p_, FS2D rho_, FS2D fx_, FS2D fy_, Kokkos::View<double*> cd_, int v_)
                          : var(var_), p(p_), rho(rho_), fluxx(fx_), fluxy(fy_), cd(cd_), v(v_) {}
     
     KOKKOS_INLINE_FUNCTION
@@ -113,15 +109,13 @@ struct computeFluxes2dv {
 
 struct advect2dv {
     
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double**> V2D;
-    V4D dvar;
-    V2D fluxx;
-    V2D fluxy;
+    FS4D dvar;
+    FS2D fluxx;
+    FS2D fluxy;
     Kokkos::View<double*> cd;
     int v;
 
-    advect2dv (V4D dvar_, V2D fx_, V2D fy_, Kokkos::View<double*> cd_, int v_)
+    advect2dv (FS4D dvar_, FS2D fx_, FS2D fy_, Kokkos::View<double*> cd_, int v_)
         : dvar(dvar_), fluxx(fx_), fluxy(fy_), cd(cd_), v(v_) {}
     
     KOKKOS_INLINE_FUNCTION
@@ -140,13 +134,11 @@ struct advect2dv {
 
 struct applyPressure2dv {
     
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double**> V2D;
-    V4D dvar;
-    V2D p;
+    FS4D dvar;
+    FS2D p;
     Kokkos::View<double*> cd;
 
-    applyPressure2dv (V4D dvar_, V2D p_, Kokkos::View<double*> cd_)
+    applyPressure2dv (FS4D dvar_, FS2D p_, Kokkos::View<double*> cd_)
         : dvar(dvar_), p(p_), cd(cd_) {}
     
     KOKKOS_INLINE_FUNCTION
@@ -173,16 +165,14 @@ struct applyPressure2dv {
 
 struct calculateStressTensor2dv {
     
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double**> V2D;
-    V4D var;
-    V2D rho;
-    V4D stressx;
-    V4D stressy;
-    V2D T;
+    FS4D var;
+    FS2D rho;
+    FS4D stressx;
+    FS4D stressy;
+    FS2D T;
     Kokkos::View<double*> cd;
 
-    calculateStressTensor2dv (V4D var_, V2D rho_, V2D T_, V4D strx_, V4D stry_, Kokkos::View<double*> cd_)
+    calculateStressTensor2dv (FS4D var_, FS2D rho_, FS2D T_, FS4D strx_, FS4D stry_, Kokkos::View<double*> cd_)
         : var(var_), rho(rho_), T(T_), stressx(strx_), stressy(stry_), cd(cd_) {}
     
     KOKKOS_INLINE_FUNCTION
@@ -193,7 +183,6 @@ struct calculateStressTensor2dv {
         double mu1 = 2.928e-5;
         double mu2 = 1.610e-5;
         double dudx,dvdy,dudy,dvdx;
-        double rhox,rhoy;
 
         double muij = (var(i,j,0,3)*mu1 + var(i,j,0,4)*mu2)/rho(i,j);
         double muip = (var(i+1,j,0,3)*mu1 + var(i+1,j,0,4)*mu2)/rho(i+1,j);
@@ -202,11 +191,11 @@ struct calculateStressTensor2dv {
         double mur = (muip + muij)/2;
         double mut = (mujp + muij)/2;
 
-        rhox = ( -     rho(i+2,j) + 7.0*rho(i+1,j)
-                 + 7.0*rho(i  ,j) -     rho(i-1,j) )/12.0;
+        //double rhox = ( -     rho(i+2,j) + 7.0*rho(i+1,j)
+        //         + 7.0*rho(i  ,j) -     rho(i-1,j) )/12.0;
 
-        rhoy = ( -     rho(i,j+2) + 7.0*rho(i,j+1)
-                 + 7.0*rho(i  ,j) -     rho(i,j-1) )/12.0;
+        //double rhoy = ( -     rho(i,j+2) + 7.0*rho(i,j+1)
+        //         + 7.0*rho(i  ,j) -     rho(i,j-1) )/12.0;
 
         //xface
         dudx = (var(i+1,j,0,0)/rho(i+1,j) - var(i,j,0,0)/rho(i,j))/dx;
@@ -260,18 +249,16 @@ struct calculateStressTensor2dv {
 };
 struct calculateHeatFlux2dv {
     
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double**> V2D;
-    V4D var;
-    V2D rho;
-    V2D qx;
-    V2D qy;
-    V2D T;
+    FS4D var;
+    FS2D rho;
+    FS2D qx;
+    FS2D qy;
+    FS2D T;
     Kokkos::View<double*> cd;
 
     double k = 0.018;
 
-    calculateHeatFlux2dv (V4D var_, V2D rho_, V2D T_, V2D qx_, V2D qy_, Kokkos::View<double*> cd_)
+    calculateHeatFlux2dv (FS4D var_, FS2D rho_, FS2D T_, FS2D qx_, FS2D qy_, Kokkos::View<double*> cd_)
         : var(var_), rho(rho_), T(T_), qx(qx_), qy(qy_), cd(cd_) {}
     
     KOKKOS_INLINE_FUNCTION
@@ -290,18 +277,16 @@ struct calculateHeatFlux2dv {
 
 struct applyViscousTerm2dv {
     
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double**> V2D;
-    V4D dvar;
-    V4D var;
-    V2D rho;
-    V2D qx;
-    V2D qy;
-    V4D stressx;
-    V4D stressy;
+    FS4D dvar;
+    FS4D var;
+    FS2D rho;
+    FS2D qx;
+    FS2D qy;
+    FS4D stressx;
+    FS4D stressy;
     Kokkos::View<double*> cd;
 
-    applyViscousTerm2dv (V4D dvar_, V4D var_, V2D rho_, V4D strx_, V4D stry_, V2D qx_, V2D qy_, Kokkos::View<double*> cd_)
+    applyViscousTerm2dv (FS4D dvar_, FS4D var_, FS2D rho_, FS4D strx_, FS4D stry_, FS2D qx_, FS2D qy_, Kokkos::View<double*> cd_)
         : dvar(dvar_), var(var_), rho(rho_), stressx(strx_), stressy(stry_), qx(qx_), qy(qy_), cd(cd_) {}
     
     KOKKOS_INLINE_FUNCTION
@@ -347,29 +332,25 @@ struct applyViscousTerm2dv {
 
 hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){};
 
-void hydro2dvisc_func::compute(const Kokkos::View<double****> & mvar, Kokkos::View<double****> & mdvar){
-
-    // Typename acronyms for 2D and 4D variables
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double**> V2D;
+void hydro2dvisc_func::compute(const FS4D & mvar, FS4D & mdvar){
 
     // Copy input and output views
-    V4D var = mvar;
-    V4D dvar = mdvar;
+    FS4D var = mvar;
+    FS4D dvar = mdvar;
 
     // Copy Configuration Data
     Kokkos::View<double*> cd = mcd;
 
     /*** Temporary Views ***/
-    V2D p("p",cf.ngi,cf.ngj);          // Pressure
-    V2D T("T",cf.ngi,cf.ngj);          // Pressure
-    V2D rho("rho",cf.ngi,cf.ngj);      // Total Density
-    V2D qx("qx",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
-    V2D qy("qy",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
-    V2D fluxx("fluxx",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
-    V2D fluxy("fluxy",cf.ngi,cf.ngj);  // Weno Fluxes in Y direction
-    V4D stressx("stressx",cf.ngi,cf.ngj,2,2);  // stress tensor on x faces
-    V4D stressy("stressy",cf.ngi,cf.ngj,2,2);  // stress tensor on y faces
+    FS2D p("p",cf.ngi,cf.ngj);          // Pressure
+    FS2D T("T",cf.ngi,cf.ngj);          // Pressure
+    FS2D rho("rho",cf.ngi,cf.ngj);      // Total Density
+    FS2D qx("qx",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
+    FS2D qy("qy",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
+    FS2D fluxx("fluxx",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
+    FS2D fluxy("fluxy",cf.ngi,cf.ngj);  // Weno Fluxes in Y direction
+    FS4D stressx("stressx",cf.ngi,cf.ngj,2,2);  // stress tensor on x faces
+    FS4D stressy("stressy",cf.ngi,cf.ngj,2,2);  // stress tensor on y faces
     
     /*** Range Policies ***/
 
