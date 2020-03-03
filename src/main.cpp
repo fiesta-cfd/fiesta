@@ -8,7 +8,7 @@
 #include "debug.hpp"
 //#include "hydroc3d.hpp"
 #include "hydro2d.hpp"
-//#include "hydro2dvisc.hpp"
+#include "hydro2dvisc.hpp"
 #include "rkfunction.hpp"
 #include <iostream>
 #include <cstdio>
@@ -102,7 +102,19 @@ int main(int argc, char* argv[]){
         printf("-----------------------\n");
     }
 
-    hydro2d_func f(cf,cd);
+    //hydro2d_func f(cf,cd);
+    //hydro2dvisc_func f(cf,cd);
+    /*** Choose Scheme ***/
+    rk_func *f;
+    //f = hydro2dvisc_func(cf.cd);
+    //if (cf.ndim == 3){
+    //    f = new hydroc3d_func(cf,cd);
+    //}else{
+        if (cf.visc == 1)
+            f = new hydro2dvisc_func(cf,cd);
+        else
+            f = new hydro2d_func(cf,cd);
+   // }
     
     MPI_Barrier(cf.comm);
     if (cf.rank == 0) printf("\nLoading Initial Conditions...\n");
@@ -110,7 +122,7 @@ int main(int argc, char* argv[]){
     std::clock_t start;
     start = std::clock();
     if (cf.restart == 0)
-        loadInitialConditions(cf,f.var);
+        loadInitialConditions(cf,f->var);
     total_time = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
 
     if (cf.rank == 0){
@@ -153,27 +165,17 @@ int main(int argc, char* argv[]){
     /*** Read Restart or Write initial conditions ***/
     if (cf.restart == 1){
         if (cf.rank == 0) printf("\nReading Restart File...\n");
-        readSolution(cf,f.var);
+        readSolution(cf,f->var);
     }else{
         if (cf.rank == 0)
             if (cf.write_freq >0 || cf.restart_freq>0)
                 printf("\nWriting Initial Conditions...\n");
         if (cf.write_freq >0)
-            writeSolution(cf,xSP,ySP,zSP,f.var,0,0.00);
+            writeSolution(cf,xSP,ySP,zSP,f->var,0,0.00);
         if (cf.restart_freq >0)
-            writeRestart(cf,x,y,z,f.var,0,0.00);
+            writeRestart(cf,x,y,z,f->var,0,0.00);
     }
 
-    /*** Choose Scheme ***/
-    //rk_func *f;
-    //if (cf.ndim == 3){
-    //    f = new hydroc3d_func(cf,cd);
-    //}else{
-    //    if (cf.visc == 1)
-    //        f = new hydro2dvisc_func(cf,cd);
-    //    else
-    //        f = new hydro2d_func(cf,cd);
-    //}
 
     // create mpi buffers
     mpiBuffers m(cf);
@@ -189,27 +191,36 @@ int main(int argc, char* argv[]){
 
         /****** Low Storage Runge-Kutta 2nd order ******/
         //K1 = f(myV)
-        applyBCs(cf,f.var,m);
-        f.compute();
+        applyBCs(cf,f->var,m);
+        f->compute();
         //f->compute(myV,K1);
         
         //tmp = myV + k1/2
+        FS4D mytmp = f->tmp1;
+        FS4D myvar = f->var;
+        FS4D mydvar = f->dvar;
         Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+cv}),
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
-            f.tmp1(i,j,k,v) = f.var(i,j,k,v);
-            f.var(i,j,k,v) = f.var(i,j,k,v) + 0.5*cf.dt*f.dvar(i,j,k,v);
+            mytmp(i,j,k,v) = myvar(i,j,k,v);
+            myvar(i,j,k,v) = myvar(i,j,k,v) + 0.5*cf.dt*mydvar(i,j,k,v);
+            //f->tmp1(i,j,k,v) = f->var(i,j,k,v);
+            //f->var(i,j,k,v) = f->var(i,j,k,v) + 0.5*cf.dt*f->dvar(i,j,k,v);
             //tmp(i,j,k,v) = myV(i,j,k,v) + cf.dt*K1(i,j,k,v);
         });
 
         //K2 = f(tmp)
-        applyBCs(cf,f.var,m);
-        f.compute();
+        applyBCs(cf,f->var,m);
+        f->compute();
         //f->compute(tmp,K2);
 
         //myV = myV + K2
+        mytmp = f->tmp1;
+        myvar = f->var;
+        mydvar = f->dvar;
         Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+cv}),
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
-            f.var(i,j,k,v) = f.var(i,j,k,v) + cf.dt*f.dvar(i,j,k,v);
+            myvar(i,j,k,v) = myvar(i,j,k,v) + cf.dt*mydvar(i,j,k,v);
+            //f->var(i,j,k,v) = f->var(i,j,k,v) + cf.dt*f->dvar(i,j,k,v);
             //myV(i,j,k,v) = myV(i,j,k,v) + cf.dt*(K1(i,j,k,v) + K2(i,j,k,v))/2.0;
         });
         
@@ -221,10 +232,10 @@ int main(int argc, char* argv[]){
         }
         if (cf.write_freq > 0)
             if ((t+1) % cf.write_freq == 0)
-                writeSolution(cf,xSP,ySP,zSP,f.var,t+1,time);
+                writeSolution(cf,xSP,ySP,zSP,f->var,t+1,time);
         if (cf.restart_freq > 0)
             if ((t+1) % cf.restart_freq == 0)
-                writeRestart(cf,x,y,z,f.var,t+1,time);
+                writeRestart(cf,x,y,z,f->var,t+1,time);
     }
 
     MPI_Barrier(cf.comm);

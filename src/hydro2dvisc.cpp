@@ -330,54 +330,47 @@ struct applyViscousTerm2dv {
     }
 };
 
-hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){};
-
-void hydro2dvisc_func::compute(const FS4D & mvar, FS4D & mdvar){
-
-    // Copy input and output views
-    FS4D var = mvar;
-    FS4D dvar = mdvar;
-
-    // Copy Configuration Data
-    Kokkos::View<double*> cd = mcd;
-
-    /*** Temporary Views ***/
-    FS2D p("p",cf.ngi,cf.ngj);          // Pressure
-    FS2D T("T",cf.ngi,cf.ngj);          // Pressure
-    FS2D rho("rho",cf.ngi,cf.ngj);      // Total Density
-    FS2D qx("qx",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
-    FS2D qy("qy",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
-    FS2D fluxx("fluxx",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
-    FS2D fluxy("fluxy",cf.ngi,cf.ngj);  // Weno Fluxes in Y direction
-    FS4D stressx("stressx",cf.ngi,cf.ngj,2,2);  // stress tensor on x faces
-    FS4D stressy("stressy",cf.ngi,cf.ngj,2,2);  // stress tensor on y faces
+hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){
     
-    /*** Range Policies ***/
+    var     = Kokkos::View<double****,FS_LAYOUT>("var",cf.ngi,cf.ngj,cf.ngk,cf.nv); // Primary Variable Array
+    tmp1    = Kokkos::View<double****,FS_LAYOUT>("tmp1",cf.ngi,cf.ngj,cf.ngk,cf.nv); // Temporary Variable Arrayr1
+    tmp2    = Kokkos::View<double****,FS_LAYOUT>("tmp2",cf.ngi,cf.ngj,cf.ngk,cf.nv); // Temporary Variable Array2
+    dvar    = Kokkos::View<double****,FS_LAYOUT>("dvar",cf.ngi,cf.ngj,cf.ngk,cf.nv); // RHS Output
+    p       = Kokkos::View<double**,FS_LAYOUT>("p",cf.ngi,cf.ngj);          // Pressure
+    T       = Kokkos::View<double**,FS_LAYOUT>("T",cf.ngi,cf.ngj);          // Pressure
+    rho     = Kokkos::View<double**,FS_LAYOUT>("rho",cf.ngi,cf.ngj);      // Total Density
+    qx      = Kokkos::View<double**,FS_LAYOUT>("qx",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
+    qy      = Kokkos::View<double**,FS_LAYOUT>("qy",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
+    fluxx   = Kokkos::View<double**,FS_LAYOUT>("fluxx",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
+    fluxy   = Kokkos::View<double**,FS_LAYOUT>("fluxy",cf.ngi,cf.ngj);  // Weno Fluxes in Y direction
+    stressx = Kokkos::View<double****,FS_LAYOUT>("stressx",cf.ngi,cf.ngj,2,2);  // stress tensor on x faces
+    stressy = Kokkos::View<double****,FS_LAYOUT>("stressy",cf.ngi,cf.ngj,2,2);  // stress tensor on y faces
+    cd = mcd;
 
-    // Physical and Ghost cells
+};
+
+void hydro2dvisc_func::compute(){
+
     policy_f ghost_pol = policy_f({0,0},{cf.ngi, cf.ngj});
-    // Physical Cells only
     policy_f cell_pol  = policy_f({cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng});
-    // Cell Faces
-    policy_f weno_pol  = policy_f({cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng});
+    policy_f face_pol  = policy_f({cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng});
 
-    /**** WENO ****/
 
     // Calcualte Total Density and Pressure Fields
     Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure2dv(var,p,rho,T,cd) );
 
     // Calculate and apply weno fluxes for each variable
     for (int v=0; v<cf.nv; ++v){
-        Kokkos::parallel_for( weno_pol, computeFluxes2dv(var,p,rho,fluxx,fluxy,cd,v) );
+        Kokkos::parallel_for( face_pol, computeFluxes2dv(var,p,rho,fluxx,fluxy,cd,v) );
         Kokkos::parallel_for( cell_pol, advect2dv(dvar,fluxx,fluxy,cd,v) );
     }
 
     // Apply Pressure Gradient Term
     Kokkos::parallel_for( cell_pol, applyPressure2dv(dvar,p,cd) );
 
-    Kokkos::parallel_for( weno_pol, calculateStressTensor2dv(var,rho,T,stressx,stressy,cd) );
+    Kokkos::parallel_for( face_pol, calculateStressTensor2dv(var,rho,T,stressx,stressy,cd) );
 
-    Kokkos::parallel_for( weno_pol, calculateHeatFlux2dv(var,rho,T,qx,qy,cd) );
+    Kokkos::parallel_for( face_pol, calculateHeatFlux2dv(var,rho,T,qx,qy,cd) );
 
     Kokkos::parallel_for( cell_pol, applyViscousTerm2dv(dvar,var,rho,stressx,stressy,qx,qy,cd) );
 }

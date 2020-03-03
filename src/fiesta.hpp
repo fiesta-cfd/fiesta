@@ -3,7 +3,7 @@
 
 #include "Kokkos_Core.hpp"
 
-#define FS_LAYOUT  Kokkos::LayoutLeft 
+#define FS_LAYOUT  Kokkos::LayoutLeft
 
 typedef typename Kokkos::View<double******, FS_LAYOUT> FS6D;
 typedef typename Kokkos::View<double*****,  FS_LAYOUT> FS5D;
