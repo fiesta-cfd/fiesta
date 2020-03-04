@@ -562,6 +562,19 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
     cg_simulation_type_write(cf.cF,cf.cB,CG_TimeAccurate);
     
     cgp_close(cf.cF);
+
+    if (cf.numProcs == 1){
+        std::ofstream myfile;
+        myfile.open("output.txt");
+        for (int i=cf.ng; i<cf.nci; ++i){
+           int  idx = (cf.nci*cf.ncj)*0+cf.nci*3+i;
+//            myfile << x[idx] << ", " << hostV(i,3,0,0) << ", " << hostV(i,3,0,1) << ", " << hostV(i,3,0,2) << ", " << hostV(i,3,0,3) << std::endl;
+            myfile << x[idx] << ", " << hostV(i,100,0,3) << std::endl;
+        }
+        myfile << std::endl;
+        myfile.close();
+    }
+
 }
 
 void readSolution(struct inputConfig cf, const Kokkos::View<double****> deviceV){
