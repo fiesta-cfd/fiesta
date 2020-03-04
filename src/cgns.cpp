@@ -113,7 +113,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
     }
 
     cf = writeGrid(cf, x,y,z,fsname);
-    snprintf(solname,32,"FS%030d",tdx);
+    snprintf(solname,32,"FS");
 
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
     cgsize_t endc[3] = {cf.iEnd,cf.jEnd,cf.kEnd};
@@ -349,7 +349,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const FS
     }
 
     cf = writeSPGrid(cf, x,y,z,fsname);
-    snprintf(solname,32,"FS%030d",tdx);
+    snprintf(solname,32,"FS");
 
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
     cgsize_t endc[3] = {cf.iEnd,cf.jEnd,cf.kEnd};

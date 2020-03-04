@@ -3,8 +3,8 @@
 
 --Restart and Output Options
 out_freq = 0                          --Screen Output Interval
-restart_freq = 10000                  --Restart Write Interval
-write_freq = 200                      --Solution Write Interval
+restart_freq = 0                      --Restart Write Interval
+write_freq = 20                       --Solution Write Interval
 restart = 0                           --Whether or not to use restart file
 time = 0.0                            --Start time of simulation
 tstart = 0                            --Start time index of simulation
@@ -18,8 +18,8 @@ M = {0.02897}                         --Array of Species Molar Masses [kg/mol]
 visc=0
 
 --Time
-nt = 4000                             --Time Step at which to end simulation
-dt = 5e-7                             --Time Step Size [s]
+nt = 1000                             --Time Step at which to end simulation
+dt = 1e-6                             --Time Step Size [s]
 
 --User Parameters
 Lx = 10.0
@@ -27,15 +27,15 @@ Ly = 10.0
 
 --Number of cells
 ndim = 2
-ni = 400            --Simulation size in x direction
-nj = 400            --Simulation Size in y direction
+ni = 200            --Simulation size in x direction
+nj = 200            --Simulation Size in y direction
 
 --Cell Sizes
 dx = Lx/ni
 dy = Ly/nj
 
 --MPI Processors
-procsx = 2
+procsx = 1
 procsy = 1
 
 --Boundary Conditions (0: Freeflow, 1: Reflective)
