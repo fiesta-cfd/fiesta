@@ -2,7 +2,7 @@ import h5py
 import numpy as np
 
 refname = 'sol.0100.ref'
-filename = 'sol-000080.cgns'
+filename = 'sol-000100.cgns'
 
 vars = ['SpeciesDensity1','EnergyInternal','MomentumX','MomentumY']
 
