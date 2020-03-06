@@ -9,6 +9,7 @@
 #include "lua.hpp"
 #include "Kokkos_Core.hpp"
 #include <mpi.h>
+#include <string>
 
 // Lua error function
 void error(lua_State *L, const char *fmt, ...);
@@ -24,7 +25,7 @@ double getglobdbl(lua_State *L, const char *var);
 
 //configuration structure
 struct inputConfig {
-    char inputFname[32];
+    std::string inputFname;
     int ndim;
     int glbl_ni,glbl_nj,glbl_nk;
     int glbl_nci,glbl_ncj,glbl_nck;
@@ -55,7 +56,7 @@ struct inputConfig {
     int out_freq, write_freq, restart_freq;
 };
 
-struct inputConfig executeConfiguration(char * fname);
+struct inputConfig executeConfiguration(int argc, char * argv[]);
 
 int loadInitialConditions(struct inputConfig cf, const FS4D v);
 

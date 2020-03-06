@@ -45,7 +45,7 @@ int main(int argc, char* argv[]){
 
     struct inputConfig cf;
 
-    cf = executeConfiguration(argv[1]);
+    cf = executeConfiguration(argc,argv);
 
     cf = mpi_init(cf);
     MPI_Barrier(cf.comm);
@@ -79,7 +79,8 @@ int main(int argc, char* argv[]){
     MPI_Barrier(cf.comm);
     /*** Output runtime information ***/
     if (cf.rank == 0){
-        printf("Input File Name: %s\n",cf.inputFname);
+        //printf("Input File Name: %s\n",cf.inputFname);
+        std::cout << "Input File Name: " << cf.inputFname << std::endl;
         if (cf.restart){
             printf("Running from Restart File: %s\n",cf.sfName);
             printf("Start Time is %.2e\n",cf.time);

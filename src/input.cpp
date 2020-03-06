@@ -3,6 +3,8 @@
 #include "Kokkos_Core.hpp"
 #include "debug.hpp"
 #include "string.h"
+#include <iostream>
+#include <string>
 
 // Lua error function
 void error(lua_State *L, const char *fmt, ...){
@@ -59,15 +61,21 @@ char * getglobstr(lua_State *L, const char * var){
     return result;
 }
 
-struct inputConfig executeConfiguration(char * fname){
+struct inputConfig executeConfiguration(int argc, char * argv[]){
 
     struct inputConfig myConfig;
+    if (argc >=2)
+        myConfig.inputFname = std::string(argv[1]);
+    else
+        myConfig.inputFname = std::string("input.lua");
+
+
     /* Create Lua State */
     lua_State *L = luaL_newstate(); //Opens Lua
     luaL_openlibs(L);               //opens the standard libraries
 
     /* Open and run Lua configuration file */
-    if (luaL_loadfile(L,fname) || lua_pcall(L,0,0,0))
+    if (luaL_loadfile(L,myConfig.inputFname.c_str()) || lua_pcall(L,0,0,0))
         error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
 
     /* get global variables from Lua results */
@@ -137,7 +145,6 @@ struct inputConfig executeConfiguration(char * fname){
 
     myConfig.nv = 4 + myConfig.ns;
 
-    snprintf(myConfig.inputFname,32,"%s",fname);
 
     /* Done with Lua */
     lua_close(L);
@@ -169,7 +176,7 @@ int loadInitialConditions(struct inputConfig cf, const FS4D deviceV){
     luaL_openlibs(L);               //opens the standard libraries
 
     /* Open and run Lua configuration file */
-    if (luaL_loadfile(L,cf.inputFname) || lua_pcall(L,0,0,0))
+    if (luaL_loadfile(L,cf.inputFname.c_str()) || lua_pcall(L,0,0,0))
         error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
 
     FS4DH hostV = Kokkos::create_mirror_view(deviceV);
