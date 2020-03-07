@@ -64,7 +64,7 @@ include_directories(${installDir}/include)
 
 # fiesta
 #set(FIESTA_SRCS src/bc.cpp src/cgns.cpp src/input.cpp src/main.cpp src/mpi.cpp src/rkfunction.cpp src/hydro2d.cpp src/hydroc3d.cpp src/hydro2dvisc.cpp)
-set(FIESTA_SRCS src/bc.cpp src/cgns.cpp src/input.cpp src/output.cpp src/main.cpp src/mpi.cpp src/rkfunction.cpp src/hydro2d.cpp src/hydro2dvisc.cpp)
+set(FIESTA_SRCS src/bc.cpp src/cgns.cpp src/timer.cpp src/input.cpp src/output.cpp src/main.cpp src/mpi.cpp src/rkfunction.cpp src/hydro2d.cpp src/hydro2dvisc.cpp)
 add_executable(fiesta ${FIESTA_SRCS})
 add_dependencies(fiesta cgnsParallel)
 target_link_libraries(fiesta

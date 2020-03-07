@@ -109,7 +109,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
 
     snprintf(fsname,32,"restart-%06d.cgns",tdx);
     if (cf.rank == 0){
-        printf("Writing Restart %s...\n",fsname);
+        printf("    Writing Restart %s...\n",fsname);
     }
 
     cf = writeGrid(cf, x,y,z,fsname);
@@ -345,7 +345,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const FS
 
     snprintf(fsname,32,"sol-%06d.cgns",tdx);
     if (cf.rank == 0){
-        printf("Writing Solution %s...\n",fsname);
+        printf("    Writing Solution %s...\n",fsname);
     }
 
     cf = writeSPGrid(cf, x,y,z,fsname);

@@ -14,6 +14,10 @@
 #include <cstdio>
 #include <ctime>
 #include "output.hpp"
+#include <iomanip>
+#include "timer.hpp"
+
+using namespace std;
 
 
 void fnExit1(void){
@@ -29,6 +33,15 @@ int main(int argc, char* argv[]){
         printSplash();
 
     Kokkos::initialize(argc, argv);
+    
+    fiestaTimer totalTimer("Total Runtime");
+    fiestaTimer initTimer("Initialization Timer");
+    fiestaTimer solWriteTimer("Solution Write Timer");
+    fiestaTimer simTimer("Simulation Timer");
+    fiestaTimer loadTimer("Initial Condition Generate Timer");
+    fiestaTimer readTimer("Restart Read Timer");
+    fiestaTimer resWriteTimer("Restart Write Timer");
+
 
     atexit(fnExit1);
 
@@ -79,16 +92,15 @@ int main(int argc, char* argv[]){
     //}
     
     MPI_Barrier(cf.comm);
-    if (cf.rank == 0) printf("\nLoading Initial Conditions...\n");
-    double total_time,mean_time;
-    std::clock_t start;
-    start = std::clock();
-    if (cf.restart == 0)
+    if (cf.restart == 0){
+        if (cf.rank == 0) printf("\nGenerating Initial Conditions...\n");
+        loadTimer.reset();
         loadInitialConditions(cf,f->var);
-    total_time = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+        loadTimer.stop();
+    }
 
     if (cf.rank == 0){
-        printf("Loaded Initial Conditions in %.1fs\n",total_time);
+        printf("    Generating Initial Conditions in %.1fs\n",loadTimer.get());
     }
 
     /* allocate grid coordinate and flow variables */
@@ -126,27 +138,45 @@ int main(int argc, char* argv[]){
 
     /*** Read Restart or Write initial conditions ***/
     if (cf.restart == 1){
-        if (cf.rank == 0) printf("\nReading Restart File...\n");
+        if (cf.rank == 0) printf("\nLoading Restart File...\n");
+        readTimer.reset();
         readSolution(cf,f->var);
+        readTimer.stop();
+        cout << "    Loaded restart file in " << setprecision(2) << readTimer.get() << "s" << endl;
     }else{
         if (cf.rank == 0)
             if (cf.write_freq >0 || cf.restart_freq>0)
                 printf("\nWriting Initial Conditions...\n");
-        if (cf.write_freq >0)
+        if (cf.write_freq >0){
+            solWriteTimer.reset();
             writeSolution(cf,xSP,ySP,zSP,f->var,0,0.00);
-        if (cf.restart_freq >0)
+            solWriteTimer.accumulate();
+        }
+        if (cf.restart_freq >0){
+            resWriteTimer.reset();
             writeRestart(cf,x,y,z,f->var,0,0.00);
+            resWriteTimer.accumulate();
+        }
+        if (cf.rank == 0)
+            if (cf.write_freq >0 || cf.restart_freq>0)
+                cout << "    Wrote initial conditions in "
+                     << solWriteTimer.get() + resWriteTimer.get()
+                     << "s" << endl;
     }
 
 
     // create mpi buffers
     mpiBuffers m(cf);
 
-    if (cf.rank == 0) printf("\nStarting Simulation...\n");
+    if (cf.rank == 0){
+        cout << endl << "-----------------------" << endl << endl;
+        cout << "Starting Simulation..." << endl;
+    }
     MPI_Barrier(cf.comm);
-    start = std::clock();
     MPI_Barrier(cf.comm);
 
+    initTimer.stop();
+    simTimer.reset();
 
     for (int t=tstart; t<cf.tend; ++t){
         time = time + cf.dt;
@@ -165,51 +195,57 @@ int main(int argc, char* argv[]){
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
             mytmp(i,j,k,v) = myvar(i,j,k,v);
             myvar(i,j,k,v) = myvar(i,j,k,v) + 0.5*cf.dt*mydvar(i,j,k,v);
-            //f->tmp1(i,j,k,v) = f->var(i,j,k,v);
-            //f->var(i,j,k,v) = f->var(i,j,k,v) + 0.5*cf.dt*f->dvar(i,j,k,v);
-            //tmp(i,j,k,v) = myV(i,j,k,v) + cf.dt*K1(i,j,k,v);
         });
 
-        //K2 = f(tmp)
         applyBCs(cf,f->var,m);
         f->compute();
-        //f->compute(tmp,K2);
 
-        //myV = myV + K2
         mytmp = f->tmp1;
         myvar = f->var;
         mydvar = f->dvar;
         Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+cv}),
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
             myvar(i,j,k,v) = myvar(i,j,k,v) + cf.dt*mydvar(i,j,k,v);
-            //f->var(i,j,k,v) = f->var(i,j,k,v) + cf.dt*f->dvar(i,j,k,v);
-            //myV(i,j,k,v) = myV(i,j,k,v) + cf.dt*(K1(i,j,k,v) + K2(i,j,k,v))/2.0;
         });
         
         /****** Output Control ******/
         if (cf.rank==0){
             if (cf.out_freq > 0)
                 if ((t+1) % cf.out_freq == 0)
-                    printf("Iteration: %d/%d, Sim Time: %.2e\n",t+1,cf.tend,time);
+                    printf("    Iteration: %d/%d, Sim Time: %.2e\n",t+1,cf.tend,time);
         }
-        if (cf.write_freq > 0)
-            if ((t+1) % cf.write_freq == 0)
+        if (cf.write_freq > 0){
+            if ((t+1) % cf.write_freq == 0){
+                solWriteTimer.reset();
                 writeSolution(cf,xSP,ySP,zSP,f->var,t+1,time);
-        if (cf.restart_freq > 0)
-            if ((t+1) % cf.restart_freq == 0)
+                solWriteTimer.accumulate();
+            }
+        }
+        if (cf.restart_freq > 0){
+            if ((t+1) % cf.restart_freq == 0){
+                resWriteTimer.reset();
                 writeRestart(cf,x,y,z,f->var,t+1,time);
+                resWriteTimer.accumulate();
+            }
+        }
     }
+    simTimer.stop();
+    if (cf.rank == 0)
+        cout << "Simulation Complete" << endl;
 
     MPI_Barrier(cf.comm);
-    total_time = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-    mean_time = total_time/cf.nt;
 
+    totalTimer.stop();
     if (cf.rank == 0){
-        printf("\nSimulation Complete\n");
-        printf("Total Time: %.2fs\nMean Time Step: %.2es\n",total_time,mean_time);
+        cout << endl << "-----------------------" << endl << endl;
+        cout.precision(2);
+        cout << "Total Time: " << totalTimer.getf() << endl;
+        cout << "Setup Time: " << initTimer.get() << endl;
+        cout << "Sim Time: " << simTimer.get() << endl;
+        cout << "    Solution write Time: " << solWriteTimer.get() << endl;
+        cout << "    Restart write Time: " << resWriteTimer.get() << endl;
     }
 
-    //if (cf.rank==0) printf("\n");
     
     MPI_Finalize();
     //Kokkos::finalize();

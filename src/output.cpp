@@ -15,15 +15,13 @@ void printSplash(){
     cout << R"(|    |_|   |_|\___||___/\__\__,_|    |)" << endl;
     cout << R"(|                                    |)" << endl;
     cout << R"(--------------------------------------)" << endl;
-    cout << endl << "Initializing..." << endl;
 }
 
 void printConfig(struct inputConfig cf){
 
     cout.precision(2);
 
-    cout << "-----------------------" << endl;
-    std::cout << "Input File Name: '" << cf.inputFname << "'" << endl << endl;
+    std::cout << endl << "Input File Name: '" << cf.inputFname << "'" << endl << endl;
 
     // Restart Options
     cout << "Restart:" << endl;
@@ -82,5 +80,5 @@ void printConfig(struct inputConfig cf){
              << endl;
         //printf("    Species %d, Gamma = %4.2f, M = %6.4f\n",s+1,cf.gamma[s],cf.M[s]);
 
-    cout << "-----------------------" << endl << flush;
+    cout << endl << "-----------------------" << endl << flush;
 }
