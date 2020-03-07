@@ -33,7 +33,7 @@ public:
     FS4D tmp1;
     FS4D tmp2;
 
-    std::map<std::string, class fiestaTimer> timers;
+    std::map<std::string, fiestaTimer> timers;
     //std::map<std::string, int> timers;
 
 protected:

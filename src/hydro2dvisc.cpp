@@ -347,6 +347,13 @@ hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*
     stressy = Kokkos::View<double****,FS_LAYOUT>("stressy",cf.ngi,cf.ngj,2,2);  // stress tensor on y faces
     cd = mcd;
 
+    timers["flux"] = fiestaTimer("Flux Calculation");
+    timers["pressgrad"] = fiestaTimer("Pressure Gradient Calculation");
+    timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
+    timers["stress"] = fiestaTimer("Stress Tensor Computation");
+    timers["qflux"] = fiestaTimer("Heat Flux Calculation");
+    timers["visc"] = fiestaTimer("Viscous Term Calculation");
+
 };
 
 void hydro2dvisc_func::compute(){
@@ -357,20 +364,32 @@ void hydro2dvisc_func::compute(){
 
 
     // Calcualte Total Density and Pressure Fields
+    timers["calcSecond"].reset();
     Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure2dv(var,p,rho,T,cd) );
+    timers["calcSecond"].accumulate();
 
     // Calculate and apply weno fluxes for each variable
     for (int v=0; v<cf.nv; ++v){
+        timers["flux"].reset();
         Kokkos::parallel_for( face_pol, computeFluxes2dv(var,p,rho,fluxx,fluxy,cd,v) );
         Kokkos::parallel_for( cell_pol, advect2dv(dvar,fluxx,fluxy,cd,v) );
+        timers["flux"].accumulate();
     }
 
     // Apply Pressure Gradient Term
+    timers["pressgrad"].reset();
     Kokkos::parallel_for( cell_pol, applyPressure2dv(dvar,p,cd) );
+    timers["pressgrad"].accumulate();
 
+    timers["stress"].reset();
     Kokkos::parallel_for( face_pol, calculateStressTensor2dv(var,rho,T,stressx,stressy,cd) );
+    timers["stress"].accumulate();
 
+    timers["qflux"].reset();
     Kokkos::parallel_for( face_pol, calculateHeatFlux2dv(var,rho,T,qx,qy,cd) );
+    timers["qflux"].accumulate();
 
+    timers["visc"].reset();
     Kokkos::parallel_for( cell_pol, applyViscousTerm2dv(dvar,var,rho,stressx,stressy,qx,qy,cd) );
+    timers["visc"].accumulate();
 }

@@ -8,11 +8,20 @@
 using namespace std;
 
 fiestaTimer::fiestaTimer(){
-    timer.reset();
+    timer = new Kokkos::Timer();
+    timer->reset();
+    time = 0.0;
+    description = "No Description";
+}
+
+fiestaTimer::fiestaTimer(string n_) : description(n_) {
+    timer = new Kokkos::Timer();
+    timer->reset();
     time = 0.0;
 }
+
 void fiestaTimer::accumulate(){
-    time = time + timer.seconds();
+    time = time + timer->seconds();
 }
 double fiestaTimer::get(){
     return time;
@@ -21,14 +30,14 @@ void fiestaTimer::clear(){
     time = 0.0;
 }
 void fiestaTimer::reset(){
-    timer.reset();
+    timer->reset();
 }
 void fiestaTimer::start(){
-    timer.reset();
+    timer->reset();
     time = 0.0;
 }
 void fiestaTimer::stop(){
-    time = timer.seconds();
+    time = timer->seconds();
 }
 string fiestaTimer::getf(){
     int d;
@@ -67,4 +76,7 @@ string fiestaTimer::getf(){
     ss << s << "s";
 
     return ss.str();
+}
+string fiestaTimer::describe(){
+    return description;
 }

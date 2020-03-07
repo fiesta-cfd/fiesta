@@ -203,6 +203,10 @@ hydro2d_func::hydro2d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_)
     cd = mcd;
 
     //timers.insert( make_pair("weno",fiestaTimer()) );
+    //timers.emplace("weno",fiestaTimer());
+    timers["flux"] = fiestaTimer("Flux Calculation");
+    timers["pressgrad"] = fiestaTimer("Pressure Gradient Calculation");
+    timers["calcRhoP"] = fiestaTimer("Secondary Variable Calculation");
     //timers.insert( make_pair<string, class fiestaTimer>("weno",fiestaTimer()) );
 
 };
@@ -216,15 +220,22 @@ void hydro2d_func::compute(){
     /**** WENO ****/
 
     // Calcualte Total Density and Pressure Fields
+    timers["calcRhoP"].reset();
     Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure2d(var,p,rho,cd) );
+    timers["calcRhoP"].accumulate();
 
     // Calculate and apply weno fluxes for each variable
     for (int v=0; v<cf.nv; ++v){
-        Kokkos::parallel_for( face_pol, calculateWenoFluxes2d(var,p,rho,wenox,wenoy,cd,v) );
+        timers["flux"].reset();
 
+        Kokkos::parallel_for( face_pol, calculateWenoFluxes2d(var,p,rho,wenox,wenoy,cd,v) );
         Kokkos::parallel_for( cell_pol, applyWenoFluxes2d(dvar,wenox,wenoy,v) );
+
+        timers["flux"].accumulate();
     }
 
     // Apply Pressure Gradient Term
+    timers["pressgrad"].reset();
     Kokkos::parallel_for( cell_pol, applyPressure2d(dvar,p,cd) );
+    timers["pressgrad"].accumulate();
 }

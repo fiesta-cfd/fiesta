@@ -9,18 +9,21 @@ using namespace std;
 class fiestaTimer {
 
 public:
-    string name;
     fiestaTimer();
+    fiestaTimer(string description);
+    string name;
     void accumulate();
     double get();
     void clear();
     void reset();
     void start();
     void stop();
+    string describe();
     string getf();
 
 private:
     double time;
-    Kokkos::Timer timer;
+    Kokkos::Timer *timer;
+    string description;
 };
 #endif

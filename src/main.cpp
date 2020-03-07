@@ -100,7 +100,7 @@ int main(int argc, char* argv[]){
     }
 
     if (cf.rank == 0){
-        printf("    Generating Initial Conditions in %.1fs\n",loadTimer.get());
+        printf("    Generated Initial Conditions in %.1fs\n",loadTimer.get());
     }
 
     /* allocate grid coordinate and flow variables */
@@ -240,10 +240,14 @@ int main(int argc, char* argv[]){
         cout << endl << "-----------------------" << endl << endl;
         cout.precision(2);
         cout << "Total Time: " << totalTimer.getf() << endl;
-        cout << "Setup Time: " << initTimer.get() << endl;
-        cout << "Sim Time: " << simTimer.get() << endl;
-        cout << "    Solution write Time: " << solWriteTimer.get() << endl;
-        cout << "    Restart write Time: " << resWriteTimer.get() << endl;
+        cout << "Setup Time: " << initTimer.getf() << endl;
+        cout << "    Initial Condition Generation: " << loadTimer.getf() << endl;
+        cout << "Sim Time: " << simTimer.getf() << endl;
+        cout << "    Solution write Time:\t" << solWriteTimer.getf() << endl;
+        cout << "    Restart write Time:\t\t" << resWriteTimer.getf() << endl;
+        for (auto tmr : f->timers){
+            cout << "    " << tmr.second.describe() << ":\t\t" << tmr.second.getf() << endl;
+        }
     }
 
     
