@@ -6,6 +6,7 @@
 #include <mpi.h>
 #include "debug.hpp"
 #include "hydro2dvisc.hpp"
+#include "flux.hpp"
 
 struct calculateRhoAndPressure2dv {
     FS4D var;
@@ -55,57 +56,6 @@ struct calculateRhoAndPressure2dv {
     }
 };
 
-struct computeFluxes2dv {
-    
-    FS4D var;
-    FS2D p;
-    FS2D rho;
-    FS2D fluxx;
-    FS2D fluxy;
-    Kokkos::View<double*> cd;
-    int v;
-
-    computeFluxes2dv (FS4D var_, FS2D p_, FS2D rho_, FS2D fx_, FS2D fy_, Kokkos::View<double*> cd_, int v_)
-                         : var(var_), p(p_), rho(rho_), fluxx(fx_), fluxy(fy_), cd(cd_), v(v_) {}
-    
-    KOKKOS_INLINE_FUNCTION
-    void operator()(const int i, const int j) const {
-
-        double dx = cd(1);
-        double dy = cd(2);
-        double ur,vr,x1,y1;
-        double px,py;
-        ur = 0.0;
-        vr = 0.0;
-        x1 = 0.0;
-        y1 = 0.0;
-
-        ur = ( 0.0 - var(i+2,j,0,0)/rho(i+2,j) + 7.0*var(i+1,j,0,0)/rho(i+1,j)
-               + 7.0*var(i  ,j,0,0)/rho(i  ,j) - var(i-1,j,0,0)/rho(i-1,j) )/12.0;
-
-        vr = ( 0.0 - var(i,j+2,0,1)/rho(i,j+2) + 7.0*var(i,j+1,0,1)/rho(i,j+1)
-               + 7.0*var(i,j  ,0,1)/rho(i,j  ) - var(i,j-1,0,1)/rho(i,j-1) )/12.0;
-
-        px =  (0.0 - p(i+2,j) + 7.0*p(i+1,j) + 7.0*p(i  ,j) - p(i-1,j) )/12.0;
-
-        py =  (0.0 - p(i,j+2) + 7.0*p(i,j+1) + 7.0*p(i  ,j) - p(i,j-1) )/12.0;
-
-        x1 = ( 0.0 - var(i+2,j,0,v) + 7.0*var(i+1,j,0,v)
-               + 7.0*var(i  ,j,0,v) -     var(i-1,j,0,v) )/12.0;
-
-        y1 = (0.0 - var(i,j+2,0,v) + 7.0*var(i,j+1,0,v)
-               + 7.0*var(i  ,j,0,v) -     var(i,j-1,0,v) )/12.0;
-
-        if (v == 2){
-            x1 = x1+px;
-            y1 = y1+py;
-        }
-
-        fluxx(i,j) = ur*x1/dx;
-        fluxy(i,j) = vr*y1/dy;
-
-    }
-};
 
 struct advect2dv {
     
@@ -371,7 +321,7 @@ void hydro2dvisc_func::compute(){
     // Calculate and apply weno fluxes for each variable
     for (int v=0; v<cf.nv; ++v){
         timers["flux"].reset();
-        Kokkos::parallel_for( face_pol, computeFluxes2dv(var,p,rho,fluxx,fluxy,cd,v) );
+        Kokkos::parallel_for( face_pol, computeFluxCentered2D(var,p,rho,fluxx,fluxy,cd,v) );
         Kokkos::parallel_for( cell_pol, advect2dv(dvar,fluxx,fluxy,cd,v) );
         timers["flux"].accumulate();
     }
