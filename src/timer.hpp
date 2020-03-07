@@ -1,3 +1,6 @@
+#ifndef TIMER_H
+#define TIMER_H
+
 #include "Kokkos_Core.hpp"
 #include <string>
 
@@ -7,7 +10,7 @@ class fiestaTimer {
 
 public:
     string name;
-    fiestaTimer(string n);
+    fiestaTimer();
     void accumulate();
     double get();
     void clear();
@@ -20,3 +23,4 @@ private:
     double time;
     Kokkos::Timer timer;
 };
+#endif

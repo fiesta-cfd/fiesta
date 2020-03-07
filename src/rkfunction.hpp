@@ -4,6 +4,9 @@
 #include "fiesta.hpp"
 #include "input.hpp"
 #include "Kokkos_Core.hpp"
+#include <map>
+#include <string>
+#include "timer.hpp"
 
 /***
  *
@@ -29,6 +32,9 @@ public:
     FS4D dvar;
     FS4D tmp1;
     FS4D tmp2;
+
+    std::map<std::string, class fiestaTimer> timers;
+    //std::map<std::string, int> timers;
 
 protected:
     Kokkos::View<double*> mcd;

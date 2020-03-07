@@ -7,6 +7,9 @@
 #include <mpi.h>
 #include "debug.hpp"
 #include "hydro2d.hpp"
+#include <map>
+#include <string>
+#include "timer.hpp"
 
 struct calculateRhoAndPressure2d {
     FS4D var;
@@ -188,6 +191,7 @@ struct applyPressure2d {
 
 hydro2d_func::hydro2d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){
 
+    using namespace std;
     var     = Kokkos::View<double****,FS_LAYOUT>("var",cf.ngi,cf.ngj,cf.ngk,cf.nv); // Primary Variable Array
     tmp1    = Kokkos::View<double****,FS_LAYOUT>("tmp1",cf.ngi,cf.ngj,cf.ngk,cf.nv); // Temporary Variable Arrayr1
     tmp2    = Kokkos::View<double****,FS_LAYOUT>("tmp2",cf.ngi,cf.ngj,cf.ngk,cf.nv); // Temporary Variable Array2
@@ -197,6 +201,9 @@ hydro2d_func::hydro2d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_)
     wenox   = Kokkos::View<double**,FS_LAYOUT>("wenox",cf.ngi,cf.ngj);           // Total Density
     wenoy   = Kokkos::View<double**,FS_LAYOUT>("wenoy",cf.ngi,cf.ngj);           // Total Density
     cd = mcd;
+
+    //timers.insert( make_pair("weno",fiestaTimer()) );
+    //timers.insert( make_pair<string, class fiestaTimer>("weno",fiestaTimer()) );
 
 };
 

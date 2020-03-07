@@ -34,13 +34,13 @@ int main(int argc, char* argv[]){
 
     Kokkos::initialize(argc, argv);
     
-    fiestaTimer totalTimer("Total Runtime");
-    fiestaTimer initTimer("Initialization Timer");
-    fiestaTimer solWriteTimer("Solution Write Timer");
-    fiestaTimer simTimer("Simulation Timer");
-    fiestaTimer loadTimer("Initial Condition Generate Timer");
-    fiestaTimer readTimer("Restart Read Timer");
-    fiestaTimer resWriteTimer("Restart Write Timer");
+    fiestaTimer totalTimer;
+    fiestaTimer initTimer;
+    fiestaTimer solWriteTimer;
+    fiestaTimer simTimer;
+    fiestaTimer loadTimer;
+    fiestaTimer readTimer;
+    fiestaTimer resWriteTimer;
 
 
     atexit(fnExit1);

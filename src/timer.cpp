@@ -7,7 +7,7 @@
 
 using namespace std;
 
-fiestaTimer::fiestaTimer(string n_) : name(n_) {
+fiestaTimer::fiestaTimer(){
     timer.reset();
     time = 0.0;
 }
@@ -60,9 +60,9 @@ string fiestaTimer::getf(){
     ss.setf(ios::fixed);
     if (d > 0)
         ss << d << "d";
-    if (d > 0)
+    if (h > 0)
         ss << h << "h";
-    if (d > 0)
+    if (m > 0)
         ss << m << "m";
     ss << s << "s";
 
