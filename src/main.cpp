@@ -13,6 +13,7 @@
 #include <iostream>
 #include <cstdio>
 #include <ctime>
+#include "output.hpp"
 
 
 void fnExit1(void){
@@ -24,18 +25,8 @@ int main(int argc, char* argv[]){
 
     int temp_rank;
     MPI_Comm_rank(MPI_COMM_WORLD,&temp_rank);
-    if (temp_rank == 0){
-        printf("--------------------------------------\n");
-        printf("|     _____ _           _            |\n");
-        printf("|    |  ___(_) ___  ___| |_ __ _     |\n");
-        printf("|    | |_  | |/ _ \\/ __| __/ _` |    |\n");
-        printf("|    |  _| | |  __/\\__ \\ || (_| |    |\n");
-        printf("|    |_|   |_|\\___||___/\\__\\__,_|    |\n");
-        printf("|                                    |\n");
-        printf("--------------------------------------\n");
-    }
-    //if (temp_rank == 0) printf("\n----------  Fiesta ----------\n");
-    if (temp_rank == 0) printf("\nInitializing...\n");
+    if (temp_rank == 0)
+        printSplash();
 
     Kokkos::initialize(argc, argv);
 
@@ -53,11 +44,6 @@ int main(int argc, char* argv[]){
     int cv = 0;
     if (cf.ceq == 1)
         cv = 5;
-
-    //FS4D myV("myV",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
-    //FS4D tmp("RK_tmp",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
-    //FS4D K1("RK_K1",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
-    //FS4D K2("RK_K2",cf.ngi,cf.ngj,cf.ngk,cf.nv+cv);
         
     Kokkos::View<double*> cd("deviceCF",5+cf.ns*2);
     typename Kokkos::View<double*>::HostMirror hostcd = Kokkos::create_mirror_view(cd);
@@ -78,36 +64,11 @@ int main(int argc, char* argv[]){
 
     MPI_Barrier(cf.comm);
     /*** Output runtime information ***/
-    if (cf.rank == 0){
-        //printf("Input File Name: %s\n",cf.inputFname);
-        std::cout << "Input File Name: " << cf.inputFname << std::endl;
-        if (cf.restart){
-            printf("Running from Restart File: %s\n",cf.sfName);
-            printf("Start Time is %.2e\n",cf.time);
-            printf("Start Index is %d\n",cf.tstart);
-        }
-        printf("-----------------------\n");
-        printf("Running %d processes as (%d,%d,%d)\n",cf.numProcs,cf.xProcs,cf.yProcs,cf.zProcs);
-        printf("tstart = %d, nt = %d, tend = %d, dt = %.2e\n",cf.tstart,cf.nt,cf.tend,cf.dt);
-        printf("Num Cells X = %d, dx = %.2e\n",cf.glbl_nci,cf.dx);
-        printf("Num Cells Y = %d, dy = %.2e\n",cf.glbl_ncj,cf.dy);
-        if (cf.ndim == 3)
-            printf("Num Cells Z = %d, dz = %.2e\n",cf.glbl_nck,cf.dz);
-        if (cf.ceq)
-            printf("C-Equation Enables");
-        else
-            printf("C-Equation Disabled\n");
-        printf("Number of Species = %d:\n",cf.ns);
-        for (int s=0; s<cf.ns; ++s)
-            printf("    Species %d, Gamma = %4.2f, M = %6.4f\n",s+1,cf.gamma[s],cf.M[s]);
-        printf("-----------------------\n");
-    }
+    if (cf.rank == 0)
+        printConfig(cf);
 
-    //hydro2d_func f(cf,cd);
-    //hydro2dvisc_func f(cf,cd);
     /*** Choose Scheme ***/
     rk_func *f;
-    //f = hydro2dvisc_func(cf.cd);
     //if (cf.ndim == 3){
     //    f = new hydroc3d_func(cf,cd);
     //}else{
@@ -115,7 +76,7 @@ int main(int argc, char* argv[]){
             f = new hydro2dvisc_func(cf,cd);
         else
             f = new hydro2d_func(cf,cd);
-   // }
+    //}
     
     MPI_Barrier(cf.comm);
     if (cf.rank == 0) printf("\nLoading Initial Conditions...\n");

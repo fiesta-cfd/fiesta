@@ -63,11 +63,11 @@ char * getglobstr(lua_State *L, const char * var){
 
 struct inputConfig executeConfiguration(int argc, char * argv[]){
 
-    struct inputConfig myConfig;
+    struct inputConfig cf;
     if (argc >=2)
-        myConfig.inputFname = std::string(argv[1]);
+        cf.inputFname = std::string(argv[1]);
     else
-        myConfig.inputFname = std::string("input.lua");
+        cf.inputFname = std::string("fiesta.lua");
 
 
     /* Create Lua State */
@@ -75,96 +75,96 @@ struct inputConfig executeConfiguration(int argc, char * argv[]){
     luaL_openlibs(L);               //opens the standard libraries
 
     /* Open and run Lua configuration file */
-    if (luaL_loadfile(L,myConfig.inputFname.c_str()) || lua_pcall(L,0,0,0))
+    if (luaL_loadfile(L,cf.inputFname.c_str()) || lua_pcall(L,0,0,0))
         error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
 
     /* get global variables from Lua results */
-    myConfig.ndim        = getglobint (L, "ndim" );
-    myConfig.nt          = getglobint (L, "nt" );
-    myConfig.glbl_nci    = getglobint (L, "ni" );
-    myConfig.glbl_ncj    = getglobint (L, "nj" );
-    myConfig.ns          = getglobint (L, "ns" );
-    myConfig.dt          = getglobdbl (L, "dt" );
-    myConfig.dx          = getglobdbl (L, "dx" );
-    myConfig.dy          = getglobdbl (L, "dy" );
-    myConfig.R           = getglobdbl (L, "R" );
-    myConfig.visc        = getglobdbl (L, "visc" );
-    myConfig.xProcs      = getglobint (L, "procsx");
-    myConfig.yProcs      = getglobint (L, "procsy");
-    //myConfig.ng          = getglobint (L, "ng" );
-    myConfig.ng = 3;
-    myConfig.xPer        = getglobint (L, "xPer" );
-    myConfig.yPer        = getglobint (L, "yPer" );
-    myConfig.bcL         = getglobint (L, "bcXmin" );
-    myConfig.bcR         = getglobint (L, "bcXmax" );
-    myConfig.bcB         = getglobint (L, "bcYmin" );
-    myConfig.bcT         = getglobint (L, "bcYmax" );
-    myConfig.restart     = getglobint (L, "restart");
-    myConfig.sfName      = getglobstr (L, "restartName");
-    myConfig.tstart      = getglobint (L, "tstart");
-    myConfig.time        = getglobdbl (L, "time");
-    myConfig.ceq         = getglobdbl (L, "ceq");
-    myConfig.kap         = getglobdbl (L, "kappa");
-    myConfig.eps         = getglobdbl (L, "epsilon");
-    myConfig.alpha       = getglobdbl (L, "alpha");
-    myConfig.beta        = getglobdbl (L, "beta");
-    myConfig.betae       = getglobdbl (L, "betae");
-    if (myConfig.ndim == 3){
-        myConfig.glbl_nck    = getglobint (L, "nk" );
-        myConfig.dz          = getglobdbl (L, "dz" );
-        myConfig.zProcs      = getglobint (L, "procsz");
-        myConfig.zPer        = getglobint (L, "zPer" );
-        myConfig.bcH         = getglobint (L, "bcZmin" );
-        myConfig.bcF         = getglobint (L, "bcZmax" );
+    cf.ndim        = getglobint (L, "ndim" );
+    cf.nt          = getglobint (L, "nt" );
+    cf.glbl_nci    = getglobint (L, "ni" );
+    cf.glbl_ncj    = getglobint (L, "nj" );
+    cf.ns          = getglobint (L, "ns" );
+    cf.dt          = getglobdbl (L, "dt" );
+    cf.dx          = getglobdbl (L, "dx" );
+    cf.dy          = getglobdbl (L, "dy" );
+    cf.R           = getglobdbl (L, "R" );
+    cf.visc        = getglobdbl (L, "visc" );
+    cf.xProcs      = getglobint (L, "procsx");
+    cf.yProcs      = getglobint (L, "procsy");
+    //cf.ng          = getglobint (L, "ng" );
+    cf.ng = 3;
+    cf.xPer        = getglobint (L, "xPer" );
+    cf.yPer        = getglobint (L, "yPer" );
+    cf.bcL         = getglobint (L, "bcXmin" );
+    cf.bcR         = getglobint (L, "bcXmax" );
+    cf.bcB         = getglobint (L, "bcYmin" );
+    cf.bcT         = getglobint (L, "bcYmax" );
+    cf.restart     = getglobint (L, "restart");
+    cf.sfName      = getglobstr (L, "restartName");
+    cf.tstart      = getglobint (L, "tstart");
+    cf.time        = getglobdbl (L, "time");
+    cf.ceq         = getglobdbl (L, "ceq");
+    cf.kap         = getglobdbl (L, "kappa");
+    cf.eps         = getglobdbl (L, "epsilon");
+    cf.alpha       = getglobdbl (L, "alpha");
+    cf.beta        = getglobdbl (L, "beta");
+    cf.betae       = getglobdbl (L, "betae");
+    if (cf.ndim == 3){
+        cf.glbl_nck    = getglobint (L, "nk" );
+        cf.dz          = getglobdbl (L, "dz" );
+        cf.zProcs      = getglobint (L, "procsz");
+        cf.zPer        = getglobint (L, "zPer" );
+        cf.bcH         = getglobint (L, "bcZmin" );
+        cf.bcF         = getglobint (L, "bcZmax" );
     }
 
-    myConfig.gamma = (double*)malloc(myConfig.ns*sizeof(double));
-    myConfig.M = (double*)malloc(myConfig.ns*sizeof(double));
-    myConfig.tend = myConfig.tstart+myConfig.nt;
+    cf.gamma = (double*)malloc(cf.ns*sizeof(double));
+    cf.M = (double*)malloc(cf.ns*sizeof(double));
+    cf.tend = cf.tstart+cf.nt;
 
     int isnum;
 
     lua_getglobal(L, "gamma");
-    for (int s=0; s<myConfig.ns; ++s){
+    for (int s=0; s<cf.ns; ++s){
         lua_pushnumber(L, s+1);
         lua_gettable(L, -2);
-        myConfig.gamma[s] = (double)lua_tonumberx(L, -1, &isnum);
+        cf.gamma[s] = (double)lua_tonumberx(L, -1, &isnum);
         lua_pop(L,1);
     }
     lua_getglobal(L, "M");
-    for (int s=0; s<myConfig.ns; ++s){
+    for (int s=0; s<cf.ns; ++s){
         lua_pushnumber(L, s+1);
         lua_gettable(L, -2);
-        myConfig.M[s] = (double)lua_tonumberx(L, -1, &isnum);
+        cf.M[s] = (double)lua_tonumberx(L, -1, &isnum);
         lua_pop(L,1);
     }
 
-    myConfig.out_freq    = getglobint (L, "out_freq");
-    myConfig.write_freq    = getglobint (L, "write_freq");
-    myConfig.restart_freq    = getglobint (L, "restart_freq");
+    cf.out_freq    = getglobint (L, "out_freq");
+    cf.write_freq    = getglobint (L, "write_freq");
+    cf.restart_freq    = getglobint (L, "restart_freq");
 
-    myConfig.nv = 4 + myConfig.ns;
+    cf.nv = 4 + cf.ns;
 
 
     /* Done with Lua */
     lua_close(L);
 
-    if (myConfig.ndim == 2){
-        myConfig.nv = 3 + myConfig.ns;
-        myConfig.dz = myConfig.dx;
-        myConfig.zProcs = 1;
-        myConfig.glbl_nck = 1;
-        myConfig.bcH = 0;
-        myConfig.bcF = 0;
-        myConfig.zPer = 0;
+    if (cf.ndim == 2){
+        cf.nv = 3 + cf.ns;
+        cf.dz = cf.dx;
+        cf.zProcs = 1;
+        cf.glbl_nck = 1;
+        cf.bcH = 0;
+        cf.bcF = 0;
+        cf.zPer = 0;
     }
 
     /* calculate number of nodes from number of cells */
-    myConfig.glbl_ni = myConfig.glbl_nci + 1;
-    myConfig.glbl_nj = myConfig.glbl_ncj + 1;
-    myConfig.glbl_nk = myConfig.glbl_nck + 1;
+    cf.glbl_ni = cf.glbl_nci + 1;
+    cf.glbl_nj = cf.glbl_ncj + 1;
+    cf.glbl_nk = cf.glbl_nck + 1;
 
-    return myConfig;
+    return cf;
 }
 
 int loadInitialConditions(struct inputConfig cf, const FS4D deviceV){
