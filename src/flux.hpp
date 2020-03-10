@@ -1,4 +1,4 @@
-struct calculateFluxWeno2D {
+struct computeFluxWeno2D {
     FS4D var;
     FS2D p;
     FS2D rho;
@@ -8,7 +8,7 @@ struct calculateFluxWeno2D {
     int v;
     double eps = 0.000001;
 
-    calculateFluxWeno2D (FS4D var_, FS2D p_, FS2D rho_,
+    computeFluxWeno2D (FS4D var_, FS2D p_, FS2D rho_,
                          FS2D wenox_, FS2D wenoy_, Kokkos::View<double*> cd_, int v_)
                          : var(var_), p(p_), rho(rho_),
                            wenox(wenox_), wenoy(wenoy_), cd(cd_), v(v_) {}

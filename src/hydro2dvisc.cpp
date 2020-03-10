@@ -332,7 +332,10 @@ void hydro2dvisc_func::compute(){
     // Calculate and apply weno fluxes for each variable
     for (int v=0; v<cf.nv; ++v){
         timers["flux"].reset();
-        Kokkos::parallel_for( face_pol, computeFluxCentered2D(var,p,rho,fluxx,fluxy,cd,v) );
+        if (cf.scheme == 2)
+            Kokkos::parallel_for( face_pol, computeFluxCentered2D(var,p,rho,fluxx,fluxy,cd,v) );
+        else
+            Kokkos::parallel_for( face_pol, computeFluxWeno2D(var,p,rho,fluxx,fluxy,cd,v) );
         Kokkos::parallel_for( cell_pol, advect2dv(dvar,fluxx,fluxy,cd,v) );
         timers["flux"].accumulate();
     }

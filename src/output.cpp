@@ -60,15 +60,20 @@ void printConfig(struct inputConfig cf){
     cout << "    Num Cells Total: " << scientific << (double)cf.glbl_nck*cf.glbl_ncj*cf.glbl_nci << endl;
 
     cout << "Options:" << endl;
+    if (cf.scheme == 1)
+        cout << "    USing 5th order weno scheme" << endl;
+    if (cf.scheme == 2)
+        cout << "    Using 4th order centered scheme" << endl;
+    if (cf.visc)
+        cout << "    Viscosity enabled" << endl;
+    else
+        cout << "    Viscosity disabled" << endl;
     // C-Equations
     if (cf.ceq)
         cout << "    C-Equation enabled" << endl;
     else
         cout << "    C-Equation disabled" << endl;
-    if (cf.visc)
-        cout << "    Viscosity enabled" << endl;
-    else
-        cout << "    Viscosity disabled" << endl;
+
 
     // Gas Properties
     cout << "Gas Properties:" << endl;
