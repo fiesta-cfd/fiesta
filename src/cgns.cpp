@@ -287,7 +287,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
 
     if (cf.ceq != 0){
         //write cequation variables
-        for (int vn=cf.nv; vn<cf.nv+5; ++vn){
+        for (int vn=cf.nv; vn<cf.nvt; ++vn){
             snprintf(dName,32,"C%d",vn-cf.nv);
             if (cf.ndim == 3){
                 for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
@@ -523,7 +523,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const FS
 
     if (cf.ceq != 0){
     //write cequation variables
-        for (int vn=cf.nv; vn<cf.nv+5; ++vn){
+        for (int vn=cf.nv; vn<cf.nvt; ++vn){
             snprintf(dName,32,"C%d",vn-cf.nv);
             if (cf.ndim == 3){
                 for (int k=cf.ng; k<cf.nck+cf.ng; ++k){

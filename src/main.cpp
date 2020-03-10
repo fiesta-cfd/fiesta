@@ -7,7 +7,7 @@
 #include <mpi.h>
 #include "debug.hpp"
 //#include "hydroc3d.hpp"
-#include "hydro2d.hpp"
+//#include "hydro2d.hpp"
 #include "hydro2dvisc.hpp"
 #include "rkfunction.hpp"
 #include <iostream>
@@ -58,7 +58,7 @@ int main(int argc, char* argv[]){
     if (cf.ceq == 1)
         cv = 5;
         
-    Kokkos::View<double*> cd("deviceCF",5+cf.ns*2);
+    Kokkos::View<double*> cd("deviceCF",5+cf.ns*3);
     typename Kokkos::View<double*>::HostMirror hostcd = Kokkos::create_mirror_view(cd);
     Kokkos::deep_copy(hostcd, cd);
     hostcd(0) = cf.ns;
@@ -71,7 +71,8 @@ int main(int argc, char* argv[]){
     for (int s=0; s<cf.ns; ++s){
         hostcd(sdx) = cf.gamma[s];
         hostcd(sdx+1) = cf.R/cf.M[s];
-        sdx += 2;
+        hostcd(sdx+2) = cf.mu[s];
+        sdx += 3;
     }
     Kokkos::deep_copy(cd,hostcd);
 
@@ -85,10 +86,10 @@ int main(int argc, char* argv[]){
     //if (cf.ndim == 3){
     //    f = new hydroc3d_func(cf,cd);
     //}else{
-        if (cf.visc == 1)
+    //    if (cf.visc == 1 || cf.ceq == 1)
             f = new hydro2dvisc_func(cf,cd);
-        else
-            f = new hydro2d_func(cf,cd);
+    //    else
+    //        f = new hydro2d_func(cf,cd);
     //}
     
     MPI_Barrier(cf.comm);
@@ -191,7 +192,7 @@ int main(int argc, char* argv[]){
         FS4D mytmp = f->tmp1;
         FS4D myvar = f->var;
         FS4D mydvar = f->dvar;
-        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+cv}),
+        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nvt}),
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
             mytmp(i,j,k,v) = myvar(i,j,k,v);
             myvar(i,j,k,v) = myvar(i,j,k,v) + 0.5*cf.dt*mydvar(i,j,k,v);
@@ -203,7 +204,7 @@ int main(int argc, char* argv[]){
         mytmp = f->tmp1;
         myvar = f->var;
         mydvar = f->dvar;
-        Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+cv}),
+        Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nvt}),
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
             myvar(i,j,k,v) = myvar(i,j,k,v) + cf.dt*mydvar(i,j,k,v);
         });
@@ -239,14 +240,14 @@ int main(int argc, char* argv[]){
     if (cf.rank == 0){
         cout << endl << "-----------------------" << endl << endl;
         cout.precision(2);
-        cout << "Total Time: " << totalTimer.getf() << endl;
-        cout << "Setup Time: " << initTimer.getf() << endl;
-        cout << "    Initial Condition Generation: " << loadTimer.getf() << endl;
-        cout << "Sim Time: " << simTimer.getf() << endl;
-        cout << "    Solution write Time:\t" << solWriteTimer.getf() << endl;
-        cout << "    Restart write Time:\t\t" << resWriteTimer.getf() << endl;
+        cout << setw(36) << left << "Total Time:" << right << " " << totalTimer.getf() << endl;
+        cout << setw(36) << left << "Setup Time:" << right << " " << initTimer.getf() << endl;
+        cout << "    " << setw(32) << left << "Initial Condition Generation:" << right << " " << loadTimer.getf() << endl;
+        cout << setw(36) << left << "Sim Time:" << right << " " << simTimer.getf() << endl;
+        cout << "    " << setw(32) << left << "Solution write Time:" << right << " " << solWriteTimer.getf() << endl;
+        cout << "    " << setw(32) << left << "Restart write Time:" << right << " " << resWriteTimer.getf() << endl;
         for (auto tmr : f->timers){
-            cout << "    " << tmr.second.describe() << ":\t\t" << tmr.second.getf() << endl;
+            cout << "    " << setw(32) << left << tmr.second.describe()+":"<< right << " " << tmr.second.getf() << endl;
         }
     }
 

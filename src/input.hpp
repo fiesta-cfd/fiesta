@@ -31,6 +31,7 @@ struct inputConfig {
     int glbl_nci,glbl_ncj,glbl_nck;
     double *gamma;
     double *M;
+    double *mu;
     double R;
     int visc;
     double dt,dx,dy,dz;
@@ -39,7 +40,7 @@ struct inputConfig {
     int xMinus,yMinus,zMinus;
     int rank;
     int nci,ncj,nck;
-    int nt,ni,nj,nk,nv,ns;
+    int nt,ni,nj,nk,nv,ns,nvt;
     int iStart,jStart,kStart;
     int iEnd,jEnd,kEnd;
     MPI_Comm comm;

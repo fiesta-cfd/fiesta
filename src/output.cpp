@@ -75,8 +75,9 @@ void printConfig(struct inputConfig cf){
     cout << "    Number of Species = " << cf.ns << ":" << endl;
     for (int s=0; s<cf.ns; ++s)
         cout << "    Species " << s+1 
-             << ", Gamma = " << setw(4) << setprecision(2) << cf.gamma[s]
-             << ", M = "     << setw(6) << setprecision(4) << cf.M[s]
+             << ", Gamma = " << setw(4) << setprecision(3) << fixed      << cf.gamma[s]
+             << ", M = "     << setw(6) << setprecision(4) << scientific << cf.M[s]
+             << ", mu = "    << setw(6) << setprecision(4) << scientific << cf.mu[s]
              << endl;
         //printf("    Species %d, Gamma = %4.2f, M = %6.4f\n",s+1,cf.gamma[s],cf.M[s]);
 

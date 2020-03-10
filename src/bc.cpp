@@ -95,33 +95,29 @@ void applyBCs(struct inputConfig cf, FS4D &u, class mpiBuffers &m){
 
     haloExchange(cf,u,m);
 
-    int cv = 0;
-    if (cf.ceq == 1)
-        cv = 5;
-
     if (cf.xMinus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngj,cf.ngk,cf.nv+cv}), bc_L(cf.ng,cf.ng,cf.bcL,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngj,cf.ngk,cf.nvt}), bc_L(cf.ng,cf.ng,cf.bcL,u));
     }
 
     if (cf.xPlus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngj,cf.ngk,cf.nv+cv}), bc_R(cf.ng+cf.nci,cf.ng,cf.bcR,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngj,cf.ngk,cf.nvt}), bc_R(cf.ng+cf.nci,cf.ng,cf.bcR,u));
     }
 
     if (cf.yMinus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngk,cf.nv+cv}), bc_B(cf.ng,cf.ng,cf.bcB,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngk,cf.nvt}), bc_B(cf.ng,cf.ng,cf.bcB,u));
     }
 
     if (cf.yPlus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngk,cf.nv+cv}), bc_T(cf.ng+cf.ncj,cf.ng,cf.bcT,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngk,cf.nvt}), bc_T(cf.ng+cf.ncj,cf.ng,cf.bcT,u));
     }
 
     if (cf.ndim == 3){
         if (cf.zMinus < 0){
-            Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngj,cf.nv+cv}), bc_H(cf.ng,cf.ng,cf.bcH,u));
+            Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngj,cf.nvt}), bc_H(cf.ng,cf.ng,cf.bcH,u));
         }
 
         if (cf.zPlus < 0){
-            Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngj,cf.nv+cv}), bc_F(cf.ng+cf.nck,cf.ng,cf.bcF,u));
+            Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngj,cf.nvt}), bc_F(cf.ng+cf.nck,cf.ng,cf.bcF,u));
         }
     }
 }

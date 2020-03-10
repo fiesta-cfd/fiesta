@@ -120,6 +120,7 @@ struct inputConfig executeConfiguration(int argc, char * argv[]){
 
     cf.gamma = (double*)malloc(cf.ns*sizeof(double));
     cf.M = (double*)malloc(cf.ns*sizeof(double));
+    cf.mu = (double*)malloc(cf.ns*sizeof(double));
     cf.tend = cf.tstart+cf.nt;
 
     int isnum;
@@ -136,6 +137,13 @@ struct inputConfig executeConfiguration(int argc, char * argv[]){
         lua_pushnumber(L, s+1);
         lua_gettable(L, -2);
         cf.M[s] = (double)lua_tonumberx(L, -1, &isnum);
+        lua_pop(L,1);
+    }
+    lua_getglobal(L, "M");
+    for (int s=0; s<cf.ns; ++s){
+        lua_pushnumber(L, s+1);
+        lua_gettable(L, -2);
+        cf.mu[s] = (double)lua_tonumberx(L, -1, &isnum);
         lua_pop(L,1);
     }
 
@@ -158,6 +166,9 @@ struct inputConfig executeConfiguration(int argc, char * argv[]){
         cf.bcF = 0;
         cf.zPer = 0;
     }
+
+    cf.nvt = cf.nv;
+    if (cf.ceq == 1) cf.nvt += 5;
 
     /* calculate number of nodes from number of cells */
     cf.glbl_ni = cf.glbl_nci + 1;
