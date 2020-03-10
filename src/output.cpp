@@ -4,24 +4,38 @@
 #include <iomanip>
 #include <locale>
 
+#define BBLU "\033[0;34m"
+#define BYEL "\033[0;33m"
+#define BGRE "\033[0;32m"
+#define BRED "\033[0;31m"
+#define NONE "\033[0m"
+
 using namespace std;
 
 void printSplash(){
-    cout << R"(--------------------------------------)" << endl;
-    cout << R"(|     _____ _           _            |)" << endl;
-    cout << R"(|    |  ___(_) ___  ___| |_ __ _     |)" << endl;
-    cout << R"(|    | |_  | |/ _ \/ __| __/ _` |    |)" << endl;
-    cout << R"(|    |  _| | |  __/\__ \ || (_| |    |)" << endl;
-    cout << R"(|    |_|   |_|\___||___/\__\__,_|    |)" << endl;
-    cout << R"(|                                    |)" << endl;
-    cout << R"(--------------------------------------)" << endl;
+    //cout << R"(--------------------------------------)" << endl;
+    //cout << R"(|     _____ _           _            |)" << endl;
+    //cout << R"(|    |  ___(_) ___  ___| |_ __ _     |)" << endl;
+    //cout << R"(|    | |_  | |/ _ \/ __| __/ _` |    |)" << endl;
+    //cout << R"(|    |  _| | |  __/\__ \ || (_| |    |)" << endl;
+    //cout << R"(|    |_|   |_|\___||___/\__\__,_|    |)" << endl;
+    //cout << R"(|                                    |)" << endl;
+    //cout << R"(--------------------------------------)" << endl;
+    cout << "----" << NONE << R"(------------------------------)" << NONE << "----" << endl;
+    cout << "|   " << BRED << R"(  _____ _           _         )" << NONE << "   |" << endl;
+    cout << "|   " << BRED << R"( |  ___(_) ___  ___| |_ __ _  )" << NONE << "   |" << endl;
+    cout << "|   " << BRED << R"( | |_  | |/ _ \/ __| __/ _` | )" << NONE << "   |" << endl;
+    cout << "|   " << BRED << R"( |  _| | |  __/\__ \ || (_| | )" << NONE << "   |" << endl;
+    cout << "|   " << BRED << R"( |_|   |_|\___||___/\__\__,_| )" << NONE << "   |" << endl;
+    cout << "|   " << BRED << R"(                              )" << NONE << "   |" << endl;
+    cout << "----" << NONE << R"(------------------------------)" << NONE << "----" << endl;
 }
 
 void printConfig(struct inputConfig cf){
 
     cout.precision(2);
 
-    std::cout << endl << "Input File Name: '" << cf.inputFname << "'" << endl << endl;
+    std::cout << endl << "Input File Name: '" << BGRE << cf.inputFname << NONE << "'" << endl << endl;
 
     // Restart Options
     cout << "Restart:" << endl;
