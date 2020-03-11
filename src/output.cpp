@@ -9,7 +9,7 @@
 using namespace std;
 
 string c(Color color){
-    if (isatty(fileno(stdout))){
+    if (isatty(STDOUT_FILENO)){
         switch (color){
             case RED :
                 return "\033[0;31m";

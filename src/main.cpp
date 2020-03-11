@@ -258,7 +258,7 @@ int main(int argc, char* argv[]){
         cout << c(GRE) << left  << setw(36) << "Total Time:"     << c(NON) 
              << c(CYA) << right << setw(13) << totalTimer.getf() << c(NON) << endl << endl;
 
-        cout << c(GRE) << left  << setw(36) << "Setup Time:"    << c(NON)
+        cout << c(GRE) << left  << setw(36) << "  Setup Time:"    << c(NON)
              << c(CYA) << right << setw(13) << initTimer.getf() << c(NON) << endl;
         cout << c(NON) << left  << setw(36) << "    Initial Condition Generation:" << c(NON)
              << c(CYA) << right << setw(13) << loadTimer.getf()                    << c(NON) << endl << endl;
@@ -270,7 +270,7 @@ int main(int argc, char* argv[]){
         //cout << c(NON) << left  << setw(36) << "    Restart write Time:" << c(NON)
         //     << c(CYA) << right << setw(8)  << resWriteTimer.getf()      << c(NON) << endl << endl;
 
-        cout << c(GRE) << left  << setw(36) << "Simulation Time:" << c(NON)
+        cout << c(GRE) << left  << setw(36) << "  Simulation Time:" << c(NON)
              << c(CYA) << right << setw(13) << simTimer.getf() << c(NON) << endl;
         for (auto tmr : stmr){
             cout << c(NON) << left  << setw(36) << "    "+tmr.second.describe()+":" << c(NON)
