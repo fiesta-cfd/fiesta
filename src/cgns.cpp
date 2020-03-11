@@ -3,8 +3,13 @@
 #include "debug.hpp"
 #include <iostream>
 #include <fstream>
+#include <sstream>
+#include <iomanip>
+#include "output.hpp"
 
-struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y, double *z,char * fname){
+using namespace std;
+
+struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y, double *z,const char * fname){
 
     //int icelldim, iphysdim, index_coord, index_field;
     cgsize_t isize[3][3];
@@ -49,7 +54,7 @@ struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y, double
 
     return cf;
 }
-struct inputConfig writeSPGrid(struct inputConfig cf, float *x, float *y, float *z, char * fname){
+struct inputConfig writeSPGrid(struct inputConfig cf, float *x, float *y, float *z, const char * fname){
 
     //int icelldim, iphysdim, index_coord, index_field;
     cgsize_t isize[3][3];
@@ -101,18 +106,24 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
     char dName[32];
 
     char solname[32];
-    char fsname[32];
+    //char fsname[32];
     cgsize_t dims = 1;
     cgsize_t idims[2];
     idims[0] = 32;
     idims[1] = 1;
 
-    snprintf(fsname,32,"restart-%06d.cgns",tdx);
+    //snprintf(fsname,32,"restart-%06d.cgns",tdx);
+
+    stringstream ss;
+    ss << "restart-" << setw(7) << setfill('0') << tdx << ".cgns";
+    string fsname = ss.str();
+
     if (cf.rank == 0){
-        printf("    Writing Restart %s...\n",fsname);
+        cout << c(YEL) << left << setw(22) << "    Writing Restart: " << c(NON)
+             << c(CYA) << left << "'" + fsname + "'" << c(NON) << endl;
     }
 
-    cf = writeGrid(cf, x,y,z,fsname);
+    cf = writeGrid(cf, x,y,z,fsname.c_str());
     snprintf(solname,32,"FS");
 
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
@@ -122,7 +133,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
     Kokkos::deep_copy(hostV,deviceV);
 
     /* open cgns file and write cell centered flow variable */
-    if (cgp_open(fsname, CG_MODE_MODIFY, &cf.cF))
+    if (cgp_open(fsname.c_str(), CG_MODE_MODIFY, &cf.cF))
         cgp_error_exit();
     
     if (cg_sol_write(cf.cF,cf.cB,cf.cZ,solname,CG_CellCenter, &index_sol))
@@ -337,18 +348,27 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const FS
     char dName[32];
 
     char solname[32];
-    char fsname[32];
+    //char fsname[32];
     cgsize_t dims = 1;
     cgsize_t idims[2];
     idims[0] = 32;
     idims[1] = 1;
 
-    snprintf(fsname,32,"sol-%06d.cgns",tdx);
+    //snprintf(fsname,32,"sol-%06d.cgns",tdx);
+    //if (cf.rank == 0){
+    //    printf("    Writing Solution %s...\n",fsname);
+    //}
+
+    stringstream ss;
+    ss << "solution-" << setw(7) << setfill('0') << tdx << ".cgns";
+    string fsname = ss.str();
+
     if (cf.rank == 0){
-        printf("    Writing Solution %s...\n",fsname);
+        cout << c(YEL) << left << setw(22) << "    Writing Solution: " << c(NON)
+             << c(CYA) << left << "'" + fsname + "'" << c(NON) << endl;
     }
 
-    cf = writeSPGrid(cf, x,y,z,fsname);
+    cf = writeSPGrid(cf, x,y,z,fsname.c_str());
     snprintf(solname,32,"FS");
 
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
@@ -358,7 +378,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const FS
     Kokkos::deep_copy(hostV,deviceV);
 
     /* open cgns file and write cell centered flow variable */
-    if (cgp_open(fsname, CG_MODE_MODIFY, &cf.cF))
+    if (cgp_open(fsname.c_str(), CG_MODE_MODIFY, &cf.cF))
         cgp_error_exit();
     
     if (cg_sol_write(cf.cF,cf.cB,cf.cZ,solname,CG_CellCenter, &index_sol))

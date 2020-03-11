@@ -16,6 +16,7 @@
 #include "output.hpp"
 #include <iomanip>
 #include "timer.hpp"
+#include <set>
 
 using namespace std;
 
@@ -171,9 +172,9 @@ int main(int argc, char* argv[]){
 
     if (cf.rank == 0){
         cout << endl << "-----------------------" << endl << endl;
-        cout << "Starting Simulation..." << endl;
+        cout << c(GRE) << "Starting Simulation:" << c(NON) << endl;
     }
-    MPI_Barrier(cf.comm);
+
     MPI_Barrier(cf.comm);
 
     initTimer.stop();
@@ -213,41 +214,67 @@ int main(int argc, char* argv[]){
         if (cf.rank==0){
             if (cf.out_freq > 0)
                 if ((t+1) % cf.out_freq == 0)
-                    printf("    Iteration: %d/%d, Sim Time: %.2e\n",t+1,cf.tend,time);
+                    cout << c(NON) << left << setw(15) << "    Iteration:" << c(NON) 
+                         << c(CYA) << right << setw(0) << t+1 << c(NON) << "/" << c(CYA) << left << setw(0) << cf.tend << c(NON) << ", "
+                         << c(CYA) << right << setw(0) << setprecision(3) << scientific << time << "s" << c(NON) << endl;
+                    //printf("    Iteration: %d/%d, Sim Time: %.2e\n",t+1,cf.tend,time);
         }
         if (cf.write_freq > 0){
             if ((t+1) % cf.write_freq == 0){
-                solWriteTimer.reset();
+                f->timers["solWrite"].reset();
                 writeSolution(cf,xSP,ySP,zSP,f->var,t+1,time);
-                solWriteTimer.accumulate();
+                f->timers["solWrite"].accumulate();
             }
         }
         if (cf.restart_freq > 0){
             if ((t+1) % cf.restart_freq == 0){
-                resWriteTimer.reset();
+                f->timers["resWrite"].reset();
                 writeRestart(cf,x,y,z,f->var,t+1,time);
-                resWriteTimer.accumulate();
+                f->timers["resWrite"].accumulate();
             }
         }
     }
     simTimer.stop();
     if (cf.rank == 0)
-        cout << "Simulation Complete" << endl;
+        cout << c(GRE) << "Simulation Complete!" << c(NON) << endl;
 
     MPI_Barrier(cf.comm);
 
+    typedef std::function<bool(std::pair<std::string, fiestaTimer>, std::pair<std::string, fiestaTimer>)> Comparator;
+ 
+    Comparator compFunctor =
+            [](std::pair<std::string, fiestaTimer> elem1 ,std::pair<std::string, fiestaTimer> elem2)
+            {
+                return elem1.second.get() > elem2.second.get();
+            };
+ 
+    std::set<std::pair<std::string, fiestaTimer>, Comparator> stmr(
+            f->timers.begin(), f->timers.end(), compFunctor);
+ 
     totalTimer.stop();
     if (cf.rank == 0){
         cout << endl << "-----------------------" << endl << endl;
         cout.precision(2);
-        cout << setw(36) << left << "Total Time:" << right << " " << totalTimer.getf() << endl;
-        cout << setw(36) << left << "Setup Time:" << right << " " << initTimer.getf() << endl;
-        cout << "    " << setw(32) << left << "Initial Condition Generation:" << right << " " << loadTimer.getf() << endl;
-        cout << setw(36) << left << "Sim Time:" << right << " " << simTimer.getf() << endl;
-        cout << "    " << setw(32) << left << "Solution write Time:" << right << " " << solWriteTimer.getf() << endl;
-        cout << "    " << setw(32) << left << "Restart write Time:" << right << " " << resWriteTimer.getf() << endl;
-        for (auto tmr : f->timers){
-            cout << "    " << setw(32) << left << tmr.second.describe()+":"<< right << " " << tmr.second.getf() << endl;
+        cout << c(GRE) << left  << setw(36) << "Total Time:"     << c(NON) 
+             << c(CYA) << right << setw(13) << totalTimer.getf() << c(NON) << endl << endl;
+
+        cout << c(GRE) << left  << setw(36) << "Setup Time:"    << c(NON)
+             << c(CYA) << right << setw(13) << initTimer.getf() << c(NON) << endl;
+        cout << c(NON) << left  << setw(36) << "    Initial Condition Generation:" << c(NON)
+             << c(CYA) << right << setw(13) << loadTimer.getf()                    << c(NON) << endl << endl;
+
+        //cout << c(GRE) << left  << setw(36) << "Write Times:"  << c(NON)
+        //     << c(CYA) << right << setw(8)  << simTimer.getf() << c(NON) << endl;
+        //cout << c(NON) << left  << setw(36) << "    Solution write Time:" << c(NON)
+        //     << c(CYA) << right << setw(8)  << solWriteTimer.getf()   << c(NON) << endl;
+        //cout << c(NON) << left  << setw(36) << "    Restart write Time:" << c(NON)
+        //     << c(CYA) << right << setw(8)  << resWriteTimer.getf()      << c(NON) << endl << endl;
+
+        cout << c(GRE) << left  << setw(36) << "Simulation Time:" << c(NON)
+             << c(CYA) << right << setw(13) << simTimer.getf() << c(NON) << endl;
+        for (auto tmr : stmr){
+            cout << c(NON) << left  << setw(36) << "    "+tmr.second.describe()+":" << c(NON)
+                 << c(CYA) << right << setw(13) << tmr.second.getf()                << c(NON) << endl;
         }
     }
 

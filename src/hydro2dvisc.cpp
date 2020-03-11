@@ -310,6 +310,8 @@ hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*
     timers["flux"]       = fiestaTimer("Flux Calculation");
     timers["pressgrad"]  = fiestaTimer("Pressure Gradient Calculation");
     timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
+    timers["solWrite"] = fiestaTimer("Solution Write Time");
+    timers["resWrite"] = fiestaTimer("Restart Write Time");
     if (cf.visc == 1){
         timers["stress"]     = fiestaTimer("Stress Tensor Computation");
         timers["qflux"]      = fiestaTimer("Heat Flux Calculation");
