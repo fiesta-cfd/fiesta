@@ -26,6 +26,7 @@ void fnExit1(void){
 }
 
 int main(int argc, char* argv[]){
+    // INITIALIZE
     MPI_Init(NULL,NULL);
 
     int temp_rank;
@@ -40,8 +41,8 @@ int main(int argc, char* argv[]){
     fiestaTimer solWriteTimer;
     fiestaTimer simTimer;
     fiestaTimer loadTimer;
-    fiestaTimer readTimer;
     fiestaTimer resWriteTimer;
+    fiestaTimer gridTimer;
 
 
     atexit(fnExit1);
@@ -49,6 +50,8 @@ int main(int argc, char* argv[]){
     int idx;
 
     struct inputConfig cf;
+
+    // CONFIGURE
 
     cf = executeConfiguration(argc,argv);
 
@@ -92,19 +95,18 @@ int main(int argc, char* argv[]){
     //    else
     //        f = new hydro2d_func(cf,cd);
     //}
-    
+   
     MPI_Barrier(cf.comm);
     if (cf.restart == 0){
-        if (cf.rank == 0) printf("\nGenerating Initial Conditions...\n");
-        loadTimer.reset();
+        if (cf.rank == 0) cout << c(GRE) << "Generating Initial Conditions:" << c(NON) << endl;
+        loadTimer.start();
         loadInitialConditions(cf,f->var);
         loadTimer.stop();
+        cout << "    Generated in: " << c(CYA) << loadTimer.getf() << c(NON) << endl << endl;
     }
 
-    if (cf.rank == 0){
-        printf("    Generated Initial Conditions in %.1fs\n",loadTimer.get());
-    }
-
+    if (cf.rank == 0) cout << c(GRE) << "Generating Grid:" << c(NON) << endl;
+    gridTimer.start();
     /* allocate grid coordinate and flow variables */
     double *x = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
     double *y = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
@@ -130,6 +132,9 @@ int main(int argc, char* argv[]){
             }
         }
     }
+    gridTimer.stop();
+    if (cf.rank == 0)
+        cout << "    Generated in: " << c(CYA) << gridTimer.getf() << c(NON) << endl << endl;
     
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_1;
     
@@ -140,15 +145,15 @@ int main(int argc, char* argv[]){
 
     /*** Read Restart or Write initial conditions ***/
     if (cf.restart == 1){
-        if (cf.rank == 0) printf("\nLoading Restart File...\n");
-        readTimer.reset();
+        if (cf.rank == 0) cout << c(GRE) << "Loading Restart File:" << c(NON) << endl;
+        loadTimer.reset();
         readSolution(cf,f->var);
-        readTimer.stop();
-        cout << "    Loaded restart file in " << setprecision(2) << readTimer.get() << "s" << endl;
+        loadTimer.stop();
+        cout << "    Loaded in: " << setprecision(2) << c(CYA) << loadTimer.get() << "s" << c(NON) << endl;
     }else{
         if (cf.rank == 0)
             if (cf.write_freq >0 || cf.restart_freq>0)
-                printf("\nWriting Initial Conditions...\n");
+                cout << c(GRE) << "Writing Initial Conditions:" << c(NON) << endl;
         if (cf.write_freq >0){
             solWriteTimer.reset();
             writeSolution(cf,xSP,ySP,zSP,f->var,0,0.00);
@@ -161,9 +166,9 @@ int main(int argc, char* argv[]){
         }
         if (cf.rank == 0)
             if (cf.write_freq >0 || cf.restart_freq>0)
-                cout << "    Wrote initial conditions in "
-                     << solWriteTimer.get() + resWriteTimer.get()
-                     << "s" << endl;
+                cout << "    Wrote in:"
+                     << c(CYA) << solWriteTimer.get() + resWriteTimer.get()
+                     << "s" << c(NON) << endl;
     }
 
 
@@ -260,8 +265,15 @@ int main(int argc, char* argv[]){
 
         cout << c(GRE) << left  << setw(36) << "  Setup Time:"    << c(NON)
              << c(CYA) << right << setw(13) << initTimer.getf() << c(NON) << endl;
-        cout << c(NON) << left  << setw(36) << "    Initial Condition Generation:" << c(NON)
-             << c(CYA) << right << setw(13) << loadTimer.getf()                    << c(NON) << endl << endl;
+        if(cf.restart == 1) 
+            cout << c(NON) << left  << setw(36) << "    Restart Read:" << c(NON)
+                 << c(CYA) << right << setw(13) << loadTimer.getf()                    << c(NON) << endl << endl;
+        else{
+            cout << c(NON) << left  << setw(36) << "    Initial Condition Generation:" << c(NON)
+                 << c(CYA) << right << setw(13) << loadTimer.getf()                    << c(NON) << endl;
+            cout << c(NON) << left  << setw(36) << "    Grid Generation:" << c(NON)
+                 << c(CYA) << right << setw(13) << gridTimer.getf()                    << c(NON) << endl << endl;
+        }
 
         //cout << c(GRE) << left  << setw(36) << "Write Times:"  << c(NON)
         //     << c(CYA) << right << setw(8)  << simTimer.getf() << c(NON) << endl;

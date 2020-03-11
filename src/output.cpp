@@ -42,85 +42,93 @@ string c(Color color){
 //#define c(NON) "\033[0m"
 
 void printSplash(){
-    //cout << R"(--------------------------------------)" << endl;
-    //cout << R"(|     _____ _           _            |)" << endl;
-    //cout << R"(|    |  ___(_) ___  ___| |_ __ _     |)" << endl;
-    //cout << R"(|    | |_  | |/ _ \/ __| __/ _` |    |)" << endl;
-    //cout << R"(|    |  _| | |  __/\__ \ || (_| |    |)" << endl;
-    //cout << R"(|    |_|   |_|\___||___/\__\__,_|    |)" << endl;
-    //cout << R"(|                                    |)" << endl;
-    //cout << R"(--------------------------------------)" << endl;
-    cout << "----" << c(NON) << R"(------------------------------)" << c(NON) << "----" << endl;
-    cout << "|   " << c(RED) << R"(  _____ _           _         )" << c(NON) << "   |" << endl;
-    cout << "|   " << c(RED) << R"( |  ___(_) ___  ___| |_ __ _  )" << c(NON) << "   |" << endl;
-    cout << "|   " << c(RED) << R"( | |_  | |/ _ \/ __| __/ _` | )" << c(NON) << "   |" << endl;
-    cout << "|   " << c(RED) << R"( |  _| | |  __/\__ \ || (_| | )" << c(NON) << "   |" << endl;
-    cout << "|   " << c(RED) << R"( |_|   |_|\___||___/\__\__,_| )" << c(NON) << "   |" << endl;
-    cout << "|   " << c(RED) << R"(                              )" << c(NON) << "   |" << endl;
-    cout << "----" << c(NON) << R"(------------------------------)" << c(NON) << "----" << endl;
+    //cout << "----" << c(NON) << R"(------------------------------)" << c(NON) << "----" << endl;
+    //cout << "|   " << c(RED) << R"(  _____ _           _         )" << c(NON) << "   |" << endl;
+    //cout << "|   " << c(RED) << R"( |  ___(_) ___  ___| |_ __ _  )" << c(NON) << "   |" << endl;
+    //cout << "|   " << c(RED) << R"( | |_  | |/ _ \/ __| __/ _` | )" << c(NON) << "   |" << endl;
+    //cout << "|   " << c(RED) << R"( |  _| | |  __/\__ \ || (_| | )" << c(NON) << "   |" << endl;
+    //cout << "|   " << c(RED) << R"( |_|   |_|\___||___/\__\__,_| )" << c(NON) << "   |" << endl;
+    //cout << "|   " << c(RED) << R"(                              )" << c(NON) << "   |" << endl;
+    //cout << "----" << c(NON) << R"(------------------------------)" << c(NON) << "----" << endl;
+
+    cout << " " << endl;
+    cout << c(RED) << R"(   _____ _           _         )" << c(NON) << endl;
+    cout << c(RED) << R"(  |  ___(_) ___  ___| |_ __ _  )" << c(NON) << endl;
+    cout << c(RED) << R"(  | |_  | |/ _ \/ __| __/ _` | )" << c(NON) << endl;
+    cout << c(RED) << R"(  |  _| | |  __/\__ \ || (_| | )" << c(NON) << endl;
+    cout << c(RED) << R"(  |_|   |_|\___||___/\__\__,_| )" << c(NON) << endl;
+    cout << c(RED) << R"(                               )" << c(NON) << endl;
+    cout << "-----------------------" << endl << endl;
 }
 
 void printConfig(struct inputConfig cf){
 
     cout.precision(2);
 
-    std::cout << endl << "Input File Name: " << c(CYA) << "'" << cf.inputFname << "'" << c(NON) << "'" << endl << endl;
+    cout << "Title: " << c(BLU) << cf.title << c(NON) << endl;
+    cout << "Input File Name: " << c(CYA) << "'" << cf.inputFname << "'" << c(NON) << endl << endl;
+
+    cout << "-----------------------" << endl << endl;
 
     // Restart Options
     cout << c(GRE) << "Restart:" << c(NON) << endl;
     if (cf.restart){
         cout << "    Running from Restart File: " << c(CYA) << "'" << cf.sfName << "'" << c(NON) << endl;
-        cout << "    Start Time is " << scientific << cf.time << endl;
-        cout << "    Start Index is " << cf.tstart << endl;
+        cout << "    Start Time:  " << scientific << c(CYA) << cf.time << c(NON) << endl;
+        cout << "    Start Index: " << c(CYA) << cf.tstart << c(NON) << endl;
     }else
         cout << "    Not running from a restart" << endl;
 
     // Output Frequencies
     cout << c(GRE) << "Output:" << c(NON) << endl;
     if (cf.out_freq > 0)
-        cout << setw(36) << left << "    Output frequency: " << c(CYA) << right << setw(5) << cf.out_freq << c(NON) << endl;
+        cout << setw(28) << left << "    Output frequency: " << c(CYA) << right << setw(0) << cf.out_freq << c(NON) << endl;
     else
-        cout << setw(36) << left << "    Output " << YEL << "disabled" << c(NON) << endl;
+        cout << setw(19) << left << "    Output " << c(YEL) << "disabled" << c(NON) << endl;
     if (cf.write_freq > 0)
-        cout << setw(36) << left << "    CGNS write frequency: "  << c(CYA) << right << setw(5) << cf.write_freq << c(NON) << endl;
+        cout << setw(28) << left << "    CGNS write frequency: "  << c(CYA) << right << setw(0) << cf.write_freq << c(NON) << endl;
     else
-        cout << setw(36) << left << "    CGNS writes " << YEL << "disabled" << c(NON) << endl;
+        cout << setw(19) << left << "    CGNS writes " << c(YEL) << "disabled" << c(NON) << endl;
     if (cf.restart_freq > 0)
-        cout << setw(36) << left << "    Restart write frequency: " << c(CYA) << right << setw(5) << cf.restart_freq << c(NON) << endl;
+        cout << setw(28) << left << "    Restart write frequency: " << c(CYA) << right << setw(0) << cf.restart_freq << c(NON) << endl;
     else
-        cout << setw(36) << left << "    Restart writes " << YEL << "disabled" << c(NON) << endl;
+        cout << setw(19) << left << "    Restart writes " << c(YEL) << "disabled" << c(NON) << endl;
 
     // Discretization
     cout << c(GRE) << "Discretization:" << c(NON) << endl;
-    cout << "    Running " << cf.numProcs << " processes as ("
-         << cf.xProcs << "," << cf.yProcs << "," << cf.zProcs << ")" << endl;
-    cout << "    tstart = "<< cf.tstart << ", nt = " << cf.nt << ", tend = "
-         << cf.tend << ", dt = " << scientific << cf.dt << endl;
-    cout << "    Num Cells X = " << cf.glbl_nci << ", dx = " << scientific << cf.dx << endl;
-    cout << "    Num Cells Y = " << cf.glbl_ncj << ", dy = " << scientific << cf.dy << endl;
+    cout << "    Running " << c(CYA) << cf.numProcs << c(NON) << " processes as ("
+         << c(CYA) << cf.xProcs << c(NON) << ","
+         << c(CYA) << cf.yProcs << c(NON) << ","
+         << c(CYA) << cf.zProcs << c(NON) << ")" << endl;
+
+    cout << "    tstart = "<< c(CYA) << cf.tstart << c(NON) << ", nt = " << c(CYA) << cf.nt << c(NON) << ", tend = "
+         << c(CYA) << cf.tend << c(NON) << ", dt = " << scientific << c(CYA) << cf.dt << c(NON) << endl;
+
+    cout << "    Num Cells X = " << c(CYA) << cf.glbl_nci << c(NON) << ", dx = " << scientific << c(CYA) << cf.dx <<  c(NON) << endl;
+    cout << "    Num Cells Y = " << c(CYA) << cf.glbl_ncj << c(NON) << ", dy = " << scientific << c(CYA) << cf.dy <<  c(NON) << endl;
     if (cf.ndim == 3)
-        cout << "    Num Cells Z = " << cf.glbl_nck << ", dz = " << scientific << cf.dz << endl;
-    cout << "    Num Cells Total: " << scientific << (double)cf.glbl_nck*cf.glbl_ncj*cf.glbl_nci << endl;
+        cout << "    Num Cells Z = " << c(CYA) << cf.glbl_nck << c(NON) << ", dz = " << scientific << c(CYA) << cf.dz << c(NON)<< endl;
+    cout << "    Num Cells Total: " << scientific << c(CYA) << (double)cf.glbl_nck*cf.glbl_ncj*cf.glbl_nci << c(NON) << endl;
 
     cout << c(GRE) << "Options:" << c(NON) << endl;
     if (cf.scheme == 1)
-        cout << "    USing 5th order weno scheme" << endl;
+        cout << "    Using 5th order weno scheme" << endl;
     if (cf.scheme == 2)
         cout << "    Using 4th order centered scheme" << endl;
     if (cf.visc)
-        cout << "    Viscosity enabled" << endl;
+        cout << setw(15) << left << "    Viscosity " << c(YEL) << "enabled" <<c(NON) <<  endl;
     else
-        cout << "    Viscosity disabled" << endl;
+        cout << setw(15) << left << "    Viscosity disabled" << endl;
     // C-Equations
     if (cf.ceq)
-        cout << "    C-Equation enabled" << endl;
+        cout << setw(15) << left << "    C-Equation " << c(YEL) << "enabled" << c(NON) << endl;
     else
-        cout << "    C-Equation disabled" << endl;
+        cout << setw(15) << left << "    C-Equation " << "disabled" << endl;
 
 
     // Gas Properties
     cout << c(GRE) << "Gas Properties:" << c(NON) << endl;
-    cout << "    Number of Species = " << cf.ns << ":" << endl;
+    cout << "    Number of Species = " << c(CYA) << cf.ns << c(NON) << ":" << endl;
     for (int s=0; s<cf.ns; ++s)
         cout << "    Species " << s+1 
              << ", Gamma = " << setw(4) << setprecision(3) << fixed      << c(CYA) << cf.gamma[s] << c(NON)
@@ -129,5 +137,5 @@ void printConfig(struct inputConfig cf){
              << endl;
         //printf("    Species %d, Gamma = %4.2f, M = %6.4f\n",s+1,cf.gamma[s],cf.M[s]);
 
-    cout << endl << "-----------------------" << endl << flush;
+    cout << endl << "-----------------------" << endl << endl << flush;
 }

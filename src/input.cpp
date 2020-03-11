@@ -102,6 +102,7 @@ struct inputConfig executeConfiguration(int argc, char * argv[]){
     cf.restart     = getglobint (L, "restart");
     cf.sfName      = getglobstr (L, "restartName");
     std::string scheme(getglobstr (L, "scheme"));
+    std::string title(getglobstr (L, "title"));
     cf.tstart      = getglobint (L, "tstart");
     cf.time        = getglobdbl (L, "time");
     cf.ceq         = getglobdbl (L, "ceq");
@@ -123,6 +124,8 @@ struct inputConfig executeConfiguration(int argc, char * argv[]){
     cf.M = (double*)malloc(cf.ns*sizeof(double));
     cf.mu = (double*)malloc(cf.ns*sizeof(double));
     cf.tend = cf.tstart+cf.nt;
+
+    cf.title = title;
 
     cf.scheme = 1;
     if (scheme.compare("weno5"))
