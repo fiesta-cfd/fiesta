@@ -169,9 +169,7 @@ int main(int argc, char* argv[]){
         writeTimer.stop();
         if (cf.rank == 0)
             if (cf.write_freq >0 || cf.restart_freq>0)
-                cout << "    Wrote in: "
-                     << c(CYA) << writeTimer.get() + resWriteTimer.get()
-                     << "s" << c(NON) << endl;
+                cout << "    Wrote in: " << c(CYA) << writeTimer.getf() << c(NON) << endl;
     }
 
 
@@ -275,7 +273,7 @@ int main(int argc, char* argv[]){
             cout << c(NON) << left  << setw(36) << "    Initial Condition Generation:" << c(NON)
                  << c(CYA) << right << setw(13) << loadTimer.getf()                    << c(NON) << endl;
             cout << c(NON) << left  << setw(36) << "    Grid Generation:" << c(NON)
-                 << c(CYA) << right << setw(13) << gridTimer.getf()                    << c(NON) << endl << endl;
+                 << c(CYA) << right << setw(13) << gridTimer.getf()                    << c(NON) << endl;
             cout << c(NON) << left  << setw(36) << "    Initial Consition WriteTime:" << c(NON)
                  << c(CYA) << right << setw(13) << writeTimer.getf()                    << c(NON) << endl << endl;
         }
