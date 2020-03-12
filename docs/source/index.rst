@@ -6,6 +6,9 @@
 Welcome to Fiesta's documentation!
 ==================================
 
+Documentation for Fiesta
+
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:

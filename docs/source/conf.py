@@ -22,7 +22,7 @@ copyright = '2020, Brian Romero'
 author = 'Brian Romero'
 
 # The full version, including alpha/beta/rc tags
-release = 'February 7, 2020'
+release = '1.0.0'
 
 
 # -- General configuration ---------------------------------------------------
