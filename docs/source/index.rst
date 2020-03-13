@@ -11,7 +11,16 @@ Documentation for Fiesta
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: User Documentation
+   :hidden:
+    
+   input.rst
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Developer Documentation
+
+   variables.rst
 
 
 
