@@ -101,6 +101,8 @@ struct inputConfig executeConfiguration(int argc, char * argv[]){
     cf.bcT         = getglobint (L, "bcYmax" );
     cf.restart     = getglobint (L, "restart");
     cf.sfName      = getglobstr (L, "restartName");
+    std::string scheme(getglobstr (L, "scheme"));
+    std::string title(getglobstr (L, "title"));
     cf.tstart      = getglobint (L, "tstart");
     cf.time        = getglobdbl (L, "time");
     cf.ceq         = getglobdbl (L, "ceq");
@@ -120,7 +122,16 @@ struct inputConfig executeConfiguration(int argc, char * argv[]){
 
     cf.gamma = (double*)malloc(cf.ns*sizeof(double));
     cf.M = (double*)malloc(cf.ns*sizeof(double));
+    cf.mu = (double*)malloc(cf.ns*sizeof(double));
     cf.tend = cf.tstart+cf.nt;
+
+    cf.title = title;
+
+    cf.scheme = 1;
+    if (scheme.compare("weno5"))
+        cf.scheme = 1;
+    if (scheme.compare("centered4"))
+        cf.scheme = 2;
 
     int isnum;
 
@@ -136,6 +147,13 @@ struct inputConfig executeConfiguration(int argc, char * argv[]){
         lua_pushnumber(L, s+1);
         lua_gettable(L, -2);
         cf.M[s] = (double)lua_tonumberx(L, -1, &isnum);
+        lua_pop(L,1);
+    }
+    lua_getglobal(L, "M");
+    for (int s=0; s<cf.ns; ++s){
+        lua_pushnumber(L, s+1);
+        lua_gettable(L, -2);
+        cf.mu[s] = (double)lua_tonumberx(L, -1, &isnum);
         lua_pop(L,1);
     }
 
@@ -158,6 +176,9 @@ struct inputConfig executeConfiguration(int argc, char * argv[]){
         cf.bcF = 0;
         cf.zPer = 0;
     }
+
+    cf.nvt = cf.nv;
+    if (cf.ceq == 1) cf.nvt += 5;
 
     /* calculate number of nodes from number of cells */
     cf.glbl_ni = cf.glbl_nci + 1;

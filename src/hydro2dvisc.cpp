@@ -36,8 +36,8 @@ struct calculateRhoAndPressure2dv {
 
         // Calculate mixture ratio of specific heats
         for (int s=0; s<ns; ++s){
-            gammas = cd(5+2*s);
-            Rs = cd(5+2*s+1);
+            gammas = cd(5+3*s);
+            Rs = cd(5+3*s+1);
 
             // accumulate mixture heat capacity by mass fraction weights
             Cp = Cp + (var(i,j,0,3+s)/rho(i,j))*( gammas*Rs/(gammas-1) );
@@ -134,9 +134,19 @@ struct calculateStressTensor2dv {
         double mu2 = 1.610e-5;
         double dudx,dvdy,dudy,dvdx;
 
-        double muij = (var(i,j,0,3)*mu1 + var(i,j,0,4)*mu2)/rho(i,j);
-        double muip = (var(i+1,j,0,3)*mu1 + var(i+1,j,0,4)*mu2)/rho(i+1,j);
-        double mujp = (var(i,j+1,0,3)*mu1 + var(i,j+1,0,4)*mu2)/rho(i,j+1);
+    double muij = 0.0;
+    double muip = 0.0;
+    double mujp = 0.0;
+
+        for (int s=0; s<ns; ++s){
+            muij += var(i, j, 0,3+s)*cd(5+3*s+2)/rho(i,j);
+            muip += var(i+1,j,0,3+s)*cd(5+3*s+2)/rho(i+1,j);
+            mujp += var(i,j+1,0,3+s)*cd(5+3*s+2)/rho(i,j+1);
+        }
+
+        //double muij = (var(i,j,0,3)*mu1 + var(i,j,0,4)*mu2)/rho(i,j);
+        //double muip = (var(i+1,j,0,3)*mu1 + var(i+1,j,0,4)*mu2)/rho(i+1,j);
+        //double mujp = (var(i,j+1,0,3)*mu1 + var(i,j+1,0,4)*mu2)/rho(i,j+1);
 
         double mur = (muip + muij)/2;
         double mut = (mujp + muij)/2;
@@ -158,9 +168,9 @@ struct calculateStressTensor2dv {
         dudy = ( (var(i+1,j+1,0,0)/rho(i+1,j+1) + var(i,j+1,0,0)/rho(i,j+1))
                 -(var(i+1,j-1,0,0)/rho(i+1,j-1) + var(i,j-1,0,0)/rho(i,j-1)) )/(4.0*dy);
         
-        //stressx(i,j,0,0) = (4.0/3.0)*mu*dudx;
+        //stressx(i,j,0,0) = (4.0/3.0)*mur*dudx;
         //stressx(i,j,0,0) = mu*dudx;
-        //stressx(i,j,0,0) = (2.0/3.0)*mu*(2.0*dudx-dvdy);
+        stressx(i,j,0,0) = (2.0/3.0)*mur*(2.0*dudx-dvdy);
         //stressx(i,j,0,1) = 0.0;
         //stressx(i,j,1,0) = 0.0;
         //stressx(i,j,1,1) = 0.0;
@@ -186,9 +196,9 @@ struct calculateStressTensor2dv {
 
         dudy = (var(i,j+1,0,0)/rho(i,j+1) - var(i,j,0,0)/rho(i,j))/dy;
 
-        //stressy(i,j,0,0) = (2.0/3.0)*rhoy*mu*(2.0*dudx);
+        //stressy(i,j,0,0) = (2.0/3.0)*rhoy*mut*(2.0*dudx);
         //stressy(i,j,0,0) = 0.0;
-        //stressy(i,j,0,0) = (2.0/3.0)*mu*(2.0*dudx-dvdy);
+        stressy(i,j,0,0) = (2.0/3.0)*mut*(2.0*dudx-dvdy);
         //stressy(i,j,0,1) = 0.0;
         //stressy(i,j,1,0) = 0.0;
         //stressy(i,j,1,1) = 0.0;
@@ -282,28 +292,31 @@ struct applyViscousTerm2dv {
 
 hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){
     
-    var     = Kokkos::View<double****,FS_LAYOUT>("var",cf.ngi,cf.ngj,cf.ngk,cf.nv); // Primary Variable Array
-    tmp1    = Kokkos::View<double****,FS_LAYOUT>("tmp1",cf.ngi,cf.ngj,cf.ngk,cf.nv); // Temporary Variable Arrayr1
-    tmp2    = Kokkos::View<double****,FS_LAYOUT>("tmp2",cf.ngi,cf.ngj,cf.ngk,cf.nv); // Temporary Variable Array2
-    dvar    = Kokkos::View<double****,FS_LAYOUT>("dvar",cf.ngi,cf.ngj,cf.ngk,cf.nv); // RHS Output
-    p       = Kokkos::View<double**,FS_LAYOUT>("p",cf.ngi,cf.ngj);          // Pressure
-    T       = Kokkos::View<double**,FS_LAYOUT>("T",cf.ngi,cf.ngj);          // Pressure
-    rho     = Kokkos::View<double**,FS_LAYOUT>("rho",cf.ngi,cf.ngj);      // Total Density
-    qx      = Kokkos::View<double**,FS_LAYOUT>("qx",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
-    qy      = Kokkos::View<double**,FS_LAYOUT>("qy",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
-    fluxx   = Kokkos::View<double**,FS_LAYOUT>("fluxx",cf.ngi,cf.ngj);  // Weno Fluxes in X direction
-    fluxy   = Kokkos::View<double**,FS_LAYOUT>("fluxy",cf.ngi,cf.ngj);  // Weno Fluxes in Y direction
-    stressx = Kokkos::View<double****,FS_LAYOUT>("stressx",cf.ngi,cf.ngj,2,2);  // stress tensor on x faces
-    stressy = Kokkos::View<double****,FS_LAYOUT>("stressy",cf.ngi,cf.ngj,2,2);  // stress tensor on y faces
+    var     = Kokkos::View<double****,FS_LAYOUT>("var",    cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Primary Variable Array
+    tmp1    = Kokkos::View<double****,FS_LAYOUT>("tmp1",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Arrayr1
+    tmp2    = Kokkos::View<double****,FS_LAYOUT>("tmp2",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Array2
+    dvar    = Kokkos::View<double****,FS_LAYOUT>("dvar",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // RHS Output
+    p       = Kokkos::View<double**  ,FS_LAYOUT>("p",      cf.ngi,cf.ngj);                 // Pressure
+    T       = Kokkos::View<double**  ,FS_LAYOUT>("T",      cf.ngi,cf.ngj);                 // Temperature
+    rho     = Kokkos::View<double**  ,FS_LAYOUT>("rho",    cf.ngi,cf.ngj);                 // Total Density
+    qx      = Kokkos::View<double**  ,FS_LAYOUT>("qx",     cf.ngi,cf.ngj);                 // Heat Fluxes in X direction
+    qy      = Kokkos::View<double**  ,FS_LAYOUT>("qy",     cf.ngi,cf.ngj);                 // Heat Fluxes in X direction
+    fluxx   = Kokkos::View<double**  ,FS_LAYOUT>("fluxx",  cf.ngi,cf.ngj);                 // Advective Fluxes in X direction
+    fluxy   = Kokkos::View<double**  ,FS_LAYOUT>("fluxy",  cf.ngi,cf.ngj);                 // Advective Fluxes in Y direction
+    stressx = Kokkos::View<double****,FS_LAYOUT>("stressx",cf.ngi,cf.ngj,2,2);             // stress tensor on x faces
+    stressy = Kokkos::View<double****,FS_LAYOUT>("stressy",cf.ngi,cf.ngj,2,2);             // stress tensor on y faces
     cd = mcd;
 
-    timers["flux"] = fiestaTimer("Flux Calculation");
-    timers["pressgrad"] = fiestaTimer("Pressure Gradient Calculation");
+    timers["flux"]       = fiestaTimer("Flux Calculation");
+    timers["pressgrad"]  = fiestaTimer("Pressure Gradient Calculation");
     timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
-    timers["stress"] = fiestaTimer("Stress Tensor Computation");
-    timers["qflux"] = fiestaTimer("Heat Flux Calculation");
-    timers["visc"] = fiestaTimer("Viscous Term Calculation");
-
+    timers["solWrite"] = fiestaTimer("Solution Write Time");
+    timers["resWrite"] = fiestaTimer("Restart Write Time");
+    if (cf.visc == 1){
+        timers["stress"]     = fiestaTimer("Stress Tensor Computation");
+        timers["qflux"]      = fiestaTimer("Heat Flux Calculation");
+        timers["visc"]       = fiestaTimer("Viscous Term Calculation");
+    }
 };
 
 void hydro2dvisc_func::compute(){
@@ -321,7 +334,10 @@ void hydro2dvisc_func::compute(){
     // Calculate and apply weno fluxes for each variable
     for (int v=0; v<cf.nv; ++v){
         timers["flux"].reset();
-        Kokkos::parallel_for( face_pol, computeFluxCentered2D(var,p,rho,fluxx,fluxy,cd,v) );
+        if (cf.scheme == 2)
+            Kokkos::parallel_for( face_pol, computeFluxCentered2D(var,p,rho,fluxx,fluxy,cd,v) );
+        else
+            Kokkos::parallel_for( face_pol, computeFluxWeno2D(var,p,rho,fluxx,fluxy,cd,v) );
         Kokkos::parallel_for( cell_pol, advect2dv(dvar,fluxx,fluxy,cd,v) );
         timers["flux"].accumulate();
     }
@@ -331,15 +347,17 @@ void hydro2dvisc_func::compute(){
     Kokkos::parallel_for( cell_pol, applyPressure2dv(dvar,p,cd) );
     timers["pressgrad"].accumulate();
 
-    timers["stress"].reset();
-    Kokkos::parallel_for( face_pol, calculateStressTensor2dv(var,rho,T,stressx,stressy,cd) );
-    timers["stress"].accumulate();
+    if (cf.visc == 1){
+        timers["stress"].reset();
+        Kokkos::parallel_for( face_pol, calculateStressTensor2dv(var,rho,T,stressx,stressy,cd) );
+        timers["stress"].accumulate();
 
-    timers["qflux"].reset();
-    Kokkos::parallel_for( face_pol, calculateHeatFlux2dv(var,rho,T,qx,qy,cd) );
-    timers["qflux"].accumulate();
+        timers["qflux"].reset();
+        Kokkos::parallel_for( face_pol, calculateHeatFlux2dv(var,rho,T,qx,qy,cd) );
+        timers["qflux"].accumulate();
 
-    timers["visc"].reset();
-    Kokkos::parallel_for( cell_pol, applyViscousTerm2dv(dvar,var,rho,stressx,stressy,qx,qy,cd) );
-    timers["visc"].accumulate();
+        timers["visc"].reset();
+        Kokkos::parallel_for( cell_pol, applyViscousTerm2dv(dvar,var,rho,stressx,stressy,qx,qy,cd) );
+        timers["visc"].accumulate();
+    }
 }

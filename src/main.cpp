@@ -7,7 +7,7 @@
 #include <mpi.h>
 #include "debug.hpp"
 //#include "hydroc3d.hpp"
-#include "hydro2d.hpp"
+//#include "hydro2d.hpp"
 #include "hydro2dvisc.hpp"
 #include "rkfunction.hpp"
 #include <iostream>
@@ -16,6 +16,7 @@
 #include "output.hpp"
 #include <iomanip>
 #include "timer.hpp"
+#include <set>
 
 using namespace std;
 
@@ -25,6 +26,7 @@ void fnExit1(void){
 }
 
 int main(int argc, char* argv[]){
+    // INITIALIZE
     MPI_Init(NULL,NULL);
 
     int temp_rank;
@@ -39,8 +41,9 @@ int main(int argc, char* argv[]){
     fiestaTimer solWriteTimer;
     fiestaTimer simTimer;
     fiestaTimer loadTimer;
-    fiestaTimer readTimer;
     fiestaTimer resWriteTimer;
+    fiestaTimer gridTimer;
+    fiestaTimer writeTimer;
 
 
     atexit(fnExit1);
@@ -48,6 +51,8 @@ int main(int argc, char* argv[]){
     int idx;
 
     struct inputConfig cf;
+
+    // CONFIGURE
 
     cf = executeConfiguration(argc,argv);
 
@@ -58,7 +63,7 @@ int main(int argc, char* argv[]){
     if (cf.ceq == 1)
         cv = 5;
         
-    Kokkos::View<double*> cd("deviceCF",5+cf.ns*2);
+    Kokkos::View<double*> cd("deviceCF",5+cf.ns*3);
     typename Kokkos::View<double*>::HostMirror hostcd = Kokkos::create_mirror_view(cd);
     Kokkos::deep_copy(hostcd, cd);
     hostcd(0) = cf.ns;
@@ -71,7 +76,8 @@ int main(int argc, char* argv[]){
     for (int s=0; s<cf.ns; ++s){
         hostcd(sdx) = cf.gamma[s];
         hostcd(sdx+1) = cf.R/cf.M[s];
-        sdx += 2;
+        hostcd(sdx+2) = cf.mu[s];
+        sdx += 3;
     }
     Kokkos::deep_copy(cd,hostcd);
 
@@ -85,24 +91,23 @@ int main(int argc, char* argv[]){
     //if (cf.ndim == 3){
     //    f = new hydroc3d_func(cf,cd);
     //}else{
-        if (cf.visc == 1)
+    //    if (cf.visc == 1 || cf.ceq == 1)
             f = new hydro2dvisc_func(cf,cd);
-        else
-            f = new hydro2d_func(cf,cd);
+    //    else
+    //        f = new hydro2d_func(cf,cd);
     //}
-    
+   
     MPI_Barrier(cf.comm);
     if (cf.restart == 0){
-        if (cf.rank == 0) printf("\nGenerating Initial Conditions...\n");
-        loadTimer.reset();
+        if (cf.rank == 0) cout << c(GRE) << "Generating Initial Conditions:" << c(NON) << endl;
+        loadTimer.start();
         loadInitialConditions(cf,f->var);
         loadTimer.stop();
+        cout << "    Generated in: " << c(CYA) << loadTimer.getf() << c(NON) << endl << endl;
     }
 
-    if (cf.rank == 0){
-        printf("    Generated Initial Conditions in %.1fs\n",loadTimer.get());
-    }
-
+    if (cf.rank == 0) cout << c(GRE) << "Generating Grid:" << c(NON) << endl;
+    gridTimer.start();
     /* allocate grid coordinate and flow variables */
     double *x = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
     double *y = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
@@ -128,6 +133,9 @@ int main(int argc, char* argv[]){
             }
         }
     }
+    gridTimer.stop();
+    if (cf.rank == 0)
+        cout << "    Generated in: " << c(CYA) << gridTimer.getf() << c(NON) << endl << endl;
     
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_1;
     
@@ -138,15 +146,16 @@ int main(int argc, char* argv[]){
 
     /*** Read Restart or Write initial conditions ***/
     if (cf.restart == 1){
-        if (cf.rank == 0) printf("\nLoading Restart File...\n");
-        readTimer.reset();
+        if (cf.rank == 0) cout << c(GRE) << "Loading Restart File:" << c(NON) << endl;
+        loadTimer.reset();
         readSolution(cf,f->var);
-        readTimer.stop();
-        cout << "    Loaded restart file in " << setprecision(2) << readTimer.get() << "s" << endl;
+        loadTimer.stop();
+        cout << "    Loaded in: " << setprecision(2) << c(CYA) << loadTimer.get() << "s" << c(NON) << endl;
     }else{
         if (cf.rank == 0)
             if (cf.write_freq >0 || cf.restart_freq>0)
-                printf("\nWriting Initial Conditions...\n");
+                cout << c(GRE) << "Writing Initial Conditions:" << c(NON) << endl;
+        writeTimer.start();
         if (cf.write_freq >0){
             solWriteTimer.reset();
             writeSolution(cf,xSP,ySP,zSP,f->var,0,0.00);
@@ -157,11 +166,10 @@ int main(int argc, char* argv[]){
             writeRestart(cf,x,y,z,f->var,0,0.00);
             resWriteTimer.accumulate();
         }
+        writeTimer.stop();
         if (cf.rank == 0)
             if (cf.write_freq >0 || cf.restart_freq>0)
-                cout << "    Wrote initial conditions in "
-                     << solWriteTimer.get() + resWriteTimer.get()
-                     << "s" << endl;
+                cout << "    Wrote in: " << c(CYA) << writeTimer.getf() << c(NON) << endl;
     }
 
 
@@ -170,9 +178,9 @@ int main(int argc, char* argv[]){
 
     if (cf.rank == 0){
         cout << endl << "-----------------------" << endl << endl;
-        cout << "Starting Simulation..." << endl;
+        cout << c(GRE) << "Starting Simulation:" << c(NON) << endl;
     }
-    MPI_Barrier(cf.comm);
+
     MPI_Barrier(cf.comm);
 
     initTimer.stop();
@@ -191,7 +199,7 @@ int main(int argc, char* argv[]){
         FS4D mytmp = f->tmp1;
         FS4D myvar = f->var;
         FS4D mydvar = f->dvar;
-        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+cv}),
+        Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nvt}),
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
             mytmp(i,j,k,v) = myvar(i,j,k,v);
             myvar(i,j,k,v) = myvar(i,j,k,v) + 0.5*cf.dt*mydvar(i,j,k,v);
@@ -203,7 +211,7 @@ int main(int argc, char* argv[]){
         mytmp = f->tmp1;
         myvar = f->var;
         mydvar = f->dvar;
-        Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nv+cv}),
+        Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nvt}),
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
             myvar(i,j,k,v) = myvar(i,j,k,v) + cf.dt*mydvar(i,j,k,v);
         });
@@ -212,42 +220,78 @@ int main(int argc, char* argv[]){
         if (cf.rank==0){
             if (cf.out_freq > 0)
                 if ((t+1) % cf.out_freq == 0)
-                    printf("    Iteration: %d/%d, Sim Time: %.2e\n",t+1,cf.tend,time);
+                    cout << c(NON) << left << setw(15) << "    Iteration:" << c(NON) 
+                         << c(CYA) << right << setw(0) << t+1 << c(NON) << "/" << c(CYA) << left << setw(0) << cf.tend << c(NON) << ", "
+                         << c(CYA) << right << setw(0) << setprecision(3) << scientific << time << "s" << c(NON) << endl;
+                    //printf("    Iteration: %d/%d, Sim Time: %.2e\n",t+1,cf.tend,time);
         }
         if (cf.write_freq > 0){
             if ((t+1) % cf.write_freq == 0){
-                solWriteTimer.reset();
+                f->timers["solWrite"].reset();
                 writeSolution(cf,xSP,ySP,zSP,f->var,t+1,time);
-                solWriteTimer.accumulate();
+                f->timers["solWrite"].accumulate();
             }
         }
         if (cf.restart_freq > 0){
             if ((t+1) % cf.restart_freq == 0){
-                resWriteTimer.reset();
+                f->timers["resWrite"].reset();
                 writeRestart(cf,x,y,z,f->var,t+1,time);
-                resWriteTimer.accumulate();
+                f->timers["resWrite"].accumulate();
             }
         }
     }
     simTimer.stop();
     if (cf.rank == 0)
-        cout << "Simulation Complete" << endl;
+        cout << c(GRE) << "Simulation Complete!" << c(NON) << endl;
 
     MPI_Barrier(cf.comm);
 
+    typedef std::function<bool(std::pair<std::string, fiestaTimer>, std::pair<std::string, fiestaTimer>)> Comparator;
+ 
+    Comparator compFunctor =
+            [](std::pair<std::string, fiestaTimer> elem1 ,std::pair<std::string, fiestaTimer> elem2)
+            {
+                return elem1.second.get() > elem2.second.get();
+            };
+ 
+    std::set<std::pair<std::string, fiestaTimer>, Comparator> stmr(
+            f->timers.begin(), f->timers.end(), compFunctor);
+ 
     totalTimer.stop();
     if (cf.rank == 0){
         cout << endl << "-----------------------" << endl << endl;
         cout.precision(2);
-        cout << "Total Time: " << totalTimer.getf() << endl;
-        cout << "Setup Time: " << initTimer.getf() << endl;
-        cout << "    Initial Condition Generation: " << loadTimer.getf() << endl;
-        cout << "Sim Time: " << simTimer.getf() << endl;
-        cout << "    Solution write Time:\t" << solWriteTimer.getf() << endl;
-        cout << "    Restart write Time:\t\t" << resWriteTimer.getf() << endl;
-        for (auto tmr : f->timers){
-            cout << "    " << tmr.second.describe() << ":\t\t" << tmr.second.getf() << endl;
+        cout << c(GRE) << left  << setw(36) << "Total Time:"     << c(NON) 
+             << c(CYA) << right << setw(13) << totalTimer.getf() << c(NON) << endl << endl;
+
+        cout << c(GRE) << left  << setw(36) << "  Setup Time:"    << c(NON)
+             << c(CYA) << right << setw(13) << initTimer.getf() << c(NON) << endl;
+        if(cf.restart == 1) 
+            cout << c(NON) << left  << setw(36) << "    Restart Read:" << c(NON)
+                 << c(CYA) << right << setw(13) << loadTimer.getf()                    << c(NON) << endl << endl;
+        else{
+            cout << c(NON) << left  << setw(36) << "    Initial Condition Generation:" << c(NON)
+                 << c(CYA) << right << setw(13) << loadTimer.getf()                    << c(NON) << endl;
+            cout << c(NON) << left  << setw(36) << "    Grid Generation:" << c(NON)
+                 << c(CYA) << right << setw(13) << gridTimer.getf()                    << c(NON) << endl;
+            cout << c(NON) << left  << setw(36) << "    Initial Consition WriteTime:" << c(NON)
+                 << c(CYA) << right << setw(13) << writeTimer.getf()                    << c(NON) << endl << endl;
         }
+
+        //cout << c(GRE) << left  << setw(36) << "Write Times:"  << c(NON)
+        //     << c(CYA) << right << setw(8)  << simTimer.getf() << c(NON) << endl;
+        //cout << c(NON) << left  << setw(36) << "    Solution write Time:" << c(NON)
+        //     << c(CYA) << right << setw(8)  << solWriteTimer.getf()   << c(NON) << endl;
+        //cout << c(NON) << left  << setw(36) << "    Restart write Time:" << c(NON)
+        //     << c(CYA) << right << setw(8)  << resWriteTimer.getf()      << c(NON) << endl << endl;
+
+        cout << c(GRE) << left  << setw(36) << "  Simulation Time:" << c(NON)
+             << c(CYA) << right << setw(13) << simTimer.getf() << c(NON) << endl;
+        for (auto tmr : stmr){
+            cout << c(NON) << left  << setw(36) << "    "+tmr.second.describe()+":" << c(NON)
+                 << c(CYA) << right << setw(13) << tmr.second.getf()                << c(NON) << endl;
+        }
+        cout << " " << endl;
     }
 
     

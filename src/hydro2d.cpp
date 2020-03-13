@@ -137,7 +137,7 @@ void hydro2d_func::compute(){
     for (int v=0; v<cf.nv; ++v){
         timers["flux"].reset();
 
-        Kokkos::parallel_for( face_pol, calculateFluxWeno2D(var,p,rho,wenox,wenoy,cd,v) );
+        Kokkos::parallel_for( face_pol, computeFluxWeno2D(var,p,rho,wenox,wenoy,cd,v) );
         Kokkos::parallel_for( cell_pol, applyWenoFluxes2d(dvar,wenox,wenoy,v) );
 
         timers["flux"].accumulate();

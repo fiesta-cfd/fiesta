@@ -26,12 +26,15 @@ double getglobdbl(lua_State *L, const char *var);
 //configuration structure
 struct inputConfig {
     std::string inputFname;
+    std::string title;
     int ndim;
     int glbl_ni,glbl_nj,glbl_nk;
     int glbl_nci,glbl_ncj,glbl_nck;
     double *gamma;
     double *M;
+    double *mu;
     double R;
+    int scheme;
     int visc;
     double dt,dx,dy,dz;
     int xProcs,yProcs,zProcs,numProcs;
@@ -39,7 +42,7 @@ struct inputConfig {
     int xMinus,yMinus,zMinus;
     int rank;
     int nci,ncj,nck;
-    int nt,ni,nj,nk,nv,ns;
+    int nt,ni,nj,nk,nv,ns,nvt;
     int iStart,jStart,kStart;
     int iEnd,jEnd,kEnd;
     MPI_Comm comm;
