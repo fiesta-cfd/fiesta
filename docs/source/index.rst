@@ -10,23 +10,13 @@ Documentation for Fiesta
 
 
 .. toctree::
-   :maxdepth: 2
-   :caption: User Documentation
-   :hidden:
+    :maxdepth: 2
+    :caption: Fiesta Documentation   
+    :hidden:
     
-   input.rst
+    intro.rst
+    buildguide.rst
+    userguide.rst
+    devguide.rst
+    techref.rst
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Developer Documentation
-
-   variables.rst
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
