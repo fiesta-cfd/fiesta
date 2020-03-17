@@ -103,7 +103,7 @@ int main(int argc, char* argv[]){
         loadTimer.start();
         loadInitialConditions(cf,f->var);
         loadTimer.stop();
-        cout << "    Generated in: " << c(CYA) << loadTimer.getf() << c(NON) << endl << endl;
+        if (cf.rank == 0) cout << "    Generated in: " << c(CYA) << loadTimer.getf() << c(NON) << endl << endl;
     }
 
     if (cf.rank == 0) cout << c(GRE) << "Generating Grid:" << c(NON) << endl;
