@@ -329,6 +329,7 @@ void hydro2dvisc_func::compute(){
     // Calcualte Total Density and Pressure Fields
     timers["calcSecond"].reset();
     Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure2dv(var,p,rho,T,cd) );
+    Kokkos::fence();
     timers["calcSecond"].accumulate();
 
     // Calculate and apply weno fluxes for each variable
@@ -338,26 +339,32 @@ void hydro2dvisc_func::compute(){
             Kokkos::parallel_for( face_pol, computeFluxCentered2D(var,p,rho,fluxx,fluxy,cd,v) );
         else
             Kokkos::parallel_for( face_pol, computeFluxWeno2D(var,p,rho,fluxx,fluxy,cd,v) );
+        Kokkos::fence();
         Kokkos::parallel_for( cell_pol, advect2dv(dvar,fluxx,fluxy,cd,v) );
+        Kokkos::fence();
         timers["flux"].accumulate();
     }
 
     // Apply Pressure Gradient Term
     timers["pressgrad"].reset();
     Kokkos::parallel_for( cell_pol, applyPressure2dv(dvar,p,cd) );
+    Kokkos::fence();
     timers["pressgrad"].accumulate();
 
     if (cf.visc == 1){
         timers["stress"].reset();
         Kokkos::parallel_for( face_pol, calculateStressTensor2dv(var,rho,T,stressx,stressy,cd) );
+        Kokkos::fence();
         timers["stress"].accumulate();
 
         timers["qflux"].reset();
         Kokkos::parallel_for( face_pol, calculateHeatFlux2dv(var,rho,T,qx,qy,cd) );
+        Kokkos::fence();
         timers["qflux"].accumulate();
 
         timers["visc"].reset();
         Kokkos::parallel_for( cell_pol, applyViscousTerm2dv(dvar,var,rho,stressx,stressy,qx,qy,cd) );
+        Kokkos::fence();
         timers["visc"].accumulate();
     }
 }
