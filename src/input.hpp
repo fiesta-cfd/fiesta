@@ -62,5 +62,6 @@ struct inputConfig {
 struct inputConfig executeConfiguration(int argc, char * argv[]);
 
 int loadInitialConditions(struct inputConfig cf, const FS4D v);
+int loadGrid(struct inputConfig cf, const FS4D v);
 
 #endif

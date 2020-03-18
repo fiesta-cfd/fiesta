@@ -91,12 +91,9 @@ int main(int argc, char* argv[]){
     //if (cf.ndim == 3){
     //    f = new hydroc3d_func(cf,cd);
     //}else{
-    //    if (cf.visc == 1 || cf.ceq == 1)
-            f = new hydro2dvisc_func(cf,cd);
-    //    else
-    //        f = new hydro2d_func(cf,cd);
+        f = new hydro2dvisc_func(cf,cd);
     //}
-   
+
     MPI_Barrier(cf.comm);
     if (cf.restart == 0){
         if (cf.rank == 0) cout << c(GRE) << "Generating Initial Conditions:" << c(NON) << endl;
@@ -104,39 +101,14 @@ int main(int argc, char* argv[]){
         loadInitialConditions(cf,f->var);
         loadTimer.stop();
         if (cf.rank == 0) cout << "    Generated in: " << c(CYA) << loadTimer.getf() << c(NON) << endl << endl;
+
+        if (cf.rank == 0) cout << c(GRE) << "Generating Grid:" << c(NON) << endl;
+        gridTimer.start();
+        loadGrid(cf,f->grid);
+        gridTimer.stop();
+        if (cf.rank == 0) cout << "    Generated in: " << c(CYA) << gridTimer.getf() << c(NON) << endl << endl;
     }
 
-    if (cf.rank == 0) cout << c(GRE) << "Generating Grid:" << c(NON) << endl;
-    gridTimer.start();
-    /* allocate grid coordinate and flow variables */
-    double *x = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
-    double *y = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
-    double *z = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
-
-    float *xSP = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
-    float *ySP = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
-    float *zSP = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
-    
-
-    /* calculate rank local grid coordinates */
-    for (int k=0; k<cf.nk; ++k){
-        for (int j=0; j<cf.nj; ++j){
-            for (int i=0; i<cf.ni; ++i){
-                idx = (cf.ni*cf.nj)*k+cf.ni*j+i;
-                x[idx] = (cf.iStart + i)*cf.dx;
-                y[idx] = (cf.jStart + j)*cf.dy;
-                z[idx] = (cf.kStart + k)*cf.dz;
-
-                xSP[idx] = (float)x[idx];
-                ySP[idx] = (float)y[idx];
-                zSP[idx] = (float)z[idx];
-            }
-        }
-    }
-    gridTimer.stop();
-    if (cf.rank == 0)
-        cout << "    Generated in: " << c(CYA) << gridTimer.getf() << c(NON) << endl << endl;
-    
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_1;
     
     double time = cf.time;
@@ -158,12 +130,12 @@ int main(int argc, char* argv[]){
         writeTimer.start();
         if (cf.write_freq >0){
             solWriteTimer.reset();
-            writeSolution(cf,xSP,ySP,zSP,f->var,0,0.00);
+            writeSolution(cf,f->grid,f->var,0,0.00);
             solWriteTimer.accumulate();
         }
         if (cf.restart_freq >0){
             resWriteTimer.reset();
-            writeRestart(cf,x,y,z,f->var,0,0.00);
+            writeRestart(cf,f->grid,f->var,0,0.00);
             resWriteTimer.accumulate();
         }
         writeTimer.stop();
@@ -228,14 +200,14 @@ int main(int argc, char* argv[]){
         if (cf.write_freq > 0){
             if ((t+1) % cf.write_freq == 0){
                 f->timers["solWrite"].reset();
-                writeSolution(cf,xSP,ySP,zSP,f->var,t+1,time);
+                writeSolution(cf,f->grid,f->var,t+1,time);
                 f->timers["solWrite"].accumulate();
             }
         }
         if (cf.restart_freq > 0){
             if ((t+1) % cf.restart_freq == 0){
                 f->timers["resWrite"].reset();
-                writeRestart(cf,x,y,z,f->var,t+1,time);
+                writeRestart(cf,f->grid,f->var,t+1,time);
                 f->timers["resWrite"].accumulate();
             }
         }

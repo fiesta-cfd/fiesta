@@ -292,6 +292,7 @@ struct applyViscousTerm2dv {
 
 hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){
     
+    grid    = Kokkos::View<double****,FS_LAYOUT>("coords", cf.ni+2*cf.ng, cf.nj+2*cf.ng, cf.nk+2*cf.ng, 3);
     var     = Kokkos::View<double****,FS_LAYOUT>("var",    cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Primary Variable Array
     tmp1    = Kokkos::View<double****,FS_LAYOUT>("tmp1",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Arrayr1
     tmp2    = Kokkos::View<double****,FS_LAYOUT>("tmp2",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Array2

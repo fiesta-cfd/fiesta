@@ -9,7 +9,27 @@
 
 using namespace std;
 
-struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y, double *z,const char * fname){
+//struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y, double *z,const char * fname){
+struct inputConfig writeGrid(struct inputConfig cf, const FS4D gridD ,const char * fname){
+
+    FS4DH gridH = Kokkos::create_mirror_view(gridD);
+
+    double *x = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
+    double *y = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
+    double *z = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
+    int idx;
+
+    for (int i=0; i<cf.ni; ++i){
+        for (int j=0; j<cf.nj; ++j){
+            for (int k=0; k<cf.nk; ++k){
+                idx = (cf.ni*cf.nj)*k+cf.ni*j+i;
+
+                x[idx] = gridH(i,j,k,0);
+                y[idx] = gridH(i,j,k,1);
+                z[idx] = gridH(i,j,k,2);
+            }
+        }
+    }
 
     //int icelldim, iphysdim, index_coord, index_field;
     cgsize_t isize[3][3];
@@ -54,7 +74,27 @@ struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y, double
 
     return cf;
 }
-struct inputConfig writeSPGrid(struct inputConfig cf, float *x, float *y, float *z, const char * fname){
+//struct inputConfig writeSPGrid(struct inputConfig cf, float *x, float *y, float *z, const char * fname){
+struct inputConfig writeSPGrid(struct inputConfig cf, const FS4D gridD, const char * fname){
+
+    FS4DH gridH = Kokkos::create_mirror_view(gridD);
+
+    float *x = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
+    float *y = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
+    float *z = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
+    int idx;
+
+    for (int i=0; i<cf.ni; ++i){
+        for (int j=0; j<cf.nj; ++j){
+            for (int k=0; k<cf.nk; ++k){
+                idx = (cf.ni*cf.nj)*k+cf.ni*j+i;
+
+                x[idx] = gridH(i,j,k,0);
+                y[idx] = gridH(i,j,k,1);
+                z[idx] = gridH(i,j,k,2);
+            }
+        }
+    }
 
     //int icelldim, iphysdim, index_coord, index_field;
     cgsize_t isize[3][3];
@@ -100,7 +140,8 @@ struct inputConfig writeSPGrid(struct inputConfig cf, float *x, float *y, float 
     return cf;
 }
 
-void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const FS4D deviceV, int tdx, double time){
+//void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const FS4D deviceV, int tdx, double time){
+void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, int tdx, double time){
     int index_sol, index_flow;
 
     char dName[32];
@@ -123,7 +164,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
              << c(CYA) << left << "'" + fsname + "'" << c(NON) << endl;
     }
 
-    cf = writeGrid(cf, x,y,z,fsname.c_str());
+    cf = writeGrid(cf, gridD, fsname.c_str());
     snprintf(solname,32,"FS");
 
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
@@ -342,7 +383,8 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
     cgp_close(cf.cF);
 }
 
-void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const FS4D deviceV, int tdx, double time){
+//void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const FS4D deviceV, int tdx, double time){
+void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, int tdx, double time){
     int index_sol, index_flow;
 
     char dName[32];
@@ -368,7 +410,7 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const FS
              << c(CYA) << left << "'" + fsname + "'" << c(NON) << endl;
     }
 
-    cf = writeSPGrid(cf, x,y,z,fsname.c_str());
+    cf = writeSPGrid(cf, gridD, fsname.c_str());
     snprintf(solname,32,"FS");
 
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
@@ -586,17 +628,17 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const FS
     
     cgp_close(cf.cF);
 
-    if (cf.numProcs == 1){
-        std::ofstream myfile;
-        myfile.open("output.txt");
-        for (int i=cf.ng; i<cf.nci; ++i){
-           int  idx = (cf.nci*cf.ncj)*0+cf.nci*3+i;
-//            myfile << x[idx] << ", " << hostV(i,3,0,0) << ", " << hostV(i,3,0,1) << ", " << hostV(i,3,0,2) << ", " << hostV(i,3,0,3) << std::endl;
-            myfile << x[idx] << ", " << hostV(i,3,0,3) << std::endl;
-        }
-        myfile << std::endl;
-        myfile.close();
-    }
+    //if (cf.numProcs == 1){
+    //    std::ofstream myfile;
+    //    myfile.open("output.txt");
+    //    for (int i=cf.ng; i<cf.nci; ++i){
+    //       int  idx = (cf.nci*cf.ncj)*0+cf.nci*3+i;
+//  //          myfile << x[idx] << ", " << hostV(i,3,0,0) << ", " << hostV(i,3,0,1) << ", " << hostV(i,3,0,2) << ", " << hostV(i,3,0,3) << std::endl;
+    //        myfile << x[idx] << ", " << hostV(i,3,0,3) << std::endl;
+    //    }
+    //    myfile << std::endl;
+    //    myfile.close();
+    //}
 
 }
 

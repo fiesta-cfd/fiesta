@@ -251,7 +251,76 @@ int loadInitialConditions(struct inputConfig cf, const FS4D deviceV){
     lua_close(L);
     
     Kokkos::deep_copy(deviceV,hostV);
-    //printf("cells: %f, %f, %f\n",hostV(2001,3,0,0),hostV(2002,3,0,0),hostV(2003,3,0,0));
+    
+    return 0;
+}
+
+int loadGrid(struct inputConfig cf, const FS4D deviceV){
+    
+    double z;
+    int isnum;
+    
+    lua_State *L = luaL_newstate(); //Opens Lua
+    luaL_openlibs(L);               //opens the standard libraries
+
+    /* Open and run Lua configuration file */
+    if (luaL_loadfile(L,cf.inputFname.c_str()) || lua_pcall(L,0,0,0))
+        error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
+
+    FS4DH hostV = Kokkos::create_mirror_view(deviceV);
+    if (cf.ndim == 3){
+        for (int v=0; v<3; ++v){
+            for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+                for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+                    for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+                        int ii = i - cf.ng;
+                        int jj = j - cf.ng;
+                        int kk = k - cf.ng;
+                        lua_getglobal(L,"g");
+                        lua_pushnumber(L,cf.iStart+ii);
+                        lua_pushnumber(L,cf.jStart+jj);
+                        lua_pushnumber(L,cf.kStart+kk);
+                        lua_pushnumber(L,v);
+                        if (lua_pcall(L,4,1,0) != LUA_OK)
+                            error(L, "error running function 'f': %s\n",lua_tostring(L, -1));
+                        z = lua_tonumberx(L,-1,&isnum);
+                        if (!isnum)
+                            error(L, "function 'f' should return a number");
+                        lua_pop(L,1);
+                        
+                        hostV(i,j,k,v) = z;
+                    }
+                }
+            }
+        }
+    }else{
+        for (int v=0; v<2; ++v){
+            for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+                for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+                    int ii = i - cf.ng;
+                    int jj = j - cf.ng;
+                    lua_getglobal(L,"g");
+                    lua_pushnumber(L,cf.iStart+ii);
+                    lua_pushnumber(L,cf.jStart+jj);
+                    lua_pushnumber(L,0);
+                    lua_pushnumber(L,v);
+                    if (lua_pcall(L,4,1,0) != LUA_OK)
+                        error(L, "error running function 'f': %s\n",lua_tostring(L, -1));
+                    z = lua_tonumberx(L,-1,&isnum);
+                    if (!isnum)
+                        error(L, "function 'f' should return a number");
+                    lua_pop(L,1);
+                    
+                    hostV(i,j,0,v) = z;
+                    hostV(i,j,1,v) = z;
+                }
+            }
+        }
+    }
+    
+    lua_close(L);
+    
+    Kokkos::deep_copy(deviceV,hostV);
     
     return 0;
 }
