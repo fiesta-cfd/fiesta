@@ -9,14 +9,29 @@
 
 using namespace std;
 
+cgnsWriter::cgnsWriter(struct inputConfig cf, FS4D gridD, FS4D varD){
+    x = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
+    y = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
+    z = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
+
+    xsp = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
+    ysp = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
+    zsp = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
+
+    vsp = (float*)malloc(cf.nci*cf.ncj*cf.nck*sizeof(float));
+    v = (double*)malloc(cf.nci*cf.ncj*cf.nck*sizeof(double));
+
+    readV = (double *)malloc(cf.nci*cf.ncj*cf.nck*cf.nv*sizeof(double));
+    
+    gridH = Kokkos::create_mirror_view(gridD);
+    varH = Kokkos::create_mirror_view(varD);
+}
+
 //struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y, double *z,const char * fname){
-struct inputConfig writeGrid(struct inputConfig cf, const FS4D gridD ,const char * fname){
+struct inputConfig cgnsWriter::writeGrid(struct inputConfig cf, const FS4D gridD ,const char * fname){
 
-    FS4DH gridH = Kokkos::create_mirror_view(gridD);
+    Kokkos::deep_copy(gridH,gridD);
 
-    double *x = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
-    double *y = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
-    double *z = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
     int idx;
 
     for (int i=0; i<cf.ni; ++i){
@@ -75,13 +90,10 @@ struct inputConfig writeGrid(struct inputConfig cf, const FS4D gridD ,const char
     return cf;
 }
 //struct inputConfig writeSPGrid(struct inputConfig cf, float *x, float *y, float *z, const char * fname){
-struct inputConfig writeSPGrid(struct inputConfig cf, const FS4D gridD, const char * fname){
+struct inputConfig cgnsWriter::writeSPGrid(struct inputConfig cf, const FS4D gridD, const char * fname){
 
-    FS4DH gridH = Kokkos::create_mirror_view(gridD);
+    Kokkos::deep_copy(gridH,gridD);
 
-    float *x = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
-    float *y = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
-    float *z = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
     int idx;
 
     for (int i=0; i<cf.ni; ++i){
@@ -89,9 +101,9 @@ struct inputConfig writeSPGrid(struct inputConfig cf, const FS4D gridD, const ch
             for (int k=0; k<cf.nk; ++k){
                 idx = (cf.ni*cf.nj)*k+cf.ni*j+i;
 
-                x[idx] = gridH(i,j,k,0);
-                y[idx] = gridH(i,j,k,1);
-                z[idx] = gridH(i,j,k,2);
+                xsp[idx] = gridH(i,j,k,0);
+                ysp[idx] = gridH(i,j,k,1);
+                zsp[idx] = gridH(i,j,k,2);
             }
         }
     }
@@ -130,9 +142,9 @@ struct inputConfig writeSPGrid(struct inputConfig cf, const FS4D gridD, const ch
         cgp_coord_write(cf.cF,cf.cB,cf.cZ,CG_RealSingle, "CoordinateZ", &Cz))
         cgp_error_exit();
 
-    if (cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cx, start, end, x) ||
-        cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cy, start, end, y) ||
-        cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cz, start, end, z))
+    if (cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cx, start, end, xsp) ||
+        cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cy, start, end, ysp) ||
+        cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cz, start, end, zsp))
         cgp_error_exit();
 
     cgp_close(cf.cF);
@@ -140,8 +152,7 @@ struct inputConfig writeSPGrid(struct inputConfig cf, const FS4D gridD, const ch
     return cf;
 }
 
-//void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const FS4D deviceV, int tdx, double time){
-void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, int tdx, double time){
+void cgnsWriter::writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D varD, int tdx, double time){
     int index_sol, index_flow;
 
     char dName[32];
@@ -170,8 +181,8 @@ void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, i
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
     cgsize_t endc[3] = {cf.iEnd,cf.jEnd,cf.kEnd};
 
-    FS4DH hostV = Kokkos::create_mirror_view(deviceV);
-    Kokkos::deep_copy(hostV,deviceV);
+    
+    Kokkos::deep_copy(varH,varD);
 
     /* open cgns file and write cell centered flow variable */
     if (cgp_open(fsname.c_str(), CG_MODE_MODIFY, &cf.cF))
@@ -180,7 +191,6 @@ void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, i
     if (cg_sol_write(cf.cF,cf.cB,cf.cZ,solname,CG_CellCenter, &index_sol))
         cgp_error_exit();
 
-    double *v = (double*)malloc(cf.nci*cf.ncj*cf.nck*sizeof(double));
 
     int idx;
 
@@ -193,7 +203,7 @@ void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, i
                     int jj = j - cf.ng;
                     int kk = k - cf.ng;
                     idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,0);
+                    v[idx] = varH(i,j,k,0);
                 }
             }
         }
@@ -203,7 +213,7 @@ void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, i
                 int ii = i - cf.ng;
                 int jj = j - cf.ng;
                 idx = cf.nci*jj+ii;
-                v[idx] = hostV(i,j,0,0);
+                v[idx] = varH(i,j,0,0);
             }
         }
     }
@@ -223,7 +233,7 @@ void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, i
                     int jj = j - cf.ng;
                     int kk = k - cf.ng;
                     idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,1);
+                    v[idx] = varH(i,j,k,1);
                 }
             }
         }
@@ -233,7 +243,7 @@ void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, i
                 int ii = i - cf.ng;
                 int jj = j - cf.ng;
                 idx = cf.nci*jj+ii;
-                v[idx] = hostV(i,j,0,1);
+                v[idx] = varH(i,j,0,1);
             }
         }
     }
@@ -253,7 +263,7 @@ void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, i
                     int jj = j - cf.ng;
                     int kk = k - cf.ng;
                     idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,2);
+                    v[idx] = varH(i,j,k,2);
                 }
             }
         }
@@ -283,7 +293,7 @@ void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, i
                     int jj = j - cf.ng;
                     int kk = k - cf.ng;
                     idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,cf.ndim);
+                    v[idx] = varH(i,j,k,cf.ndim);
                 }
             }
         }
@@ -293,7 +303,7 @@ void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, i
                 int ii = i - cf.ng;
                 int jj = j - cf.ng;
                 idx = cf.nci*jj+ii;
-                v[idx] = hostV(i,j,0,cf.ndim);
+                v[idx] = varH(i,j,0,cf.ndim);
             }
         }
     }
@@ -315,7 +325,7 @@ void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, i
                         int jj = j - cf.ng;
                         int kk = k - cf.ng;
                         idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                        v[idx] = hostV(i,j,k,vn);
+                        v[idx] = varH(i,j,k,vn);
                     }
                 }
             }
@@ -325,7 +335,7 @@ void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, i
                     int ii = i - cf.ng;
                     int jj = j - cf.ng;
                     idx = cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,0,vn);
+                    v[idx] = varH(i,j,0,vn);
                 }
             }
         }
@@ -349,7 +359,7 @@ void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, i
                             int jj = j - cf.ng;
                             int kk = k - cf.ng;
                             idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                            v[idx] = hostV(i,j,k,vn);
+                            v[idx] = varH(i,j,k,vn);
                         }
                     }
                 }
@@ -359,7 +369,7 @@ void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, i
                         int ii = i - cf.ng;
                         int jj = j - cf.ng;
                         idx = cf.nci*jj+ii;
-                        v[idx] = hostV(i,j,0,vn);
+                        v[idx] = varH(i,j,0,vn);
                     }
                 }
             }
@@ -384,7 +394,7 @@ void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, i
 }
 
 //void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const FS4D deviceV, int tdx, double time){
-void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, int tdx, double time){
+void cgnsWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D varD, int tdx, double time){
     int index_sol, index_flow;
 
     char dName[32];
@@ -416,8 +426,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
     cgsize_t endc[3] = {cf.iEnd,cf.jEnd,cf.kEnd};
 
-    FS4DH hostV = Kokkos::create_mirror_view(deviceV);
-    Kokkos::deep_copy(hostV,deviceV);
+    Kokkos::deep_copy(varH,varD);
 
     /* open cgns file and write cell centered flow variable */
     if (cgp_open(fsname.c_str(), CG_MODE_MODIFY, &cf.cF))
@@ -426,7 +435,6 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
     if (cg_sol_write(cf.cF,cf.cB,cf.cZ,solname,CG_CellCenter, &index_sol))
         cgp_error_exit();
 
-    float *v = (float*)malloc(cf.nci*cf.ncj*cf.nck*sizeof(float));
 
     int idx;
 
@@ -439,7 +447,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
                     int jj = j - cf.ng;
                     int kk = k - cf.ng;
                     idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,0);
+                    vsp[idx] = varH(i,j,k,0);
                 }
             }
         }
@@ -449,7 +457,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
                 int ii = i - cf.ng;
                 int jj = j - cf.ng;
                 idx = cf.nci*jj+ii;
-                v[idx] = hostV(i,j,0,0);
+                vsp[idx] = varH(i,j,0,0);
             }
         }
     }
@@ -457,7 +465,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
     if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,"MomentumX",&index_flow))
         cgp_error_exit();
 
-    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,vsp))
         cgp_error_exit();
 
     //write momentum y
@@ -469,7 +477,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
                     int jj = j - cf.ng;
                     int kk = k - cf.ng;
                     idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,1);
+                    vsp[idx] = varH(i,j,k,1);
                 }
             }
         }
@@ -479,7 +487,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
                 int ii = i - cf.ng;
                 int jj = j - cf.ng;
                 idx = cf.nci*jj+ii;
-                v[idx] = hostV(i,j,0,1);
+                vsp[idx] = varH(i,j,0,1);
             }
         }
     }
@@ -487,7 +495,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
     if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,"MomentumY",&index_flow))
         cgp_error_exit();
 
-    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,vsp))
         cgp_error_exit();
 
     //write momentum z
@@ -499,7 +507,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
                     int jj = j - cf.ng;
                     int kk = k - cf.ng;
                     idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,2);
+                    vsp[idx] = varH(i,j,k,2);
                 }
             }
         }
@@ -509,7 +517,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
                 int ii = i - cf.ng;
                 int jj = j - cf.ng;
                 idx = cf.nci*jj+ii;
-                v[idx] = 0;
+                vsp[idx] = 0;
             }
         }
     }
@@ -517,7 +525,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
     if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,"MomentumZ",&index_flow))
         cgp_error_exit();
 
-    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,vsp))
         cgp_error_exit();
 
     //write energy
@@ -529,7 +537,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
                     int jj = j - cf.ng;
                     int kk = k - cf.ng;
                     idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,k,cf.ndim);
+                    vsp[idx] = varH(i,j,k,cf.ndim);
                 }
             }
         }
@@ -539,7 +547,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
                 int ii = i - cf.ng;
                 int jj = j - cf.ng;
                 idx = cf.nci*jj+ii;
-                v[idx] = hostV(i,j,0,cf.ndim);
+                vsp[idx] = varH(i,j,0,cf.ndim);
             }
         }
     }
@@ -547,7 +555,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
     if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,"EnergyInternal",&index_flow))
         cgp_error_exit();
 
-    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,vsp))
         cgp_error_exit();
 
     //write densities
@@ -561,7 +569,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
                         int jj = j - cf.ng;
                         int kk = k - cf.ng;
                         idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                        v[idx] = hostV(i,j,k,vn);
+                        vsp[idx] = varH(i,j,k,vn);
                     }
                 }
             }
@@ -571,7 +579,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
                     int ii = i - cf.ng;
                     int jj = j - cf.ng;
                     idx = cf.nci*jj+ii;
-                    v[idx] = hostV(i,j,0,vn);
+                    vsp[idx] = varH(i,j,0,vn);
                 }
             }
         }
@@ -579,7 +587,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
         if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,dName,&index_flow))
             cgp_error_exit();
 
-        if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+        if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,vsp))
             cgp_error_exit();
     }
 
@@ -595,7 +603,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
                             int jj = j - cf.ng;
                             int kk = k - cf.ng;
                             idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                            v[idx] = hostV(i,j,k,vn);
+                            vsp[idx] = varH(i,j,k,vn);
                         }
                     }
                 }
@@ -605,7 +613,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
                         int ii = i - cf.ng;
                         int jj = j - cf.ng;
                         idx = cf.nci*jj+ii;
-                        v[idx] = hostV(i,j,0,vn);
+                        vsp[idx] = varH(i,j,0,vn);
                     }
                 }
             }
@@ -613,7 +621,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
             if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,dName,&index_flow))
                 cgp_error_exit();
 
-            if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+            if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,vsp))
                 cgp_error_exit();
         }
     }
@@ -642,10 +650,7 @@ void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, 
 
 }
 
-void readSolution(struct inputConfig cf, const FS4D deviceV){
-    FS4DH hostV = Kokkos::create_mirror_view(deviceV);
-    Kokkos::deep_copy(hostV,deviceV);
-
+void cgnsWriter::readSolution(struct inputConfig cf, const FS4D varD){
     /* open cgns file for reading restart information */
     if (cgp_open(cf.sfName, CG_MODE_MODIFY, &cf.cF))
         cgp_error_exit();
@@ -655,8 +660,6 @@ void readSolution(struct inputConfig cf, const FS4D deviceV){
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
     cgsize_t endc[3] = {cf.iEnd,cf.jEnd,cf.kEnd};
 
-    double * readV;
-    readV = (double *)malloc(cf.nci*cf.ncj*cf.nck*cf.nv*sizeof(double));
 
     for (int v=0; v<cf.nv; ++v){
         if (cf.ndim == 2 && v > 1)
@@ -672,7 +675,7 @@ void readSolution(struct inputConfig cf, const FS4D deviceV){
                         int jj = j - cf.ng;
                         int kk = k - cf.ng;
                         idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                        hostV(i,j,k,v) = readV[idx];
+                        varH(i,j,k,v) = readV[idx];
                     }
                 }
             }
@@ -682,7 +685,7 @@ void readSolution(struct inputConfig cf, const FS4D deviceV){
                     int ii = i - cf.ng;
                     int jj = j - cf.ng;
                     idx = cf.nci*jj+ii;
-                    hostV(i,j,0,v) = readV[idx];
+                    varH(i,j,0,v) = readV[idx];
                 }
             }
         }
@@ -690,6 +693,5 @@ void readSolution(struct inputConfig cf, const FS4D deviceV){
 
     cgp_close(cf.cF);
     
-    Kokkos::deep_copy(deviceV,hostV);
-    free(readV);
+    Kokkos::deep_copy(varD,varH);
 }

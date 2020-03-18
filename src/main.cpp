@@ -94,6 +94,8 @@ int main(int argc, char* argv[]){
         f = new hydro2dvisc_func(cf,cd);
     //}
 
+    cgnsWriter w(cf,f->grid,f->var);
+
     MPI_Barrier(cf.comm);
     if (cf.restart == 0){
         if (cf.rank == 0) cout << c(GRE) << "Generating Initial Conditions:" << c(NON) << endl;
@@ -120,7 +122,7 @@ int main(int argc, char* argv[]){
     if (cf.restart == 1){
         if (cf.rank == 0) cout << c(GRE) << "Loading Restart File:" << c(NON) << endl;
         loadTimer.reset();
-        readSolution(cf,f->var);
+        w.readSolution(cf,f->var);
         loadTimer.stop();
         cout << "    Loaded in: " << setprecision(2) << c(CYA) << loadTimer.get() << "s" << c(NON) << endl;
     }else{
@@ -130,12 +132,12 @@ int main(int argc, char* argv[]){
         writeTimer.start();
         if (cf.write_freq >0){
             solWriteTimer.reset();
-            writeSolution(cf,f->grid,f->var,0,0.00);
+            w.writeSolution(cf,f->grid,f->var,0,0.00);
             solWriteTimer.accumulate();
         }
         if (cf.restart_freq >0){
             resWriteTimer.reset();
-            writeRestart(cf,f->grid,f->var,0,0.00);
+            w.writeRestart(cf,f->grid,f->var,0,0.00);
             resWriteTimer.accumulate();
         }
         writeTimer.stop();
@@ -200,14 +202,14 @@ int main(int argc, char* argv[]){
         if (cf.write_freq > 0){
             if ((t+1) % cf.write_freq == 0){
                 f->timers["solWrite"].reset();
-                writeSolution(cf,f->grid,f->var,t+1,time);
+                w.writeSolution(cf,f->grid,f->var,t+1,time);
                 f->timers["solWrite"].accumulate();
             }
         }
         if (cf.restart_freq > 0){
             if ((t+1) % cf.restart_freq == 0){
                 f->timers["resWrite"].reset();
-                writeRestart(cf,f->grid,f->var,t+1,time);
+                w.writeRestart(cf,f->grid,f->var,t+1,time);
                 f->timers["resWrite"].accumulate();
             }
         }
