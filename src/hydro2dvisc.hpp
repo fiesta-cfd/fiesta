@@ -19,5 +19,6 @@ public:
     FS2D fluxy;  // Weno Fluxes in Y direction
     FS4D stressx;  // stress tensor on x faces
     FS4D stressy;  // stress tensor on y faces
+    FS3D gradRho;
     FS1D cd;
 };

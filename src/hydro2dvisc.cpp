@@ -7,6 +7,7 @@
 #include "debug.hpp"
 #include "hydro2dvisc.hpp"
 #include "flux.hpp"
+#include "ceq.hpp"
 
 struct calculateRhoAndPressure2dv {
     FS4D var;
@@ -306,6 +307,7 @@ hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*
     fluxy   = Kokkos::View<double**  ,FS_LAYOUT>("fluxy",  cf.ngi,cf.ngj);                 // Advective Fluxes in Y direction
     stressx = Kokkos::View<double****,FS_LAYOUT>("stressx",cf.ngi,cf.ngj,2,2);             // stress tensor on x faces
     stressy = Kokkos::View<double****,FS_LAYOUT>("stressy",cf.ngi,cf.ngj,2,2);             // stress tensor on y faces
+    gradRho = Kokkos::View<double*** ,FS_LAYOUT>("gradRho",cf.ngi,cf.ngj,4);             // stress tensor on y faces
     cd = mcd;
 
     timers["flux"]       = fiestaTimer("Flux Calculation");
@@ -317,6 +319,9 @@ hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*
         timers["stress"]     = fiestaTimer("Stress Tensor Computation");
         timers["qflux"]      = fiestaTimer("Heat Flux Calculation");
         timers["visc"]       = fiestaTimer("Viscous Term Calculation");
+    }
+    if (cf.ceq == 1){
+        timers["ceq"]       = fiestaTimer("C-Equation");
     }
 };
 
@@ -367,5 +372,18 @@ void hydro2dvisc_func::compute(){
         Kokkos::parallel_for( cell_pol, applyViscousTerm2dv(dvar,var,rho,stressx,stressy,qx,qy,cd) );
         Kokkos::fence();
         timers["visc"].accumulate();
+    }
+
+    double myMaxS, maxS;
+    if (cf.ceq == 1){
+        timers["ceq"].reset();
+        Kokkos::parallel_reduce(cell_pol,maxWaveSpeed2D(var,p,rho,cd), Kokkos::Max<double>(myMaxS));
+        MPI_Allreduce(&myMaxS,&maxS,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+
+        Kokkos::parallel_for(cell_pol, calculateRhoGrad2D(var,rho,gradRho,cd));
+
+        Kokkos::parallel_for(cell_pol, updateCeq2D(dvar,var,gradRho,maxS,cd,cf.kap,cf.eps));
+
+        timers["ceq"].accumulate();
     }
 }
