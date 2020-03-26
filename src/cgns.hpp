@@ -34,8 +34,8 @@ private:
     float *vsp;
     double * readV;
 
-    FS4D gridH;
-    FS4D varH;
+    FS4DH gridH;
+    FS4DH varH;
 
 };
 
