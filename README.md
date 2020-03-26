@@ -54,7 +54,7 @@ Copy a sample input file to a scratch directory.
 ```
 cd /your/users/scratch/directory
 mkdir fiesta-test && cd fiesta-test
-cp /fiesta/repository/path/test/ideal_expansion_3D/fiesta.lua .
+cp ~/fiesta-dev/fiesta/test/ideal_expansion_3D/fiesta.lua .
 ```
 
 Edit the 'fiesta.lua' file to change the number of mpi processes for 4 GPUs.  e.g.:
@@ -66,7 +66,7 @@ procsz = 1
 
 Then run the code with:
 ```
-mpirun -n 4 ~/fiesta-dev/build/fiesta-build/fiesta fiesta.lua --kokkos-ndevices=4
+mpirun -n 4 ~/fiesta-dev/build/fiesta fiesta.lua --kokkos-ndevices=4
 ```
 The simulation will produce restart files and solution files.  Both are in the CGNS format and can be viewed with Paraview, Tecplot or any other mainstream visualization package.  The format is fairly well standardized.
 
