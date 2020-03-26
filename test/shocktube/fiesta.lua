@@ -2,14 +2,16 @@
 -- 2D Ideal Expansion
 d_fac = 4
 
+title = "Inclined Shock Tube"
+
 --Restart and Output Options
-out_freq = 0                          --Screen Output Interval
-restart_freq = 0                      --Restart Write Interval
-write_freq = 100                      --Solution Write Interval
+out_freq = 20                         --Screen Output Interval
+restart_freq = 5                       --Restart Write Interval
+write_freq = 5                        --Solution Write Interval
 restart = 0                           --Whether or not to use restart file
 time = 0.0                               --Start time of simulation
-tstart = 0                           --Start time index of simulation
-restartName = "restart-020000.cgns"   --Restart File Name
+tstart = 0                            --Start time index of simulation
+restartName = "restart-0000010.cgns"   --Restart File Name
 
 --Gas Properties
 --Gas Properties
@@ -17,7 +19,9 @@ R = 8.314462                          --Universal Gas Constant [J/(K*mol)]
 ns = 2                                --Number of Gas Species
 gamma = {1.402, 1.092}                  --Array of Species Ratio of Specific Heats
 M = {0.028966,0.14606}                 --Array of Species Molar Masses [kg/mol]
+mu = {2.928e-5,1.610e-5}
 visc = 0
+scheme = "centered4"
 
 --User Parameters
 Ly = 0.1500
@@ -25,8 +29,8 @@ Lx = 0.40
 
 --Number of cells
 ndim = 2
-ni = 2000           --Simulation size in x direction
-nj = 750            --Simulation Size in y direction
+ni = 1000           --Simulation size in x direction
+nj = 325            --Simulation Size in y direction
 
 --Cell Sizes
 dx = Lx/ni
@@ -36,7 +40,7 @@ dy = Ly/nj
 --dt = 0.6/(1000/dx+1000/dy)            --Time Step Size [s]
 dt = 1e-8
 --nt = math.ceil(0.0010/dt)             --Time Step at which to end simulation
-nt = 1000
+nt = 10  
 
 --MPI Processors
 procsx = 1
@@ -53,7 +57,7 @@ xPer = 0
 yPer = 0
 
 -- C-Equation Coefficients
-ceq = 0             --Enable/Disable Cequation
+ceq = 1             --Enable/Disable Cequation
 kappa = 10.0        --Smoothness Factor
 epsilon = 1.0       --Support Factor
 alpha = 10.0        --Anisotropic Coefficient
@@ -97,6 +101,10 @@ Cv_sf6 = R/(M[2]*(gamma[2]-1))
 --print(u1,us,u2p,u2,r2*u2)
 --print(e1,e2)
 
+function g(i,j,k,v)
+    if v==0 then return dx*i end
+    if v==1 then return dy*j end
+end
 --initial conditions
 function f(i,j,k,v)
     local angle = 30

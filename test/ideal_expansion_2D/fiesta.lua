@@ -1,6 +1,8 @@
 --
 -- 2D Ideal Expansion
 
+title = "2D Idealized Expansion"
+
 --Restart and Output Options
 out_freq = 0                          --Screen Output Interval
 restart_freq = 0                      --Restart Write Interval
@@ -15,10 +17,12 @@ R = 8.314462                          --Universal Gas Constant [J/(K*mol)]
 ns = 1                                --Number of Gas Species
 gamma = {1.40}                        --Array of Species Ratio of Specific Heats
 M = {0.02897}                         --Array of Species Molar Masses [kg/mol]
+mu = {2.928e-5}
 visc=0
+scheme="weno5"
 
 --Time
-nt = 1000                             --Time Step at which to end simulation
+nt = 10                               --Time Step at which to end simulation
 dt = 1e-6                             --Time Step Size [s]
 
 --User Parameters
@@ -55,6 +59,11 @@ epsilon = 1.0       --Support Factor
 alpha = 10.0        --Anisotropic Coefficient
 beta = 15.0         --Isotropic Coefficient
 betae = 2.0         --Energy Equation Isotropic Coefficient
+
+function g(i,j,k,v)
+    if v==0 then return dx*i end
+    if v==1 then return dy*j end
+end
 
 function f(i,j,k,v)
     --[[
