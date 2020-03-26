@@ -128,9 +128,9 @@ struct inputConfig executeConfiguration(int argc, char * argv[]){
     cf.title = title;
 
     cf.scheme = 1;
-    if (scheme.compare("weno5"))
+    if (scheme.compare("weno5")==0)
         cf.scheme = 1;
-    if (scheme.compare("centered4"))
+    if (scheme.compare("centered4")==0)
         cf.scheme = 2;
 
     int isnum;
