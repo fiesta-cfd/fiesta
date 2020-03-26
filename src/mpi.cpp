@@ -1,5 +1,5 @@
 #include "mpi.hpp"
-#include "lsdebug.hpp"
+#include "debug.hpp"
 
 struct inputConfig mpi_init(struct inputConfig cf){
 
@@ -78,19 +78,18 @@ mpiBuffers::mpiBuffers(struct inputConfig cf){
         cv = 5;
     }
 
-    leftSend   = Kokkos::View<double****>("leftSend",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
-    leftRecv   = Kokkos::View<double****>("leftRecv",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
-    rightSend  = Kokkos::View<double****>("rightSend",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
-    rightRecv  = Kokkos::View<double****>("rightRecv",cf.ng,cf.ngj,cf.ngk,cf.nv+cv);
-
-    bottomSend = Kokkos::View<double****>("bottomSend",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
-    bottomRecv = Kokkos::View<double****>("bottomRecv",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
-    topSend    = Kokkos::View<double****>("topSend",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
-    topRecv    = Kokkos::View<double****>("topRecv",cf.ngi,cf.ng,cf.ngk,cf.nv+cv);
-    backSend   = Kokkos::View<double****>("backSend",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
-    backRecv   = Kokkos::View<double****>("backRecv",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
-    frontSend  = Kokkos::View<double****>("frontSend",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
-    frontRecv  = Kokkos::View<double****>("frontRecv",cf.ngi,cf.ngj,cf.ng,cf.nv+cv);
+    leftSend   = Kokkos::View<double****,FS_LAYOUT>("leftSend",cf.ng,cf.ngj,cf.ngk,cf.nvt);
+    leftRecv   = Kokkos::View<double****,FS_LAYOUT>("leftRecv",cf.ng,cf.ngj,cf.ngk,cf.nvt);
+    rightSend  = Kokkos::View<double****,FS_LAYOUT>("rightSend",cf.ng,cf.ngj,cf.ngk,cf.nvt);
+    rightRecv  = Kokkos::View<double****,FS_LAYOUT>("rightRecv",cf.ng,cf.ngj,cf.ngk,cf.nvt);
+    bottomSend = Kokkos::View<double****,FS_LAYOUT>("bottomSend",cf.ngi,cf.ng,cf.ngk,cf.nvt);
+    bottomRecv = Kokkos::View<double****,FS_LAYOUT>("bottomRecv",cf.ngi,cf.ng,cf.ngk,cf.nvt);
+    topSend    = Kokkos::View<double****,FS_LAYOUT>("topSend",cf.ngi,cf.ng,cf.ngk,cf.nvt);
+    topRecv    = Kokkos::View<double****,FS_LAYOUT>("topRecv",cf.ngi,cf.ng,cf.ngk,cf.nvt);
+    backSend   = Kokkos::View<double****,FS_LAYOUT>("backSend",cf.ngi,cf.ngj,cf.ng,cf.nvt);
+    backRecv   = Kokkos::View<double****,FS_LAYOUT>("backRecv",cf.ngi,cf.ngj,cf.ng,cf.nvt);
+    frontSend  = Kokkos::View<double****,FS_LAYOUT>("frontSend",cf.ngi,cf.ngj,cf.ng,cf.nvt);
+    frontRecv  = Kokkos::View<double****,FS_LAYOUT>("frontRecv",cf.ngi,cf.ngj,cf.ng,cf.nvt);
     leftSend_H = Kokkos::create_mirror_view(leftSend);
     leftRecv_H = Kokkos::create_mirror_view(leftRecv);
     rightSend_H = Kokkos::create_mirror_view(rightSend);
@@ -107,16 +106,16 @@ mpiBuffers::mpiBuffers(struct inputConfig cf){
 
 }
 
-void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV, class mpiBuffers &m){
+void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m){
     int cv = 0;
     if (cf.ceq == 1){
         cv = 5;
     }
 
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_rind;
-    policy_rind xPol = policy_rind({0,0,0,0},{cf.ng ,cf.ngj,cf.ngk,cf.nv+cv});
-    policy_rind yPol = policy_rind({0,0,0,0},{cf.ngi,cf.ng ,cf.ngk,cf.nv+cv});
-    policy_rind zPol = policy_rind({0,0,0,0},{cf.ngi,cf.ngj,cf.ng ,cf.nv+cv});
+    policy_rind xPol = policy_rind({0,0,0,0},{cf.ng ,cf.ngj,cf.ngk,cf.nvt});
+    policy_rind yPol = policy_rind({0,0,0,0},{cf.ngi,cf.ng ,cf.ngk,cf.nvt});
+    policy_rind zPol = policy_rind({0,0,0,0},{cf.ngi,cf.ngj,cf.ng ,cf.nvt});
     
     Kokkos::parallel_for( xPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
         m.leftSend(i,j,k,v) = deviceV(cf.ng+i,j,k,v);
@@ -149,29 +148,29 @@ void haloExchange(struct inputConfig cf, Kokkos::View<double****> &deviceV, clas
     
 
     //send and recieve left
-    MPI_Isend(m.leftSend_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.xMinus,           0, cf.comm, &reqs[0]);
-    MPI_Irecv(m.leftRecv_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.xMinus, MPI_ANY_TAG, cf.comm, &reqs[1]);
+    MPI_Isend(m.leftSend_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.xMinus,           0, cf.comm, &reqs[0]);
+    MPI_Irecv(m.leftRecv_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.xMinus, MPI_ANY_TAG, cf.comm, &reqs[1]);
 
     //send and recieve right
-    MPI_Isend(m.rightSend_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.xPlus,           0, cf.comm, &reqs[2]);
-    MPI_Irecv(m.rightRecv_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.xPlus, MPI_ANY_TAG, cf.comm, &reqs[3]);
+    MPI_Isend(m.rightSend_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.xPlus,           0, cf.comm, &reqs[2]);
+    MPI_Irecv(m.rightRecv_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.xPlus, MPI_ANY_TAG, cf.comm, &reqs[3]);
     
     //send and recieve bottom
-    MPI_Isend(m.bottomSend_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.yMinus,           0, cf.comm, &reqs[4]);
-    MPI_Irecv(m.bottomRecv_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.yMinus, MPI_ANY_TAG, cf.comm, &reqs[5]);
+    MPI_Isend(m.bottomSend_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.yMinus,           0, cf.comm, &reqs[4]);
+    MPI_Irecv(m.bottomRecv_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.yMinus, MPI_ANY_TAG, cf.comm, &reqs[5]);
     
     //send and recieve top
-    MPI_Isend(m.topSend_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.yPlus,           0, cf.comm, &reqs[6]);
-    MPI_Irecv(m.topRecv_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nv+cv), MPI_DOUBLE, cf.yPlus, MPI_ANY_TAG, cf.comm, &reqs[7]);
+    MPI_Isend(m.topSend_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.yPlus,           0, cf.comm, &reqs[6]);
+    MPI_Irecv(m.topRecv_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.yPlus, MPI_ANY_TAG, cf.comm, &reqs[7]);
     
     if (cf.ndim == 3){
         //send and recieve back
-        MPI_Isend(m.backSend_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nv+cv), MPI_DOUBLE, cf.zMinus,           0, cf.comm, &reqs[8]);
-        MPI_Irecv(m.backRecv_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nv+cv), MPI_DOUBLE, cf.zMinus, MPI_ANY_TAG, cf.comm, &reqs[9]);
+        MPI_Isend(m.backSend_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nvt), MPI_DOUBLE, cf.zMinus,           0, cf.comm, &reqs[8]);
+        MPI_Irecv(m.backRecv_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nvt), MPI_DOUBLE, cf.zMinus, MPI_ANY_TAG, cf.comm, &reqs[9]);
         
         //send and recieve front
-        MPI_Isend(m.frontSend_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nv+cv), MPI_DOUBLE, cf.zPlus,           0, cf.comm, &reqs[10]);
-        MPI_Irecv(m.frontRecv_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nv+cv), MPI_DOUBLE, cf.zPlus, MPI_ANY_TAG, cf.comm, &reqs[11]);
+        MPI_Isend(m.frontSend_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nvt), MPI_DOUBLE, cf.zPlus,           0, cf.comm, &reqs[10]);
+        MPI_Irecv(m.frontRecv_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nvt), MPI_DOUBLE, cf.zPlus, MPI_ANY_TAG, cf.comm, &reqs[11]);
     }
     
     MPI_Waitall(wait_count,reqs, MPI_STATUSES_IGNORE);

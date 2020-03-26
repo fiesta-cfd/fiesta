@@ -1,6 +1,7 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+#include "fiesta.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -8,6 +9,7 @@
 #include "lua.hpp"
 #include "Kokkos_Core.hpp"
 #include <mpi.h>
+#include <string>
 
 // Lua error function
 void error(lua_State *L, const char *fmt, ...);
@@ -23,20 +25,24 @@ double getglobdbl(lua_State *L, const char *var);
 
 //configuration structure
 struct inputConfig {
-    char inputFname[32];
+    std::string inputFname;
+    std::string title;
     int ndim;
     int glbl_ni,glbl_nj,glbl_nk;
     int glbl_nci,glbl_ncj,glbl_nck;
     double *gamma;
     double *M;
+    double *mu;
     double R;
+    int scheme;
+    int visc;
     double dt,dx,dy,dz;
     int xProcs,yProcs,zProcs,numProcs;
     int xPlus,yPlus,zPlus;
     int xMinus,yMinus,zMinus;
     int rank;
     int nci,ncj,nck;
-    int nt,ni,nj,nk,nv,ns;
+    int nt,ni,nj,nk,nv,ns,nvt;
     int iStart,jStart,kStart;
     int iEnd,jEnd,kEnd;
     MPI_Comm comm;
@@ -45,7 +51,7 @@ struct inputConfig {
     int xPer,yPer,zPer;
     int restart;
     const char * sfName;
-    int tstart;
+    int tstart,tend;
     double time;
     double ceq,kap,eps,alpha,beta,betae;
     int bcL,bcR,bcB,bcT,bcH,bcF;
@@ -53,8 +59,9 @@ struct inputConfig {
     int out_freq, write_freq, restart_freq;
 };
 
-struct inputConfig executeConfiguration(char * fname);
+struct inputConfig executeConfiguration(int argc, char * argv[]);
 
-int loadInitialConditions(struct inputConfig cf, const Kokkos::View<double****> v);
+int loadInitialConditions(struct inputConfig cf, const FS4D v);
+int loadGrid(struct inputConfig cf, const FS4D v);
 
 #endif

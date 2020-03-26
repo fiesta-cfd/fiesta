@@ -1,3 +1,4 @@
+#include "fiesta.hpp"
 #ifndef CGNS_H
 #define CGNS_H
 
@@ -7,12 +8,35 @@ extern "C" {
 #include "pcgnslib.h"
 }
 
-struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y, double *z,char * fname);
-struct inputConfig writeSPGrid(struct inputConfig cf, float *x, float *y, float *z,char * fname);
+class cgnsWriter {
 
-void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Kokkos::View<double****> deviceV, int tdx, double time);
-void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const Kokkos::View<double****> deviceV, int tdx, double time);
+public:
 
-void readSolution(struct inputConfig cf, const Kokkos::View<double****> deviceV);
+    cgnsWriter(struct inputConfig, FS4D gridD, FS4D varD);
+    struct inputConfig writeGrid(struct inputConfig cf, const FS4D gridD, const char * fname);
+    struct inputConfig writeSPGrid(struct inputConfig cf, const FS4D gridD, const char * fname);
+
+    void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, int tdx, double time);
+    void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, int tdx, double time);
+
+    void readSolution(struct inputConfig cf, const FS4D deviceV);
+
+private:
+
+    double *x;
+    double *y;
+    double *z;
+    float *xsp;
+    float *ysp;
+    float *zsp;
+
+    double *v;
+    float *vsp;
+    double * readV;
+
+    FS4DH gridH;
+    FS4DH varH;
+
+};
 
 #endif

@@ -1,21 +1,20 @@
+#include "fiesta.hpp"
 #include "input.hpp"
 #include "mpi.hpp"
 #include "cgns.hpp"
 #include "bc.hpp"
 #include "Kokkos_Core.hpp"
 #include <mpi.h>
-#include "lsdebug.hpp"
-#include "wenoc3d.hpp"
+#include "debug.hpp"
+#include "cart3d.hpp"
 
 struct calculateRhoAndPressure {
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double***> V3D;
-    V4D var;
-    V3D p;
-    V3D rho;
+    FS4D var;
+    FS3D p;
+    FS3D rho;
     Kokkos::View<double*> cd;
 
-    calculateRhoAndPressure (V4D var_, V3D p_, V3D rho_, Kokkos::View<double*> cd_)
+    calculateRhoAndPressure (FS4D var_, FS3D p_, FS3D rho_, Kokkos::View<double*> cd_)
          : var(var_), p(p_), rho(rho_), cd(cd_) {}
 
     KOKKOS_INLINE_FUNCTION
@@ -50,20 +49,18 @@ struct calculateRhoAndPressure {
 
 struct calculateWenoFluxes {
     
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double***> V3D;
-    V4D var;
-    V3D p;
-    V3D rho;
-    V3D wenox;
-    V3D wenoy;
-    V3D wenoz;
+    FS4D var;
+    FS3D p;
+    FS3D rho;
+    FS3D wenox;
+    FS3D wenoy;
+    FS3D wenoz;
     Kokkos::View<double*> cd;
     int v;
     double eps = 0.000001;
 
-    calculateWenoFluxes (V4D var_, V3D p_, V3D rho_,
-                         V3D wenox_, V3D wenoy_, V3D wenoz_, Kokkos::View<double*> cd_, int v_)
+    calculateWenoFluxes (FS4D var_, FS3D p_, FS3D rho_,
+                         FS3D wenox_, FS3D wenoy_, FS3D wenoz_, Kokkos::View<double*> cd_, int v_)
                          : var(var_), p(p_), rho(rho_),
                            wenox(wenox_), wenoy(wenoy_), wenoz(wenoz_), cd(cd_), v(v_) {}
     
@@ -158,15 +155,13 @@ struct calculateWenoFluxes {
 
 struct applyWenoFluxes {
     
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double***> V3D;
-    V4D dvar;
-    V3D wenox;
-    V3D wenoy;
-    V3D wenoz;
+    FS4D dvar;
+    FS3D wenox;
+    FS3D wenoy;
+    FS3D wenoz;
     int v;
 
-    applyWenoFluxes (V4D dvar_, V3D wenox_, V3D wenoy_, V3D wenoz_, int v_)
+    applyWenoFluxes (FS4D dvar_, FS3D wenox_, FS3D wenoy_, FS3D wenoz_, int v_)
         : dvar(dvar_), wenox(wenox_), wenoy(wenoy_), wenoz(wenoz_), v(v_) {}
     
     KOKKOS_INLINE_FUNCTION
@@ -180,13 +175,11 @@ struct applyWenoFluxes {
 
 struct applyPressure {
     
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double***> V3D;
-    V4D dvar;
-    V3D p;
+    FS4D dvar;
+    FS3D p;
     Kokkos::View<double*> cd;
 
-    applyPressure (V4D dvar_, V3D p_, Kokkos::View<double*> cd_)
+    applyPressure (FS4D dvar_, FS3D p_, Kokkos::View<double*> cd_)
         : dvar(dvar_), p(p_), cd(cd_) {}
     
     KOKKOS_INLINE_FUNCTION
@@ -203,14 +196,12 @@ struct applyPressure {
 
 struct maxWaveSpeed {
     
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double***> V3D;
-    V4D var;
-    V3D p;
-    V3D rho;
+    FS4D var;
+    FS3D p;
+    FS3D rho;
     Kokkos::View<double*> cd;
 
-    maxWaveSpeed (V4D var_, V3D p_, V3D rho_, Kokkos::View<double*> cd_)
+    maxWaveSpeed (FS4D var_, FS3D p_, FS3D rho_, Kokkos::View<double*> cd_)
         : var(var_), p(p_), rho(rho_), cd(cd_) {}
     
     KOKKOS_INLINE_FUNCTION
@@ -242,14 +233,12 @@ struct maxWaveSpeed {
 
 struct calculateRhoGrad {
 
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double***> V3D;
-    V4D var;
-    V3D rho;
-    V4D gradRho;
+    FS4D var;
+    FS3D rho;
+    FS4D gradRho;
     Kokkos::View<double*> cd;
 
-    calculateRhoGrad (V4D var_, V3D rho_, V4D gradRho_, Kokkos::View<double*> cd_)
+    calculateRhoGrad (FS4D var_, FS3D rho_, FS4D gradRho_, Kokkos::View<double*> cd_)
         : var(var_), rho(rho_), gradRho(gradRho_), cd(cd_) {}
 
     KOKKOS_INLINE_FUNCTION
@@ -346,11 +335,10 @@ struct calculateRhoGrad {
 
 struct maxGradFunctor {
 
-    typedef typename Kokkos::View<double****> V4D;
-    V4D gradRho;
+    FS4D gradRho;
     int n;
 
-    maxGradFunctor(V4D gradRho_, int n_) : gradRho(gradRho_), n(n_) {}
+    maxGradFunctor(FS4D gradRho_, int n_) : gradRho(gradRho_), n(n_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j, const int k, double& lmax) const {
@@ -361,15 +349,13 @@ struct maxGradFunctor {
 
 struct updateCeq {
 
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double***> V3D;
-    V4D dvar;
-    V4D var;
-    V4D gradRho;
+    FS4D dvar;
+    FS4D var;
+    FS4D gradRho;
     double maxS,kap,eps;
     Kokkos::View<double*> cd;
 
-    updateCeq (V4D dvar_, V4D var_, V4D gradRho_, double maxS_, Kokkos::View<double*> cd_,
+    updateCeq (FS4D dvar_, FS4D var_, FS4D gradRho_, double maxS_, Kokkos::View<double*> cd_,
                       double kap_, double eps_)
         : dvar(dvar_), var(var_), gradRho(gradRho_), maxS(maxS_), cd(cd_), kap(kap_), eps(eps_) {}
 
@@ -450,16 +436,13 @@ struct updateCeq {
 
 struct calculateCeqFlux {
 
-    typedef typename Kokkos::View<double******> V6D;
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double***> V3D;
-    V4D var;
-    V3D rho;
-    V6D mFlux;  //(m,n,i,j,k,dir)
-    V4D cFlux; //(i,j,k,dir)
+    FS4D var;
+    FS3D rho;
+    FS6D mFlux;  //(m,n,i,j,k,dir)
+    FS4D cFlux; //(i,j,k,dir)
     Kokkos::View<double*> cd;
 
-    calculateCeqFlux (V4D var_, V3D rho_, V6D mFlux_, V4D cFlux_, Kokkos::View<double*> cd_)
+    calculateCeqFlux (FS4D var_, FS3D rho_, FS6D mFlux_, FS4D cFlux_, Kokkos::View<double*> cd_)
         : var(var_), rho(rho_), mFlux(mFlux_), cFlux(cFlux_), cd(cd_) {}
 
     KOKKOS_INLINE_FUNCTION
@@ -569,18 +552,15 @@ struct calculateCeqFlux {
 
 struct applyCeq {
 
-    typedef typename Kokkos::View<double******> V6D;
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double***> V3D;
-    V4D dvar;
-    V4D var;
-    V3D rho;
-    V6D mFlux;  //(m,n,i,j,k,dir)
-    V4D cFlux; //(i,j,k,dir)
+    FS4D dvar;
+    FS4D var;
+    FS3D rho;
+    FS6D mFlux;  //(m,n,i,j,k,dir)
+    FS4D cFlux; //(i,j,k,dir)
     double alpha,beta,betae;
     Kokkos::View<double*> cd;
 
-    applyCeq (V4D dvar_, V4D var_, V3D rho_, V6D mFlux_, V4D cFlux_, Kokkos::View<double*> cd_,
+    applyCeq (FS4D dvar_, FS4D var_, FS3D rho_, FS6D mFlux_, FS4D cFlux_, Kokkos::View<double*> cd_,
                       double alpha_, double beta_, double betae_)
         : dvar(dvar_), var(var_), rho(rho_), mFlux(mFlux_), cFlux(cFlux_),
           cd(cd_), alpha(alpha_), beta(beta_), betae(betae_) {} 
@@ -696,36 +676,52 @@ struct applyCeq {
     }
 };
 
-wenoc3d_func::wenoc3d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_) {};
+hydroc3d_func::hydroc3d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_) {
 
-void wenoc3d_func::compute(const Kokkos::View<double****> & mvar, Kokkos::View<double****> & mdvar) {
+    grid    = Kokkos::View<double****  ,FS_LAYOUT>("coords", cf.ni, cf.nj, cf.nk, 3);
+    var     = Kokkos::View<double****  ,FS_LAYOUT>("var",    cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Primary Variable Array
+    tmp1    = Kokkos::View<double****  ,FS_LAYOUT>("tmp1",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Arrayr1
+    tmp2    = Kokkos::View<double****  ,FS_LAYOUT>("tmp2",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Array2
+    dvar    = Kokkos::View<double****  ,FS_LAYOUT>("dvar",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // RHS Output
+    p       = Kokkos::View<double***   ,FS_LAYOUT>("p",      cf.ngi,cf.ngj,cf.ngk);        // Pressure
+    T       = Kokkos::View<double***   ,FS_LAYOUT>("T",      cf.ngi,cf.ngj,cf.ngk);        // Temperature
+    rho     = Kokkos::View<double***   ,FS_LAYOUT>("rho",    cf.ngi,cf.ngj,cf.ngk);        // Total Density
+    qx      = Kokkos::View<double***   ,FS_LAYOUT>("qx",     cf.ngi,cf.ngj,cf.ngk);        // Heat Fluxes in X direction
+    qy      = Kokkos::View<double***   ,FS_LAYOUT>("qy",     cf.ngi,cf.ngj,cf.ngk);        // Heat Fluxes in X direction
+    qz      = Kokkos::View<double***   ,FS_LAYOUT>("qz",     cf.ngi,cf.ngj,cf.ngk);        // Heat Fluxes in z direction
+    fluxx   = Kokkos::View<double***   ,FS_LAYOUT>("fluxx",  cf.ngi,cf.ngj,cf.ngk);        // Advective Fluxes in X direction
+    fluxy   = Kokkos::View<double***   ,FS_LAYOUT>("fluxy",  cf.ngi,cf.ngj,cf.ngk);        // Advective Fluxes in Y direction
+    fluxz   = Kokkos::View<double***   ,FS_LAYOUT>("fluxz",  cf.ngi,cf.ngj,cf.ngk);        // Advective Fluxes in z direction
+    stressx = Kokkos::View<double***** ,FS_LAYOUT>("stressx",cf.ngi,cf.ngj,cf.ngk,3,3);    // stress tensor on x faces
+    stressy = Kokkos::View<double***** ,FS_LAYOUT>("stressy",cf.ngi,cf.ngj,cf.ngk,3,3);    // stress tensor on y faces
+    stressz = Kokkos::View<double***** ,FS_LAYOUT>("stressz",cf.ngi,cf.ngj,cf.ngk,3,3);    // stress tensor on z faces
+    gradRho = Kokkos::View<double****  ,FS_LAYOUT>("gradRho",cf.ngi,cf.ngj,cf.ngk,5);      // density gradient vector
+    cFlux   = Kokkos::View<double****  ,FS_LAYOUT>("cFlux",  cf.ngi,cf.ngj,cf.ngk,3);      // 
+    mFlux   = Kokkos::View<double******,FS_LAYOUT>("mFlux",  3,3,cf.ngi,cf.ngj,cf.ngk,3);  // 
+    cd = mcd;
 
-    // Typename acronyms for 3D and 4D variables
-    typedef typename Kokkos::View<double******> V6D;
-    typedef typename Kokkos::View<double****> V4D;
-    typedef typename Kokkos::View<double***> V3D;
+    timers["flux"]       = fiestaTimer("Flux Calculation");
+    timers["pressgrad"]  = fiestaTimer("Pressure Gradient Calculation");
+    timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
+    timers["solWrite"] = fiestaTimer("Solution Write Time");
+    timers["resWrite"] = fiestaTimer("Restart Write Time");
+    if (cf.visc == 1){
+        timers["stress"]     = fiestaTimer("Stress Tensor Computation");
+        timers["qflux"]      = fiestaTimer("Heat Flux Calculation");
+        timers["visc"]       = fiestaTimer("Viscous Term Calculation");
+    }
+    if (cf.ceq == 1){
+        timers["ceq"]       = fiestaTimer("C-Equation");
+    }
 
-    // copy input views
-    V4D dvar = mdvar;
-    V4D var = mvar;
+};
 
-    // create configuration data view
-    Kokkos::View<double*> cd = mcd;
-
-    // create temprary views
-    V3D p("p",cf.ngi,cf.ngj,cf.ngk);
-    V3D rho("rho",cf.ngi,cf.ngj,cf.ngk);
-    V3D wenox("wenox",cf.ngi,cf.ngj,cf.ngk);
-    V3D wenoy("wenoy",cf.ngi,cf.ngj,cf.ngk);
-    V3D wenoz("wenoz",cf.ngi,cf.ngj,cf.ngk);
-    V4D gradRho("gradRho",cf.ngi,cf.ngj,cf.ngk,5);
-    V6D mFlux("mFlux",3,3,cf.ngi,cf.ngj,cf.ngk,3);
-    V4D cFlux("cFlux",cf.ngi,cf.ngj,cf.ngk,3);
+void hydroc3d_func::compute() {
 
     // create range policies
-    policy_f ghost_pol = policy_f({0,0,0},{cf.ngi, cf.ngj, cf.ngk});
-    policy_f cell_pol  = policy_f({cf.ng,cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
-    policy_f weno_pol  = policy_f({cf.ng-1,cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
+    policy_f3 ghost_pol = policy_f3({0,0,0},{cf.ngi, cf.ngj, cf.ngk});
+    policy_f3 cell_pol  = policy_f3({cf.ng,cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
+    policy_f3 weno_pol  = policy_f3({cf.ng-1,cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
 
     double myMaxS,maxS;
 
@@ -740,9 +736,9 @@ void wenoc3d_func::compute(const Kokkos::View<double****> & mvar, Kokkos::View<d
     Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure(var,p,rho,cd) );
 
     for (int v=0; v<cf.nv; ++v){
-        Kokkos::parallel_for( weno_pol, calculateWenoFluxes(var,p,rho,wenox,wenoy,wenoz,cd,v) );
+        Kokkos::parallel_for( weno_pol, calculateWenoFluxes(var,p,rho,fluxx,fluxy,fluxz,cd,v) );
 
-        Kokkos::parallel_for( cell_pol, applyWenoFluxes(dvar,wenox,wenoy,wenoz,v) );
+        Kokkos::parallel_for( cell_pol, applyWenoFluxes(dvar,fluxx,fluxy,fluxz,v) );
     }
 
     Kokkos::parallel_for( cell_pol, applyPressure(dvar,p,cd) );
@@ -798,8 +794,7 @@ void wenoc3d_func::compute(const Kokkos::View<double****> & mvar, Kokkos::View<d
         //    printf("%.4f,%.4f,%.4f,%.4f,%.4f\n",maxC,maxCh,maxC1,maxC2,maxC3);
         //    //printf("alpha = %f, beta = %f, betae = %f\n",alpha,beta,betae);
         
-        Kokkos::parallel_for(weno_pol,
-            calculateCeqFlux(var,rho,mFlux,cFlux,cd));
+        Kokkos::parallel_for(weno_pol, calculateCeqFlux(var,rho,mFlux,cFlux,cd));
 
         Kokkos::parallel_for( cell_pol, applyCeq(dvar,var,rho,mFlux,cFlux,cd,alpha,beta,betae) );
     }

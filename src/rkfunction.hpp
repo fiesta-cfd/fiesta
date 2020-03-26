@@ -1,8 +1,12 @@
 #ifndef RKFUNCTION_H
 #define RKFUNCTION_H
 
+#include "fiesta.hpp"
 #include "input.hpp"
 #include "Kokkos_Core.hpp"
+#include <map>
+#include <string>
+#include "timer.hpp"
 
 /***
  *
@@ -21,11 +25,19 @@ class rk_func
 public:
     rk_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_);
 
-    virtual void compute(const Kokkos::View<double****> & mvar, Kokkos::View<double****> & mdvar) = 0;
+    virtual void compute() = 0;
+    //virtual void compute(const FS4D & mvar, FS4D & mdvar) = 0;
+    
+    FS4D var;
+    FS4D dvar;
+    FS4D tmp1;
+    FS4D tmp2;
+    FS4D grid;
+
+    std::map<std::string, fiestaTimer> timers;
+    //std::map<std::string, int> timers;
 
 protected:
-    Kokkos::View<double****> mvar;
-    Kokkos::View<double****> mdvar;
     Kokkos::View<double*> mcd;
     struct inputConfig cf;
 };

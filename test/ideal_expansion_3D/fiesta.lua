@@ -2,10 +2,12 @@
 -- 3D Ideal Expansion
 --
 
+title = "3D Idealized Expansion"
+
 --Restart and Output Options
-out_freq = 10                         --Screen Output Interval
-restart_freq = 10000                  --Restart Write Interval
-write_freq = 100                      --Solution Write Interval
+out_freq = 5                          --Screen Output Interval
+restart_freq = 0                      --Restart Write Interval
+write_freq = 10                       --Solution Write Interval
 restart = 0                           --Whether or not to use restart file
 time = 0.0                            --Start time of simulation
 tstart = 0                            --Start time index of simulation
@@ -16,10 +18,12 @@ R = 8.314462                          --Universal Gas Constant [J/(K*mol)]
 ns = 1                                --Number of Gas Species
 gamma = {1.400}                  --Array of Species Ratio of Specific Heats
 M = {0.02897}                 --Array of Species Molar Masses [kg/mol]
---M = {0.02897,0.14606}                 --Array of Species Molar Masses [kg/mol]
+mu = {2.928e-5}
+visc=0
+scheme="weno5"
 
 --Time
-nt = 3000                             --Time Step at which to end simulation
+nt = 20                               --Time Step at which to end simulation
 dt = 1e-6                             --Time Step Size [s]
 
 --User Parameters
@@ -29,9 +33,9 @@ Lz = 10.0
 
 --Number of cells
 ndim = 3
-ni = 75             --Simulation size in x direction
-nj = 75             --Simulation Size in y direction
-nk = 75             --Simulation Size in z direction
+ni = 100            --Simulation size in x direction
+nj = 100            --Simulation Size in y direction
+nk = 100            --Simulation Size in z direction
 
 --Cell Sizes
 dx = Lx/ni
@@ -39,7 +43,7 @@ dy = Ly/nj
 dz = Lz/nk
 
 --MPI Processors
-procsx = 2
+procsx = 1
 procsy = 1
 procsz = 1
 
@@ -62,6 +66,12 @@ epsilon = 1.0       --Support Factor
 alpha = 10.0        --Anisotropic Coefficient
 beta = 15.0         --Isotropic Coefficient
 betae = 2.0         --Energy Equation Isotropic Coefficient
+
+function g(i,j,k,v)
+    if v==0 then return dx*i end
+    if v==1 then return dy*j end
+    if v==2 then return dz*k end
+end
 
 function f(i,j,k,v)
     --[[
@@ -100,7 +110,7 @@ function f(i,j,k,v)
     Ehot = 3000*Cv_hot*1000.0
 
     --setup hot region
-    if rdist < 0.5 then
+    if rdist < 1.0 then
         if v==0 then return 0      end
         if v==1 then return 0      end
         if v==2 then return 0      end

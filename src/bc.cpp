@@ -1,14 +1,15 @@
+#include "fiesta.hpp"
 #include "Kokkos_Core.hpp"
-#include "lsdebug.hpp"
+#include "debug.hpp"
 #include "input.hpp"
 #include "mpi.hpp"
 #include <mpi.h>
 
 struct bc_L {
-    Kokkos::View<double****> u;
+    FS4D u;
     int n, ng, bc_type;
 
-    bc_L(int n_, int ng_, int bc_type_, Kokkos::View<double****> u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
+    bc_L(int n_, int ng_, int bc_type_, FS4D u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int j, const int k, const int v) const {
@@ -19,10 +20,10 @@ struct bc_L {
 };
 
 struct bc_R {
-    Kokkos::View<double****> u;
+    FS4D u;
     int n, ng, bc_type;
 
-    bc_R(int n_, int ng_, int bc_type_, Kokkos::View<double****> u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
+    bc_R(int n_, int ng_, int bc_type_, FS4D u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int j, const int k, const int v) const {
@@ -33,10 +34,10 @@ struct bc_R {
 };
 
 struct bc_B {
-    Kokkos::View<double****> u;
+    FS4D u;
     int n, ng, bc_type;
 
-    bc_B(int n_, int ng_, int bc_type_, Kokkos::View<double****> u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
+    bc_B(int n_, int ng_, int bc_type_, FS4D u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int k, const int v) const {
@@ -47,10 +48,10 @@ struct bc_B {
 };
 
 struct bc_T {
-    Kokkos::View<double****> u;
+    FS4D u;
     int n, ng, bc_type;
 
-    bc_T(int n_, int ng_, int bc_type_, Kokkos::View<double****> u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
+    bc_T(int n_, int ng_, int bc_type_, FS4D u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int k, const int v) const {
@@ -61,10 +62,10 @@ struct bc_T {
 };
 
 struct bc_H {
-    Kokkos::View<double****> u;
+    FS4D u;
     int n, ng, bc_type;
 
-    bc_H(int n_, int ng_, int bc_type_, Kokkos::View<double****> u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
+    bc_H(int n_, int ng_, int bc_type_, FS4D u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j, const int v) const {
@@ -75,10 +76,10 @@ struct bc_H {
 };
 
 struct bc_F {
-    Kokkos::View<double****> u;
+    FS4D u;
     int n, ng, bc_type;
 
-    bc_F(int n_, int ng_, int bc_type_, Kokkos::View<double****> u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
+    bc_F(int n_, int ng_, int bc_type_, FS4D u_) : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j, const int v) const {
@@ -88,39 +89,35 @@ struct bc_F {
     }
 };
 
-void applyBCs(struct inputConfig cf, Kokkos::View<double****> &u, class mpiBuffers &m){
+void applyBCs(struct inputConfig cf, FS4D &u, class mpiBuffers &m){
 
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_bl;
 
     haloExchange(cf,u,m);
 
-    int cv = 0;
-    if (cf.ceq == 1)
-        cv = 5;
-
     if (cf.xMinus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngj,cf.ngk,cf.nv+cv}), bc_L(cf.ng,cf.ng,cf.bcL,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngj,cf.ngk,cf.nvt}), bc_L(cf.ng,cf.ng,cf.bcL,u));
     }
 
     if (cf.xPlus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngj,cf.ngk,cf.nv+cv}), bc_R(cf.ng+cf.nci,cf.ng,cf.bcR,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngj,cf.ngk,cf.nvt}), bc_R(cf.ng+cf.nci,cf.ng,cf.bcR,u));
     }
 
     if (cf.yMinus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngk,cf.nv+cv}), bc_B(cf.ng,cf.ng,cf.bcB,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngk,cf.nvt}), bc_B(cf.ng,cf.ng,cf.bcB,u));
     }
 
     if (cf.yPlus < 0){
-        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngk,cf.nv+cv}), bc_T(cf.ng+cf.ncj,cf.ng,cf.bcT,u));
+        Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngk,cf.nvt}), bc_T(cf.ng+cf.ncj,cf.ng,cf.bcT,u));
     }
 
     if (cf.ndim == 3){
         if (cf.zMinus < 0){
-            Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngj,cf.nv+cv}), bc_H(cf.ng,cf.ng,cf.bcH,u));
+            Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngj,cf.nvt}), bc_H(cf.ng,cf.ng,cf.bcH,u));
         }
 
         if (cf.zPlus < 0){
-            Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngj,cf.nv+cv}), bc_F(cf.ng+cf.nck,cf.ng,cf.bcF,u));
+            Kokkos::parallel_for(policy_bl({0,0,0},{cf.ngi,cf.ngj,cf.nvt}), bc_F(cf.ng+cf.nck,cf.ng,cf.bcF,u));
         }
     }
 }
