@@ -5,7 +5,7 @@
 #include "Kokkos_Core.hpp"
 #include <mpi.h>
 #include "debug.hpp"
-#include "hydro2dvisc.hpp"
+#include "cart2d.hpp"
 #include "flux.hpp"
 #include "ceq.hpp"
 

@@ -8,7 +8,7 @@
 #include "debug.hpp"
 //#include "hydroc3d.hpp"
 //#include "hydro2d.hpp"
-#include "hydro2dvisc.hpp"
+#include "cart2d.hpp"
 #include "rkfunction.hpp"
 #include <iostream>
 #include <cstdio>
