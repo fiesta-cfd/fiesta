@@ -20,6 +20,7 @@ typedef typename Kokkos::View<double**,     FS_LAYOUT>::HostMirror FS2DH;
 typedef typename Kokkos::View<double*,      FS_LAYOUT>::HostMirror FS1DH;
 
 typedef typename Kokkos::MDRangePolicy<Kokkos::Rank<2>> policy_f;
+typedef typename Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_f3;
 typedef typename Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_f4;
 
 #endif

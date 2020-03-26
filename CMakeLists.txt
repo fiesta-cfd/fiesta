@@ -72,7 +72,7 @@ ExternalProject_Add_StepDependencies(cgnsParallel configure hdf5Parallel)
 include_directories(${installDir}/include)
 
 # fiesta
-set(FIESTA_SRCS src/bc.cpp src/cgns.cpp src/timer.cpp src/input.cpp src/output.cpp src/main.cpp src/mpi.cpp src/rkfunction.cpp src/cart2d.cpp)
+set(FIESTA_SRCS src/bc.cpp src/cgns.cpp src/timer.cpp src/input.cpp src/output.cpp src/main.cpp src/mpi.cpp src/rkfunction.cpp src/cart2d.cpp src/cart3d.cpp)
 add_executable(fiesta ${FIESTA_SRCS})
 add_dependencies(fiesta cgnsParallel)
 target_link_libraries(fiesta

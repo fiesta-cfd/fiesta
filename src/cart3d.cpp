@@ -6,7 +6,7 @@
 #include "Kokkos_Core.hpp"
 #include <mpi.h>
 #include "debug.hpp"
-#include "hydroc3d.hpp"
+#include "cart3d.hpp"
 
 struct calculateRhoAndPressure {
     FS4D var;
@@ -676,33 +676,52 @@ struct applyCeq {
     }
 };
 
-hydroc3d_func::hydroc3d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_) {};
+hydroc3d_func::hydroc3d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_) {
 
-void hydroc3d_func::compute(const FS4D & mvar, FS4D & mdvar) {
+    grid    = Kokkos::View<double****  ,FS_LAYOUT>("coords", cf.ni, cf.nj, cf.nk, 3);
+    var     = Kokkos::View<double****  ,FS_LAYOUT>("var",    cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Primary Variable Array
+    tmp1    = Kokkos::View<double****  ,FS_LAYOUT>("tmp1",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Arrayr1
+    tmp2    = Kokkos::View<double****  ,FS_LAYOUT>("tmp2",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Array2
+    dvar    = Kokkos::View<double****  ,FS_LAYOUT>("dvar",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // RHS Output
+    p       = Kokkos::View<double***   ,FS_LAYOUT>("p",      cf.ngi,cf.ngj,cf.ngk);        // Pressure
+    T       = Kokkos::View<double***   ,FS_LAYOUT>("T",      cf.ngi,cf.ngj,cf.ngk);        // Temperature
+    rho     = Kokkos::View<double***   ,FS_LAYOUT>("rho",    cf.ngi,cf.ngj,cf.ngk);        // Total Density
+    qx      = Kokkos::View<double***   ,FS_LAYOUT>("qx",     cf.ngi,cf.ngj,cf.ngk);        // Heat Fluxes in X direction
+    qy      = Kokkos::View<double***   ,FS_LAYOUT>("qy",     cf.ngi,cf.ngj,cf.ngk);        // Heat Fluxes in X direction
+    qz      = Kokkos::View<double***   ,FS_LAYOUT>("qz",     cf.ngi,cf.ngj,cf.ngk);        // Heat Fluxes in z direction
+    fluxx   = Kokkos::View<double***   ,FS_LAYOUT>("fluxx",  cf.ngi,cf.ngj,cf.ngk);        // Advective Fluxes in X direction
+    fluxy   = Kokkos::View<double***   ,FS_LAYOUT>("fluxy",  cf.ngi,cf.ngj,cf.ngk);        // Advective Fluxes in Y direction
+    fluxz   = Kokkos::View<double***   ,FS_LAYOUT>("fluxz",  cf.ngi,cf.ngj,cf.ngk);        // Advective Fluxes in z direction
+    stressx = Kokkos::View<double***** ,FS_LAYOUT>("stressx",cf.ngi,cf.ngj,cf.ngk,3,3);    // stress tensor on x faces
+    stressy = Kokkos::View<double***** ,FS_LAYOUT>("stressy",cf.ngi,cf.ngj,cf.ngk,3,3);    // stress tensor on y faces
+    stressz = Kokkos::View<double***** ,FS_LAYOUT>("stressz",cf.ngi,cf.ngj,cf.ngk,3,3);    // stress tensor on z faces
+    gradRho = Kokkos::View<double****  ,FS_LAYOUT>("gradRho",cf.ngi,cf.ngj,cf.ngk,5);      // density gradient vector
+    cFlux   = Kokkos::View<double****  ,FS_LAYOUT>("cFlux",  cf.ngi,cf.ngj,cf.ngk,3);      // 
+    mFlux   = Kokkos::View<double******,FS_LAYOUT>("mFlux",  3,3,cf.ngi,cf.ngj,cf.ngk,3);  // 
+    cd = mcd;
 
-    // Typename acronyms for 3D and 4D variables
+    timers["flux"]       = fiestaTimer("Flux Calculation");
+    timers["pressgrad"]  = fiestaTimer("Pressure Gradient Calculation");
+    timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
+    timers["solWrite"] = fiestaTimer("Solution Write Time");
+    timers["resWrite"] = fiestaTimer("Restart Write Time");
+    if (cf.visc == 1){
+        timers["stress"]     = fiestaTimer("Stress Tensor Computation");
+        timers["qflux"]      = fiestaTimer("Heat Flux Calculation");
+        timers["visc"]       = fiestaTimer("Viscous Term Calculation");
+    }
+    if (cf.ceq == 1){
+        timers["ceq"]       = fiestaTimer("C-Equation");
+    }
 
-    // copy input views
-    FS4D dvar = mdvar;
-    FS4D var = mvar;
+};
 
-    // create configuration data view
-    Kokkos::View<double*> cd = mcd;
-
-    // create temprary views
-    FS3D p("p",cf.ngi,cf.ngj,cf.ngk);
-    FS3D rho("rho",cf.ngi,cf.ngj,cf.ngk);
-    FS3D wenox("wenox",cf.ngi,cf.ngj,cf.ngk);
-    FS3D wenoy("wenoy",cf.ngi,cf.ngj,cf.ngk);
-    FS3D wenoz("wenoz",cf.ngi,cf.ngj,cf.ngk);
-    FS4D gradRho("gradRho",cf.ngi,cf.ngj,cf.ngk,5);
-    FS6D mFlux("mFlux",3,3,cf.ngi,cf.ngj,cf.ngk,3);
-    FS4D cFlux("cFlux",cf.ngi,cf.ngj,cf.ngk,3);
+void hydroc3d_func::compute() {
 
     // create range policies
-    policy_f ghost_pol = policy_f({0,0,0},{cf.ngi, cf.ngj, cf.ngk});
-    policy_f cell_pol  = policy_f({cf.ng,cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
-    policy_f weno_pol  = policy_f({cf.ng-1,cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
+    policy_f3 ghost_pol = policy_f3({0,0,0},{cf.ngi, cf.ngj, cf.ngk});
+    policy_f3 cell_pol  = policy_f3({cf.ng,cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
+    policy_f3 weno_pol  = policy_f3({cf.ng-1,cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
 
     double myMaxS,maxS;
 
@@ -717,9 +736,9 @@ void hydroc3d_func::compute(const FS4D & mvar, FS4D & mdvar) {
     Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure(var,p,rho,cd) );
 
     for (int v=0; v<cf.nv; ++v){
-        Kokkos::parallel_for( weno_pol, calculateWenoFluxes(var,p,rho,wenox,wenoy,wenoz,cd,v) );
+        Kokkos::parallel_for( weno_pol, calculateWenoFluxes(var,p,rho,fluxx,fluxy,fluxz,cd,v) );
 
-        Kokkos::parallel_for( cell_pol, applyWenoFluxes(dvar,wenox,wenoy,wenoz,v) );
+        Kokkos::parallel_for( cell_pol, applyWenoFluxes(dvar,fluxx,fluxy,fluxz,v) );
     }
 
     Kokkos::parallel_for( cell_pol, applyPressure(dvar,p,cd) );
@@ -775,8 +794,7 @@ void hydroc3d_func::compute(const FS4D & mvar, FS4D & mdvar) {
         //    printf("%.4f,%.4f,%.4f,%.4f,%.4f\n",maxC,maxCh,maxC1,maxC2,maxC3);
         //    //printf("alpha = %f, beta = %f, betae = %f\n",alpha,beta,betae);
         
-        Kokkos::parallel_for(weno_pol,
-            calculateCeqFlux(var,rho,mFlux,cFlux,cd));
+        Kokkos::parallel_for(weno_pol, calculateCeqFlux(var,rho,mFlux,cFlux,cd));
 
         Kokkos::parallel_for( cell_pol, applyCeq(dvar,var,rho,mFlux,cFlux,cd,alpha,beta,betae) );
     }

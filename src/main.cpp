@@ -6,8 +6,7 @@
 #include "Kokkos_Core.hpp"
 #include <mpi.h>
 #include "debug.hpp"
-//#include "hydroc3d.hpp"
-//#include "hydro2d.hpp"
+#include "cart3d.hpp"
 #include "cart2d.hpp"
 #include "rkfunction.hpp"
 #include <iostream>
@@ -88,11 +87,11 @@ int main(int argc, char* argv[]){
 
     /*** Choose Scheme ***/
     rk_func *f;
-    //if (cf.ndim == 3){
-    //    f = new hydroc3d_func(cf,cd);
-    //}else{
+    if (cf.ndim == 3){
+        f = new hydroc3d_func(cf,cd);
+    }else{
         f = new hydro2dvisc_func(cf,cd);
-    //}
+    }
 
     cgnsWriter w(cf,f->grid,f->var);
 
