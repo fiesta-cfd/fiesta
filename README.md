@@ -4,8 +4,6 @@
 
 ## Building on Kodiak
 
-There is a new bash script and makefile system for building Fiesta.  Tested and working on Kodiak and local workstations.  Does not work on any UNM CARC machines.
-
 Pick a working directory:
 ```
 mkdir ~/fiesta-dev && cd ~/fiesta-dev
@@ -33,27 +31,33 @@ module load gcc/7.4.0 openmpi/2.1.2 cudatoolkit/10.0 cmake/3.14.6
 
 Configure with CMAKE
 ```
-cmake ../fiesta -DCUDA=on -DKOKKOS_ARCH=Pascal60
+cmake ../fiesta -DCUDA=on
 ```
-With no options, Fiesta will be built with serial cpu kokkos.  Use -DCUDA for nvidia GPUs.  For pascal GPUs, the architecture must be specified with -KOKKOS_ARCH=Pascal60.  For Volta GPUs, use -KOKKOS_ARCH=Volta70. Other kokkos options are passed through, so other devices can be specified with -DDEVICE="device".
+With no options, Fiesta will be built with CPU support.  Use '-DCUDA=on' for nvidia GPUs.  Use '-DOPENMP=on' for openMP support on CPUs.
+
+If desired, specify an installation directory with '-DCMAKE_INSTALL_PREFIX=/path/to/install'.
 
 Build the code:
 ```
 make -j
 ```
+or
+```
+make install -j
+```
 
-An executable should now exist in the build directory. The executable is statically linked, so there is no need to keep the third party libraries in the path, e.g.  "export LD_LIBRARY_PATH" is not necessary. 
+The resulting executable is statically linked, so there is no need to keep the third party libraries in the path, e.g.  "export LD_LIBRARY_PATH" is not necessary. 
 
 ### Run an interactive job
+Copy a sample input file to a scratch directory.
 
-Assuming that the code is built, the library path has been updated and the modules are still loaded, then running on a single interactive node is straight forward.
 ```
 cd /your/users/scratch/directory
 mkdir fiesta-test && cd fiesta-test
-cp /fiesta/repository/path/test/ideal_expansion_3D/input.lua .
+cp /fiesta/repository/path/test/ideal_expansion_3D/fiesta.lua .
 ```
 
-Edit the 'input.lua' file to change the number of mpi processes for 4 GPUs.  e.g.:
+Edit the 'fiesta.lua' file to change the number of mpi processes for 4 GPUs.  e.g.:
 ```
 procsx = 2
 procsy = 2
@@ -62,7 +66,7 @@ procsz = 1
 
 Then run the code with:
 ```
-mpirun -n 4 ~/fiesta-dev/build/fiesta-build/fiesta input.lua --kokkos-ndevices=4
+mpirun -n 4 ~/fiesta-dev/build/fiesta-build/fiesta fiesta.lua --kokkos-ndevices=4
 ```
 The simulation will produce restart files and solution files.  Both are in the CGNS format and can be viewed with Paraview, Tecplot or any other mainstream visualization package.  The format is fairly well standardized.
 
@@ -82,49 +86,6 @@ sbatch fiesta.slurm
 ```
 
 Once the batch file executes, the simulation will produce restart files and solution files.  Both are in the CGNS format and can be viewed with Paraview, Tecplot or any other mainstream visualization package.  The format is fairly well standardized.
-
-
-## Installation on Xena at UNM Carc
-
-Compiling with Cuda support on Xena requires cgns-3.4, lua-5.3 and kokkos which are not already present on the system.
-Spack can be used to install cgns and Lua on Xena with mpich and gcc-7.4.0.  Newer gcc versions cannot be used because they are not supported by Cuda 10.0.
-
-```
-module load gcc-7.4.0-gcc-8.1.0-j26pfmd
-spack compiler find
-spack install cgns%gcc@7.4.0 ^mpich@3.3.1
-spack install lua@5.3%gcc@7.4.0
-```
-The system provided mpich or openmpi installationis can be used by setting their paths in .spack/packages.yaml as appropriate.  The above commands will build mpich-3.3.1 from source.
-
-Kokkos can be obtained from github.com/kokkos/kokkos.git
-```
-git clone https://github.com/kokkos/kokkos.git
-cd $BUILD_DIRECTORY
-$KOKKOS_SOURCE_DIR/generate_makefile.sh --with-cuda --arch=Kepler35 --kokkos_cuda_opt=enable_lambda --kokkos-path=$KOKKOS_SOURCE_DIR --prefix=$KOKKOS_INSTALL_DIR
-```
-
-Now the run command scripts can be used to setup the environment.  These may need to be edited to reflect your module names.  These files load modules and export the mpi compiler environment variable
-
-```
-source mpich.rc
-```
-
-The makefile in the fiesta/src directory will need to be edited to reflect the kokkos paths and the installation path.  The code can then be built with 
-
-```
-make install -j
-```
-
-### Running on Xena at UNM Carc
-```
-qsub -I -q dualGPU -l walltime=48:00:00
-fiesta.cuda input.lua --kokkos-ndevices=2
-```
-
-There is an example pbs batch script that will run on Xena.  The modules can be modified to  run on Wheeler if the '--with-serial' was used during the kokkos makefile generation step instead of --with-cuda.
-
-There is an example PBS batch script included.
 
 ### Visualizing
 Output files are written in the CFD Generalized Notation System standard (CGNS) and can be viewed with paraview, tecplot, visit, etc.  Solution files are single precision and include the grid in every solution file.  Restart files are double precision.
