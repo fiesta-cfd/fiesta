@@ -82,9 +82,9 @@ void printConfig(struct inputConfig cf){
     // Output Frequencies
     cout << c(GRE) << "Output:" << c(NON) << endl;
     if (cf.out_freq > 0)
-        cout << setw(30) << left << "    Output frequency: " << c(CYA) << right << setw(0) << cf.out_freq << c(NON) << endl;
+        cout << setw(30) << left << "    Progress Output frequency: " << c(CYA) << right << setw(0) << cf.out_freq << c(NON) << endl;
     else
-        cout << setw(19) << left << "    Output " << c(YEL) << "disabled" << c(NON) << endl;
+        cout << setw(19) << left << "    Progress Output " << c(YEL) << "disabled" << c(NON) << endl;
     if (cf.write_freq > 0)
         cout << setw(30) << left << "    Solution write frequency: "  << c(CYA) << right << setw(0) << cf.write_freq << c(NON) << endl;
     else

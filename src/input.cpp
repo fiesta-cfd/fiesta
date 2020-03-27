@@ -175,6 +175,7 @@ struct inputConfig executeConfiguration(int argc, char * argv[]){
     cf.out_freq    = getglobint (L, "out_freq");
     cf.write_freq    = getglobint (L, "write_freq");
     cf.restart_freq    = getglobint (L, "restart_freq");
+    cf.stat_freq    = getglobint (L, "stat_freq");
 
     cf.nv = 4 + cf.ns;
 
