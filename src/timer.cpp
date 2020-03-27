@@ -26,6 +26,9 @@ void fiestaTimer::accumulate(){
 double fiestaTimer::get(){
     return time;
 }
+string fiestaTimer::getf(){
+    return formatTime(time);
+}
 void fiestaTimer::clear(){
     time = 0.0;
 }
@@ -39,7 +42,13 @@ void fiestaTimer::start(){
 void fiestaTimer::stop(){
     time = timer->seconds();
 }
-string fiestaTimer::getf(){
+string fiestaTimer::checkf(){
+    return formatTime(timer->seconds());
+}
+double fiestaTimer::check(){
+    return timer->seconds();
+}
+string fiestaTimer::formatTime(double tin){
     int d;
     int h;
     int m;
@@ -51,7 +60,7 @@ string fiestaTimer::getf(){
     m = 0;
     s = 0.0;
 
-    temp = time;
+    temp = tin;
     d = time/864000;
 
     temp = temp - d*864000;

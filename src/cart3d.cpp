@@ -705,6 +705,7 @@ hydroc3d_func::hydroc3d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd
     timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
     timers["solWrite"] = fiestaTimer("Solution Write Time");
     timers["resWrite"] = fiestaTimer("Restart Write Time");
+    timers["statCheck"] = fiestaTimer("Status Check");
     if (cf.visc == 1){
         timers["stress"]     = fiestaTimer("Stress Tensor Computation");
         timers["qflux"]      = fiestaTimer("Heat Flux Calculation");

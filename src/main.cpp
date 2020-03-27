@@ -15,6 +15,7 @@
 #include "output.hpp"
 #include <iomanip>
 #include "timer.hpp"
+#include "status.hpp"
 #include <set>
 
 using namespace std;
@@ -47,8 +48,6 @@ int main(int argc, char* argv[]){
 
     atexit(fnExit1);
 
-    int idx;
-
     struct inputConfig cf;
 
     // CONFIGURE
@@ -58,9 +57,9 @@ int main(int argc, char* argv[]){
     cf = mpi_init(cf);
     MPI_Barrier(cf.comm);
 
-    int cv = 0;
-    if (cf.ceq == 1)
-        cv = 5;
+    //int cv = 0;
+    //if (cf.ceq == 1)
+    //    cv = 5;
         
     Kokkos::View<double*> cd("deviceCF",5+cf.ns*3);
     typename Kokkos::View<double*>::HostMirror hostcd = Kokkos::create_mirror_view(cd);
@@ -193,7 +192,7 @@ int main(int argc, char* argv[]){
         if (cf.rank==0){
             if (cf.out_freq > 0)
                 if ((t+1) % cf.out_freq == 0)
-                    cout << c(NON) << left << setw(15) << "    Iteration:" << c(NON) 
+                    cout << c(YEL) << left << setw(15) << "    Iteration:" << c(NON) 
                          << c(CYA) << right << setw(0) << t+1 << c(NON) << "/" << c(CYA) << left << setw(0) << cf.tend << c(NON) << ", "
                          << c(CYA) << right << setw(0) << setprecision(3) << scientific << time << "s" << c(NON) << endl;
                     //printf("    Iteration: %d/%d, Sim Time: %.2e\n",t+1,cf.tend,time);
@@ -210,6 +209,13 @@ int main(int argc, char* argv[]){
                 f->timers["resWrite"].reset();
                 w.writeRestart(cf,f->grid,f->var,t+1,time);
                 f->timers["resWrite"].accumulate();
+            }
+        }
+        if (cf.stat_freq > 0){
+            if ((t+1) % cf.stat_freq == 0){
+                f->timers["statCheck"].reset();
+                statusCheck(cf,f->var,t+1,time,totalTimer);
+                f->timers["statCheck"].accumulate();
             }
         }
     }

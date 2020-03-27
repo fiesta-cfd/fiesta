@@ -339,7 +339,7 @@ hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*
     fluxy   = Kokkos::View<double**  ,FS_LAYOUT>("fluxy",  cf.ngi,cf.ngj);                 // Advective Fluxes in Y direction
     stressx = Kokkos::View<double****,FS_LAYOUT>("stressx",cf.ngi,cf.ngj,2,2);             // stress tensor on x faces
     stressy = Kokkos::View<double****,FS_LAYOUT>("stressy",cf.ngi,cf.ngj,2,2);             // stress tensor on y faces
-    gradRho = Kokkos::View<double*** ,FS_LAYOUT>("gradRho",cf.ngi,cf.ngj,4);             // stress tensor on y faces
+    gradRho = Kokkos::View<double*** ,FS_LAYOUT>("gradRho",cf.ngi,cf.ngj,4);               // stress tensor on y faces
     cd = mcd;
 
     timers["flux"]       = fiestaTimer("Flux Calculation");
@@ -347,6 +347,7 @@ hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*
     timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
     timers["solWrite"] = fiestaTimer("Solution Write Time");
     timers["resWrite"] = fiestaTimer("Restart Write Time");
+    timers["statCheck"] = fiestaTimer("Status Check");
     if (cf.gravity == 1){
         timers["gravity"]     = fiestaTimer("Gravity Term");
     }

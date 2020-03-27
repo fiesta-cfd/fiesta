@@ -20,6 +20,9 @@ public:
     void stop();
     string describe();
     string getf();
+    string checkf();
+    double check();
+    string formatTime(double tin);
 
 private:
     double time;
