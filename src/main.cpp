@@ -121,7 +121,7 @@ int main(int argc, char* argv[]){
     if (cf.restart == 1){
         if (cf.rank == 0) cout << c(GRE) << "Loading Restart File:" << c(NON) << endl;
         loadTimer.reset();
-        w.readSolution(cf,f->var);
+        w.readSolution(cf,f->grid,f->var);
         loadTimer.stop();
         cout << "    Loaded in: " << setprecision(2) << c(CYA) << loadTimer.get() << "s" << c(NON) << endl;
     }else{
