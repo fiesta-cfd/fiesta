@@ -650,28 +650,13 @@ void cgnsWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS
 
 }
 
-void cgnsWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD){
+void cgnsWriter::readSolution(struct inputConfig cf, const FS4D varD){
     /* open cgns file for reading restart information */
     if (cgp_open(cf.sfName, CG_MODE_MODIFY, &cf.cF))
         cgp_error_exit();
 
     int idx,vv;
     
-    cgsize_t gstart[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
-    cgsize_t gend[3] = {cf.iEnd+1,cf.jEnd+1,cf.kEnd+1};
-
-    for (int v=0; v<3; ++v){
-        cgp_coord_read_data(cf.cF,1,1,v+1,gstart,gend,x);
-        for (int k=0; k<cf.nk; ++k){
-            for (int j=0; j<cf.nj; ++j){
-                for (int i=0; i<cf.ni; ++i){
-                    idx = (cf.ni*cf.nj)*k+cf.ni*j+i;
-                    gridH(i,j,k,v) = x[idx];
-                }
-            }
-        }
-    }
-
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
     cgsize_t endc[3] = {cf.iEnd,cf.jEnd,cf.kEnd};
 
@@ -709,5 +694,4 @@ void cgnsWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD){
     cgp_close(cf.cF);
     
     Kokkos::deep_copy(varD,varH);
-    Kokkos::deep_copy(gridD,gridH);
 }
