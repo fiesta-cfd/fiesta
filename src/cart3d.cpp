@@ -733,17 +733,27 @@ void hydroc3d_func::compute() {
     double mu,alpha,beta,betae;
 
     /**** WENO ****/
+    timers["calcSecond"].reset();
     Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure(var,p,rho,cd) );
+    Kokkos::fence();
+    timers["calcSecond"].accumulate();
 
     for (int v=0; v<cf.nv; ++v){
+        timers["flux"].reset();
         Kokkos::parallel_for( weno_pol, calculateWenoFluxes(var,p,rho,fluxx,fluxy,fluxz,cd,v) );
 
         Kokkos::parallel_for( cell_pol, applyWenoFluxes(dvar,fluxx,fluxy,fluxz,v) );
+    Kokkos::fence();
+        timers["flux"].accumulate();
     }
 
+    timers["pressgrad"].reset();
     Kokkos::parallel_for( cell_pol, applyPressure(dvar,p,cd) );
+    Kokkos::fence();
+    timers["pressgrad"].accumulate();
 
     if (cf.ceq != 0){
+        timers["ceq"].reset();
         /**** CEQ ****/
         //find mac wavespeed
         Kokkos::parallel_reduce(cell_pol,maxWaveSpeed(var,p,rho,cd), Kokkos::Max<double>(myMaxS));
@@ -797,5 +807,7 @@ void hydroc3d_func::compute() {
         Kokkos::parallel_for(weno_pol, calculateCeqFlux(var,rho,mFlux,cFlux,cd));
 
         Kokkos::parallel_for( cell_pol, applyCeq(dvar,var,rho,mFlux,cFlux,cd,alpha,beta,betae) );
+        Kokkos::fence();
+        timers["ceq"].reset();
     }
 }
