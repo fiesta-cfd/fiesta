@@ -119,10 +119,12 @@ struct inputConfig executeConfiguration(int argc, char * argv[]){
         cf.bcH         = getglobint (L, "bcZmin" );
         cf.bcF         = getglobint (L, "bcZmax" );
     }
+    
 
     cf.gamma = (double*)malloc(cf.ns*sizeof(double));
     cf.M = (double*)malloc(cf.ns*sizeof(double));
     cf.mu = (double*)malloc(cf.ns*sizeof(double));
+    cf.g_vec = (double*)malloc(3*sizeof(double));
     cf.tend = cf.tstart+cf.nt;
 
     cf.title = title;
@@ -149,12 +151,25 @@ struct inputConfig executeConfiguration(int argc, char * argv[]){
         cf.M[s] = (double)lua_tonumberx(L, -1, &isnum);
         lua_pop(L,1);
     }
-    lua_getglobal(L, "M");
+    lua_getglobal(L, "mu");
     for (int s=0; s<cf.ns; ++s){
         lua_pushnumber(L, s+1);
         lua_gettable(L, -2);
         cf.mu[s] = (double)lua_tonumberx(L, -1, &isnum);
         lua_pop(L,1);
+    }
+
+    //cf.gravity     = getglobdbl (L, "gravity" );
+    cf.gravity = 0;
+    if (cf.gravity == 1){
+        cf.g_accel     = getglobdbl (L, "g_accel" );
+        lua_getglobal(L, "g_vec");
+        for (int d=0; d<3; ++d){
+            lua_pushnumber(L, d+1);
+            lua_gettable(L, -2);
+            cf.g_vec[d] = (double)lua_tonumberx(L, -1, &isnum);
+            lua_pop(L,1);
+        }
     }
 
     cf.out_freq    = getglobint (L, "out_freq");

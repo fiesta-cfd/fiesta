@@ -9,6 +9,38 @@
 #include "flux.hpp"
 #include "ceq.hpp"
 
+struct calculateGravity {
+    FS4D dvar;
+    FS4D var;
+    FS2D rho;
+    double g, gx, gy;
+
+    calculateGravity (FS4D dvar_, FS4D var_, FS2D rho_, double g_, double gx_, double gy_)
+         : dvar(dvar_), var(var_), rho(rho_), g(g_), gx(gx_), gy(gy_) {}
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int j) const {
+
+        double u = var(i,j,0,0)/rho(i,j);
+        double v = var(i,j,0,1)/rho(i,j);
+        double rhop = rho(i,j) - 1.0;
+        double eps = 1e-6;
+
+        if (rhop >= eps || rhop <= -eps){
+            double f = -g*rhop;;
+
+            //dvar(i,j,0,0) += f*gx;
+            //dvar(i,j,0,1) += f*gy;
+            //dvar(i,j,0,2) += u*f*gx + v*f*gy;
+
+            dvar(i,j,0,1) += f;
+            dvar(i,j,0,2) += v*f;
+
+            //printf("%f, %f\n",f,v);
+        }
+    }
+};
+
 struct calculateRhoAndPressure2dv {
     FS4D var;
     FS2D p;
@@ -131,13 +163,13 @@ struct calculateStressTensor2dv {
         int ns = (int)cd(0);
         double dx = cd(1);
         double dy = cd(2);
-        double mu1 = 2.928e-5;
-        double mu2 = 1.610e-5;
+        //double mu1 = 2.928e-5;
+        //double mu2 = 1.610e-5;
         double dudx,dvdy,dudy,dvdx;
 
-    double muij = 0.0;
-    double muip = 0.0;
-    double mujp = 0.0;
+        double muij = 0.0;
+        double muip = 0.0;
+        double mujp = 0.0;
 
         for (int s=0; s<ns; ++s){
             muij += var(i, j, 0,3+s)*cd(5+3*s+2)/rho(i,j);
@@ -315,6 +347,9 @@ hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*
     timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
     timers["solWrite"] = fiestaTimer("Solution Write Time");
     timers["resWrite"] = fiestaTimer("Restart Write Time");
+    if (cf.gravity == 1){
+        timers["gravity"]     = fiestaTimer("Gravity Term");
+    }
     if (cf.visc == 1){
         timers["stress"]     = fiestaTimer("Stress Tensor Computation");
         timers["qflux"]      = fiestaTimer("Heat Flux Calculation");
@@ -356,6 +391,13 @@ void hydro2dvisc_func::compute(){
     Kokkos::parallel_for( cell_pol, applyPressure2dv(dvar,p,cd) );
     Kokkos::fence();
     timers["pressgrad"].accumulate();
+
+    if (cf.gravity == 1){
+        timers["gravity"].reset();
+        Kokkos::parallel_for( cell_pol, calculateGravity(dvar,var,rho,cf.g_accel,cf.g_vec[0],cf.g_vec[1]) );
+        Kokkos::fence();
+        timers["gravity"].accumulate();
+    }
 
     if (cf.visc == 1){
         timers["stress"].reset();

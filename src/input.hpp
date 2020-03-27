@@ -36,6 +36,9 @@ struct inputConfig {
     double R;
     int scheme;
     int visc;
+    int gravity;
+    double g_accel;
+    double* g_vec;
     double dt,dx,dy,dz;
     int xProcs,yProcs,zProcs,numProcs;
     int xPlus,yPlus,zPlus;
