@@ -19,7 +19,7 @@ public:
     void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, int tdx, double time);
     void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, int tdx, double time);
 
-    void readSolution(struct inputConfig cf, const FS4D deviceV);
+    void readSolution(struct inputConfig cf, FS4D &deviceG, FS4D &deviceV);
 
 private:
 
