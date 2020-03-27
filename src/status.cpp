@@ -116,55 +116,57 @@ void statusCheck(struct inputConfig cf, FS4D var, int t, double time, fiestaTime
     //max[3] = 0.0;
 
     // Print Header
-    cout << "      " << setw(13) << " "
-         << setw(10) << right << "Min"
-         << setw(10) << right << "Max" << endl;
-    cout << "      " << "---------------------------------" << endl;
+    if (cf.rank == 0){
+        cout << "      " << setw(13) << " "
+             << setw(10) << right << "Min"
+             << setw(10) << right << "Max" << endl;
+        cout << "      " << "---------------------------------" << endl;
 
-    // Check for nans and infs and print table
-    for (int v=0; v<cf.nvt; ++v){
-        stringstream ss, smax, smin;
+        // Check for nans and infs and print table
+        for (int v=0; v<cf.nvt; ++v){
+            stringstream ss, smax, smin;
 
-        if (cf.ndim == 2){
-            if (v == 0) vname = "X-Momentum: ";
-            else if (v == 1) vname = "Y-Momentum: ";
-            else if (v == 2) vname = "Energy: ";
-            else if (v > 2 && v < cf.nv){
-                ss << "Density " << (v-2) << ": ";
-                vname = ss.str();
+            if (cf.ndim == 2){
+                if (v == 0) vname = "X-Momentum: ";
+                else if (v == 1) vname = "Y-Momentum: ";
+                else if (v == 2) vname = "Energy: ";
+                else if (v > 2 && v < cf.nv){
+                    ss << "Density " << (v-2) << ": ";
+                    vname = ss.str();
+                }else{
+                    ss << "C-" << (v-cf.nv) << ": ";
+                    vname = ss.str();
+                }
             }else{
-                ss << "C-" << (v-cf.nv) << ": ";
-                vname = ss.str();
+                if (v == 0) vname = "X-Momentum: ";
+                else if (v == 1) vname = "Y-Momentum: ";
+                else if (v == 2) vname = "Z-Momentum: ";
+                else if (v == 3) vname = "Energy: ";
+                else if (v > 3 && v < cf.nv){
+                    ss << "Density " << (v-3) << ": ";
+                    vname = ss.str();
+                }else{
+                    ss << "C-" << (v-cf.nv) << ": ";
+                    vname = ss.str();
+                }
             }
-        }else{
-            if (v == 0) vname = "X-Momentum: ";
-            else if (v == 1) vname = "Y-Momentum: ";
-            else if (v == 2) vname = "Z-Momentum: ";
-            else if (v == 3) vname = "Energy: ";
-            else if (v > 3 && v < cf.nv){
-                ss << "Density " << (v-3) << ": ";
-                vname = ss.str();
-            }else{
-                ss << "C-" << (v-cf.nv) << ": ";
-                vname = ss.str();
-            }
+
+            if (isnormal(min[v]) || min[v] == 0)
+                smin << c(CYA) << setw(10) << right << setprecision(2) << scientific << min[v] << c(NON);
+            else
+                smax << c(RED) << setw(10) << right << setprecision(2) << scientific << min[v] << c(NON);
+                
+
+            if (isnormal(max[v]) || max[v] == 0)
+                smax << c(CYA) << setw(10) << right << setprecision(2) << scientific << max[v] << c(NON);
+            else
+                smax << c(RED) << setw(10) << right << setprecision(2) << scientific << max[v] << c(NON);
+                
+            cout << "      "
+                 << setw(13) << left << vname
+                 << smin.str()
+                 << smax.str()
+                 << endl;
         }
-
-        if (isnormal(min[v]) || min[v] == 0)
-            smin << c(CYA) << setw(10) << right << setprecision(2) << scientific << min[v] << c(NON);
-        else
-            smax << c(RED) << setw(10) << right << setprecision(2) << scientific << min[v] << c(NON);
-            
-
-        if (isnormal(max[v]) || max[v] == 0)
-            smax << c(CYA) << setw(10) << right << setprecision(2) << scientific << max[v] << c(NON);
-        else
-            smax << c(RED) << setw(10) << right << setprecision(2) << scientific << max[v] << c(NON);
-            
-        cout << "      "
-             << setw(13) << left << vname
-             << smin.str()
-             << smax.str()
-             << endl;
     }
 }
