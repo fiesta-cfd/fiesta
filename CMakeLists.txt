@@ -13,8 +13,15 @@ execute_process(COMMAND bash -c "cd ${CMAKE_CURRENT_LIST_DIR} && git rev-parse -
                 OUTPUT_VARIABLE GIT_BRANCH)
 string(STRIP ${GIT_VER} GIT_VER)
 string(STRIP ${GIT_BRANCH} GIT_BRANCH)
+set(FIESTA_VER "${GIT_BRANCH}-${GIT_VER}")
 
 list(APPEND CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -O3)
+
+if (LITE)
+    set(FIESTA_OPTS "LITE")
+else()
+    set(FIESTA_OPTS "NORMAL")
+endif()
 
 # CUDA
 if (CUDA)
@@ -32,8 +39,10 @@ if (CUDA)
   message(STATUS ${KOKKOS_ARCH})
   set(KOKKOS_ENABLE_CUDA ON)
   set(KOKKOS_ENABLE_CUDA_LAMBDA ON)
+  set(FIESTA_OPTS "${FIESTA_OPTS}+CUDA")
 elseif(OPENMP)
   set(KOKKOS_ENABLE_OPENMP ON)
+  set(FIESTA_OPTS "${FIESTA_OPTS}+OPENMP")
 endif()
 add_subdirectory(kokkos)
 
@@ -93,9 +102,11 @@ target_link_libraries(fiesta
                       ${installDir}/lib/libhdf5_tools.a
                       lua
 )
-target_compile_definitions(fiesta PRIVATE FIESTA_VERSION="${GIT_BRANCH}-${GIT_VER}")
+target_compile_definitions(fiesta PRIVATE FIESTA_VERSION="${FIESTA_VER}")
+target_compile_definitions(fiesta PRIVATE FIESTA_OPTIONS="${FIESTA_OPTS}")
 
 install(TARGETS fiesta
         RUNTIME DESTINATION)
 
-message("Fiesta Version ${GIT_VER}")
+message("Fiesta Version ${FIESTA_VER}")
+message("Fiesta Build Options ${FIESTA_OPTS}")

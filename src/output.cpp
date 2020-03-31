@@ -59,7 +59,9 @@ void printSplash(){
     cout << c(RED) << R"(  |  _| | |  __/\__ \ || (_| | )" << c(NON) << endl;
     cout << c(RED) << R"(  |_|   |_|\___||___/\__\__,_| )" << c(NON) << endl;
     cout << c(RED) << R"(                               )" << c(NON) << endl;
+    cout << " " << endl;
     cout << "Version: " << c(CYA) << "'" << FIESTA_VERSION << "'" << c(NON) << endl;
+    cout << "Type:    " << c(CYA) << "'" << FIESTA_OPTIONS << "'" << c(NON) << endl << endl;
     cout << "-----------------------" << endl << endl;
 }
 
