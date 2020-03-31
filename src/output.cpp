@@ -9,7 +9,8 @@
 using namespace std;
 
 string c(Color color){
-    if (isatty(STDOUT_FILENO)){
+    if (isatty(fileno(stdout))){
+    //if (isatty(STDOUT_FILENO)){
         switch (color){
             case RED :
                 return "\033[0;31m";
@@ -58,6 +59,7 @@ void printSplash(){
     cout << c(RED) << R"(  |  _| | |  __/\__ \ || (_| | )" << c(NON) << endl;
     cout << c(RED) << R"(  |_|   |_|\___||___/\__\__,_| )" << c(NON) << endl;
     cout << c(RED) << R"(                               )" << c(NON) << endl;
+    cout << "Version: " << c(CYA) << "'" << FIESTA_VERSION << "'" << c(NON) << endl;
     cout << "-----------------------" << endl << endl;
 }
 

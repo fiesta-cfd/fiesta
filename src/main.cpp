@@ -201,6 +201,7 @@ int main(int argc, char* argv[]){
             if ((t+1) % cf.write_freq == 0){
                 f->timers["solWrite"].reset();
                 w.writeSolution(cf,f->grid,f->var,t+1,time);
+                Kokkos::fence();
                 f->timers["solWrite"].accumulate();
             }
         }
@@ -208,6 +209,7 @@ int main(int argc, char* argv[]){
             if ((t+1) % cf.restart_freq == 0){
                 f->timers["resWrite"].reset();
                 w.writeRestart(cf,f->grid,f->var,t+1,time);
+                Kokkos::fence();
                 f->timers["resWrite"].accumulate();
             }
         }

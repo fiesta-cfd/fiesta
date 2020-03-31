@@ -7,6 +7,13 @@ endif()
 
 project(Fiesta CXX)
 
+execute_process(COMMAND bash -c "cd ${CMAKE_CURRENT_LIST_DIR} && git describe --tags --dirty=+"
+                OUTPUT_VARIABLE GIT_VER)
+execute_process(COMMAND bash -c "cd ${CMAKE_CURRENT_LIST_DIR} && git rev-parse --abbrev-ref HEAD"
+                OUTPUT_VARIABLE GIT_BRANCH)
+string(STRIP ${GIT_VER} GIT_VER)
+string(STRIP ${GIT_BRANCH} GIT_BRANCH)
+
 list(APPEND CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -O3)
 
 # CUDA
@@ -86,5 +93,9 @@ target_link_libraries(fiesta
                       ${installDir}/lib/libhdf5_tools.a
                       lua
 )
+target_compile_definitions(fiesta PRIVATE FIESTA_VERSION="${GIT_BRANCH}-${GIT_VER}")
+
 install(TARGETS fiesta
         RUNTIME DESTINATION)
+
+message("Fiesta Version ${GIT_VER}")
