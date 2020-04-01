@@ -48,7 +48,8 @@ struct calculateRhoGrad2D {
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j) const {
 
-        int indicator = 0;
+        int i1 = 0;
+        int i2 = 0;
 
         double ux1 = var(i-2,j,0,0)/rho(i,j-2);
         double ux2 = var(i-1,j,0,0)/rho(i,j-1);
@@ -98,31 +99,54 @@ struct calculateRhoGrad2D {
         double dnednr = (n1*dxe+n2*dye)*(n1*dxr+n2*dyr);
 
         //compression switch
-        if (dnednr < 0.0)
-            indicator = 1.0;
-        else
-            indicator = 0.0;
+        if (dnednr > 1.0e-6)
+            i1 = 1;
+        //else
+        //    i1 = 0;
         
         // detect shock front (equation 5a)
-        if (divu < 0.0)
-            gradRho(i,j,0) = (1.0-indicator)*rgrad;
+        if (divu < -1.0e-6)
+            i2 = 1;
+            //gradRho(i,j,0) = (1.0-indicator)*rgrad;
             //gradRho(i,j,k,0) = (1-indicator)*divu*rgrad;
+        //else
+        //    i2 = 0;
+            //gradRho(i,j,0) = 0.0;
+
+        if (i1 == 0 && i2 == 1)
+            gradRho(i,j,0) = rgrad;
         else
             gradRho(i,j,0) = 0.0;
 
+        if (i1 == 1 && i2 == 0){
+            gradRho(i,j,1) = rgrad;
+            gradRho(i,j,2) =-dxr;
+            gradRho(i,j,3) = dyr;
+        }else{
+            gradRho(i,j,1) = 0.0;
+            gradRho(i,j,2) = 0.0;
+            gradRho(i,j,3) = 0.0;
+        }
+            
+
+        //gradRho(i,j,0) = (1.0-indicator)*indicator2*rgrad;
+        //gradRho(i,j,0) = indicator2*rgrad;
         // detect contact surface
-        gradRho(i,j,1) = indicator*rgrad;
+        //gradRho(i,j,1) = indicator*rgrad;
+        //gradRho(i,j,1) = (1.0-indicator2)*indicator*rgrad;
 
         // gradient components
-        gradRho(i,j,2) = -indicator*dxr;
-        gradRho(i,j,3) =  indicator*dyr;
+        //gradRho(i,j,2) = -i1*dxr;
+        //gradRho(i,j,3) =  i1*dyr;
 
         //if (j == 10 && i == 27){
         //    std::cout << gradRho(i-1,j,0) << ", "
         //              << gradRho(i  ,j,0) << ", "
         //              << gradRho(i+1,j,0) << std::endl;
         //}
+        //if (j == 10 && i < 50)
         //if (j == 10)
+        //    std::cout << i << ":  " << dnednr << endl;
         //    std::cout << gradRho(i-1,j,0) << endl;
     }
 };
