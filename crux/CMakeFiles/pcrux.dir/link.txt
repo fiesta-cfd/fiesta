@@ -1,2 +1,0 @@
-/usr/bin/ar qc libpcrux.a  CMakeFiles/pcrux.dir/crux.cpp.o
-/usr/bin/ranlib libpcrux.a

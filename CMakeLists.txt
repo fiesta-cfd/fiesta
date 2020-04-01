@@ -60,46 +60,39 @@ ExternalProject_Add(cgnsParallel
 )
 
 ExternalProject_Add_StepDependencies(cgnsParallel configure hdf5Parallel)
+include_directories("${PROJECT_BINARY_DIR}")
+include_directories(${PROJECT_SOURCE_DIR})
+
 include_directories(${installDir}/include)
 
 # mesh
-include_directories(mesh)
 add_subdirectory(mesh)
 
 # memstats
-include_directories(memstats)
 add_subdirectory(memstats)
 
 # powerstats
-include_directories(powerstats)
 add_subdirectory(powerstats)
 
 # PowerParser
-include_directories(PowerParser)
 add_subdirectory(PowerParser)
 
 # l7
-include_directories(l7)
 add_subdirectory(l7)
 
 # timer
-include_directories(timer)
 add_subdirectory(timer)
 
 # genmalloc
-include_directories(genmalloc)
 add_subdirectory(genmalloc)
 
 # MallocPlus
-include_directories(MallocPlus)
 add_subdirectory(MallocPlus)
 
 # hash
-include_directories(hash)
 add_subdirectory(hash)
 
 # crux
-include_directories(crux)
 add_subdirectory(crux)
 
 # fiesta
@@ -114,17 +107,18 @@ target_link_libraries(fiesta
                       ${installDir}/lib/libhdf5_hl.a
                       ${installDir}/lib/libhdf5_tools.a
                       lua
-                      PowerParser
-                      mesh
+                      pPowerParser
+                      pmesh
                       hsfc
                       kdtree
                       zorder
                       hash
-                      crux
+                      pcrux
                       timer
                       memstats
                       powerstats
-                      genmalloc
-                      MallocPlus
                       l7
+                      genmalloc
+                      pMallocPlus
+                      m
 )

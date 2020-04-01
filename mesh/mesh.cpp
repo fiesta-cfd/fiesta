@@ -154,7 +154,7 @@ int do_stencil_warning=0;
 #endif
 
 extern bool localStencil;
-int calc_neighbor_type;
+int calc_neighbor_type = HASH_TABLE;
 bool dynamic_load_balance_on;
 bool neighbor_remap;
 
@@ -1559,6 +1559,7 @@ void Mesh::init(int nx, int ny, real_t circ_radius, partition_method initial_ord
        int istart = 1,
            jstart = 1,
            bounds = 0,
+           ghosts = 3,
            iend   = nx,
            jend   = ny,
            nxx    = nx,
@@ -1569,12 +1570,12 @@ void Mesh::init(int nx, int ny, real_t circ_radius, partition_method initial_ord
           bounds = 1;
           iend   = nx + ghosts;
           jend   = ny + ghosts;
-          nxx    = nx + ghosts*ndim;
-          nyy    = ny + ghosts*ndim;
+          nxx    = nx + ghosts*2;
+          nyy    = ny + ghosts*2;
        }
 
        //Dan look
-       if (ndim == TWO_DIMENSIONAL) ncells = nxx * nyy - have_boundary * 4;
+       if (ndim == TWO_DIMENSIONAL) ncells = nxx * nyy; // - have_boundary * 4;
        else                         ncells = nxx * nyy;
 
        noffset = 0;
@@ -1603,10 +1604,10 @@ void Mesh::init(int nx, int ny, real_t circ_radius, partition_method initial_ord
 
        for (int jj = jstart; jj <= jend; jj++) {
           for (int ii = istart; ii <= iend; ii++) {
-             if (have_boundary && ii < bounds    && jj < bounds   ) continue;
-             if (have_boundary && ii < bounds    && jj > jend - bounds) continue;
-             if (have_boundary && ii > iend - bounds && jj < bounds   ) continue;
-             if (have_boundary && ii > iend - bounds && jj > jend - bounds) continue;
+             //if (have_boundary && ii < bounds    && jj < bounds   ) continue;
+             //if (have_boundary && ii < bounds    && jj > jend - bounds) continue;
+             //if (have_boundary && ii > iend - bounds && jj < bounds   ) continue;
+             //if (have_boundary && ii > iend - bounds && jj > jend - bounds) continue;
 
              if (ic >= (int)noffset && ic < (int)(ncells+noffset)){
                 int iclocal = ic-noffset;
@@ -1621,6 +1622,8 @@ void Mesh::init(int nx, int ny, real_t circ_radius, partition_method initial_ord
 
        //if (numpe > 1 && (initial_order != HILBERT_SORT && initial_order != HILBERT_PARTITION) ) mem_factor = 2.0;
        partition_cells(numpe, index, initial_order);
+      //celltype = (char_t *)mesh_memory.memory_malloc(5, sizeof(char_t), "celltype", 0);
+      //celltype = (char_t *)mesh_memory.get_memory_ptr("celltype");
 
        calc_celltype(ncells);
        calc_spatial_coordinates(0);
@@ -1691,6 +1694,336 @@ void Mesh::init(int nx, int ny, real_t circ_radius, partition_method initial_ord
          }
       }
    }
+}
+
+void Mesh::init(int nx, int ny, int do_gpu_calc)
+{
+   if (do_gpu_calc) {
+#ifdef HAVE_OPENCL
+      cl_context context = ezcl_get_context();
+
+      hash_lib_init();
+      if (mype == 0) printf("Starting compile of kernels in mesh\n");
+      char *bothsources = (char *)malloc(strlen(mesh_kern_source)+strlen(get_hash_kernel_source_string())+1);
+      strcpy(bothsources, get_hash_kernel_source_string());
+      strcat(bothsources, mesh_kern_source);
+      strcat(bothsources, "\0");
+      const char *defines = NULL;
+      cl_program program = ezcl_create_program_wsource(context, defines, bothsources);
+      free(bothsources);
+
+      dev_nlft = NULL;
+      kernel_reduction_scan2          = ezcl_create_kernel_wprogram(program, "finish_reduction_scan2_cl");
+      kernel_reduction_count          = ezcl_create_kernel_wprogram(program, "finish_reduction_count_cl");
+      kernel_reduction_count2         = ezcl_create_kernel_wprogram(program, "finish_reduction_count2_cl");
+      kernel_hash_adjust_sizes        = ezcl_create_kernel_wprogram(program, "hash_adjust_sizes_cl");
+      kernel_hash_setup               = ezcl_create_kernel_wprogram(program, "hash_setup_cl");
+      kernel_hash_setup_local         = ezcl_create_kernel_wprogram(program, "hash_setup_local_cl");
+      kernel_neighbor_init            = ezcl_create_kernel_wprogram(program, "neighbor_init_cl");
+      kernel_calc_neighbors           = ezcl_create_kernel_wprogram(program, "calc_neighbors_cl");
+      kernel_calc_neighbors_local     = ezcl_create_kernel_wprogram(program, "calc_neighbors_local_cl");
+      kernel_calc_border_cells        = ezcl_create_kernel_wprogram(program, "calc_border_cells_cl");
+      kernel_calc_border_cells2       = ezcl_create_kernel_wprogram(program, "calc_border_cells2_cl");
+      kernel_finish_scan              = ezcl_create_kernel_wprogram(program, "finish_scan_cl");
+      kernel_get_border_data          = ezcl_create_kernel_wprogram(program, "get_border_data_cl");
+      kernel_calc_layer1              = ezcl_create_kernel_wprogram(program, "calc_layer1_cl");
+      kernel_calc_layer1_sethash      = ezcl_create_kernel_wprogram(program, "calc_layer1_sethash_cl");
+      kernel_calc_layer2              = ezcl_create_kernel_wprogram(program, "calc_layer2_cl");
+      kernel_get_border_data2         = ezcl_create_kernel_wprogram(program, "get_border_data2_cl");
+      kernel_calc_layer2_sethash      = ezcl_create_kernel_wprogram(program, "calc_layer2_sethash_cl");
+      kernel_copy_mesh_data           = ezcl_create_kernel_wprogram(program, "copy_mesh_data_cl");
+      kernel_fill_mesh_ghost          = ezcl_create_kernel_wprogram(program, "fill_mesh_ghost_cl");
+      kernel_fill_neighbor_ghost      = ezcl_create_kernel_wprogram(program, "fill_neighbor_ghost_cl");
+      kernel_set_corner_neighbor      = ezcl_create_kernel_wprogram(program, "set_corner_neighbor_cl");
+      kernel_adjust_neighbors_local   = ezcl_create_kernel_wprogram(program, "adjust_neighbors_local_cl");
+      kernel_hash_size                = ezcl_create_kernel_wprogram(program, "calc_hash_size_cl");
+      kernel_finish_hash_size         = ezcl_create_kernel_wprogram(program, "finish_reduction_minmax4_cl");
+      kernel_calc_spatial_coordinates = ezcl_create_kernel_wprogram(program, "calc_spatial_coordinates_cl");
+      kernel_do_load_balance_lower    = ezcl_create_kernel_wprogram(program, "do_load_balance_lower_cl");
+      kernel_do_load_balance_middle   = ezcl_create_kernel_wprogram(program, "do_load_balance_middle_cl");
+      kernel_do_load_balance_upper    = ezcl_create_kernel_wprogram(program, "do_load_balance_upper_cl");
+      kernel_face_idx_wbidirmap = ezcl_create_kernel_wprogram(program, "face_idx_wbidirmap_cl");
+      kernel_calc_face_list_wbidirmap_pt1 = ezcl_create_kernel_wprogram(program, "calc_face_list_wbidirmap_pt1_cl");
+      kernel_calc_face_list_wbidirmap_pt2 = ezcl_create_kernel_wprogram(program, "calc_face_list_wbidirmap_pt2_cl");
+      kernel_wbidirmap_precount = ezcl_create_kernel_wprogram(program, "wbidirmap_precount_cl");
+      kernel_calc_wbidirmap_phantom_neighbors = ezcl_create_kernel_wprogram(program, "calc_wbidirmap_phantom_neighbors_cl");
+      kernel_calc_wbidirmap_phantom_values = ezcl_create_kernel_wprogram(program, "calc_wbidirmap_phantom_values_cl");
+      kernel_deep_copy = ezcl_create_kernel_wprogram(program, "deep_copy_cl");
+#ifndef MINIMUM_PRECISION
+      kernel_do_load_balance_double   = ezcl_create_kernel_wprogram(program, "do_load_balance_double_cl");
+#endif
+      kernel_do_load_balance_float    = ezcl_create_kernel_wprogram(program, "do_load_balance_float_cl");
+      kernel_refine_smooth            = ezcl_create_kernel_wprogram(program, "refine_smooth_cl");
+      kernel_coarsen_smooth           = ezcl_create_kernel_wprogram(program, "coarsen_smooth_cl");
+      kernel_coarsen_check_block      = ezcl_create_kernel_wprogram(program, "coarsen_check_block_cl");
+      kernel_rezone_all               = ezcl_create_kernel_wprogram(program, "rezone_all_cl");
+      kernel_rezone_neighbors         = ezcl_create_kernel_wprogram(program, "rezone_neighbors_cl");
+#ifndef MINIMUM_PRECISION
+      kernel_rezone_one_double        = ezcl_create_kernel_wprogram(program, "rezone_one_double_cl");
+#endif
+      kernel_rezone_one_float         = ezcl_create_kernel_wprogram(program, "rezone_one_float_cl");
+      kernel_copy_mpot_ghost_data     = ezcl_create_kernel_wprogram(program, "copy_mpot_ghost_data_cl");
+      kernel_set_boundary_refinement  = ezcl_create_kernel_wprogram(program, "set_boundary_refinement");
+      init_kernel_2stage_sum();
+      init_kernel_2stage_sum_int();
+      if (! have_boundary){
+        kernel_count_BCs              = ezcl_create_kernel_wprogram(program, "count_BCs_cl");
+      }
+
+      ezcl_program_release(program);
+      if (mype == 0) printf("Finishing compile of kernels in mesh\n");
+#endif
+   }
+
+   //KDTree_Initialize(&tree);
+   if (ncells > 0) { // this is a restart.
+       if (parallel && numpe > 1) {
+#ifdef HAVE_MPI
+          int ncells_int = ncells;
+          nsizes.clear();
+          ndispl.clear();
+          nsizes.resize (numpe);
+          ndispl.resize (numpe);
+          MPI_Allgather(&ncells_int, 1, MPI_INT, &nsizes[0], 1, MPI_INT, MPI_COMM_WORLD);
+          ndispl[0]=0;
+          for (int ip=1; ip<numpe; ip++){
+             ndispl[ip] = ndispl[ip-1] + nsizes[ip-1];
+          }
+          noffset=ndispl[mype];
+          ncells_global = ndispl[numpe-1] + nsizes[numpe-1];
+#endif
+       } else {
+          noffset = 0;
+          ncells_global = ncells;
+          proc.resize (ncells);
+          calc_distribution(numpe);
+       }
+       calc_celltype(ncells);
+
+   } else {
+       int istart = 1,
+           jstart = 1,
+           bounds = 0,
+           iend   = nx,
+           jend   = ny,
+           nxx    = nx,
+           nyy    = ny;
+       if (have_boundary) {
+          istart = 0;
+          jstart = 0;
+          bounds = 1;
+          nxx    = nx + have_boundary*2;
+          nyy    = ny + have_boundary*2;
+          iend   = nxx - 1;
+          jend   = nyy - 1;
+       }
+
+       if (ndim == TWO_DIMENSIONAL) ncells = nxx * nyy - have_boundary * 4;
+       else                         ncells = nxx * nyy;
+
+       noffset = 0;
+       if (parallel) {
+          ncells_global = ncells;
+          nsizes.resize(numpe);
+          ndispl.resize(numpe);
+
+          for (int ip=0; ip<numpe; ip++){
+             nsizes[ip] = ncells_global/numpe;
+             if (ip < (int)(ncells_global%numpe)) nsizes[ip]++;
+          }
+
+          ndispl[0]=0;
+          for (int ip=1; ip<numpe; ip++){
+             ndispl[ip] = ndispl[ip-1] + nsizes[ip-1];
+          }
+          ncells= nsizes[mype];
+          noffset=ndispl[mype];
+       }
+
+       allocate(ncells);
+       index.resize(ncells);
+
+       int ic = 0;
+
+       for (int jj = jstart; jj <= jend; jj++) {
+          for (int ii = istart; ii <= iend; ii++) {
+             if (have_boundary && ii == 0    && jj == 0   ) continue;
+             if (have_boundary && ii == 0    && jj == jend) continue;
+             if (have_boundary && ii == iend && jj == 0   ) continue;
+             if (have_boundary && ii == iend && jj == jend) continue;
+
+             if (ic >= (int)noffset && ic < (int)(ncells+noffset)){
+                int iclocal = ic-noffset;
+                index[iclocal] = ic;
+                i[iclocal]     = ii;
+                j[iclocal]     = jj;
+                level[iclocal] = 0;
+             }
+             ic++;
+          }
+       }
+       /*
+
+       //if (numpe > 1 && (initial_order != HILBERT_SORT && initial_order != HILBERT_PARTITION) ) mem_factor = 2.0;
+       partition_cells(numpe, index, initial_order);
+      //celltype = (char_t *)mesh_memory.memory_malloc(5, sizeof(char_t), "celltype", 0);
+      //celltype = (char_t *)mesh_memory.get_memory_ptr("celltype");
+
+       calc_celltype(ncells);
+       calc_spatial_coordinates(0);
+
+       //  Start lev loop here
+       for (int ilevel=1; ilevel<=levmx; ilevel++) {
+
+          //int old_ncells = ncells;
+
+          ncells_ghost = ncells;
+          calc_neighbors_local();
+
+          kdtree_setup();
+
+          int nez;
+          vector<int> ind(ncells);
+
+    #ifdef FULL_PRECISION
+          KDTree_QueryCircleIntersect_Double(&tree, &nez, &(ind[0]), circ_radius, ncells, &x[0], &dx[0], &y[0], &dy[0]);
+    #else
+          KDTree_QueryCircleIntersect_Float(&tree, &nez, &(ind[0]), circ_radius, ncells, &x[0], &dx[0], &y[0], &dy[0]);
+    #endif
+
+          vector<char_t> mpot(ncells_ghost,0);
+
+          for (int ic=0; ic<nez; ++ic){
+             if ((int)level[ind[ic]] < levmx) mpot[ind[ic]] = 1;
+          }
+
+          KDTree_Destroy(&tree);
+          //  Refine the cells.
+          int icount = 0;
+          int jcount = 0;
+          int new_ncells = refine_smooth(mpot, icount, jcount);
+
+          MallocPlus dummy;
+          rezone_all(icount, jcount, mpot, 0, dummy);
+
+          ncells = new_ncells;
+
+          calc_spatial_coordinates(0);
+
+    #ifdef HAVE_MPI
+          if (parallel && numpe > 1) {
+             int ncells_int = ncells;
+             MPI_Allgather(&ncells_int, 1, MPI_INT, &nsizes[0], 1, MPI_INT, MPI_COMM_WORLD);
+             ndispl[0]=0;
+             for (int ip=1; ip<numpe; ip++){
+                ndispl[ip] = ndispl[ip-1] + nsizes[ip-1];
+             }
+             noffset=ndispl[mype];
+             ncells_global = ndispl[numpe-1] + nsizes[numpe-1];
+          }
+    #endif
+       }  // End lev loop here
+       index.clear();
+       ncells_ghost = ncells;
+   */
+   }
+   int ncells_corners = 4;
+   int i_corner[] = {   0,   0,imax,imax};
+   int j_corner[] = {   0,jmax,   0,jmax};
+
+   for(int ic=0; ic<ncells_corners; ic++){
+      for (int    jj = j_corner[ic]*IPOW2(levmx); jj < (j_corner[ic]+1)*IPOW2(levmx); jj++) {
+         for (int ii = i_corner[ic]*IPOW2(levmx); ii < (i_corner[ic]+1)*IPOW2(levmx); ii++) {
+            corners_i.push_back(ii);
+            corners_j.push_back(jj);
+         }
+      }
+   }
+}
+
+
+size_t Mesh::state_calc_refine_potential(vector<char_t> &mpot,int &icount, int &jcount, double *D) 
+{
+    double refine_gradient = 0.10;
+    double coarsen_gradient = 0.05;
+
+    icount = 0;
+    jcount = 0;
+     
+    for (int ic = 0; ic < ncells; ic++) {
+        if (celltype[ic] != REAL_CELL) continue;
+        double Dic = D[ic];
+
+        int nl = nlft[ic];
+        double Dl = D[nl];
+        if (level[nl] > level[ic]) {
+            int nlt = ntop[nl];
+            Dl = 0.5 * (Dl + D[nlt]);
+        }
+
+        int nr = nrht[ic];
+        double Dr = D[nr];
+        if (level[nr] > level[ic]) {
+            int nrt = ntop[nr];
+            Dr = 0.5 * (Dr + D[nrt]);
+        }
+
+        int nb = nbot[ic];
+        double Db = D[nb];
+        if (level[nb] > level[ic]) {
+            int nbr = nrht[nb];
+            Db = 0.5 * (Db + D[nbr]);
+        }
+
+        int nt = ntop[ic];
+        double Dt = D[nt];
+        if (level[nt] > level[ic]) {
+            int ntr = nrht[nt];
+            Dt = 0.5 * (Dt + D[ntr]);
+        }
+
+        double duplus1; //, duplus2;
+        double duhalf1; //, duhalf2;
+        double duminus1; //, duminus2;
+
+        double qmax = -1000.0;
+
+        duplus1 = Dr-Dic;
+        duhalf1 = Dic-Dl;
+
+        double qpot = max(fabs(duplus1/Dic), fabs(duhalf1/Dic));
+        if (qpot > qmax) qmax = qpot;
+
+        duminus1 = Dic-Dl;
+        duhalf1  = Dr-Dic;
+
+        qpot = max(fabs(duminus1/Dic), fabs(duhalf1/Dic));
+        if (qpot > qmax) qmax = qpot;
+
+        duplus1 = Dt-Dic;
+        duhalf1 = Dic-Db;
+
+        qpot = max(fabs(duplus1/Dic), fabs(duhalf1/Dic));
+        if (qpot > qmax) qmax = qpot;
+
+        duminus1 = Dic-Db;
+        duhalf1  = Dt-Dic;
+
+        qpot = max(fabs(duminus1/Dic), fabs(duhalf1/Dic));
+        if (qpot > qmax) qmax = qpot;
+
+        mpot[ic] = 0;
+
+        if (qmax > refine_gradient && (int)level[ic] < levmx) {
+            mpot[ic] = 1;
+        } else if (qmax < coarsen_gradient && level[ic] > 0) {
+            mpot[ic] = -1;
+        }
+    }
+
+    int newcount = refine_smooth(mpot, icount, jcount);
+
+    return(newcount);
 }
 
 size_t Mesh::refine_smooth(vector<char_t> &mpot, int &icount, int &jcount)
@@ -8396,12 +8729,10 @@ void Mesh::calc_celltype(size_t ncells)
 #ifdef HAVE_J7
    if (parallel) flags = LOAD_BALANCE_MEMORY;
 #endif
-
    if (celltype == NULL || mesh_memory.get_memory_size(celltype) < ncells) {
       if (celltype != NULL) celltype = (char_t *)mesh_memory.memory_delete((void *)celltype);
       celltype = (char_t *)mesh_memory.memory_malloc(ncells, sizeof(char_t), "celltype", flags);
    }
-
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -9201,7 +9532,7 @@ int Mesh::gpu_count_BCs(void)
 
 void Mesh::allocate(size_t ncells)
 {
-   int flags = 0;
+   int flags;
    flags = RESTART_DATA;
 #ifdef HAVE_J7
    if (parallel) flags = LOAD_BALANCE_MEMORY;

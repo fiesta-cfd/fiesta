@@ -1,1 +1,0 @@
-/projects/opt/x86_64/gcc/9.2.0/bin/gcc -fPIC -O3 -DNDEBUG -g -O3 -g -O3  -shared -Wl,-soname,libzorder.so.2 -o libzorder.so.2.0.0 CMakeFiles/zorder.dir/zorder.c.o -Wl,-rpath,/home/ddunning/CLAMR/s7: ../../s7/libs7.so.2.0.7 

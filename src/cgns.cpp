@@ -328,7 +328,7 @@ void writeRestart(struct inputConfig cf, double *x, double *y, double *z, const 
     cgp_close(cf.cF);
 }
 
-void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Kokkos::View<double**> deviceV, int tdx, double time){
+void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Kokkos::View<double**> deviceV, int tdx, double time, Mesh *mesh){
     int index_sol, index_flow;
 
     char dName[32];
@@ -379,14 +379,19 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
             }
         }
     }else{
-        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                int ii = i - cf.ng;
-                int jj = j - cf.ng;
-                idx = cf.nci*jj+ii;
-                v[idx] = hostV(idx,0);
+        //for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+        //    for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+            int vidx = 0;
+            for (int ic = 0; ic < mesh->ncells; ic++) {
+                if (mesh->celltype[ic] != REAL_CELL) continue;
+                //int ii = i - cf.ng;
+                //int jj = j - cf.ng;
+                //idx = cf.nci*jj+ii;
+                v[vidx] = hostV(ic,0);
+                vidx++;
             }
-        }
+        //    }
+        //}
     }
 
     if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,"MomentumX",&index_flow))
@@ -409,14 +414,19 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
             }
         }
     }else{
-        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                int ii = i - cf.ng;
-                int jj = j - cf.ng;
-                idx = cf.nci*jj+ii;
-                v[idx] = hostV(idx,1);
+        //for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+        //    for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+            int vidx = 0;
+            for (int ic = 0; ic < mesh->ncells; ic++) {
+                if (mesh->celltype[ic] != REAL_CELL) continue;
+                //int ii = i - cf.ng;
+                //int jj = j - cf.ng;
+                //idx = cf.nci*jj+ii;
+                v[vidx] = hostV(ic,1);
+                vidx++;
             }
-        }
+        //    }
+        //}
     }
     
     if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,"MomentumY",&index_flow))
@@ -439,14 +449,19 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
             }
         }
     }else{
-        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                int ii = i - cf.ng;
-                int jj = j - cf.ng;
-                idx = cf.nci*jj+ii;
-                v[idx] = 0;
+        //for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+        //    for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+            int vidx = 0;
+            for (int ic = 0; ic < mesh->ncells; ic++) {
+                if (mesh->celltype[ic] != REAL_CELL) continue;
+                //int ii = i - cf.ng;
+                //int jj = j - cf.ng;
+                //idx = cf.nci*jj+ii;
+                v[vidx] = 0;
+                vidx++;
             }
-        }
+        //    }
+        //}
     }
     
     if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,"MomentumZ",&index_flow))
@@ -469,14 +484,19 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
             }
         }
     }else{
-        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                int ii = i - cf.ng;
-                int jj = j - cf.ng;
-                idx = cf.nci*jj+ii;
-                v[idx] = hostV(idx,cf.ndim);
+        //for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+        //    for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+            int vidx = 0;
+            for (int ic = 0; ic < mesh->ncells; ic++) {
+                if (mesh->celltype[ic] != REAL_CELL) continue;
+                //int ii = i - cf.ng;
+                //int jj = j - cf.ng;
+                //idx = cf.nci*jj+ii;
+                v[vidx] = hostV(ic,cf.ndim);
+                vidx++;
             }
-        }
+        //    }
+        //}
     }
     
     if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,"EnergyInternal",&index_flow))
@@ -501,14 +521,19 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
                 }
             }
         }else{
-            for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-                for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                    int ii = i - cf.ng;
-                    int jj = j - cf.ng;
-                    idx = cf.nci*jj+ii;
-                    v[idx] = hostV(idx,vn);
-                }
+            //for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+            //    for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+            int vidx = 0;
+            for (int ic = 0; ic < mesh->ncells; ic++) {
+                if (mesh->celltype[ic] != REAL_CELL) continue;
+                //int ii = i - cf.ng;
+                //int jj = j - cf.ng;
+                //idx = cf.nci*jj+ii;
+                v[vidx] = hostV(ic,vn);
+                vidx++;
             }
+            //    }
+           // }
         }
         
         if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,dName,&index_flow))
@@ -535,14 +560,19 @@ void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const Ko
                     }
                 }
             }else{
-                for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-                    for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                        int ii = i - cf.ng;
-                        int jj = j - cf.ng;
-                        idx = cf.nci*jj+ii;
-                        v[idx] = hostV(idx,vn);
-                    }
+                //for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+                //    for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+                int vidx = 0;
+                for (int ic = 0; ic < mesh->ncells; ic++) {
+                   if (mesh->celltype[ic] != REAL_CELL) continue;
+                   //int ii = i - cf.ng;
+                   //int jj = j - cf.ng;
+                   //idx = cf.nci*jj+ii;
+                   v[vidx] = hostV(ic,vn);
+                   vidx++;
                 }
+             //    }
+             // }
             }
             
             if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,dName,&index_flow))

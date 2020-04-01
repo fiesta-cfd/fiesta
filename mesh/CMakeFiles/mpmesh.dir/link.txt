@@ -1,2 +1,0 @@
-/usr/bin/ar qc libmpmesh.a  CMakeFiles/mpmesh.dir/mesh.cpp.o CMakeFiles/mpmesh.dir/partition.cpp.o CMakeFiles/mpmesh.dir/reduce.c.o
-/usr/bin/ranlib libmpmesh.a

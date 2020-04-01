@@ -3,6 +3,7 @@
 #include "input.hpp"
 #include "mpi.hpp"
 #include <mpi.h>
+#include "mesh/mesh.h"
 
 struct bc_L {
     Kokkos::View<double**> u;
@@ -32,7 +33,8 @@ struct bc_L {
     void operator()(const int n, const int v) const {
         int idx = n;
         int idx_bc = nlft(idx); // index for the boundary cell
-        if (cell_type(idx) == BORDER_CELL && cell_type(idx_bc) == BOUNDARY_CELL) {
+        //if (cell_type(idx) == BORDER_CELL_ && cell_type(idx_bc) == BOUNDARY_CELL_) {
+        if (cell_type(idx) == REAL_CELL && cell_type(idx_bc) != REAL_CELL) {
             for (int i=0; i<ng; ++i) {
                 if (v==0 && bc_type==1) u(idx_bc,v) = -u(idx,v);
                 else u(idx_bc,v) = u(idx,v);
@@ -71,7 +73,8 @@ struct bc_R {
     void operator()(const int n, const int v) const {
         int idx = n;
         int idx_bc = nrht(idx); // index for the boundary cell
-        if (cell_type(idx) == BORDER_CELL && cell_type(idx_bc) == BOUNDARY_CELL) {
+        //if (cell_type(idx) == BORDER_CELL_ && cell_type(idx_bc) == BOUNDARY_CELL_) {
+        if (cell_type(idx) == REAL_CELL && cell_type(idx_bc) != REAL_CELL) {
             for (int i=0; i<ng; ++i) {
                 if (v==0 && bc_type==1) u(idx_bc,v) = -u(idx,v);
                 else u(idx_bc,v) = u(idx,v);
@@ -109,7 +112,8 @@ struct bc_B {
     void operator()(const int n, const int v) const {
         int idx = n;
         int idx_bc = nbot(idx); // index for the boundary cell
-        if (cell_type(idx) == BORDER_CELL && cell_type(idx_bc) == BOUNDARY_CELL) {
+        //if (cell_type(idx) == BORDER_CELL_ && cell_type(idx_bc) == BOUNDARY_CELL_) {
+        if (cell_type(idx) == REAL_CELL && cell_type(idx_bc) != REAL_CELL) {
             for (int j=0; j<ng; ++j) {
                 if (v==0 && bc_type==1) u(idx_bc,v) = -u(idx,v);
                 else u(idx_bc,v) = u(idx,v);
@@ -147,7 +151,8 @@ struct bc_T {
     void operator()(const int n, const int v) const {
         int idx = n;
         int idx_bc = ntop(idx); // index for the boundary cell
-        if (cell_type(idx) == BORDER_CELL && cell_type(idx_bc) == BOUNDARY_CELL) {
+        //if (cell_type(idx) == BORDER_CELL_ && cell_type(idx_bc) == BOUNDARY_CELL_) {
+        if (cell_type(idx) == REAL_CELL && cell_type(idx_bc) != REAL_CELL) {
             for (int j=0; j<ng; ++j) {
                 if (v==0 && bc_type==1) u(idx_bc,v) = -u(idx,v);
                 else u(idx_bc,v) = u(idx,v);
@@ -185,7 +190,8 @@ struct bc_H {
     void operator()(const int n, const int v) const {
         int idx = n;
         int idx_bc = nbak(idx); // index for the boundary cell
-        if (cell_type(idx) == BORDER_CELL && cell_type(idx_bc) == BOUNDARY_CELL) {
+        //if (cell_type(idx) == BORDER_CELL_ && cell_type(idx_bc) == BOUNDARY_CELL_) {
+        if (cell_type(idx) == REAL_CELL && cell_type(idx_bc) != REAL_CELL) {
             for (int k=0; k<ng; ++k) {
                 if (v==0 && bc_type==1) u(idx_bc,v) = -u(idx,v);
                 else u(idx_bc,v) = u(idx,v);
@@ -222,7 +228,8 @@ struct bc_F {
     void operator()(const int n, const int v) const {
         int idx = n;
         int idx_bc = nfrt(idx); // index for the boundary cell
-        if (cell_type(idx) == BORDER_CELL && cell_type(idx_bc) == BOUNDARY_CELL) {
+        //if (cell_type(idx) == BORDER_CELL_ && cell_type(idx_bc) == BOUNDARY_CELL_) {
+        if (cell_type(idx) == REAL_CELL && cell_type(idx_bc) != REAL_CELL) {
             for (int k=0; k<ng; ++k) {
                 if (v==0 && bc_type==1) u(idx_bc,v) = -u(idx,v);
                 else u(idx_bc,v) = u(idx,v);
@@ -238,7 +245,7 @@ void applyBCs(struct inputConfig cf, Kokkos::View<double**> &u, class mpiBuffers
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_bl;
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>> policy_b2;
 
-    haloExchange(cf,u,m);
+    //haloExchange(cf,u,m);
 
     int cv = 0;
     if (cf.ceq == 1)

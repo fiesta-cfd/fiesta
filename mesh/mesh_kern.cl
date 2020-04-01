@@ -3734,13 +3734,13 @@ __kernel void wbidirmap_precount_cl(
                     rncell = nrht[lncell];
                 }
                 if (fncell == lncell) {
-                    pycellCnt[giX] = 4;
-                    pyfaceCnt[giX] = 3;
-                    ifixupYCnt[giX] = 1;
+                    pycellCnt[giX] += 4;
+                    pyfaceCnt[giX] += 3;
+                    ifixupYCnt[giX] ++;
                 }
                 else {
-                    pycellCnt[giX] = 2;
-                    pyfaceCnt[giX] = 1;
+                    pycellCnt[giX] += 2;
+                    pyfaceCnt[giX] ++;
                 }
             }
         }

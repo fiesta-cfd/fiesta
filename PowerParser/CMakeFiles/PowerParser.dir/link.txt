@@ -1,2 +1,0 @@
-/usr/bin/ar qc libPowerParser.a  CMakeFiles/PowerParser.dir/Cmd.cc.o CMakeFiles/PowerParser.dir/Function.cc.o CMakeFiles/PowerParser.dir/Parser_utils.cc.o CMakeFiles/PowerParser.dir/Variable.cc.o CMakeFiles/PowerParser.dir/Word.cc.o CMakeFiles/PowerParser.dir/Comm.cc.o CMakeFiles/PowerParser.dir/PowerParser.cc.o CMakeFiles/PowerParser.dir/Parser_math.cc.o CMakeFiles/PowerParser.dir/Restartblock.cc.o CMakeFiles/PowerParser.dir/Whenthen.cc.o CMakeFiles/PowerParser.dir/parser_iface.cc.o CMakeFiles/PowerParser.dir/FParser.F90.o
-/usr/bin/ranlib libPowerParser.a

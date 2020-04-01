@@ -1,2 +1,0 @@
-/usr/bin/ar qc libpmesh.a  CMakeFiles/pmesh.dir/mesh.cpp.o CMakeFiles/pmesh.dir/partition.cpp.o CMakeFiles/pmesh.dir/reduce.c.o
-/usr/bin/ranlib libpmesh.a

@@ -1,2 +1,0 @@
-/usr/bin/ar qc libpmpMallocPlus.a  CMakeFiles/pmpMallocPlus.dir/MallocPlus.cpp.o CMakeFiles/pmpMallocPlus.dir/FMallocPlus.F90.o
-/usr/bin/ranlib libpmpMallocPlus.a

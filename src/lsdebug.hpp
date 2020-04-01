@@ -5,10 +5,11 @@
 #define MYDBG0 if(cf.rank==0) printf("%s:%d\n",__FILE__,__LINE__);
 enum cell_type
 {
-    BOUNDARY_CELL = 0,      // Ghost or Halo cell
-    REAL_CELL = 1,          // Real cell
-    BORDER_CELL = 2          // Border cell
+    BOUNDARY_CELL_ = 0,      // Ghost or Halo cell
+    REAL_CELL_ = 1,          // Real cell
+    BORDER_CELL_ = 2          // Border cell
 };
+/*
 enum border_type
 {
     LBORDER_CELL = 0,         // Real cell just inside the boundary cells. Used for Boundary conditions. Left
@@ -36,4 +37,5 @@ enum corner_type
     //RBF_CORN = 7,
     //RTF_CORN = 8
 };
+*/
 #endif

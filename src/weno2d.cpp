@@ -6,6 +6,7 @@
 #include <mpi.h>
 #include "lsdebug.hpp"
 #include "weno2d.hpp"
+#include "mesh/mesh.h"
 
 struct calculateRhoAndPressure2d {
     typedef typename Kokkos::View<double**> V4D;
@@ -85,7 +86,8 @@ struct calculateWenoFluxes2d {
     
     KOKKOS_INLINE_FUNCTION
     void operator()(const int index) const {
-      if (cell_type(index) == REAL_CELL || cell_type(nrht(index)) == BORDER_CELL || cell_type(ntop(index)) == BORDER_CELL  || cell_type(index) == BORDER_CELL) {
+      //if (cell_type(index) == REAL_CELL_ || cell_type(nrht(index)) == BORDER_CELL_ || cell_type(ntop(index)) == BORDER_CELL_ || cell_type(index) == BORDER_CELL_) {
+      if (cell_type(index) == REAL_CELL || cell_type(nrht(index)) == REAL_CELL || cell_type(ntop(index)) == REAL_CELL) {
         int ns = (int)cd(0);
         double ur,vr,w,b1,b2,b3,w1,w2,w3,p1,p2,p3,f1,f2,f3,f4,f5;
         double dx = cd(1);
@@ -188,7 +190,8 @@ struct applyWenoFluxes2d {
         //int idx = i + j*26;
         //apply weno fluxes to right hand side of Euler equation dV/dt = ...
         // if real
-        if (cell_type(idx) != BOUNDARY_CELL) {
+        //if (cell_type(idx) != BOUNDARY_CELL_) {
+        if (cell_type(idx) == REAL_CELL) {
             dvar(idx,v) = -( (wenox(idx) - wenox(nlft(idx)))
                               +(wenoy(idx) - wenoy(nbot(idx))) );
         }
@@ -217,7 +220,8 @@ struct applyPressure2d {
     void operator()(const int idx) const {
         //int idx = i + j*26;
         // if real
-        if (cell_type(idx) != BOUNDARY_CELL) {
+        //if (cell_type(idx) != BOUNDARY_CELL_) {}
+        if (cell_type(idx) == REAL_CELL) {
             double dx = cd(1);
             double dy = cd(2);
             // calculate pressure gradient across cell in each direction using 4th order
@@ -253,10 +257,10 @@ void weno2d_func::compute(const Kokkos::View<double**> & mvar, Kokkos::View<int*
     Kokkos::View<double*> cd = mcd;
 
     /*** Temporary Views ***/
-    V2D p("p",cf.ngi*cf.ngj);          // Pressure
-    V2D rho("rho",cf.ngi*cf.ngj);      // Total Density
-    V2D wenox("wenox",cf.ngi*cf.ngj);  // Weno Fluxes in X direction
-    V2D wenoy("wenoy",cf.ngi*cf.ngj);  // Weno Fluxes in Y direction
+    V2D p("p",ncells);          // Pressure
+    V2D rho("rho",ncells);      // Total Density
+    V2D wenox("wenox",ncells);  // Weno Fluxes in X direction
+    V2D wenoy("wenoy",ncells);  // Weno Fluxes in Y direction
 
     /*** Range Policies ***/
 
@@ -270,6 +274,17 @@ void weno2d_func::compute(const Kokkos::View<double**> & mvar, Kokkos::View<int*
 
     /**** WENO ****/
 
+    /*
+    Kokkos::View<double**>::HostMirror h_var = Kokkos::create_mirror_view(var);
+    Kokkos::deep_copy(h_var, var);
+    for (int ic = 0; ic < ncells; ic++) {
+        printf("%d) %f ", ic, h_var(ic, 0));
+        printf("%f ", h_var(ic, 1));
+        printf("%f ", h_var(ic, 2));
+        printf("%f\n", h_var(ic, 3));
+    }
+    */
+
     // Calcualte Total Density and Pressure Fields
     Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure2d(var,lft,rht,bot,top,p,rho,cd) );
 
@@ -279,7 +294,10 @@ void weno2d_func::compute(const Kokkos::View<double**> & mvar, Kokkos::View<int*
 
         Kokkos::parallel_for( ghost_pol, applyWenoFluxes2d(dvar,lft,rht,bot,top,cell_type,wenox,wenoy,v) );
     }
+    
 
     // Apply Pressure Gradient Term
     Kokkos::parallel_for( ghost_pol, applyPressure2d(dvar,lft,rht,bot,top,cell_type,p,cd) );
+
+    //printf("\n\n-------------------------------------------------------------------\n\n");
 }

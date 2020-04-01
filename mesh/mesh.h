@@ -61,6 +61,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+#define HAVE_MPI
 
 #include "MallocPlus/MallocPlus.h"
 #include <string>
@@ -614,6 +615,7 @@ public:
 
    //   Member functions.
    void init(int nx, int ny, real_t circ_radius, partition_method initial_order, int do_gpu_calc);
+   void init(int nx, int ny, int do_gpu_calc);
    void terminate(void);
 
    void set_bounds(int n);
@@ -830,6 +832,7 @@ public:
  *    ioffset -- write offset for each cell to account for new cells
  *    result -- refinement count
  *******************************************************************/
+   size_t state_calc_refine_potential(vector<char_t> &mpot,int &icount, int &jcount, double *D);
    size_t refine_smooth(vector<char_t> &mpot, int &icount, int &jcount);
 #ifdef HAVE_OPENCL
    int gpu_refine_smooth(cl_mem &dev_mpot, int &icount, int &jcount);

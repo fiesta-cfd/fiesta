@@ -1,1 +1,0 @@
-/projects/opt/x86_64/gcc/9.2.0/bin/gcc -fPIC -O3 -DNDEBUG -g -O3 -g -O3  -shared -Wl,-soname,libhsfc.so.2 -o libhsfc.so.2.0.0 CMakeFiles/hsfc.dir/hsfc2part.c.o CMakeFiles/hsfc.dir/hsfc.c.o CMakeFiles/hsfc.dir/hsfcsort.c.o 

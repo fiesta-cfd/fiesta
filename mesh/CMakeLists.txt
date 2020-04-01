@@ -113,7 +113,7 @@ if (MPI_FOUND)
 endif (MPI_FOUND)
 
 if (NOT DEFINED OPENMP_FOUND)
-   find_package( OpenMP)
+    #find_package( OpenMP)
 endif (NOT DEFINED OPENMP_FOUND)
 
 if (NOT PRECISION_TYPE)

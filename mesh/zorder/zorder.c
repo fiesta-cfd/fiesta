@@ -58,7 +58,7 @@
 
 #include <stdio.h>
 #include <math.h>
-#include "s7/s7.h"
+//#include "s7/s7.h"
 #include "zorder.h"
 
 #define DEBUG 0
@@ -77,7 +77,7 @@ void calc_zorder(int size, int *i, int *j, uchar_t *level, int levmx, int ibase,
       z_order[ic] = ic; }
 
    //   Sort the z-ordered indices.
-   S7_Index_Sort(z_index, size, S7_INT, z_order);
+   //S7_Index_Sort(z_index, size, S7_INT, z_order);
 
    //   Output ordered mesh information.
    if (DEBUG)

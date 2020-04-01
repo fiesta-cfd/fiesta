@@ -1,2 +1,0 @@
-/usr/bin/ar qc libdMallocPlus.a  CMakeFiles/dMallocPlus.dir/MallocPlus.cpp.o CMakeFiles/dMallocPlus.dir/FMallocPlus.F90.o
-/usr/bin/ranlib libdMallocPlus.a

@@ -55,6 +55,7 @@
  *           Dennis Trujillo         dptrujillo@lanl.gov, dptru10@gmail.com
  * 
  */
+#define HAVE_MPI
 #ifdef HAVE_MPI
 #include "mpi.h"
 #endif
