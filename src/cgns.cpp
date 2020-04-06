@@ -10,9 +10,9 @@
 using namespace std;
 
 cgnsWriter::cgnsWriter(struct inputConfig cf, FS4D gridD, FS4D varD){
-    x = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
-    y = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
-    z = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
+    xdp = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
+    ydp = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
+    zdp = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
 
     xsp = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
     ysp = (float*)malloc(cf.ni*cf.nj*cf.nk*sizeof(float));
@@ -39,9 +39,9 @@ struct inputConfig cgnsWriter::writeGrid(struct inputConfig cf, const FS4D gridD
             for (int k=0; k<cf.nk; ++k){
                 idx = (cf.ni*cf.nj)*k+cf.ni*j+i;
 
-                x[idx] = gridH(i,j,k,0);
-                y[idx] = gridH(i,j,k,1);
-                z[idx] = gridH(i,j,k,2);
+                xdp[idx] = gridH(i,j,k,0);
+                ydp[idx] = gridH(i,j,k,1);
+                zdp[idx] = gridH(i,j,k,2);
             }
         }
     }
@@ -80,9 +80,16 @@ struct inputConfig cgnsWriter::writeGrid(struct inputConfig cf, const FS4D gridD
         cgp_coord_write(cf.cF,cf.cB,cf.cZ,CG_RealDouble, "CoordinateZ", &Cz))
         cgp_error_exit();
 
-    if (cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cx, start, end, x) ||
-        cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cy, start, end, y) ||
-        cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cz, start, end, z))
+    //if (cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cx, start, end, xdp) ||
+    //    cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cy, start, end, ydp) ||
+    //    cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cz, start, end, zdp))
+    //    cgp_error_exit();
+
+    cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cx, start, end, xdp);
+
+    if (cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cy, start, end, ydp))
+        cgp_error_exit();
+    if (cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cz, start, end, zdp))
         cgp_error_exit();
 
     cgp_close(cf.cF);
@@ -175,7 +182,8 @@ void cgnsWriter::writeRestart(struct inputConfig cf, const FS4D gridD, const FS4
              << c(CYA) << left << "'" + fsname + "'" << c(NON) << endl;
     }
 
-    cf = writeGrid(cf, gridD, fsname.c_str());
+    cf = writeSPGrid(cf, gridD, fsname.c_str());
+    //cf = writeGrid(cf, gridD, fsname.c_str());
     snprintf(solname,32,"FS");
 
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
@@ -661,12 +669,12 @@ void cgnsWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD){
     cgsize_t gend[3] = {cf.iEnd+1,cf.jEnd+1,cf.kEnd+1};
 
     for (int v=0; v<3; ++v){
-        cgp_coord_read_data(cf.cF,1,1,v+1,gstart,gend,x);
+        cgp_coord_read_data(cf.cF,1,1,v+1,gstart,gend,xdp);
         for (int k=0; k<cf.nk; ++k){
             for (int j=0; j<cf.nj; ++j){
                 for (int i=0; i<cf.ni; ++i){
                     idx = (cf.ni*cf.nj)*k+cf.ni*j+i;
-                    gridH(i,j,k,v) = x[idx];
+                    gridH(i,j,k,v) = xdp[idx];
                 }
             }
         }

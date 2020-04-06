@@ -23,9 +23,9 @@ public:
 
 private:
 
-    double *x;
-    double *y;
-    double *z;
+    double *xdp;
+    double *ydp;
+    double *zdp;
     float *xsp;
     float *ysp;
     float *zsp;
