@@ -84,10 +84,12 @@ void statusCheck(struct inputConfig cf, FS4D var, int t, double time, fiestaTime
     double min[cf.nvt];
     string vname;
 
-    cout << c(YEL) << "    Status: " << c(NON) << endl;
-    cout << "      Time Step:       " << c(CYA) << t << c(NON) << "/" << c(CYA) << cf.tend << c(NON) << endl;
-    cout << "      Simulation Time: " << c(CYA) << setprecision(5) << scientific << time << c(NON) << endl;
-    cout << "      Wall Time:       " << c(CYA) << wall.checkf() << c(NON) << endl;
+    if (cf.rank == 0){
+        cout << c(YEL) << "    Status: " << c(NON) << endl;
+        cout << "      Time Step:       " << c(CYA) << t << c(NON) << "/" << c(CYA) << cf.tend << c(NON) << endl;
+        cout << "      Simulation Time: " << c(CYA) << setprecision(5) << scientific << time << c(NON) << endl;
+        cout << "      Wall Time:       " << c(CYA) << wall.checkf() << c(NON) << endl;
+    }
 
     if (cf.ndim == 2){
         policy_f cell_pol  = policy_f({cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng});

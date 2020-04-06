@@ -9,29 +9,29 @@
 using namespace std;
 
 string c(Color color){
-    if (isatty(fileno(stdout))){
-    //if (isatty(STDOUT_FILENO)){
-        switch (color){
-            case RED :
-                return "\033[0;31m";
-            case GRE :
-                return "\033[0;32m";
-            case YEL :
-                return "\033[0;33m";
-            case BLU :
-                return "\033[0;34m";
-            case MAG :
-                return "\033[0;35m";
-            case CYA :
-                return "\033[0;36m";
-            case NON :
-                return "\033[0m";
-            default :
-                return "\033[0m";
-        }
-    }else{
+    //if (isatty(fileno(stdout))){
+    ////if (isatty(STDOUT_FILENO)){
+    //    switch (color){
+    //        case RED :
+    //            return "\033[0;31m";
+    //        case GRE :
+    //            return "\033[0;32m";
+    //        case YEL :
+    //            return "\033[0;33m";
+    //        case BLU :
+    //            return "\033[0;34m";
+    //        case MAG :
+    //            return "\033[0;35m";
+    //        case CYA :
+    //            return "\033[0;36m";
+    //        case NON :
+    //            return "\033[0m";
+    //        default :
+    //            return "\033[0m";
+    //    }
+    //}else{
         return "";
-    }
+    //}
 }
 
 //#define c(CYA) "\033[0;36m"
