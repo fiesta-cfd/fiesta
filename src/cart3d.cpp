@@ -1,10 +1,12 @@
 #include "fiesta.hpp"
 #include "input.hpp"
+#ifndef NOMPI
 #include "mpi.hpp"
 #include "cgns.hpp"
+#include <mpi.h>
+#endif
 #include "bc.hpp"
 #include "Kokkos_Core.hpp"
-#include <mpi.h>
 #include "debug.hpp"
 #include "cart3d.hpp"
 
@@ -724,13 +726,13 @@ void hydroc3d_func::compute() {
     policy_f3 cell_pol  = policy_f3({cf.ng,cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
     policy_f3 weno_pol  = policy_f3({cf.ng-1,cf.ng-1,cf.ng-1},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
 
-    double myMaxS,maxS;
+    double maxS;
 
-    double myMaxC, maxC;
-    double myMaxCh, maxCh;
-    double myMaxC1, maxC1;
-    double myMaxC2, maxC2;
-    double myMaxC3, maxC3;
+    double maxC;
+    double maxCh;
+    double maxC1;
+    double maxC2;
+    double maxC3;
     double mu,alpha,beta,betae;
 
     /**** WENO ****/
@@ -757,8 +759,10 @@ void hydroc3d_func::compute() {
         timers["ceq"].reset();
         /**** CEQ ****/
         //find mac wavespeed
-        Kokkos::parallel_reduce(cell_pol,maxWaveSpeed(var,p,rho,cd), Kokkos::Max<double>(myMaxS));
-        MPI_Allreduce(&myMaxS,&maxS,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        Kokkos::parallel_reduce(cell_pol,maxWaveSpeed(var,p,rho,cd), Kokkos::Max<double>(maxS));
+#ifndef NOMPI
+        MPI_Allreduce(&maxS,&maxS,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+#endif
 
         //calculate density and energy gradients and find ceq source terms
         Kokkos::parallel_for(cell_pol,calculateRhoGrad(var,rho,gradRho,cd));
@@ -768,20 +772,18 @@ void hydroc3d_func::compute() {
             updateCeq(dvar,var,gradRho,maxS,cd,cf.kap,cf.eps));
 
         /**** Apply CEQ ****/
-        Kokkos::parallel_reduce(cell_pol,maxGradFunctor(var,cf.nv+0), Kokkos::Max<double>(myMaxC));
-        MPI_Allreduce(&myMaxC,&maxC,1,MPI_DOUBLE,MPI_MAX,cf.comm);
-
-        Kokkos::parallel_reduce(cell_pol,maxGradFunctor(var,cf.nv+1), Kokkos::Max<double>(myMaxCh));
-        MPI_Allreduce(&myMaxCh,&maxCh,1,MPI_DOUBLE,MPI_MAX,cf.comm);
-
-        Kokkos::parallel_reduce(cell_pol,maxGradFunctor(var,cf.nv+2), Kokkos::Max<double>(myMaxC1));
-        MPI_Allreduce(&myMaxC1,&maxC1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
-
-        Kokkos::parallel_reduce(cell_pol,maxGradFunctor(var,cf.nv+3), Kokkos::Max<double>(myMaxC2));
-        MPI_Allreduce(&myMaxC2,&maxC2,1,MPI_DOUBLE,MPI_MAX,cf.comm);
-
-        Kokkos::parallel_reduce(cell_pol,maxGradFunctor(var,cf.nv+4), Kokkos::Max<double>(myMaxC3));
-        MPI_Allreduce(&myMaxC3,&maxC3,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        Kokkos::parallel_reduce(cell_pol,maxGradFunctor(var,cf.nv+0), Kokkos::Max<double>(maxC));
+        Kokkos::parallel_reduce(cell_pol,maxGradFunctor(var,cf.nv+1), Kokkos::Max<double>(maxCh));
+        Kokkos::parallel_reduce(cell_pol,maxGradFunctor(var,cf.nv+2), Kokkos::Max<double>(maxC1));
+        Kokkos::parallel_reduce(cell_pol,maxGradFunctor(var,cf.nv+3), Kokkos::Max<double>(maxC2));
+        Kokkos::parallel_reduce(cell_pol,maxGradFunctor(var,cf.nv+4), Kokkos::Max<double>(maxC3));
+#ifndef NOMPI
+        MPI_Allreduce(&maxC,&maxC,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        MPI_Allreduce(&maxCh,&maxCh,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        MPI_Allreduce(&maxC1,&maxC1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        MPI_Allreduce(&maxC2,&maxC2,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        MPI_Allreduce(&maxC3,&maxC3,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+#endif
 
         mu = maxC1;
         if (maxC2 > mu)

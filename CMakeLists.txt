@@ -14,14 +14,13 @@ execute_process(COMMAND bash -c "cd ${CMAKE_CURRENT_LIST_DIR} && git rev-parse -
 string(STRIP ${GIT_VER} GIT_VER)
 string(STRIP ${GIT_BRANCH} GIT_BRANCH)
 set(FIESTA_VER "${GIT_BRANCH}-${GIT_VER}")
-
-list(APPEND CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -O3)
-
 if (LITE)
     set(FIESTA_OPTS "LITE")
 else()
-    set(FIESTA_OPTS "NORMAL")
+    set(FIESTA_OPTS "FULL")
 endif()
+
+list(APPEND CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -O3)
 
 # CUDA
 if (CUDA)
@@ -49,61 +48,79 @@ add_subdirectory(kokkos)
 # Kokkos
 include_directories(${Kokkos_INCLUDE_DIRS_RET})
 
-# MPI
-find_package(MPI REQUIRED)
-include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
 # lua
 include_directories(lua/src)
 add_subdirectory(lua)
 
-# hdf5
-set(installDir ${CMAKE_CURRENT_BINARY_DIR}/install)
-ExternalProject_Add(hdf5Parallel
-  SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/hdf5
-  INSTALL_DIR ${installDir}
-  CMAKE_ARGS -D BUILD_SHARED_LIBS:BOOL=OFF
-             -D BUILD_TESTING:BOOL=OFF
-             -D HDF5_BUILD_EXAMPLES:BOOL=OFF
-             -D HDF5_DISABLE_COMPILER_WARNINGS:BOOL=ON
-             -D HDF5_ENABLE_PARALLEL:BOOL=ON
-             -D HDF5_BUILD_CPP_LIB:BOOL=OFF
-             -D CMAKE_INSTALL_PREFIX:PATH=${installDir}
-)
+if (NOT LITE)
+    # MPI
+    find_package(MPI REQUIRED)
+    include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 
-# cgns
-ExternalProject_Add(cgnsParallel
-  SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/cgns
-  INSTALL_DIR ${installDir}
-  CMAKE_ARGS -D CGNS_BUILD_SHARED:BOOL=OFF
-             -D CGNS_USE_SHARED:BOOL=OFF
-             -D CGNS_ENABLE_64BIT:BOOL=ON
-             -D CGNS_ENABLE_HDF5:BOOL=ON
-             -D HDF5_NEED_MPI:BOOL=ON
-             -D CGNS_ENABLE_PARALLEL:BOOL=ON
-             -D CGNS_ENABLE_SCOPING:BOOL=ON
-             -D CMAKE_INSTALL_PREFIX:PATH=${installDir}
-             -D CMAKE_PREFIX_PATH:PATH=${installDir}
-)
+    # hdf5
+    set(installDir ${CMAKE_CURRENT_BINARY_DIR}/install)
+    ExternalProject_Add(hdf5Parallel
+      SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/hdf5
+      INSTALL_DIR ${installDir}
+      CMAKE_ARGS -D BUILD_SHARED_LIBS:BOOL=OFF
+                 -D BUILD_TESTING:BOOL=OFF
+                 -D HDF5_BUILD_EXAMPLES:BOOL=OFF
+                 -D HDF5_DISABLE_COMPILER_WARNINGS:BOOL=ON
+                 -D HDF5_ENABLE_PARALLEL:BOOL=ON
+                 -D HDF5_BUILD_CPP_LIB:BOOL=OFF
+                 -D CMAKE_INSTALL_PREFIX:PATH=${installDir}
+    )
 
-ExternalProject_Add_StepDependencies(cgnsParallel configure hdf5Parallel)
+    # cgns
+    ExternalProject_Add(cgnsParallel
+      SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/cgns
+      INSTALL_DIR ${installDir}
+      CMAKE_ARGS -D CGNS_BUILD_SHARED:BOOL=OFF
+                 -D CGNS_USE_SHARED:BOOL=OFF
+                 -D CGNS_ENABLE_64BIT:BOOL=ON
+                 -D CGNS_ENABLE_HDF5:BOOL=ON
+                 -D HDF5_NEED_MPI:BOOL=ON
+                 -D CGNS_ENABLE_PARALLEL:BOOL=ON
+                 -D CGNS_ENABLE_SCOPING:BOOL=ON
+                 -D CMAKE_INSTALL_PREFIX:PATH=${installDir}
+                 -D CMAKE_PREFIX_PATH:PATH=${installDir}
+    )
+    ExternalProject_Add_StepDependencies(cgnsParallel configure hdf5Parallel)
+endif()
+
 include_directories(${installDir}/include)
 
 # fiesta
-set(FIESTA_SRCS src/bc.cpp src/cgns.cpp src/status.cpp src/timer.cpp src/input.cpp src/output.cpp src/main.cpp src/mpi.cpp src/rkfunction.cpp src/cart2d.cpp src/cart3d.cpp)
-add_executable(fiesta ${FIESTA_SRCS})
-add_dependencies(fiesta cgnsParallel)
-target_link_libraries(fiesta
-                      kokkos
-                      ${MPI_CXX_LIBRARIES}
-                      ${installDir}/lib/libcgns.a
-                      ${installDir}/lib/libhdf5.a
-                      ${installDir}/lib/libhdf5_hl.a
-                      ${installDir}/lib/libhdf5_tools.a
-                      lua
-)
+set(FIESTA_SRCS src/bc.cpp src/status.cpp src/timer.cpp src/input.cpp src/output.cpp src/main.cpp src/rkfunction.cpp src/cart2d.cpp src/cart3d.cpp)
+if (LITE)
+    message("Fiesta Sources" ${FIESTA_SRCS})
+    add_executable(fiesta ${FIESTA_SRCS})
+    target_link_libraries(fiesta
+                          kokkos
+                          lua
+    )
+else()
+    message("Fiesta Sources" ${FIESTA_SRCS})
+    add_executable(fiesta ${FIESTA_SRCS} src/cgns.cpp src/mpi.cpp)
+    add_dependencies(fiesta cgnsParallel)
+    target_link_libraries(fiesta
+                          kokkos
+                          ${MPI_CXX_LIBRARIES}
+                          ${installDir}/lib/libcgns.a
+                          ${installDir}/lib/libhdf5.a
+                          ${installDir}/lib/libhdf5_hl.a
+                          ${installDir}/lib/libhdf5_tools.a
+                          lua
+    )
+endif()
+
 target_compile_definitions(fiesta PRIVATE FIESTA_VERSION="${FIESTA_VER}")
 target_compile_definitions(fiesta PRIVATE FIESTA_OPTIONS="${FIESTA_OPTS}")
+if (LITE)
+    target_compile_definitions(fiesta PRIVATE NOMPI)
+endif()
+
 
 install(TARGETS fiesta
         RUNTIME DESTINATION)

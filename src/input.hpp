@@ -8,7 +8,9 @@
 #include <math.h>
 #include "lua.hpp"
 #include "Kokkos_Core.hpp"
+#ifndef NOMPI
 #include <mpi.h>
+#endif
 #include <string>
 
 // Lua error function
@@ -48,7 +50,9 @@ struct inputConfig {
     int nt,ni,nj,nk,nv,ns,nvt;
     int iStart,jStart,kStart;
     int iEnd,jEnd,kEnd;
+#ifndef NOMPI
     MPI_Comm comm;
+#endif
     int cF,cB,cZ;
     int ng,ngi,ngj,ngk;
     int xPer,yPer,zPer;

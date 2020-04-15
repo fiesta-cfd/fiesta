@@ -1,9 +1,11 @@
 #include "input.hpp"
+#ifndef NOMPI
 #include "mpi.hpp"
 #include "cgns.hpp"
+#include <mpi.h>
+#endif
 #include "bc.hpp"
 #include "Kokkos_Core.hpp"
-#include <mpi.h>
 #include "debug.hpp"
 #include "cart2d.hpp"
 #include "flux.hpp"
@@ -417,44 +419,39 @@ void hydro2dvisc_func::compute(){
         timers["visc"].accumulate();
     }
 
-    double myMaxS, maxS;
-    double myMaxG, maxG;
-    double myMaxGh, maxGh;
-    double myMaxTau1, maxTau1;
-    double myMaxTau2, maxTau2;
+    double maxS;
+    double maxG;
+    double maxGh;
+    double maxTau1;
+    double maxTau2;
     double mu;
-    double myMaxC, maxC;
-    double myMaxCh, maxCh;
-    double myMaxT1, maxT1;
-    double myMaxT2, maxT2;
+    double maxC;
+    double maxCh;
+    double maxT1;
+    double maxT2;
     if (cf.ceq == 1){
         timers["ceq"].reset();
-        Kokkos::parallel_reduce(cell_pol,maxWaveSpeed2D(var,p,rho,cd), Kokkos::Max<double>(myMaxS));
-        MPI_Allreduce(&myMaxS,&maxS,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        Kokkos::parallel_reduce(cell_pol,maxWaveSpeed2D(var,p,rho,cd), Kokkos::Max<double>(maxS));
+        Kokkos::parallel_reduce(cell_pol,maxGradRho2D(gradRho,1), Kokkos::Max<double>(maxG));
+        Kokkos::parallel_reduce(cell_pol,maxGradRho2D(gradRho,1), Kokkos::Max<double>(maxGh));
+        Kokkos::parallel_reduce(cell_pol,maxGradRho2D(gradRho,1), Kokkos::Max<double>(maxTau1));
+        Kokkos::parallel_reduce(cell_pol,maxGradRho2D(gradRho,1), Kokkos::Max<double>(maxTau2));
+        Kokkos::parallel_reduce(cell_pol,maxCvar2D(var,0,cd), Kokkos::Max<double>(maxC));
+        Kokkos::parallel_reduce(cell_pol,maxCvar2D(var,1,cd), Kokkos::Max<double>(maxCh));
+        Kokkos::parallel_reduce(cell_pol,maxCvar2D(var,2,cd), Kokkos::Max<double>(maxT1));
+        Kokkos::parallel_reduce(cell_pol,maxCvar2D(var,3,cd), Kokkos::Max<double>(maxT2));
 
-        Kokkos::parallel_reduce(cell_pol,maxGradRho2D(gradRho,1), Kokkos::Max<double>(myMaxG));
-        MPI_Allreduce(&myMaxG,&maxG,1,MPI_DOUBLE,MPI_MAX,cf.comm);
-
-        Kokkos::parallel_reduce(cell_pol,maxGradRho2D(gradRho,1), Kokkos::Max<double>(myMaxGh));
-        MPI_Allreduce(&myMaxGh,&maxGh,1,MPI_DOUBLE,MPI_MAX,cf.comm);
-
-        Kokkos::parallel_reduce(cell_pol,maxGradRho2D(gradRho,1), Kokkos::Max<double>(myMaxTau1));
-        MPI_Allreduce(&myMaxTau1,&maxTau1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
-
-        Kokkos::parallel_reduce(cell_pol,maxGradRho2D(gradRho,1), Kokkos::Max<double>(myMaxTau2));
-        MPI_Allreduce(&myMaxTau1,&maxTau2,1,MPI_DOUBLE,MPI_MAX,cf.comm);
-
-        Kokkos::parallel_reduce(cell_pol,maxCvar2D(var,0,cd), Kokkos::Max<double>(myMaxC));
-        MPI_Allreduce(&myMaxC,&maxC,1,MPI_DOUBLE,MPI_MAX,cf.comm);
-
-        Kokkos::parallel_reduce(cell_pol,maxCvar2D(var,1,cd), Kokkos::Max<double>(myMaxCh));
-        MPI_Allreduce(&myMaxCh,&maxCh,1,MPI_DOUBLE,MPI_MAX,cf.comm);
-
-        Kokkos::parallel_reduce(cell_pol,maxCvar2D(var,2,cd), Kokkos::Max<double>(myMaxT1));
-        MPI_Allreduce(&myMaxT1,&maxT1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
-
-        Kokkos::parallel_reduce(cell_pol,maxCvar2D(var,3,cd), Kokkos::Max<double>(myMaxT2));
-        MPI_Allreduce(&myMaxT2,&maxT2,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+#ifndef NOMPI
+        MPI_Allreduce(&maxS,&maxS,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        MPI_Allreduce(&maxG,&maxG,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        MPI_Allreduce(&maxGh,&maxGh,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        MPI_Allreduce(&maxTau1,&maxTau1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        MPI_Allreduce(&maxTau1,&maxTau2,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        MPI_Allreduce(&maxC,&maxC,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        MPI_Allreduce(&maxCh,&maxCh,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        MPI_Allreduce(&maxT1,&maxT1,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+        MPI_Allreduce(&maxT2,&maxT2,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+#endif
 
 
         if (maxG < 1e-6) maxG = 1e-6;

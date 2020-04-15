@@ -2,7 +2,9 @@
 #include "input.hpp"
 #include <iomanip>
 #include <locale>
+#ifndef NOMPI
 #include <mpi.h>
+#endif
 #include "output.hpp"
 #include <cmath>
 
@@ -78,9 +80,9 @@ struct maxVarFunctor3d {
 void statusCheck(struct inputConfig cf, FS4D var, int t, double time, fiestaTimer& wall){
     policy_f cell_pol  = policy_f({cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng});
 
-    double myMax[cf.nvt];
+//    double myMax[cf.nvt];
     double max[cf.nvt];
-    double myMin[cf.nvt];
+//    double myMin[cf.nvt];
     double min[cf.nvt];
     string vname;
 
@@ -94,20 +96,23 @@ void statusCheck(struct inputConfig cf, FS4D var, int t, double time, fiestaTime
     if (cf.ndim == 2){
         policy_f cell_pol  = policy_f({cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng});
         for (int v=0; v<cf.nvt; ++v){
-            Kokkos::parallel_reduce(cell_pol,maxVarFunctor2d(var, v), Kokkos::Max<double>(myMax[v]));
-            MPI_Allreduce(&myMax[v],&max[v],1,MPI_DOUBLE,MPI_MAX,cf.comm);
+            Kokkos::parallel_reduce(cell_pol,maxVarFunctor2d(var, v), Kokkos::Max<double>(max[v]));
+            Kokkos::parallel_reduce(cell_pol,minVarFunctor2d(var, v), Kokkos::Min<double>(min[v]));
 
-            Kokkos::parallel_reduce(cell_pol,minVarFunctor2d(var, v), Kokkos::Min<double>(myMin[v]));
-            MPI_Allreduce(&myMin[v],&min[v],1,MPI_DOUBLE,MPI_MIN,cf.comm);
+#ifndef NOMPI
+            MPI_Allreduce(&max[v],&max[v],1,MPI_DOUBLE,MPI_MAX,cf.comm);
+            MPI_Allreduce(&min[v],&min[v],1,MPI_DOUBLE,MPI_MIN,cf.comm);
+#endif
         }
     }else{
         policy_f3 cell_pol  = policy_f3({cf.ng,cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
         for (int v=0; v<cf.nvt; ++v){
-            Kokkos::parallel_reduce(cell_pol,maxVarFunctor3d(var, v), Kokkos::Max<double>(myMax[v]));
-            MPI_Allreduce(&myMax[v],&max[v],1,MPI_DOUBLE,MPI_MAX,cf.comm);
-
-            Kokkos::parallel_reduce(cell_pol,minVarFunctor3d(var, v), Kokkos::Min<double>(myMin[v]));
-            MPI_Allreduce(&myMin[v],&min[v],1,MPI_DOUBLE,MPI_MIN,cf.comm);
+            Kokkos::parallel_reduce(cell_pol,maxVarFunctor3d(var, v), Kokkos::Max<double>(max[v]));
+            Kokkos::parallel_reduce(cell_pol,minVarFunctor3d(var, v), Kokkos::Min<double>(min[v]));
+#ifndef NOMPI
+            MPI_Allreduce(&max[v],&max[v],1,MPI_DOUBLE,MPI_MAX,cf.comm);
+            MPI_Allreduce(&min[v],&min[v],1,MPI_DOUBLE,MPI_MIN,cf.comm);
+#endif
         }
     }
 

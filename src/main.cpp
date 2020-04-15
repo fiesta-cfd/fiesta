@@ -1,10 +1,12 @@
 #include "fiesta.hpp"
 #include "input.hpp"
+#ifndef NOMPI
 #include "mpi.hpp"
 #include "cgns.hpp"
+#include <mpi.h>
+#endif
 #include "bc.hpp"
 #include "Kokkos_Core.hpp"
-#include <mpi.h>
 #include "debug.hpp"
 #include "cart3d.hpp"
 #include "cart2d.hpp"
@@ -27,14 +29,18 @@ void fnExit1(void){
 
 int main(int argc, char* argv[]){
     // INITIALIZE
-    MPI_Init(NULL,NULL);
-
     int temp_rank;
+    temp_rank = 0;
+#ifndef NOMPI
+    MPI_Init(NULL,NULL);
     MPI_Comm_rank(MPI_COMM_WORLD,&temp_rank);
+#endif
+
     if (temp_rank == 0)
         printSplash();
 
     Kokkos::initialize(argc, argv);
+    atexit(fnExit1);
     
     fiestaTimer totalTimer;
     fiestaTimer initTimer;
@@ -45,17 +51,16 @@ int main(int argc, char* argv[]){
     fiestaTimer gridTimer;
     fiestaTimer writeTimer;
 
-
-    atexit(fnExit1);
-
     struct inputConfig cf;
 
     // CONFIGURE
 
     cf = executeConfiguration(argc,argv);
 
+#ifndef NOMPI
     cf = mpi_init(cf);
-    MPI_Barrier(cf.comm);
+#endif
+//    MPI_Barrier(cf.comm);
 
     //int cv = 0;
     //if (cf.ceq == 1)
@@ -79,7 +84,7 @@ int main(int argc, char* argv[]){
     }
     Kokkos::deep_copy(cd,hostcd);
 
-    MPI_Barrier(cf.comm);
+//    MPI_Barrier(cf.comm);
     /*** Output runtime information ***/
     if (cf.rank == 0)
         printConfig(cf);
@@ -92,9 +97,11 @@ int main(int argc, char* argv[]){
         f = new hydro2dvisc_func(cf,cd);
     }
 
+#ifndef NOMPI
     cgnsWriter w(cf,f->grid,f->var);
+#endif
 
-    MPI_Barrier(cf.comm);
+//    MPI_Barrier(cf.comm);
     if (cf.restart == 0){
         if (cf.rank == 0) cout << c(GRE) << "Generating Initial Conditions:" << c(NON) << endl;
         loadTimer.start();
@@ -114,9 +121,10 @@ int main(int argc, char* argv[]){
     double time = cf.time;
     int tstart = cf.tstart;
     
-    MPI_Barrier(cf.comm);
+//    MPI_Barrier(cf.comm);
 
     /*** Read Restart or Write initial conditions ***/
+#ifndef NOMPI
     if (cf.restart == 1){
         if (cf.rank == 0) cout << c(GRE) << "Loading Restart File:" << c(NON) << endl;
         loadTimer.reset();
@@ -147,23 +155,32 @@ int main(int argc, char* argv[]){
 
     // create mpi buffers
     mpiBuffers m(cf);
+#endif
 
     if (cf.rank == 0){
         cout << endl << "-----------------------" << endl << endl;
         cout << c(GRE) << "Starting Simulation:" << c(NON) << endl;
     }
 
-    MPI_Barrier(cf.comm);
+//    MPI_Barrier(cf.comm);
 
     initTimer.stop();
     simTimer.reset();
+
+  // // // // // // // //  \\ \\ \\ \\ \\ \\ \\ \\
+ // // // // // // MAIN TIME LOOP \\ \\ \\ \\ \\ \\
+// // // // // // // // //\\ \\ \\ \\ \\ \\ \\ \\ \\
 
     for (int t=tstart; t<cf.tend; ++t){
         time = time + cf.dt;
 
         /****** Low Storage Runge-Kutta 2nd order ******/
         //K1 = f(myV)
+#ifndef NOMPI
         applyBCs(cf,f->var,m);
+#else
+        applyBCs(cf,f->var);
+#endif
         f->compute();
         //f->compute(myV,K1);
         
@@ -177,7 +194,11 @@ int main(int argc, char* argv[]){
             myvar(i,j,k,v) = myvar(i,j,k,v) + 0.5*cf.dt*mydvar(i,j,k,v);
         });
 
+#ifndef NOMPI
         applyBCs(cf,f->var,m);
+#else
+        applyBCs(cf,f->var);
+#endif
         f->compute();
 
         mytmp = f->tmp1;
@@ -197,6 +218,7 @@ int main(int argc, char* argv[]){
                          << c(CYA) << right << setw(0) << setprecision(3) << scientific << time << "s" << c(NON) << endl;
                     //printf("    Iteration: %d/%d, Sim Time: %.2e\n",t+1,cf.tend,time);
         }
+#ifndef NOMPI
         if (cf.write_freq > 0){
             if ((t+1) % cf.write_freq == 0){
                 f->timers["solWrite"].reset();
@@ -213,6 +235,7 @@ int main(int argc, char* argv[]){
                 f->timers["resWrite"].accumulate();
             }
         }
+#endif
         if (cf.stat_freq > 0){
             if ((t+1) % cf.stat_freq == 0){
                 f->timers["statCheck"].reset();
@@ -225,7 +248,7 @@ int main(int argc, char* argv[]){
     if (cf.rank == 0)
         cout << c(GRE) << "Simulation Complete!" << c(NON) << endl;
 
-    MPI_Barrier(cf.comm);
+//    MPI_Barrier(cf.comm);
 
     typedef std::function<bool(std::pair<std::string, fiestaTimer>, std::pair<std::string, fiestaTimer>)> Comparator;
  
@@ -276,7 +299,9 @@ int main(int argc, char* argv[]){
     }
 
     
+#ifndef NOMPI
     MPI_Finalize();
+#endif
     //Kokkos::finalize();
     return 0;
 }

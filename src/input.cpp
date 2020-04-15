@@ -201,6 +201,34 @@ struct inputConfig executeConfiguration(int argc, char * argv[]){
     cf.glbl_nj = cf.glbl_ncj + 1;
     cf.glbl_nk = cf.glbl_nck + 1;
 
+    /* Set MPI defaults for 1 processor*/
+    cf.rank = 0;
+    cf.nci = cf.glbl_nci;
+    cf.ncj = cf.glbl_ncj;
+    cf.nck = cf.glbl_nck;
+
+    cf.ngi = cf.nci + 2*cf.ng;
+    cf.ngj = cf.ncj + 2*cf.ng;
+    cf.ngk = cf.nck + 2*cf.ng;
+
+    cf.iStart = 0;
+    cf.iEnd   = cf.nci;
+    cf.jStart = 0;
+    cf.jEnd   = cf.ncj;
+    cf.kStart = 0;
+    cf.kEnd   = cf.nck;
+
+    cf.ni = cf.nci + 1;
+    cf.nj = cf.ncj + 1;
+    cf.nk = cf.nck + 1;
+
+    cf.xMinus = -1 + cf.xPer;
+    cf.xPlus  = -1 + cf.xPer;
+    cf.yMinus = -1 + cf.yPer;
+    cf.yPlus  = -1 + cf.yPer;
+    cf.zMinus = -1 + cf.zPer;
+    cf.zPlus  = -1 + cf.zPer;
+
     return cf;
 }
 
