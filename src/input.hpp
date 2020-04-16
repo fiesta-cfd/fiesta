@@ -66,7 +66,8 @@ struct inputConfig {
     int out_freq, stat_freq, write_freq, restart_freq;
 };
 
-struct inputConfig executeConfiguration(int argc, char * argv[]);
+void getCommandlineOptions(int argc, char** argv, int &vFlag, int &cFlag, std::string &fName);
+struct inputConfig executeConfiguration(std::string fName);
 
 int loadInitialConditions(struct inputConfig cf, const FS4D v);
 int loadGrid(struct inputConfig cf, const FS4D v);

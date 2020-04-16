@@ -5,6 +5,7 @@
 #include "string.h"
 #include <iostream>
 #include <string>
+#include <getopt.h>
 
 // Lua error function
 void error(lua_State *L, const char *fmt, ...){
@@ -61,14 +62,51 @@ char * getglobstr(lua_State *L, const char * var){
     return result;
 }
 
-struct inputConfig executeConfiguration(int argc, char * argv[]){
+void getCommandlineOptions(int argc, char** argv, int &version_flag,int &color_flag, std::string& inputFname){
+
+    version_flag = 0;
+    color_flag = 0;
+
+    static struct option long_options[] = {
+        {"version", no_argument, NULL, 'v'},
+        {"color", optional_argument, NULL, 'c'},
+        {NULL,0,NULL,0}
+    };
+
+    std::string copt;
+    int c = 1;
+    int opt_index;
+    while ((c = getopt_long(argc, argv, "", long_options, &opt_index)) != -1){
+        switch (c) { case 'c':
+                if (optarg)
+                    copt = std::string(optarg);
+                else
+                    copt = "auto";
+                break;
+            case 'v':
+                version_flag = 1;
+                break;
+        }
+    }
+
+    if (copt.compare("off") == 0)
+        color_flag = 0;
+    else if (copt.compare("on") == 0)
+        color_flag = 1;
+    else if (copt.compare("auto") == 0)
+        color_flag = 2;
+
+    if (optind < argc)
+        inputFname = std::string(argv[optind]);
+    else
+        inputFname = std::string("fiesta.lua");
+}
+
+struct inputConfig executeConfiguration(std::string fName){
 
     struct inputConfig cf;
-    if (argc >=2)
-        cf.inputFname = std::string(argv[1]);
-    else
-        cf.inputFname = std::string("fiesta.lua");
 
+    cf.inputFname = fName;
 
     /* Create Lua State */
     lua_State *L = luaL_newstate(); //Opens Lua

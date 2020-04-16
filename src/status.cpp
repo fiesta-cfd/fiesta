@@ -77,7 +77,7 @@ struct maxVarFunctor3d {
     }
 };
 
-void statusCheck(struct inputConfig cf, FS4D var, int t, double time, fiestaTimer& wall){
+void statusCheck(int cFlag, struct inputConfig cf, FS4D var, int t, double time, fiestaTimer& wall){
     policy_f cell_pol  = policy_f({cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng});
 
 //    double myMax[cf.nvt];
@@ -87,10 +87,10 @@ void statusCheck(struct inputConfig cf, FS4D var, int t, double time, fiestaTime
     string vname;
 
     if (cf.rank == 0){
-        cout << c(YEL) << "    Status: " << c(NON) << endl;
-        cout << "      Time Step:       " << c(CYA) << t << c(NON) << "/" << c(CYA) << cf.tend << c(NON) << endl;
-        cout << "      Simulation Time: " << c(CYA) << setprecision(5) << scientific << time << c(NON) << endl;
-        cout << "      Wall Time:       " << c(CYA) << wall.checkf() << c(NON) << endl;
+        cout << c(cFlag,YEL) << "    Status: " << c(cFlag,NON) << endl;
+        cout << "      Time Step:       " << c(cFlag,CYA) << t << c(cFlag,NON) << "/" << c(cFlag,CYA) << cf.tend << c(cFlag,NON) << endl;
+        cout << "      Simulation Time: " << c(cFlag,CYA) << setprecision(5) << scientific << time << c(cFlag,NON) << endl;
+        cout << "      Wall Time:       " << c(cFlag,CYA) << wall.checkf() << c(cFlag,NON) << endl;
     }
 
     if (cf.ndim == 2){
@@ -159,15 +159,15 @@ void statusCheck(struct inputConfig cf, FS4D var, int t, double time, fiestaTime
             }
 
             if (isnormal(min[v]) || min[v] == 0)
-                smin << c(CYA) << setw(10) << right << setprecision(2) << scientific << min[v] << c(NON);
+                smin << c(cFlag,CYA) << setw(10) << right << setprecision(2) << scientific << min[v] << c(cFlag,NON);
             else
-                smax << c(RED) << setw(10) << right << setprecision(2) << scientific << min[v] << c(NON);
+                smax << c(cFlag,RED) << setw(10) << right << setprecision(2) << scientific << min[v] << c(cFlag,NON);
                 
 
             if (isnormal(max[v]) || max[v] == 0)
-                smax << c(CYA) << setw(10) << right << setprecision(2) << scientific << max[v] << c(NON);
+                smax << c(cFlag,CYA) << setw(10) << right << setprecision(2) << scientific << max[v] << c(cFlag,NON);
             else
-                smax << c(RED) << setw(10) << right << setprecision(2) << scientific << max[v] << c(NON);
+                smax << c(cFlag,RED) << setw(10) << right << setprecision(2) << scientific << max[v] << c(cFlag,NON);
                 
             cout << "      "
                  << setw(13) << left << vname

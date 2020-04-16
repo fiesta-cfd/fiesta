@@ -3,8 +3,8 @@
 
 using namespace std;
 
-void printSplash(void);
-void printConfig(struct inputConfig cf);
+void printSplash(int cFlag);
+void printConfig(struct inputConfig cf, int cFlag);
 
 enum Color {
     RED,
@@ -16,4 +16,4 @@ enum Color {
     NON
 };
 
-string c(Color color);
+string c(int cFlag, Color color);
