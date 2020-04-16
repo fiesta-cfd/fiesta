@@ -19,6 +19,7 @@ if (LITE)
 else()
     set(FIESTA_OPTS "FULL")
 endif()
+string(TIMESTAMP BUILD_TIME "%Y-%m-%dT%H:%MZ" UTC)
 
 list(APPEND CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -O3)
 
@@ -52,7 +53,6 @@ include_directories(${Kokkos_INCLUDE_DIRS_RET})
 # lua
 include_directories(lua/src)
 add_subdirectory(lua)
-
 if (NOT LITE)
     # MPI
     find_package(MPI REQUIRED)
@@ -117,6 +117,7 @@ endif()
 
 target_compile_definitions(fiesta PRIVATE FIESTA_VERSION="${FIESTA_VER}")
 target_compile_definitions(fiesta PRIVATE FIESTA_OPTIONS="${FIESTA_OPTS}")
+target_compile_definitions(fiesta PRIVATE FIESTA_BTIME="${BUILD_TIME}")
 if (LITE)
     target_compile_definitions(fiesta PRIVATE NOMPI)
 endif()
@@ -127,3 +128,4 @@ install(TARGETS fiesta
 
 message("Fiesta Version ${FIESTA_VER}")
 message("Fiesta Build Options ${FIESTA_OPTS}")
+message("Fiesta Build Time ${BUILD_TIME}")
