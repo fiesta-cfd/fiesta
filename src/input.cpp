@@ -241,6 +241,7 @@ struct inputConfig executeConfiguration(std::string fName){
 
     /* Set MPI defaults for 1 processor*/
     cf.rank = 0;
+    cf.numProcs = 1;
     cf.nci = cf.glbl_nci;
     cf.ncj = cf.glbl_ncj;
     cf.nck = cf.glbl_nck;

@@ -75,17 +75,21 @@ void printConfig(struct inputConfig cf, int cFlag){
     // Output Frequencies
     cout << c(cFlag,GRE) << "Output:" << c(cFlag,NON) << endl;
     if (cf.out_freq > 0)
-        cout << setw(30) << left << "    Timestep Output frequency: " << c(cFlag,CYA) << right << setw(0) << cf.out_freq << c(cFlag,NON) << endl;
+        cout << setw(31) << left << "    Timestep output frequency: " << c(cFlag,CYA) << right << setw(0) << cf.out_freq << c(cFlag,NON) << endl;
     else
-        cout << setw(19) << left << "    Timestep Output " << c(cFlag,YEL) << "disabled" << c(cFlag,NON) << endl;
+        cout << setw(20) << left << "    Timestep output " << c(cFlag,YEL) << "disabled" << c(cFlag,NON) << endl;
     if (cf.write_freq > 0)
-        cout << setw(30) << left << "    Solution write frequency: "  << c(cFlag,CYA) << right << setw(0) << cf.write_freq << c(cFlag,NON) << endl;
+        cout << setw(31) << left << "    Solution write frequency: "  << c(cFlag,CYA) << right << setw(0) << cf.write_freq << c(cFlag,NON) << endl;
     else
-        cout << setw(19) << left << "    CGNS writes " << c(cFlag,YEL) << "disabled" << c(cFlag,NON) << endl;
+        cout << setw(20) << left << "    CGNS writes " << c(cFlag,YEL) << "disabled" << c(cFlag,NON) << endl;
     if (cf.restart_freq > 0)
-        cout << setw(30) << left << "    Restart write frequency: " << c(cFlag,CYA) << right << setw(0) << cf.restart_freq << c(cFlag,NON) << endl;
+        cout << setw(31) << left << "    Restart write frequency: " << c(cFlag,CYA) << right << setw(0) << cf.restart_freq << c(cFlag,NON) << endl;
     else
-        cout << setw(19) << left << "    Restart writes " << c(cFlag,YEL) << "disabled" << c(cFlag,NON) << endl;
+        cout << setw(20) << left << "    Restart writes " << c(cFlag,YEL) << "disabled" << c(cFlag,NON) << endl;
+    if (cf.stat_freq > 0)
+        cout << setw(31) << left << "    Status check frequency: " << c(cFlag,CYA) << right << setw(0) << cf.restart_freq << c(cFlag,NON) << endl;
+    else
+        cout << setw(20) << left << "    Status checks " << c(cFlag,YEL) << "disabled" << c(cFlag,NON) << endl;
 
     // Discretization
     cout << c(cFlag,GRE) << "Discretization:" << c(cFlag,NON) << endl;
