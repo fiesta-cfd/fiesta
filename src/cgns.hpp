@@ -6,15 +6,16 @@
 extern "C" {
 #include "cgnslib.h"
 #include "pcgnslib.h"
+#include "writer.hpp"
 }
 
-class cgnsWriter {
+class cgnsWriter : public writer{
 
 public:
 
     cgnsWriter(struct inputConfig, FS4D gridD, FS4D varD);
-    struct inputConfig writeGrid(struct inputConfig cf, const FS4D gridD, const char * fname);
-    struct inputConfig writeSPGrid(struct inputConfig cf, const FS4D gridD, const char * fname);
+    void writeGrid(struct inputConfig cf, const FS4D gridD, const char * fname);
+    void writeSPGrid(struct inputConfig cf, const FS4D gridD, const char * fname);
 
     void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, int tdx, double time);
     void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, int tdx, double time);
@@ -36,6 +37,8 @@ private:
 
     FS4DH gridH;
     FS4DH varH;
+
+    int fIdx,bIdx,zIdx;
 
 };
 

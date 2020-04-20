@@ -25,10 +25,13 @@ cgnsWriter::cgnsWriter(struct inputConfig cf, FS4D gridD, FS4D varD){
     
     gridH = Kokkos::create_mirror_view(gridD);
     varH = Kokkos::create_mirror_view(varD);
+    fIdx = 0;
+    bIdx = 0;
+    zIdx = 0;
 }
 
 //struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y, double *z,const char * fname){
-struct inputConfig cgnsWriter::writeGrid(struct inputConfig cf, const FS4D gridD ,const char * fname){
+void cgnsWriter::writeGrid(struct inputConfig cf, const FS4D gridD ,const char * fname){
 
     Kokkos::deep_copy(gridH,gridD);
 
@@ -70,34 +73,33 @@ struct inputConfig cgnsWriter::writeGrid(struct inputConfig cf, const FS4D gridD
     cgp_mpi_comm(cf.comm);
     
     /* create cgns file and write grid coordinates in parallel*/
-    if (cgp_open(fname, CG_MODE_WRITE, &cf.cF) ||
-        cg_base_write(cf.cF,"Base",3,3,&cf.cB) ||
-        cg_zone_write(cf.cF,cf.cB,"Zone 1",*isize,CG_Structured,&cf.cZ))
+    if (cgp_open(fname, CG_MODE_WRITE, &fIdx) ||
+        cg_base_write(fIdx,"Base",3,3,&bIdx) ||
+        cg_zone_write(fIdx,bIdx,"Zone 1",*isize,CG_Structured,&zIdx))
         cgp_error_exit();
 
-    if (cgp_coord_write(cf.cF,cf.cB,cf.cZ,CG_RealDouble, "CoordinateX", &Cx) ||
-        cgp_coord_write(cf.cF,cf.cB,cf.cZ,CG_RealDouble, "CoordinateY", &Cy) ||
-        cgp_coord_write(cf.cF,cf.cB,cf.cZ,CG_RealDouble, "CoordinateZ", &Cz))
+    if (cgp_coord_write(fIdx,bIdx,zIdx,CG_RealDouble, "CoordinateX", &Cx) ||
+        cgp_coord_write(fIdx,bIdx,zIdx,CG_RealDouble, "CoordinateY", &Cy) ||
+        cgp_coord_write(fIdx,bIdx,zIdx,CG_RealDouble, "CoordinateZ", &Cz))
         cgp_error_exit();
 
-    //if (cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cx, start, end, xdp) ||
-    //    cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cy, start, end, ydp) ||
-    //    cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cz, start, end, zdp))
+    //if (cgp_coord_write_data(fIdx,bIdx,zIdx,Cx, start, end, xdp) ||
+    //    cgp_coord_write_data(fIdx,bIdx,zIdx,Cy, start, end, ydp) ||
+    //    cgp_coord_write_data(fIdx,bIdx,zIdx,Cz, start, end, zdp))
     //    cgp_error_exit();
 
-    cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cx, start, end, xdp);
+    cgp_coord_write_data(fIdx,bIdx,zIdx,Cx, start, end, xdp);
 
-    if (cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cy, start, end, ydp))
+    if (cgp_coord_write_data(fIdx,bIdx,zIdx,Cy, start, end, ydp))
         cgp_error_exit();
-    if (cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cz, start, end, zdp))
+    if (cgp_coord_write_data(fIdx,bIdx,zIdx,Cz, start, end, zdp))
         cgp_error_exit();
 
-    cgp_close(cf.cF);
+    cgp_close(fIdx);
 
-    return cf;
 }
 //struct inputConfig writeSPGrid(struct inputConfig cf, float *x, float *y, float *z, const char * fname){
-struct inputConfig cgnsWriter::writeSPGrid(struct inputConfig cf, const FS4D gridD, const char * fname){
+void cgnsWriter::writeSPGrid(struct inputConfig cf, const FS4D gridD, const char * fname){
 
     Kokkos::deep_copy(gridH,gridD);
 
@@ -139,24 +141,23 @@ struct inputConfig cgnsWriter::writeSPGrid(struct inputConfig cf, const FS4D gri
     cgp_mpi_comm(cf.comm);
     
     /* create cgns file and write grid coordinates in parallel*/
-    if (cgp_open(fname, CG_MODE_WRITE, &cf.cF) ||
-        cg_base_write(cf.cF,"Base",3,3,&cf.cB) ||
-        cg_zone_write(cf.cF,cf.cB,"Zone 1",*isize,CG_Structured,&cf.cZ))
+    if (cgp_open(fname, CG_MODE_WRITE, &fIdx) ||
+        cg_base_write(fIdx,"Base",3,3,&bIdx) ||
+        cg_zone_write(fIdx,bIdx,"Zone 1",*isize,CG_Structured,&zIdx))
         cgp_error_exit();
 
-    if (cgp_coord_write(cf.cF,cf.cB,cf.cZ,CG_RealSingle, "CoordinateX", &Cx) ||
-        cgp_coord_write(cf.cF,cf.cB,cf.cZ,CG_RealSingle, "CoordinateY", &Cy) ||
-        cgp_coord_write(cf.cF,cf.cB,cf.cZ,CG_RealSingle, "CoordinateZ", &Cz))
+    if (cgp_coord_write(fIdx,bIdx,zIdx,CG_RealSingle, "CoordinateX", &Cx) ||
+        cgp_coord_write(fIdx,bIdx,zIdx,CG_RealSingle, "CoordinateY", &Cy) ||
+        cgp_coord_write(fIdx,bIdx,zIdx,CG_RealSingle, "CoordinateZ", &Cz))
         cgp_error_exit();
 
-    if (cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cx, start, end, xsp) ||
-        cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cy, start, end, ysp) ||
-        cgp_coord_write_data(cf.cF,cf.cB,cf.cZ,Cz, start, end, zsp))
+    if (cgp_coord_write_data(fIdx,bIdx,zIdx,Cx, start, end, xsp) ||
+        cgp_coord_write_data(fIdx,bIdx,zIdx,Cy, start, end, ysp) ||
+        cgp_coord_write_data(fIdx,bIdx,zIdx,Cz, start, end, zsp))
         cgp_error_exit();
 
-    cgp_close(cf.cF);
+    cgp_close(fIdx);
 
-    return cf;
 }
 
 void cgnsWriter::writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D varD, int tdx, double time){
@@ -178,11 +179,11 @@ void cgnsWriter::writeRestart(struct inputConfig cf, const FS4D gridD, const FS4
     string fsname = ss.str();
 
     if (cf.rank == 0){
-        cout << c(YEL) << left << setw(22) << "    Writing Restart: " << c(NON)
-             << c(CYA) << left << "'" + fsname + "'" << c(NON) << endl;
+        cout << c(0,YEL) << left << setw(22) << "    Writing Restart: " << c(0,NON)
+             << c(0,CYA) << left << "'" + fsname + "'" << c(0,NON) << endl;
     }
 
-    cf = writeSPGrid(cf, gridD, fsname.c_str());
+    writeSPGrid(cf, gridD, fsname.c_str());
     //cf = writeGrid(cf, gridD, fsname.c_str());
     snprintf(solname,32,"FS");
 
@@ -193,10 +194,10 @@ void cgnsWriter::writeRestart(struct inputConfig cf, const FS4D gridD, const FS4
     Kokkos::deep_copy(varH,varD);
 
     /* open cgns file and write cell centered flow variable */
-    if (cgp_open(fsname.c_str(), CG_MODE_MODIFY, &cf.cF))
+    if (cgp_open(fsname.c_str(), CG_MODE_MODIFY, &bIdx))
         cgp_error_exit();
     
-    if (cg_sol_write(cf.cF,cf.cB,cf.cZ,solname,CG_CellCenter, &index_sol))
+    if (cg_sol_write(fIdx,bIdx,zIdx,solname,CG_CellCenter, &index_sol))
         cgp_error_exit();
 
 
@@ -226,10 +227,10 @@ void cgnsWriter::writeRestart(struct inputConfig cf, const FS4D gridD, const FS4
         }
     }
 
-    if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealDouble,"MomentumX",&index_flow))
+    if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealDouble,"MomentumX",&index_flow))
         cgp_error_exit();
 
-    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+    if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,v))
         cgp_error_exit();
 
     //write momentum y
@@ -256,10 +257,10 @@ void cgnsWriter::writeRestart(struct inputConfig cf, const FS4D gridD, const FS4
         }
     }
     
-    if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealDouble,"MomentumY",&index_flow))
+    if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealDouble,"MomentumY",&index_flow))
         cgp_error_exit();
 
-    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+    if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,v))
         cgp_error_exit();
 
     //write momentum z
@@ -286,10 +287,10 @@ void cgnsWriter::writeRestart(struct inputConfig cf, const FS4D gridD, const FS4
         }
     }
     
-    if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealDouble,"MomentumZ",&index_flow))
+    if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealDouble,"MomentumZ",&index_flow))
         cgp_error_exit();
 
-    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+    if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,v))
         cgp_error_exit();
 
     //write energy
@@ -316,10 +317,10 @@ void cgnsWriter::writeRestart(struct inputConfig cf, const FS4D gridD, const FS4
         }
     }
     
-    if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealDouble,"EnergyInternal",&index_flow))
+    if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealDouble,"EnergyInternal",&index_flow))
         cgp_error_exit();
 
-    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+    if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,v))
         cgp_error_exit();
 
     //write densities
@@ -348,10 +349,10 @@ void cgnsWriter::writeRestart(struct inputConfig cf, const FS4D gridD, const FS4
             }
         }
         
-        if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealDouble,dName,&index_flow))
+        if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealDouble,dName,&index_flow))
             cgp_error_exit();
 
-        if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+        if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,v))
             cgp_error_exit();
     }
 
@@ -382,23 +383,23 @@ void cgnsWriter::writeRestart(struct inputConfig cf, const FS4D gridD, const FS4
                 }
             }
             
-            if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealDouble,dName,&index_flow))
+            if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealDouble,dName,&index_flow))
                 cgp_error_exit();
 
-            if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,v))
+            if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,v))
                 cgp_error_exit();
         }
     }
 
-    cg_biter_write(cf.cF,cf.cB,"TimeIterValues",1);
-    cg_goto(cf.cF,cf.cB,"BaseIterativeData_t",1,"end");
+    cg_biter_write(fIdx,bIdx,"TimeIterValues",1);
+    cg_goto(fIdx,bIdx,"BaseIterativeData_t",1,"end");
     cg_array_write("TimeValues",CG_RealDouble,1,&dims,&time);
-    cg_ziter_write(cf.cF,cf.cB,cf.cZ,"ZoneIterativeData");
-    cg_goto(cf.cF,cf.cB,"Zone_t",cf.cZ,"ZoneIterativeData_t",1,"end");
+    cg_ziter_write(fIdx,bIdx,zIdx,"ZoneIterativeData");
+    cg_goto(fIdx,bIdx,"Zone_t",zIdx,"ZoneIterativeData_t",1,"end");
     cg_array_write("FlowSolutionPointers",CG_Character,2,idims,solname);
-    cg_simulation_type_write(cf.cF,cf.cB,CG_TimeAccurate);
+    cg_simulation_type_write(fIdx,bIdx,CG_TimeAccurate);
     
-    cgp_close(cf.cF);
+    cgp_close(fIdx);
 }
 
 //void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const FS4D deviceV, int tdx, double time){
@@ -424,11 +425,11 @@ void cgnsWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS
     string fsname = ss.str();
 
     if (cf.rank == 0){
-        cout << c(YEL) << left << setw(22) << "    Writing Solution: " << c(NON)
-             << c(CYA) << left << "'" + fsname + "'" << c(NON) << endl;
+        cout << c(0,YEL) << left << setw(22) << "    Writing Solution: " << c(0,NON)
+             << c(0,CYA) << left << "'" + fsname + "'" << c(0,NON) << endl;
     }
 
-    cf = writeSPGrid(cf, gridD, fsname.c_str());
+    writeSPGrid(cf, gridD, fsname.c_str());
     snprintf(solname,32,"FS");
 
     cgsize_t start[3] = {cf.iStart+1,cf.jStart+1,cf.kStart+1};
@@ -437,12 +438,11 @@ void cgnsWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS
     Kokkos::deep_copy(varH,varD);
 
     /* open cgns file and write cell centered flow variable */
-    if (cgp_open(fsname.c_str(), CG_MODE_MODIFY, &cf.cF))
+    if (cgp_open(fsname.c_str(), CG_MODE_MODIFY, &fIdx))
         cgp_error_exit();
     
-    if (cg_sol_write(cf.cF,cf.cB,cf.cZ,solname,CG_CellCenter, &index_sol))
+    if (cg_sol_write(fIdx,bIdx,zIdx,solname,CG_CellCenter, &index_sol))
         cgp_error_exit();
-
 
     int idx;
 
@@ -470,10 +470,10 @@ void cgnsWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS
         }
     }
 
-    if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,"MomentumX",&index_flow))
+    if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,"MomentumX",&index_flow))
         cgp_error_exit();
 
-    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,vsp))
+    if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
         cgp_error_exit();
 
     //write momentum y
@@ -500,10 +500,10 @@ void cgnsWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS
         }
     }
     
-    if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,"MomentumY",&index_flow))
+    if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,"MomentumY",&index_flow))
         cgp_error_exit();
 
-    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,vsp))
+    if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
         cgp_error_exit();
 
     //write momentum z
@@ -530,10 +530,10 @@ void cgnsWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS
         }
     }
     
-    if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,"MomentumZ",&index_flow))
+    if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,"MomentumZ",&index_flow))
         cgp_error_exit();
 
-    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,vsp))
+    if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
         cgp_error_exit();
 
     //write energy
@@ -560,10 +560,10 @@ void cgnsWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS
         }
     }
     
-    if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,"EnergyInternal",&index_flow))
+    if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,"EnergyInternal",&index_flow))
         cgp_error_exit();
 
-    if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,vsp))
+    if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
         cgp_error_exit();
 
     //write densities
@@ -592,10 +592,10 @@ void cgnsWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS
             }
         }
         
-        if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,dName,&index_flow))
+        if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,dName,&index_flow))
             cgp_error_exit();
 
-        if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,vsp))
+        if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
             cgp_error_exit();
     }
 
@@ -626,23 +626,23 @@ void cgnsWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS
                 }
             }
             
-            if (cgp_field_write(cf.cF,cf.cB,cf.cZ,index_sol,CG_RealSingle,dName,&index_flow))
+            if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,dName,&index_flow))
                 cgp_error_exit();
 
-            if (cgp_field_write_data(cf.cF,cf.cB,cf.cZ,index_sol,index_flow,start,endc,vsp))
+            if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
                 cgp_error_exit();
         }
     }
 
-    cg_biter_write(cf.cF,cf.cB,"TimeIterValues",1);
-    cg_goto(cf.cF,cf.cB,"BaseIterativeData_t",1,"end");
+    cg_biter_write(fIdx,bIdx,"TimeIterValues",1);
+    cg_goto(fIdx,bIdx,"BaseIterativeData_t",1,"end");
     cg_array_write("TimeValues",CG_RealDouble,1,&dims,&time);
-    cg_ziter_write(cf.cF,cf.cB,cf.cZ,"ZoneIterativeData");
-    cg_goto(cf.cF,cf.cB,"Zone_t",cf.cZ,"ZoneIterativeData_t",1,"end");
+    cg_ziter_write(fIdx,bIdx,zIdx,"ZoneIterativeData");
+    cg_goto(fIdx,bIdx,"Zone_t",zIdx,"ZoneIterativeData_t",1,"end");
     cg_array_write("FlowSolutionPointers",CG_Character,2,idims,solname);
-    cg_simulation_type_write(cf.cF,cf.cB,CG_TimeAccurate);
+    cg_simulation_type_write(fIdx,bIdx,CG_TimeAccurate);
     
-    cgp_close(cf.cF);
+    cgp_close(fIdx);
 
     //if (cf.numProcs == 1){
     //    std::ofstream myfile;
@@ -660,7 +660,7 @@ void cgnsWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS
 
 void cgnsWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD){
     /* open cgns file for reading restart information */
-    if (cgp_open(cf.sfName, CG_MODE_MODIFY, &cf.cF))
+    if (cgp_open(cf.sfName, CG_MODE_MODIFY, &fIdx))
         cgp_error_exit();
 
     int idx,vv;
@@ -669,7 +669,7 @@ void cgnsWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD){
     cgsize_t gend[3] = {cf.iEnd+1,cf.jEnd+1,cf.kEnd+1};
 
     for (int v=0; v<3; ++v){
-        cgp_coord_read_data(cf.cF,1,1,v+1,gstart,gend,xdp);
+        cgp_coord_read_data(fIdx,1,1,v+1,gstart,gend,xdp);
         for (int k=0; k<cf.nk; ++k){
             for (int j=0; j<cf.nj; ++j){
                 for (int i=0; i<cf.ni; ++i){
@@ -689,7 +689,7 @@ void cgnsWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD){
             vv = v+1;
         else
             vv = v;
-        cgp_field_read_data(cf.cF,1,1,1,vv+1,start,endc,readV);
+        cgp_field_read_data(fIdx,1,1,1,vv+1,start,endc,readV);
         if (cf.ndim == 3){
             for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
                 for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
@@ -714,7 +714,7 @@ void cgnsWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD){
         }
     }
 
-    cgp_close(cf.cF);
+    cgp_close(fIdx);
     
     Kokkos::deep_copy(varD,varH);
     Kokkos::deep_copy(gridD,gridH);

@@ -92,7 +92,7 @@ endif()
 include_directories(${installDir}/include)
 
 # fiesta
-set(FIESTA_SRCS src/bc.cpp src/status.cpp src/timer.cpp src/input.cpp src/output.cpp src/main.cpp src/rkfunction.cpp src/cart2d.cpp src/cart3d.cpp)
+set(FIESTA_SRCS src/bc.cpp src/status.cpp src/timer.cpp src/input.cpp src/output.cpp src/main.cpp src/rkfunction.cpp src/cart2d.cpp src/cart3d.cpp src/writer.cpp)
 if (LITE)
     message("Fiesta Sources" ${FIESTA_SRCS})
     add_executable(fiesta ${FIESTA_SRCS})
