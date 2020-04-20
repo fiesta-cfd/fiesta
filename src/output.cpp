@@ -8,6 +8,7 @@
 
 using namespace std;
 
+// if color is enabled insert ascii color codes
 string c(int cFlag,Color color){
     int use_color = 0;
     if (cFlag == 1)
@@ -38,24 +39,7 @@ string c(int cFlag,Color color){
     }
 }
 
-//#define c(cFlag,CYA) "\033[0;36m"
-//#define MAG "\033[0;35m"
-//#define BLU "\033[0;34m"
-//#define YEL "\033[0;33m"
-//#define c(cFlag,GRE) "\033[0;32m"
-//#define RED "\033[0;31m"
-//#define c(cFlag,NON) "\033[0m"
-
 void printSplash(int cFlag){
-    //cout << "----" << c(cFlag,NON) << R"(------------------------------)" << c(cFlag,NON) << "----" << endl;
-    //cout << "|   " << c(cFlag,RED) << R"(  _____ _           _         )" << c(cFlag,NON) << "   |" << endl;
-    //cout << "|   " << c(cFlag,RED) << R"( |  ___(_) ___  ___| |_ __ _  )" << c(cFlag,NON) << "   |" << endl;
-    //cout << "|   " << c(cFlag,RED) << R"( | |_  | |/ _ \/ __| __/ _` | )" << c(cFlag,NON) << "   |" << endl;
-    //cout << "|   " << c(cFlag,RED) << R"( |  _| | |  __/\__ \ || (_| | )" << c(cFlag,NON) << "   |" << endl;
-    //cout << "|   " << c(cFlag,RED) << R"( |_|   |_|\___||___/\__\__,_| )" << c(cFlag,NON) << "   |" << endl;
-    //cout << "|   " << c(cFlag,RED) << R"(                              )" << c(cFlag,NON) << "   |" << endl;
-    //cout << "----" << c(cFlag,NON) << R"(------------------------------)" << c(cFlag,NON) << "----" << endl;
-
     cout << " " << endl;
     cout << c(cFlag,RED) << R"(   _____ _           _         )" << c(cFlag,NON) << endl;
     cout << c(cFlag,RED) << R"(  |  ___(_) ___  ___| |_ __ _  )" << c(cFlag,NON) << endl;
@@ -91,9 +75,9 @@ void printConfig(struct inputConfig cf, int cFlag){
     // Output Frequencies
     cout << c(cFlag,GRE) << "Output:" << c(cFlag,NON) << endl;
     if (cf.out_freq > 0)
-        cout << setw(30) << left << "    Progress Output frequency: " << c(cFlag,CYA) << right << setw(0) << cf.out_freq << c(cFlag,NON) << endl;
+        cout << setw(30) << left << "    Timestep Output frequency: " << c(cFlag,CYA) << right << setw(0) << cf.out_freq << c(cFlag,NON) << endl;
     else
-        cout << setw(19) << left << "    Progress Output " << c(cFlag,YEL) << "disabled" << c(cFlag,NON) << endl;
+        cout << setw(19) << left << "    Timestep Output " << c(cFlag,YEL) << "disabled" << c(cFlag,NON) << endl;
     if (cf.write_freq > 0)
         cout << setw(30) << left << "    Solution write frequency: "  << c(cFlag,CYA) << right << setw(0) << cf.write_freq << c(cFlag,NON) << endl;
     else
