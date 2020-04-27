@@ -1,0 +1,1 @@
+/projects/opt/x86_64/gcc/9.2.0/bin/gcc -O3 -DNDEBUG -g -O3 -g -O3  -rdynamic CMakeFiles/ezclTest.dir/ezclTest.c.o  -o ezclTest -Wl,-rpath,/home/ddunning/CLAMR/ezcl ../libezcl.so.2.0.7 -lOpenCL 

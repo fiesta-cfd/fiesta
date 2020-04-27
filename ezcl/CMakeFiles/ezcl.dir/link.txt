@@ -1,0 +1,1 @@
+/projects/opt/x86_64/gcc/9.2.0/bin/gcc -fPIC  -I/usr/include -O3 -DNDEBUG -g -O3 -g -O3  -shared -Wl,-soname,libezcl.so.2 -o libezcl.so.2.0.7 CMakeFiles/ezcl.dir/ezcl.c.o -lOpenCL 

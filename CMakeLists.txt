@@ -95,6 +95,18 @@ add_subdirectory(hash)
 # crux
 add_subdirectory(crux)
 
+# ezcl
+add_subdirectory(ezcl)
+
+# grapics
+add_subdirectory(graphics)
+
+
+if (ENABLE_GRAPHICS)
+    add_definitions(-DHAVE_GRAPHICS=1)
+    include_directories(graphics)
+endif (ENABLE_GRAPHICS)
+
 # fiesta
 set(FIESTA_SRCS src/bc.cpp src/cgns.cpp src/input.cpp src/main.cpp src/mpi.cpp src/rkfunction.cpp src/weno2d.cpp src/wenoc3d.cpp)
 add_executable(fiesta ${FIESTA_SRCS})
@@ -121,4 +133,9 @@ target_link_libraries(fiesta
                       genmalloc
                       pMallocPlus
                       m
+                      ezcl
 )
+
+if (ENABLE_GRAPHICS)
+    target_link_libraries(fiesta graphics ${FREEGLUT_LIBRARIES})
+endif (ENABLE_GRAPHICS)

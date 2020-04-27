@@ -14,6 +14,10 @@
 #include "l7/l7.h"
 #include "mesh/mesh.h"
 #include "mesh/partition.h"
+#ifdef HAVE_GRAPHICS
+#include <unistd.h>
+#include "graphics/display.h"
+#endif
 #include "MallocPlus/MallocPlus.h"
 
 #define HAVE_MPI
@@ -298,6 +302,9 @@ int main(int argc, char* argv[]){
     float *xSP = (float*)malloc(ncells_loc*sizeof(float));
     float *ySP = (float*)malloc(ncells_loc*sizeof(float));
     float *zSP = (float*)malloc(ncells_loc*sizeof(float));
+
+    double *g_x, *g_y, *g_dx, *g_dy;
+    float xwinmin, xwinmax, ywinmin, ywinmax;
     
     //printf("Here3\n");
     
@@ -511,7 +518,50 @@ int main(int argc, char* argv[]){
     //Kokkos::deep_copy(nfrt, h_nfrt);
     Kokkos::deep_copy(celltype, h_celltype);
     Kokkos::deep_copy(myV, h_myV);
+
+
+
 #endif
+
+
+#ifdef HAVE_GRAPHICS
+    mesh->calc_spatial_coordinates(0);
+    g_x = (double *) malloc(ncells_loc*sizeof(double));
+    g_y = (double *) malloc(ncells_loc*sizeof(double));
+    g_dx = (double *) malloc(ncells_loc*sizeof(double));
+    g_dy = (double *) malloc(ncells_loc*sizeof(double));
+    for (int ic = 0; ic < ncells_loc; ic++) {
+        g_x[ic] = mesh->x[ic]; 
+        g_y[ic] = mesh->y[ic]; 
+        g_dx[ic] = mesh->dx[ic]; 
+        g_dy[ic] = mesh->dy[ic]; 
+        //printf("%d) %f %f %f %f\n", ic, mesh->x[ic], mesh->y[ic], mesh->dx[ic], mesh->dy[ic]);
+    }
+    //xwinmin=0.0-2.0;
+    //xwinmax=(float)mesh->xmax+2.0;
+    //ywinmin=0.0-12.0;
+    //ywinmax=(float)mesh->ymax+2.0;
+    xwinmin = mesh->xmin-2.0;
+    xwinmax = (float)mesh->xmax;
+    ywinmin = mesh->ymin-12.0;
+    ywinmax = mesh->ymax;
+    //printf("%f %f %f %f\n", xwinmin, xwinmax, ywinmin, ywinmax);
+    //printf("%f\n", (800 / (ywinmax - ywinmin)) * (xwinmax - xwinmin));
+
+    set_display_mysize(ncells_loc);
+    set_display_cell_coordinates_double(g_x, g_dx, g_y, g_dy);
+    set_display_cell_data_double(E);
+
+    set_display_window(xwinmin,xwinmax,ywinmin,ywinmax);
+    set_display_viewmode(1);
+    set_display_outline(1);
+    init_display(&argc, argv, "Fiesta AMR");
+    draw_scene();
+    sleep(10);
+#endif
+
+
+
 
     //for (int ic = 0; ic < ncells_loc; ic++) {
         //printf("%d) lvl %d celltype %d X %f Y %f E %f D %f\n", ic, mesh->level[ic], mesh->celltype[ic], h_myV(ic,0), h_myV(ic,1), h_myV(ic,2), h_myV(ic,3));
@@ -556,7 +606,7 @@ int main(int argc, char* argv[]){
     mesh->set_bounds(ncells_loc);
     int icount, jcount;
     new_ncells = mesh->state_calc_refine_potential(mpot, icount, jcount, D);
-    printf("%d\n\n", new_ncells);
+    //printf("%d\n\n", new_ncells);
 
     //  Resize the mesh, inserting cells where refinement is necessary.
     mesh->rezone_all(icount, jcount, mpot, 1, state_memory);
@@ -752,9 +802,40 @@ int main(int argc, char* argv[]){
 
 
 
+    // Real-time graphics
+    ///*
+#ifdef HAVE_GRAPHICS
+    mesh->calc_spatial_coordinates(0);
+    free(g_x);
+    free(g_dx);
+    free(g_y);
+    free(g_dy);
+    g_x = (double *) malloc(ncells_loc*sizeof(double));
+    g_y = (double *) malloc(ncells_loc*sizeof(double));
+    g_dx = (double *) malloc(ncells_loc*sizeof(double));
+    g_dy = (double *) malloc(ncells_loc*sizeof(double));
+    for (int ic = 0; ic < ncells_loc; ic++) {
+        g_x[ic] = mesh->x[ic]; 
+        g_y[ic] = mesh->y[ic]; 
+        g_dx[ic] = mesh->dx[ic]; 
+        g_dy[ic] = mesh->dy[ic]; 
+    }
+    xwinmin = mesh->xmin-2.0;
+    xwinmax = (float)mesh->xmax;
+    ywinmin = mesh->ymin-12.0;
+    ywinmax = (float)mesh->ymax;
 
+    set_display_mysize(ncells_loc);
+    set_display_cell_coordinates_double(g_x, g_dx, g_y, g_dy);
+    set_display_cell_data_double(E);
 
-
+    set_display_window(xwinmin,xwinmax,ywinmin,ywinmax);
+    provide_sim_progress(time, t);
+    draw_scene(); 
+    sleep(10);
+#endif
+    //*/
+   
     }
 //#endif
 
@@ -768,7 +849,7 @@ int main(int argc, char* argv[]){
 
     //Kokkos::deep_copy(h_myV, myV);
     int real_cell_cnt = 0;
-    ///*
+    /*
     if (cf.rank == 0) {
         //    for (int kk = 0; kk < cf.ngk; kk++) {
         //        for (int jj = cf.ng; jj < cf.ngj - cf.ng; jj++) {
@@ -788,7 +869,7 @@ int main(int argc, char* argv[]){
         //        }
         //    }
     }
-    //*/
+    */
     
     mesh->terminate();
 

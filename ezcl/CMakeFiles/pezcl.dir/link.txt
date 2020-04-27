@@ -1,0 +1,1 @@
+/projects/opt/x86_64/gcc/9.2.0/bin/gcc -fPIC  -I/usr/include -O3 -DNDEBUG -g -O3 -g -O3  -shared -Wl,-soname,libpezcl.so.2 -o libpezcl.so.2.0.7 CMakeFiles/pezcl.dir/ezcl.c.o -Wl,-rpath,/projects/opt/x86_64/openmpi/4.0.2-gcc_9.2.0/lib: -lOpenCL /projects/opt/x86_64/openmpi/4.0.2-gcc_9.2.0/lib/libmpi.so 
