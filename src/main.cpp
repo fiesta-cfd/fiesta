@@ -389,28 +389,28 @@ int main(int argc, char* argv[]){
     }
     for (int ic = 0; ic < ncells_loc; ic++) {
         if (mesh->celltype[ic] == LEFT_BOUNDARY) {
-            X[ic] = -X[mesh->nrht[ic]];
-            Y[ic] = -Y[mesh->nrht[ic]];
-            E[ic] = -E[mesh->nrht[ic]];
-            D[ic] = -D[mesh->nrht[ic]];
+            X[ic] = X[mesh->nrht[ic]];
+            Y[ic] = Y[mesh->nrht[ic]];
+            E[ic] = E[mesh->nrht[ic]];
+            D[ic] = D[mesh->nrht[ic]];
         }
         else if (mesh->celltype[ic] == RIGHT_BOUNDARY) {
-            X[ic] = -X[mesh->nlft[ic]];
-            Y[ic] = -Y[mesh->nlft[ic]];
-            E[ic] = -E[mesh->nlft[ic]];
-            D[ic] = -D[mesh->nlft[ic]];
+            X[ic] = X[mesh->nlft[ic]];
+            Y[ic] = Y[mesh->nlft[ic]];
+            E[ic] = E[mesh->nlft[ic]];
+            D[ic] = D[mesh->nlft[ic]];
         }
         else if (mesh->celltype[ic] == BOTTOM_BOUNDARY) {
-            X[ic] = -X[mesh->ntop[ic]];
-            Y[ic] = -Y[mesh->ntop[ic]];
-            E[ic] = -E[mesh->ntop[ic]];
-            D[ic] = -D[mesh->ntop[ic]];
+            X[ic] = X[mesh->ntop[ic]];
+            Y[ic] = Y[mesh->ntop[ic]];
+            E[ic] = E[mesh->ntop[ic]];
+            D[ic] = D[mesh->ntop[ic]];
         }
         else if (mesh->celltype[ic] == TOP_BOUNDARY) {
-            X[ic] = -X[mesh->nbot[ic]];
-            Y[ic] = -Y[mesh->nbot[ic]];
-            E[ic] = -E[mesh->nbot[ic]];
-            D[ic] = -D[mesh->nbot[ic]];
+            X[ic] = X[mesh->nbot[ic]];
+            Y[ic] = Y[mesh->nbot[ic]];
+            E[ic] = E[mesh->nbot[ic]];
+            D[ic] = D[mesh->nbot[ic]];
         }
         //printf("%d) X %f Y %f E %f D %f\n", ic, h_myV(ic,0), h_myV(ic,1), h_myV(ic,2), h_myV(ic,3));
     }
@@ -424,7 +424,7 @@ int main(int argc, char* argv[]){
     mesh->set_bounds(ncells_loc);
     int icount, jcount;
     new_ncells = mesh->state_calc_refine_potential(mpot, icount, jcount, D);
-    printf("%d\n\n\n\n\n\n", new_ncells);
+    printf("New cells %d\n\n\n\n\n\n", new_ncells);
 
     //  Resize the mesh, inserting cells where refinement is necessary.
     mesh->rezone_all(icount, jcount, mpot, 1, state_memory);
@@ -535,18 +535,13 @@ int main(int argc, char* argv[]){
         g_y[ic] = mesh->y[ic]; 
         g_dx[ic] = mesh->dx[ic]; 
         g_dy[ic] = mesh->dy[ic]; 
-        //printf("%d) %f %f %f %f\n", ic, mesh->x[ic], mesh->y[ic], mesh->dx[ic], mesh->dy[ic]);
+        //printf("%d %lf %lf %d %d %d\n", ic, mesh->x[ic], mesh->y[ic], mesh->level[ic], mesh->i[ic], mesh->j[ic]);
     }
-    //xwinmin=0.0-2.0;
-    //xwinmax=(float)mesh->xmax+2.0;
-    //ywinmin=0.0-12.0;
-    //ywinmax=(float)mesh->ymax+2.0;
+    printf("\n");
     xwinmin = mesh->xmin-2.0;
-    xwinmax = (float)mesh->xmax;
-    ywinmin = mesh->ymin-12.0;
-    ywinmax = mesh->ymax;
-    //printf("%f %f %f %f\n", xwinmin, xwinmax, ywinmin, ywinmax);
-    //printf("%f\n", (800 / (ywinmax - ywinmin)) * (xwinmax - xwinmin));
+    xwinmax = (float)(mesh->xmax+2.0);
+    ywinmin = mesh->ymin-12.0+2.0;
+    ywinmax = (float)(mesh->ymax+2.0);
 
     set_display_mysize(ncells_loc);
     set_display_cell_coordinates_double(g_x, g_dx, g_y, g_dy);
@@ -606,7 +601,7 @@ int main(int argc, char* argv[]){
     mesh->set_bounds(ncells_loc);
     int icount, jcount;
     new_ncells = mesh->state_calc_refine_potential(mpot, icount, jcount, D);
-    //printf("%d\n\n", new_ncells);
+    printf("%d\n\n", new_ncells);
 
     //  Resize the mesh, inserting cells where refinement is necessary.
     mesh->rezone_all(icount, jcount, mpot, 1, state_memory);
@@ -819,11 +814,12 @@ int main(int argc, char* argv[]){
         g_y[ic] = mesh->y[ic]; 
         g_dx[ic] = mesh->dx[ic]; 
         g_dy[ic] = mesh->dy[ic]; 
+        //printf("%d %lf %lf %d %d %d\n", ic, mesh->x[ic], mesh->y[ic], mesh->level[ic], mesh->i[ic], mesh->j[ic]);
     }
     xwinmin = mesh->xmin-2.0;
-    xwinmax = (float)mesh->xmax;
-    ywinmin = mesh->ymin-12.0;
-    ywinmax = (float)mesh->ymax;
+    xwinmax = (float)(mesh->xmax+2.0);
+    ywinmin = mesh->ymin-12.0+2.0;
+    ywinmax = (float)(mesh->ymax+2.0);
 
     set_display_mysize(ncells_loc);
     set_display_cell_coordinates_double(g_x, g_dx, g_y, g_dy);
@@ -832,7 +828,7 @@ int main(int argc, char* argv[]){
     set_display_window(xwinmin,xwinmax,ywinmin,ywinmax);
     provide_sim_progress(time, t);
     draw_scene(); 
-    sleep(10);
+    sleep(5);
 #endif
     //*/
    

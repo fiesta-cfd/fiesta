@@ -77,7 +77,7 @@
 
 #define ESCAPE 27
 #ifdef HAVE_OPENGL
-#define NCOLORS 5000
+#define NCOLORS 1000
 #else
 #define NCOLORS 5000
 #endif
@@ -194,7 +194,6 @@ void init_display(int *argc, char **argv, const char *title){
 #endif
 
    width = (int) (WINSIZE / (display_ymax - display_ymin)) * (display_xmax - display_xmin);
-   printf("%d\n", width);
 #ifdef HAVE_OPENGL
    glutInit(argc, argv);
    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
@@ -280,7 +279,7 @@ void free_display(void){
 #endif
 }
 void DisplayState(void) {
-   double scaleMax = 6000.0, scaleMin = -6000.0; //1200
+   double scaleMax = 6000.0, scaleMin = 0.0; //1200
    int i;
 #ifdef HAVE_OPENGL
    int color;
@@ -306,12 +305,12 @@ void DisplayState(void) {
 #ifdef HAVE_OPENGL
    double step = NCOLORS/(scaleMax - scaleMin);
 #endif
-   printf("%f %f %f\n", scaleMin, scaleMax, step);
   
 #ifdef HAVE_OPENGL
    //set up 2D viewing
    gluOrtho2D(display_xmin, display_xmax, display_ymin, display_ymax);
 #endif
+   float myred, mygreen, myblue;
   
 #ifdef HAVE_OPENGL
    for(i = 0; i < display_mysize; i++) {
@@ -320,31 +319,40 @@ void DisplayState(void) {
       glBegin(GL_QUADS);
 
       if (data_type == DATA_DOUBLE){
-         color = (int)(data_double[i]-scaleMin)*step;
-         printf("color %f %d\n", (data_double[i]-scaleMin)*step, (int)(data_double[i]-scaleMin)*step);
-         if (DEBUG) 
-             printf("DEBUG color[%d] %d %lf %lf %lf\n",i,color,scaleMin,data_double[i],step);
+         color = (int)((data_double[i]-scaleMin)*step);
+         if (DEBUG) printf("DEBUG color[%d] %d %lf %lf %lf\n",i,color,scaleMin,data_double[i],step);
       } else {
-         color = (int)(data_float[i]-scaleMin)*step;
+         color = (int)((data_float[i]-scaleMin)*step);
       }
       if (color < 0) {
          color=0;
       }
       if (color >= NCOLORS) color = NCOLORS-1;
 
+      myred = Rainbow[color].Red;
+      mygreen = Rainbow[color].Green;
+      myblue = Rainbow[color].Blue;
+
+      //if (myred < 0.75 && myred > 0.0) myred = 0.75;
+      //if (mygreen < 0.75 && mygreen > 0.0) mygreen = 0.75;
+      //if (myblue < 0.75 && myblue > 0.0) myblue = 0.75;
    
-      glColor3f(Rainbow[color].Red, Rainbow[color].Green, Rainbow[color].Blue);
+      glColor3f(myred, mygreen, myblue);
    
       if (spatial_type == SPATIAL_DOUBLE){
-         if (DEBUG) printf("DEBUG draw vertex[%d] %lf %lf\n",i,x_double[i]-0.5*dx_double[i],y_double[i]-0.5*dy_double[i]);
-         glVertex2f(x_double[i]-0.5*dx_double[i], y_double[i]-0.5*dy_double[i]);
-         if (DEBUG) printf("DEBUG draw vertex[%d] %lf %lf\n",i,x_double[i]+0.5*dx_double[i],y_double[i]-0.5*dy_double[i]);
-         glVertex2f(x_double[i]+0.5*dx_double[i], y_double[i]-0.5*dy_double[i]);
-         if (DEBUG) printf("DEBUG draw vertex[%d] %lf %lf\n",i,x_double[i]+0.5*dx_double[i],y_double[i]+0.5*dy_double[i]);
-         glVertex2f(x_double[i]+0.5*dx_double[i], y_double[i]+0.5*dy_double[i]);
-         if (DEBUG) printf("DEBUG draw vertex[%d] %lf %lf\n",i,x_double[i]-0.5*dx_double[i],y_double[i]+0.5*dy_double[i]);
-         glVertex2f(x_double[i]-0.5*dx_double[i], y_double[i]+0.5*dy_double[i]);
-         if (DEBUG) printf("\n");
+         //printf("DEBUG draw vertex[%d] %lf %lf %lf %lf\n",i,x_double[i],x_double[i]-0.5*dx_double[i],y_double[i],y_double[i]-0.5*dy_double[i]);
+         //glVertex2f(x_double[i]-0.5*dx_double[i], y_double[i]-0.5*dy_double[i]);
+         //printf("DEBUG draw vertex[%d] %lf %lf %lf %lf\n",i,x_double[i],x_double[i]+0.5*dx_double[i],y_double[i],y_double[i]-0.5*dy_double[i]);
+         //glVertex2f(x_double[i]+0.5*dx_double[i], y_double[i]-0.5*dy_double[i]);
+         //printf("DEBUG draw vertex[%d] %lf %lf %lf %lf\n",i,x_double[i],x_double[i]+0.5*dx_double[i],y_double[i],y_double[i]+0.5*dy_double[i]);
+         //glVertex2f(x_double[i]+0.5*dx_double[i], y_double[i]+0.5*dy_double[i]);
+         //printf("DEBUG draw vertex[%d] %lf %lf %lf %lf\n",i,x_double[i],x_double[i]-0.5*dx_double[i],y_double[i],y_double[i]+0.5*dy_double[i]);
+         //glVertex2f(x_double[i]-0.5*dx_double[i], y_double[i]+0.5*dy_double[i]);
+         glVertex2f(x_double[i], y_double[i]);
+         glVertex2f(x_double[i]+dx_double[i], y_double[i]);
+         glVertex2f(x_double[i]+dx_double[i], y_double[i]+dy_double[i]);
+         glVertex2f(x_double[i], y_double[i]+dy_double[i]);
+         //printf("\n");
       } else {
          glVertex2f(x_float[i]-0.5*dx_float[i], y_float[i]-0.5*dy_float[i]);
          glVertex2f(x_float[i]+0.5*dx_float[i], y_float[i]-0.5*dy_float[i]);
@@ -359,10 +367,14 @@ void DisplayState(void) {
          glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
          glBegin(GL_QUADS);
          if (spatial_type == SPATIAL_DOUBLE){
-            glVertex2f(x_double[i]-0.5*dx_double[i], y_double[i]-0.5*dy_double[i]);
-            glVertex2f(x_double[i]+0.5*dx_double[i], y_double[i]-0.5*dy_double[i]);
-            glVertex2f(x_double[i]+0.5*dx_double[i], y_double[i]+0.5*dy_double[i]);
-            glVertex2f(x_double[i]-0.5*dx_double[i], y_double[i]+0.5*dy_double[i]);
+            //glVertex2f(x_double[i]-0.5*dx_double[i], y_double[i]-0.5*dy_double[i]);
+            //glVertex2f(x_double[i]+0.5*dx_double[i], y_double[i]-0.5*dy_double[i]);
+            //glVertex2f(x_double[i]+0.5*dx_double[i], y_double[i]+0.5*dy_double[i]);
+            //glVertex2f(x_double[i]-0.5*dx_double[i], y_double[i]+0.5*dy_double[i]);
+            glVertex2f(x_double[i], y_double[i]);
+            glVertex2f(x_double[i]+dx_double[i], y_double[i]);
+            glVertex2f(x_double[i]+dx_double[i], y_double[i]+dy_double[i]);
+            glVertex2f(x_double[i], y_double[i]+dy_double[i]);
          } else {
             glVertex2f(x_float[i]-0.5*dx_float[i], y_float[i]-0.5*dy_float[i]);
             glVertex2f(x_float[i]+0.5*dx_float[i], y_float[i]-0.5*dy_float[i]);
@@ -631,7 +643,7 @@ void draw_scene(void) {
       DisplayState();
    }
 
-   if (display_mysize <=500) {
+   if (display_mysize <=99) {
       char c[10];
       if (data_type == DATA_DOUBLE){
          for(int i = 0; i < display_mysize; i++) {
