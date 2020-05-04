@@ -103,6 +103,7 @@ struct ColorTable {
 };
 
 static int autoscale = 1;
+static double scaleMax, scaleMin; //1200
 static double display_circle_radius=-1.0;
 static int current_frame = 0;
 static double sim_time;
@@ -279,7 +280,6 @@ void free_display(void){
 #endif
 }
 void DisplayState(void) {
-   double scaleMax = 6000.0, scaleMin = 0.0; //1200
    int i;
 #ifdef HAVE_OPENGL
    int color;

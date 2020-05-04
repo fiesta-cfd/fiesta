@@ -106,7 +106,7 @@ int main(int argc, char* argv[]){
 
     int nx = cf.ngi - cf.ng*2;
     int ny = cf.ngj - cf.ng*2;
-    int levmx = 2;
+    int levmx = 3;
     mesh = new Mesh(nx, ny, levmx, 2, 1.0, 1.0, 1, 1, 0);
     mesh->init(nx, ny, 0);
     size_t &ncells_loc   = mesh->ncells;
@@ -795,7 +795,32 @@ int main(int argc, char* argv[]){
 #endif
 
 
-
+    for (int ic = 0; ic < ncells_loc; ic++) {
+        if (mesh->celltype[ic] == LEFT_BOUNDARY) {
+            X[ic] = X[mesh->nrht[ic]];
+            Y[ic] = Y[mesh->nrht[ic]];
+            E[ic] = E[mesh->nrht[ic]];
+            D[ic] = D[mesh->nrht[ic]];
+        }
+        else if (mesh->celltype[ic] == RIGHT_BOUNDARY) {
+            X[ic] = X[mesh->nlft[ic]];
+            Y[ic] = Y[mesh->nlft[ic]];
+            E[ic] = E[mesh->nlft[ic]];
+            D[ic] = D[mesh->nlft[ic]];
+        }
+        else if (mesh->celltype[ic] == BOTTOM_BOUNDARY) {
+            X[ic] = X[mesh->ntop[ic]];
+            Y[ic] = Y[mesh->ntop[ic]];
+            E[ic] = E[mesh->ntop[ic]];
+            D[ic] = D[mesh->ntop[ic]];
+        }
+        else if (mesh->celltype[ic] == TOP_BOUNDARY) {
+            X[ic] = X[mesh->nbot[ic]];
+            Y[ic] = Y[mesh->nbot[ic]];
+            E[ic] = E[mesh->nbot[ic]];
+            D[ic] = D[mesh->nbot[ic]];
+        }
+    }
 
     // Real-time graphics
     ///*
@@ -832,7 +857,7 @@ int main(int argc, char* argv[]){
 #endif
     //*/
    
-    }
+    } // end for loop
 //#endif
 
     MPI_Barrier(cf.comm);
