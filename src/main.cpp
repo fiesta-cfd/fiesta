@@ -20,7 +20,52 @@
 #include "status.hpp"
 #include <set>
 
+#ifdef DYNAMIC_AMR
+#include "l7/l7.h"
+#include "mesh/mesh.h"
+#include "mesh/partition.h"
+#include "MallocPlus/MallocPlus.h"
+#endif
+
+#ifdef HAVE_GRAPHICS
+#include <unistd.h>
+#include "graphics/display.h"
+#endif
+
+#ifndef NOMPI
+#define HAVE_MPI
+#endif
+
 using namespace std;
+
+#ifdef DYNAMIC_AMR
+enum partition_method initial_order,  //  Initial order of mesh.
+                      cycle_reorder;  //  Order of mesh every cycle.
+bool localStencil;
+
+static Mesh *mesh;           //  Object containing mesh information
+MallocPlus state_memory;     // MallocPlus state array
+double *X = NULL;
+double *Y = NULL;
+double *E = NULL;
+double *D = NULL;
+
+int do_quo_setup, lttrace_on;
+
+void memory_reset_ptrs(void){
+   X = (double *)state_memory.get_memory_ptr("X");
+   Y = (double *)state_memory.get_memory_ptr("Y");
+   E = (double *)state_memory.get_memory_ptr("E");
+   D = (double *)state_memory.get_memory_ptr("D");
+}
+
+void state_reorder(vector<int> iorder) {
+    X = state_memory.memory_reorder(X, &iorder[0]);
+    Y = state_memory.memory_reorder(Y, &iorder[0]);
+    E = state_memory.memory_reorder(E, &iorder[0]);
+    D = state_memory.memory_reorder(D, &iorder[0]);
+}
+#endif
 
 void fnExit1(void){
     Kokkos::finalize();
@@ -58,8 +103,15 @@ int main(int argc, char* argv[]){
     // Initialize command MPI and get rank.
     int temp_rank;
     temp_rank = 0;
+
 #ifndef NOMPI
+#ifdef DYNAMIC_AMR
+    int mype = 0;
+    int numpe = 0;
+    L7_Init(&mype, &numpe, &argc, argv, do_quo_setup, lttrace_on);
+#else
     MPI_Init(NULL,NULL);
+#endif
     MPI_Comm_rank(MPI_COMM_WORLD,&temp_rank);
 #endif
 
