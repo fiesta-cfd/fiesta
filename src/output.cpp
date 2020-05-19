@@ -112,6 +112,8 @@ void printConfig(struct inputConfig cf, int cFlag){
         cout << "    Using 5th order weno scheme" << endl;
     if (cf.scheme == 2)
         cout << "    Using 4th order centered scheme" << endl;
+    if (cf.scheme == 3)
+        cout << "    Using Quick scheme" << endl;
     if (cf.visc)
         cout << setw(15) << left << "    Viscosity " << c(cFlag,YEL) << "enabled" << c(cFlag,NON) <<  endl;
     else

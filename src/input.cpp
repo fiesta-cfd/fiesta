@@ -172,6 +172,8 @@ struct inputConfig executeConfiguration(std::string fName){
         cf.scheme = 1;
     if (scheme.compare("centered4")==0)
         cf.scheme = 2;
+    if (scheme.compare("quick")==0)
+        cf.scheme = 3;
 
     int isnum;
 
