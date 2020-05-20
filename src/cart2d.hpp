@@ -2,6 +2,7 @@
 #include "input.hpp"
 #include "rkfunction.hpp"
 #include "Kokkos_Core.hpp"
+#include "noise.hpp"
 
 class hydro2dvisc_func : public rk_func {
 
@@ -24,5 +25,6 @@ public:
     FS4D stressx;  // stress tensor on x faces
     FS4D stressy;  // stress tensor on y faces
     FS3D gradRho;
+    FS2D noise;          // Pressure
     FS1D cd;
 };

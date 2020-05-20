@@ -35,8 +35,8 @@ struct calculateRhoAndPressure {
         }
 
         for (int s=0; s<ns; ++s){
-            gammas = cd(5+2*s);
-            Rs = cd(5+2*s+1);
+            gammas = cd(6+2*s);
+            Rs = cd(6+2*s+1);
 
             Cp = Cp + (var(i,j,k,4+s)/rho(i,j,k))*( gammas*Rs/(gammas-1) );
             Cv = Cv + (var(i,j,k,4+s)/rho(i,j,k))*( Rs/(gammas-1) );
@@ -216,8 +216,8 @@ struct maxWaveSpeed {
         double a, s;
 
         for (int s=0; s<ns; ++s){
-            gammas = cd(5+2*s);
-            Rs = cd(5+2*s+1);
+            gammas = cd(6+2*s);
+            Rs = cd(6+2*s+1);
 
             Cp = Cp + (var(i,j,k,4+s)/rho(i,j,k))*( gammas*Rs/(gammas-1) );
             Cv = Cv + (var(i,j,k,4+s)/rho(i,j,k))*( Rs/(gammas-1) );

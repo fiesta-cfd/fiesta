@@ -90,7 +90,7 @@ int main(int argc, char* argv[]){
 
     // Create and copy minimal configuration array for data needed
     // withing Kokkos kernels.
-    Kokkos::View<double*> cd("deviceCF",5+cf.ns*3);
+    Kokkos::View<double*> cd("deviceCF",6+cf.ns*3);
     typename Kokkos::View<double*>::HostMirror hostcd = Kokkos::create_mirror_view(cd);
     Kokkos::deep_copy(hostcd, cd);
     hostcd(0) = cf.ns;  // number of gas species
@@ -98,9 +98,10 @@ int main(int argc, char* argv[]){
     hostcd(2) = cf.dy;  // cell size
     hostcd(3) = cf.dz;  // cell size
     hostcd(4) = cf.nv;  // number of flow variables
+    hostcd(5) = cf.ng;  // number of flow variables
     
     // include gas properties for each gas species
-    int sdx = 5;
+    int sdx = 6;
     for (int s=0; s<cf.ns; ++s){
         hostcd(sdx) = cf.gamma[s];      // ratio of specific heats
         hostcd(sdx+1) = cf.R/cf.M[s];   // species gas comstant

@@ -71,8 +71,8 @@ struct calculateRhoAndPressure2dv {
 
         // Calculate mixture ratio of specific heats
         for (int s=0; s<ns; ++s){
-            gammas = cd(5+3*s);
-            Rs = cd(5+3*s+1);
+            gammas = cd(6+3*s);
+            Rs = cd(6+3*s+1);
 
             // accumulate mixture heat capacity by mass fraction weights
             Cp = Cp + (var(i,j,0,3+s)/rho(i,j))*( gammas*Rs/(gammas-1) );
@@ -174,9 +174,9 @@ struct calculateStressTensor2dv {
         double mujp = 0.0;
 
         for (int s=0; s<ns; ++s){
-            muij += var(i, j, 0,3+s)*cd(5+3*s+2)/rho(i,j);
-            muip += var(i+1,j,0,3+s)*cd(5+3*s+2)/rho(i+1,j);
-            mujp += var(i,j+1,0,3+s)*cd(5+3*s+2)/rho(i,j+1);
+            muij += var(i, j, 0,3+s)*cd(6+3*s+2)/rho(i,j);
+            muip += var(i+1,j,0,3+s)*cd(6+3*s+2)/rho(i+1,j);
+            mujp += var(i,j+1,0,3+s)*cd(6+3*s+2)/rho(i,j+1);
         }
 
         //double muij = (var(i,j,0,3)*mu1 + var(i,j,0,4)*mu2)/rho(i,j);
@@ -342,6 +342,7 @@ hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*
     stressx = Kokkos::View<double****,FS_LAYOUT>("stressx",cf.ngi,cf.ngj,2,2);             // stress tensor on x faces
     stressy = Kokkos::View<double****,FS_LAYOUT>("stressy",cf.ngi,cf.ngj,2,2);             // stress tensor on y faces
     gradRho = Kokkos::View<double*** ,FS_LAYOUT>("gradRho",cf.ngi,cf.ngj,4);               // stress tensor on y faces
+    noise   = Kokkos::View<double**  ,FS_LAYOUT>("noise"  ,cf.ngi,cf.ngj);
     cd = mcd;
 
     timers["flux"]       = fiestaTimer("Flux Calculation");
@@ -364,7 +365,27 @@ hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*
 };
 
 void hydro2dvisc_func::preStep(){}
-void hydro2dvisc_func::postStep(){}
+void hydro2dvisc_func::postStep(){
+    int M = 0;
+    int N = 0;
+
+    if ((cf.nci-1) % 2 == 0)
+        M = (cf.nci-1)/2;
+    else
+        M = cf.nci/2;
+
+    if ((cf.ncj-1) % 2 == 0)
+        N = (cf.ncj-1)/2;
+    else
+        N = cf.ncj/2;
+
+    cout << "postStep: " << M << ", " << N << endl;
+
+    Kokkos::MDRangePolicy<Kokkos::Rank<2>> noise_pol({0,0},{M,N});
+    for (int v=0; v<cf.nv; ++v){
+        Kokkos::parallel_for( noise_pol, detectNoise2D(var,noise,0.1,cd,v) );
+    }
+}
 void hydro2dvisc_func::preSim(){}
 void hydro2dvisc_func::postSim(){}
 
