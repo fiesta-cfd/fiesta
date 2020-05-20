@@ -446,129 +446,8 @@ void cgnsWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS
 
     int idx;
 
-    //write momentum x
-    if (cf.ndim == 3){
-        for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
-            for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-                for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                    int ii = i - cf.ng;
-                    int jj = j - cf.ng;
-                    int kk = k - cf.ng;
-                    idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    vsp[idx] = varH(i,j,k,0);
-                }
-            }
-        }
-    }else{
-        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                int ii = i - cf.ng;
-                int jj = j - cf.ng;
-                idx = cf.nci*jj+ii;
-                vsp[idx] = varH(i,j,0,0);
-            }
-        }
-    }
-
-    if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,"MomentumX",&index_flow))
-        cgp_error_exit();
-
-    if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
-        cgp_error_exit();
-
-    //write momentum y
-    if (cf.ndim == 3){
-        for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
-            for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-                for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                    int ii = i - cf.ng;
-                    int jj = j - cf.ng;
-                    int kk = k - cf.ng;
-                    idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    vsp[idx] = varH(i,j,k,1);
-                }
-            }
-        }
-    }else{
-        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                int ii = i - cf.ng;
-                int jj = j - cf.ng;
-                idx = cf.nci*jj+ii;
-                vsp[idx] = varH(i,j,0,1);
-            }
-        }
-    }
-    
-    if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,"MomentumY",&index_flow))
-        cgp_error_exit();
-
-    if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
-        cgp_error_exit();
-
-    //write momentum z
-    if (cf.ndim == 3){
-        for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
-            for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-                for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                    int ii = i - cf.ng;
-                    int jj = j - cf.ng;
-                    int kk = k - cf.ng;
-                    idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    vsp[idx] = varH(i,j,k,2);
-                }
-            }
-        }
-    }else{
-        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                int ii = i - cf.ng;
-                int jj = j - cf.ng;
-                idx = cf.nci*jj+ii;
-                vsp[idx] = 0;
-            }
-        }
-    }
-    
-    if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,"MomentumZ",&index_flow))
-        cgp_error_exit();
-
-    if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
-        cgp_error_exit();
-
-    //write energy
-    if (cf.ndim == 3){
-        for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
-            for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-                for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                    int ii = i - cf.ng;
-                    int jj = j - cf.ng;
-                    int kk = k - cf.ng;
-                    idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                    vsp[idx] = varH(i,j,k,cf.ndim);
-                }
-            }
-        }
-    }else{
-        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                int ii = i - cf.ng;
-                int jj = j - cf.ng;
-                idx = cf.nci*jj+ii;
-                vsp[idx] = varH(i,j,0,cf.ndim);
-            }
-        }
-    }
-    
-    if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,"EnergyInternal",&index_flow))
-        cgp_error_exit();
-
-    if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
-        cgp_error_exit();
-
-    //write densities
-    for (int vn=cf.ndim+1; vn<cf.nv; ++vn){
-        snprintf(dName,32,"SpeciesDensity%d",vn-cf.ndim);
+    for (int vn=0; vn<cf.nvt+2; ++vn){
+        snprintf(dName,32,"Var%d",vn);
         if (cf.ndim == 3){
             for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
                 for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
@@ -599,40 +478,193 @@ void cgnsWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS
             cgp_error_exit();
     }
 
-    if (cf.ceq != 0){
-    //write cequation variables
-        for (int vn=cf.nv; vn<cf.nvt; ++vn){
-            snprintf(dName,32,"C%d",vn-cf.nv);
-            if (cf.ndim == 3){
-                for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
-                    for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-                        for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                            int ii = i - cf.ng;
-                            int jj = j - cf.ng;
-                            int kk = k - cf.ng;
-                            idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
-                            vsp[idx] = varH(i,j,k,vn);
-                        }
-                    }
-                }
-            }else{
-                for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
-                    for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
-                        int ii = i - cf.ng;
-                        int jj = j - cf.ng;
-                        idx = cf.nci*jj+ii;
-                        vsp[idx] = varH(i,j,0,vn);
-                    }
-                }
-            }
-            
-            if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,dName,&index_flow))
-                cgp_error_exit();
+    //write momentum x
+    //if (cf.ndim == 3){
+    //    for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+    //        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+    //            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+    //                int ii = i - cf.ng;
+    //                int jj = j - cf.ng;
+    //                int kk = k - cf.ng;
+    //                idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
+    //                vsp[idx] = varH(i,j,k,0);
+    //            }
+    //        }
+    //    }
+    //}else{
+    //    for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+    //        for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+    //            int ii = i - cf.ng;
+    //            int jj = j - cf.ng;
+    //            idx = cf.nci*jj+ii;
+    //            vsp[idx] = varH(i,j,0,0);
+    //        }
+    //    }
+    //}
 
-            if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
-                cgp_error_exit();
-        }
-    }
+    //if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,"MomentumX",&index_flow))
+    //    cgp_error_exit();
+
+    //if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
+    //    cgp_error_exit();
+
+    ////write momentum y
+    //if (cf.ndim == 3){
+    //    for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+    //        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+    //            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+    //                int ii = i - cf.ng;
+    //                int jj = j - cf.ng;
+    //                int kk = k - cf.ng;
+    //                idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
+    //                vsp[idx] = varH(i,j,k,1);
+    //            }
+    //        }
+    //    }
+    //}else{
+    //    for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+    //        for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+    //            int ii = i - cf.ng;
+    //            int jj = j - cf.ng;
+    //            idx = cf.nci*jj+ii;
+    //            vsp[idx] = varH(i,j,0,1);
+    //        }
+    //    }
+    //}
+    //
+    //if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,"MomentumY",&index_flow))
+    //    cgp_error_exit();
+
+    //if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
+    //    cgp_error_exit();
+
+    ////write momentum z
+    //if (cf.ndim == 3){
+    //    for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+    //        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+    //            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+    //                int ii = i - cf.ng;
+    //                int jj = j - cf.ng;
+    //                int kk = k - cf.ng;
+    //                idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
+    //                vsp[idx] = varH(i,j,k,2);
+    //            }
+    //        }
+    //    }
+    //}else{
+    //    for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+    //        for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+    //            int ii = i - cf.ng;
+    //            int jj = j - cf.ng;
+    //            idx = cf.nci*jj+ii;
+    //            vsp[idx] = 0;
+    //        }
+    //    }
+    //}
+    //
+    //if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,"MomentumZ",&index_flow))
+    //    cgp_error_exit();
+
+    //if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
+    //    cgp_error_exit();
+
+    ////write energy
+    //if (cf.ndim == 3){
+    //    for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+    //        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+    //            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+    //                int ii = i - cf.ng;
+    //                int jj = j - cf.ng;
+    //                int kk = k - cf.ng;
+    //                idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
+    //                vsp[idx] = varH(i,j,k,cf.ndim);
+    //            }
+    //        }
+    //    }
+    //}else{
+    //    for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+    //        for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+    //            int ii = i - cf.ng;
+    //            int jj = j - cf.ng;
+    //            idx = cf.nci*jj+ii;
+    //            vsp[idx] = varH(i,j,0,cf.ndim);
+    //        }
+    //    }
+    //}
+    //
+    //if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,"EnergyInternal",&index_flow))
+    //    cgp_error_exit();
+
+    //if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
+    //    cgp_error_exit();
+
+    ////write densities
+    //for (int vn=cf.ndim+1; vn<cf.nv; ++vn){
+    //    snprintf(dName,32,"SpeciesDensity%d",vn-cf.ndim);
+    //    if (cf.ndim == 3){
+    //        for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+    //            for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+    //                for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+    //                    int ii = i - cf.ng;
+    //                    int jj = j - cf.ng;
+    //                    int kk = k - cf.ng;
+    //                    idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
+    //                    vsp[idx] = varH(i,j,k,vn);
+    //                }
+    //            }
+    //        }
+    //    }else{
+    //        for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+    //            for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+    //                int ii = i - cf.ng;
+    //                int jj = j - cf.ng;
+    //                idx = cf.nci*jj+ii;
+    //                vsp[idx] = varH(i,j,0,vn);
+    //            }
+    //        }
+    //    }
+    //    
+    //    if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,dName,&index_flow))
+    //        cgp_error_exit();
+
+    //    if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
+    //        cgp_error_exit();
+    //}
+
+    //if (cf.ceq != 0){
+    ////write cequation variables
+    //    for (int vn=cf.nv; vn<cf.nvt; ++vn){
+    //        snprintf(dName,32,"C%d",vn-cf.nv);
+    //        if (cf.ndim == 3){
+    //            for (int k=cf.ng; k<cf.nck+cf.ng; ++k){
+    //                for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+    //                    for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+    //                        int ii = i - cf.ng;
+    //                        int jj = j - cf.ng;
+    //                        int kk = k - cf.ng;
+    //                        idx = (cf.nci*cf.ncj)*kk+cf.nci*jj+ii;
+    //                        vsp[idx] = varH(i,j,k,vn);
+    //                    }
+    //                }
+    //            }
+    //        }else{
+    //            for (int j=cf.ng; j<cf.ncj+cf.ng; ++j){
+    //                for (int i=cf.ng; i<cf.nci+cf.ng; ++i){
+    //                    int ii = i - cf.ng;
+    //                    int jj = j - cf.ng;
+    //                    idx = cf.nci*jj+ii;
+    //                    vsp[idx] = varH(i,j,0,vn);
+    //                }
+    //            }
+    //        }
+    //        
+    //        if (cgp_field_write(fIdx,bIdx,zIdx,index_sol,CG_RealSingle,dName,&index_flow))
+    //            cgp_error_exit();
+
+    //        if (cgp_field_write_data(fIdx,bIdx,zIdx,index_sol,index_flow,start,endc,vsp))
+    //            cgp_error_exit();
+    //    }
+    //}
 
     cg_biter_write(fIdx,bIdx,"TimeIterValues",1);
     cg_goto(fIdx,bIdx,"BaseIterativeData_t",1,"end");

@@ -328,7 +328,7 @@ struct applyViscousTerm2dv {
 hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){
     
     grid    = Kokkos::View<double****,FS_LAYOUT>("coords", cf.ni+2*cf.ng, cf.nj+2*cf.ng, cf.nk+2*cf.ng, 3);
-    var     = Kokkos::View<double****,FS_LAYOUT>("var",    cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Primary Variable Array
+    var     = Kokkos::View<double****,FS_LAYOUT>("var",    cf.ngi,cf.ngj,cf.ngk,cf.nvt+2); // Primary Variable Array
     tmp1    = Kokkos::View<double****,FS_LAYOUT>("tmp1",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Arrayr1
     tmp2    = Kokkos::View<double****,FS_LAYOUT>("tmp2",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Array2
     dvar    = Kokkos::View<double****,FS_LAYOUT>("dvar",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // RHS Output
@@ -342,7 +342,7 @@ hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*
     stressx = Kokkos::View<double****,FS_LAYOUT>("stressx",cf.ngi,cf.ngj,2,2);             // stress tensor on x faces
     stressy = Kokkos::View<double****,FS_LAYOUT>("stressy",cf.ngi,cf.ngj,2,2);             // stress tensor on y faces
     gradRho = Kokkos::View<double*** ,FS_LAYOUT>("gradRho",cf.ngi,cf.ngj,4);               // stress tensor on y faces
-    noise   = Kokkos::View<double**  ,FS_LAYOUT>("noise"  ,cf.ngi,cf.ngj);
+    noise   = Kokkos::View<int   **  ,FS_LAYOUT>("noise"  ,cf.ngi,cf.ngj);
     cd = mcd;
 
     timers["flux"]       = fiestaTimer("Flux Calculation");
@@ -379,12 +379,15 @@ void hydro2dvisc_func::postStep(){
     else
         N = cf.ncj/2;
 
-    cout << "postStep: " << M << ", " << N << endl;
+    //Kokkos::MDRangePolicy<Kokkos::Rank<2>> noise_pol({0,0},{M,N});
+    policy_f noise_pol = policy_f({0,0},{M,N});
+    policy_f cell_pol  = policy_f({cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng});
 
-    Kokkos::MDRangePolicy<Kokkos::Rank<2>> noise_pol({0,0},{M,N});
-    for (int v=0; v<cf.nv; ++v){
-        Kokkos::parallel_for( noise_pol, detectNoise2D(var,noise,0.1,cd,v) );
-    }
+    //for (int v=0; v<cf.nv; ++v){
+        Kokkos::parallel_for( noise_pol, detectNoise2D(var,noise,2.0e11,cd,2) );
+        //Kokkos::parallel_for( cell_pol,  removeNoise2D(var,noise,0.1,cd,cf.nvt) );
+    //}
+
 }
 void hydro2dvisc_func::preSim(){}
 void hydro2dvisc_func::postSim(){}

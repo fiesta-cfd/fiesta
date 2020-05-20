@@ -25,6 +25,6 @@ public:
     FS4D stressx;  // stress tensor on x faces
     FS4D stressy;  // stress tensor on y faces
     FS3D gradRho;
-    FS2D noise;          // Pressure
+    FS2D_I noise;          // Pressure
     FS1D cd;
 };
