@@ -8,6 +8,10 @@ class hydroc3d_func : public rk_func{
 public:
     hydroc3d_func(struct inputConfig &cf, Kokkos::View<double*> & mcd);
     void compute();
+    void preStep();
+    void postStep();
+    void preSim();
+    void postSim();
 
     FS3D p;
     FS3D T;

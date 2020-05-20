@@ -719,6 +719,11 @@ hydroc3d_func::hydroc3d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd
 
 };
 
+void hydroc3d_func::preStep() {}
+void hydroc3d_func::postStep() {}
+void hydroc3d_func::preSim() {}
+void hydroc3d_func::postSim() {}
+
 void hydroc3d_func::compute() {
 
     // create range policies

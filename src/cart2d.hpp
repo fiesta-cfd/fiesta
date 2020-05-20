@@ -9,6 +9,10 @@ public:
     hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*> &cd_);
 
     void compute();
+    void preStep();
+    void postStep();
+    void preSim();
+    void postSim();
 
     FS2D p;          // Pressure
     FS2D T;          // Pressure

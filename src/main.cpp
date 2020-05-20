@@ -188,12 +188,18 @@ int main(int argc, char* argv[]){
     // reset simulation timer
     simTimer.reset();
 
+    // pre simulation hook
+    f->preSim();
+
   // // // // // // // //  \\ \\ \\ \\ \\ \\ \\ \\
  // // // // // // MAIN TIME LOOP \\ \\ \\ \\ \\ \\
 // // // // // // // // //\\ \\ \\ \\ \\ \\ \\ \\ \\
 
     for (int t=tstart; t<cf.tend; ++t){
         time = time + cf.dt;
+
+        //pre timestep hook
+        f->preStep();
 
         // apply boundary conditions
 #ifndef NOMPI
@@ -237,6 +243,9 @@ int main(int argc, char* argv[]){
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
             myvar(i,j,k,v) = myvar(i,j,k,v) + cf.dt*mydvar(i,j,k,v);
         });
+
+        //post timestep hook
+        f->postStep();
         
         // Print time step info if necessary
         if (cf.rank==0){
@@ -275,6 +284,9 @@ int main(int argc, char* argv[]){
             }
         }
     } // End main time loop
+
+    // post simulation hook
+    f->postSim();
 
     //stop simulation timer
     simTimer.stop();

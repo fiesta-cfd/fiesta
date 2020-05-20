@@ -363,6 +363,12 @@ hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*
     }
 };
 
+void hydro2dvisc_func::preStep(){}
+void hydro2dvisc_func::postStep(){}
+void hydro2dvisc_func::preSim(){}
+void hydro2dvisc_func::postSim(){}
+
+
 void hydro2dvisc_func::compute(){
 
     policy_f ghost_pol = policy_f({0,0},{cf.ngi, cf.ngj});

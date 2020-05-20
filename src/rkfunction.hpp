@@ -26,6 +26,10 @@ public:
     rk_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_);
 
     virtual void compute() = 0;
+    virtual void preStep() = 0;
+    virtual void postStep() = 0;
+    virtual void preSim() = 0;
+    virtual void postSim() = 0;
     //virtual void compute(const FS4D & mvar, FS4D & mdvar) = 0;
     
     FS4D var;
