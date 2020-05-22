@@ -3,14 +3,16 @@ struct detectNoise2D {
     FS2D_I noise;
     int v;
     double dh;
+    double coff;
     Kokkos::View<double*> cd;
 
-    detectNoise2D (FS4D var_, FS2D_I n_, double dh_, Kokkos::View<double*> cd_, int v_)
-                         : var(var_), noise(n_), dh(dh_), cd(cd_), v(v_) {}
+    detectNoise2D (FS4D var_, FS2D_I n_, double dh_, double c_, Kokkos::View<double*> cd_, int v_)
+                         : var(var_), noise(n_), dh(dh_), coff(c_), cd(cd_), v(v_) {}
     
     KOKKOS_INLINE_FUNCTION
     void operator()(const int ii, const int jj) const {
 
+        int nv = (int)cd(0) + 3;
         int ng = (int)cd(5);
 
         double dx = cd(1);
@@ -21,21 +23,21 @@ struct detectNoise2D {
 
         double a = sqrt(6.0*dx*dy);
 
-        double c = (a/192.0)+(  var(i-1,j+1,0,v)+ 2*var(i  ,j+1,0,v)+  var(i+1,j+1,0,v)
-                             +2*var(i-1,j  ,0,v)-12*var(i  ,j  ,0,v)+2*var(i+1,j  ,0,v)
-                             +  var(i-1,j-1,0,v)+ 2*var(i  ,j-1,0,v)+  var(i+1,j-1,0,v));
+        double c = -(a/192.0)*(  var(i-1,j+1,0,v)+ 2*var(i  ,j+1,0,v)+  var(i+1,j+1,0,v)
+                              +2*var(i-1,j  ,0,v)-12*var(i  ,j  ,0,v)+2*var(i+1,j  ,0,v)
+                              +  var(i-1,j-1,0,v)+ 2*var(i  ,j-1,0,v)+  var(i+1,j-1,0,v));
 
         double cref = dh*a/16.0;
 
-        var(i-1,j+1,0,6) = 0.0;
-        var(i  ,j+1,0,6) = 0.0;
-        var(i+1,j+1,0,6) = 0.0;
-        var(i-1,j  ,0,6) = 0.0;
-        var(i  ,j  ,0,6) = 0.0;
-        var(i+1,j  ,0,6) = 0.0;
-        var(i-1,j-1,0,6) = 0.0;
-        var(i  ,j-1,0,6) = 0.0;
-        var(i+1,j-1,0,6) = 0.0;
+        var(i-1,j+1,0,11) = 0.0;
+        var(i  ,j+1,0,11) = 0.0;
+        var(i+1,j+1,0,11) = 0.0;
+        var(i-1,j  ,0,11) = 0.0;
+        var(i  ,j  ,0,11) = 0.0;
+        var(i+1,j  ,0,11) = 0.0;
+        var(i-1,j-1,0,11) = 0.0;
+        var(i  ,j-1,0,11) = 0.0;
+        var(i+1,j-1,0,11) = 0.0;
 
         noise(i-1,j+1) = 0;
         noise(i  ,j+1) = 0;
@@ -48,50 +50,51 @@ struct detectNoise2D {
         noise(i+1,j-1) = 0;
 
         if (abs(c) >= cref){
-            noise(i-1,j+1) = 1;
-            noise(i  ,j+1) = 1;
-            noise(i+1,j+1) = 1;
-            noise(i-1,j  ) = 1;
-            noise(i  ,j  ) = 1;
-            noise(i+1,j  ) = 1;
-            noise(i-1,j-1) = 1;
-            noise(i  ,j-1) = 1;
-            noise(i+1,j-1) = 1;
+            if (var(i-1,j+1,0,nv+1) < coff) noise(i-1,j+1) = 1;
+            if (var(i  ,j+1,0,nv+1) < coff) noise(i  ,j+1) = 1;
+            if (var(i+1,j+1,0,nv+1) < coff) noise(i+1,j+1) = 1;
+            if (var(i-1,j  ,0,nv+1) < coff) noise(i-1,j  ) = 1;
+            if (var(i  ,j  ,0,nv+1) < coff) noise(i  ,j  ) = 1;
+            if (var(i+1,j  ,0,nv+1) < coff) noise(i+1,j  ) = 1;
+            if (var(i-1,j-1,0,nv+1) < coff) noise(i-1,j-1) = 1;
+            if (var(i  ,j-1,0,nv+1) < coff) noise(i  ,j-1) = 1;
+            if (var(i+1,j-1,0,nv+1) < coff) noise(i+1,j-1) = 1;
 
         }
 
-        var(i-1,j+1,0,6) = noise(i-1,j+1);
-        var(i  ,j+1,0,6) = noise(i  ,j+1);
-        var(i+1,j+1,0,6) = noise(i+1,j+1);
-        var(i-1,j  ,0,6) = noise(i-1,j  );
-        var(i  ,j  ,0,6) = noise(i  ,j  );
-        var(i+1,j  ,0,6) = noise(i+1,j  );
-        var(i-1,j-1,0,6) = noise(i-1,j-1);
-        var(i  ,j-1,0,6) = noise(i  ,j-1);
-        var(i+1,j-1,0,6) = noise(i+1,j-1);
+        var(i-1,j+1,0,11) = noise(i-1,j+1);
+        var(i  ,j+1,0,11) = noise(i  ,j+1);
+        var(i+1,j+1,0,11) = noise(i+1,j+1);
+        var(i-1,j  ,0,11) = noise(i-1,j  );
+        var(i  ,j  ,0,11) = noise(i  ,j  );
+        var(i+1,j  ,0,11) = noise(i+1,j  );
+        var(i-1,j-1,0,11) = noise(i-1,j-1);
+        var(i  ,j-1,0,11) = noise(i  ,j-1);
+        var(i+1,j-1,0,11) = noise(i+1,j-1);
 
-        var(i-1,j+1,0,5) = c;
-        var(i  ,j+1,0,5) = c;
-        var(i+1,j+1,0,5) = c;
-        var(i-1,j  ,0,5) = c;
-        var(i  ,j  ,0,5) = c;
-        var(i+1,j  ,0,5) = c;
-        var(i-1,j-1,0,5) = c;
-        var(i  ,j-1,0,5) = c;
-        var(i+1,j-1,0,5) = c;
+        var(i-1,j+1,0,10) = c;
+        var(i  ,j+1,0,10) = c;
+        var(i+1,j+1,0,10) = c;
+        var(i-1,j  ,0,10) = c;
+        var(i  ,j  ,0,10) = c;
+        var(i+1,j  ,0,10) = c;
+        var(i-1,j-1,0,10) = c;
+        var(i  ,j-1,0,10) = c;
+        var(i+1,j-1,0,10) = c;
 
     }
 };
 
 struct removeNoise2D {
+    FS4D dvar;
     FS4D var;
     FS2D_I noise;
     int v;
     double dt;
     Kokkos::View<double*> cd;
 
-    removeNoise2D (FS4D var_, FS2D_I n_, double dt_, Kokkos::View<double*> cd_, int v_)
-                         : var(var_), noise(n_), dt(dt_), cd(cd_), v(v_) {}
+    removeNoise2D (FS4D dvar_, FS4D var_, FS2D_I n_, double dt_, Kokkos::View<double*> cd_, int v_)
+                         : dvar(dvar_), var(var_), noise(n_), dt(dt_), cd(cd_), v(v_) {}
     
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j) const {
@@ -100,8 +103,29 @@ struct removeNoise2D {
 
         double dx = cd(1);
         double dy = cd(2);
+
+        double lgrad = ( var(i,j,0,v)-var(i-1,j,0,v) )/dx;
+        double rgrad = ( var(i+1,j,0,v)-var(i,j,0,v) )/dx;
+        double bgrad = ( var(i,j,0,v)-var(i,j-1,0,v) )/dy;
+        double tgrad = ( var(i,j+1,0,v)-var(i,j,0,v) )/dy;
+
+        dvar(i,j,0,v) = dt*(dx*dx+dy*dy)*noise(i,j)*( (rgrad-lgrad)/dx + (tgrad-bgrad)/dy );
+        var(i,j,0,12) = dvar(i,j,0,v);
         
-        //var(i,j,0,v) = noise(i,j);
-        //var(i,j,0,v) = 1;
+    }
+};
+
+struct updateNoise2D {
+    FS4D dvar;
+    FS4D var;
+    int v;
+
+    updateNoise2D (FS4D dvar_, FS4D var_, int v_) : dvar(dvar_), var(var_), v(v_) {}
+    
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int j) const {
+
+        var(i,j,0,v) += dvar(i,j,0,v);
+        
     }
 };

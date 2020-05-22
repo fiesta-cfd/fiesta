@@ -350,8 +350,8 @@ struct applyCeq2D {
                        (bTildU/dy)*(rt*ct*dut - rb*cb*dub);
         double diffv = (bTildU/dx)*(rr*cr*dvr - rl*cl*dvl) + 
                        (bTildU/dy)*(rt*ct*dvt - rb*cb*dvb);
-        double diffe = (bTildU/dx)*(rr*cr*der - rl*cl*del) + 
-                       (bTildU/dy)*(rt*ct*det - rb*cb*deb);
+        double diffe = (bTildE/dx)*(rr*cr*der - rl*cl*del) + 
+                       (bTildE/dy)*(rt*ct*det - rb*cb*deb);
 
         dvar(i,j,0,0) += diffu;
         dvar(i,j,0,1) += diffv;

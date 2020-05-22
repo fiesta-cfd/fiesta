@@ -73,10 +73,10 @@ struct inputConfig mpi_init(struct inputConfig cf){
 }
 
 mpiBuffers::mpiBuffers(struct inputConfig cf){
-    int cv = 0;
-    if (cf.ceq == 1){
-        cv = 5;
-    }
+    //int cv = 0;
+    //if (cf.ceq == 1){
+    //    cv = 5;
+    //}
 
     leftSend   = Kokkos::View<double****,FS_LAYOUT>("leftSend",cf.ng,cf.ngj,cf.ngk,cf.nvt);
     leftRecv   = Kokkos::View<double****,FS_LAYOUT>("leftRecv",cf.ng,cf.ngj,cf.ngk,cf.nvt);
@@ -107,10 +107,10 @@ mpiBuffers::mpiBuffers(struct inputConfig cf){
 }
 
 void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m){
-    int cv = 0;
-    if (cf.ceq == 1){
-        cv = 5;
-    }
+    //int cv = 0;
+    //if (cf.ceq == 1){
+    //    cv = 5;
+    //}
 
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_rind;
     policy_rind xPol = policy_rind({0,0,0,0},{cf.ng ,cf.ngj,cf.ngk,cf.nvt});

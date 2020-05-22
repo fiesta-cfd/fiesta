@@ -125,8 +125,8 @@ void statusCheck(int cFlag, struct inputConfig cf, FS4D var, int t, double time,
     // Print Header
     if (cf.rank == 0){
         cout << "      " << setw(13) << " "
-             << setw(10) << right << "Min"
-             << setw(10) << right << "Max" << endl;
+             << setw(11) << right << "Min"
+             << setw(11) << right << "Max" << endl;
         cout << "      " << "---------------------------------" << endl;
 
         // Check for nans and infs and print table
@@ -158,16 +158,16 @@ void statusCheck(int cFlag, struct inputConfig cf, FS4D var, int t, double time,
                 }
             }
 
-            if (isnormal(min[v]) || min[v] == 0)
-                smin << c(cFlag,CYA) << setw(10) << right << setprecision(2) << scientific << min[v] << c(cFlag,NON);
+            if ((isnormal(min[v]) || min[v] == 0) && (min[v] > -1.0e+200 && min[v] < 1.0e+200))
+                smin << c(cFlag,CYA) << setw(11) << right << setprecision(2) << scientific << min[v] << c(cFlag,NON);
             else
-                smax << c(cFlag,RED) << setw(10) << right << setprecision(2) << scientific << min[v] << c(cFlag,NON);
+                smax << c(cFlag,RED) << setw(11) << right << setprecision(2) << scientific << min[v] << c(cFlag,NON);
                 
 
-            if (isnormal(max[v]) || max[v] == 0)
-                smax << c(cFlag,CYA) << setw(10) << right << setprecision(2) << scientific << max[v] << c(cFlag,NON);
+            if ((isnormal(max[v]) || max[v] == 0) && (max[v] > -1.0e+200 && max[v] < 1.0e+200))
+                smax << c(cFlag,CYA) << setw(11) << right << setprecision(2) << scientific << max[v] << c(cFlag,NON);
             else
-                smax << c(cFlag,RED) << setw(10) << right << setprecision(2) << scientific << max[v] << c(cFlag,NON);
+                smax << c(cFlag,RED) << setw(11) << right << setprecision(2) << scientific << max[v] << c(cFlag,NON);
                 
             cout << "      "
                  << setw(13) << left << vname
