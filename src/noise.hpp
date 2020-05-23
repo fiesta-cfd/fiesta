@@ -29,15 +29,15 @@ struct detectNoise2D {
 
         double cref = dh*a/16.0;
 
-        var(i-1,j+1,0,11) = 0.0;
-        var(i  ,j+1,0,11) = 0.0;
-        var(i+1,j+1,0,11) = 0.0;
-        var(i-1,j  ,0,11) = 0.0;
-        var(i  ,j  ,0,11) = 0.0;
-        var(i+1,j  ,0,11) = 0.0;
-        var(i-1,j-1,0,11) = 0.0;
-        var(i  ,j-1,0,11) = 0.0;
-        var(i+1,j-1,0,11) = 0.0;
+//        var(i-1,j+1,0,11) = 0.0;
+//        var(i  ,j+1,0,11) = 0.0;
+//        var(i+1,j+1,0,11) = 0.0;
+//        var(i-1,j  ,0,11) = 0.0;
+//        var(i  ,j  ,0,11) = 0.0;
+//        var(i+1,j  ,0,11) = 0.0;
+//        var(i-1,j-1,0,11) = 0.0;
+//        var(i  ,j-1,0,11) = 0.0;
+//        var(i+1,j-1,0,11) = 0.0;
 
         noise(i-1,j+1) = 0;
         noise(i  ,j+1) = 0;
@@ -50,37 +50,48 @@ struct detectNoise2D {
         noise(i+1,j-1) = 0;
 
         if (abs(c) >= cref){
-            if (var(i-1,j+1,0,nv+1) < coff) noise(i-1,j+1) = 1;
-            if (var(i  ,j+1,0,nv+1) < coff) noise(i  ,j+1) = 1;
-            if (var(i+1,j+1,0,nv+1) < coff) noise(i+1,j+1) = 1;
-            if (var(i-1,j  ,0,nv+1) < coff) noise(i-1,j  ) = 1;
-            if (var(i  ,j  ,0,nv+1) < coff) noise(i  ,j  ) = 1;
-            if (var(i+1,j  ,0,nv+1) < coff) noise(i+1,j  ) = 1;
-            if (var(i-1,j-1,0,nv+1) < coff) noise(i-1,j-1) = 1;
-            if (var(i  ,j-1,0,nv+1) < coff) noise(i  ,j-1) = 1;
-            if (var(i+1,j-1,0,nv+1) < coff) noise(i+1,j-1) = 1;
-
+            if (coff == 0.0){
+                noise(i-1,j+1) = 1;
+                noise(i  ,j+1) = 1;
+                noise(i+1,j+1) = 1;
+                noise(i-1,j  ) = 1;
+                noise(i  ,j  ) = 1;
+                noise(i+1,j  ) = 1;
+                noise(i-1,j-1) = 1;
+                noise(i  ,j-1) = 1;
+                noise(i+1,j-1) = 1;
+            }else{
+                if (var(i-1,j+1,0,nv+1) < coff) noise(i-1,j+1) = 1;
+                if (var(i  ,j+1,0,nv+1) < coff) noise(i  ,j+1) = 1;
+                if (var(i+1,j+1,0,nv+1) < coff) noise(i+1,j+1) = 1;
+                if (var(i-1,j  ,0,nv+1) < coff) noise(i-1,j  ) = 1;
+                if (var(i  ,j  ,0,nv+1) < coff) noise(i  ,j  ) = 1;
+                if (var(i+1,j  ,0,nv+1) < coff) noise(i+1,j  ) = 1;
+                if (var(i-1,j-1,0,nv+1) < coff) noise(i-1,j-1) = 1;
+                if (var(i  ,j-1,0,nv+1) < coff) noise(i  ,j-1) = 1;
+                if (var(i+1,j-1,0,nv+1) < coff) noise(i+1,j-1) = 1;
+            }
         }
 
-        var(i-1,j+1,0,11) = noise(i-1,j+1);
-        var(i  ,j+1,0,11) = noise(i  ,j+1);
-        var(i+1,j+1,0,11) = noise(i+1,j+1);
-        var(i-1,j  ,0,11) = noise(i-1,j  );
-        var(i  ,j  ,0,11) = noise(i  ,j  );
-        var(i+1,j  ,0,11) = noise(i+1,j  );
-        var(i-1,j-1,0,11) = noise(i-1,j-1);
-        var(i  ,j-1,0,11) = noise(i  ,j-1);
-        var(i+1,j-1,0,11) = noise(i+1,j-1);
-
-        var(i-1,j+1,0,10) = c;
-        var(i  ,j+1,0,10) = c;
-        var(i+1,j+1,0,10) = c;
-        var(i-1,j  ,0,10) = c;
-        var(i  ,j  ,0,10) = c;
-        var(i+1,j  ,0,10) = c;
-        var(i-1,j-1,0,10) = c;
-        var(i  ,j-1,0,10) = c;
-        var(i+1,j-1,0,10) = c;
+//        var(i-1,j+1,0,11) = noise(i-1,j+1);
+//        var(i  ,j+1,0,11) = noise(i  ,j+1);
+//        var(i+1,j+1,0,11) = noise(i+1,j+1);
+//        var(i-1,j  ,0,11) = noise(i-1,j  );
+//        var(i  ,j  ,0,11) = noise(i  ,j  );
+//        var(i+1,j  ,0,11) = noise(i+1,j  );
+//        var(i-1,j-1,0,11) = noise(i-1,j-1);
+//        var(i  ,j-1,0,11) = noise(i  ,j-1);
+//        var(i+1,j-1,0,11) = noise(i+1,j-1);
+//
+//        var(i-1,j+1,0,10) = c;
+//        var(i  ,j+1,0,10) = c;
+//        var(i+1,j+1,0,10) = c;
+//        var(i-1,j  ,0,10) = c;
+//        var(i  ,j  ,0,10) = c;
+//        var(i+1,j  ,0,10) = c;
+//        var(i-1,j-1,0,10) = c;
+//        var(i  ,j-1,0,10) = c;
+//        var(i+1,j-1,0,10) = c;
 
     }
 };
@@ -110,7 +121,7 @@ struct removeNoise2D {
         double tgrad = ( var(i,j+1,0,v)-var(i,j,0,v) )/dy;
 
         dvar(i,j,0,v) = dt*(dx*dx+dy*dy)*noise(i,j)*( (rgrad-lgrad)/dx + (tgrad-bgrad)/dy );
-        var(i,j,0,12) = dvar(i,j,0,v);
+//        var(i,j,0,12) = dvar(i,j,0,v);
         
     }
 };

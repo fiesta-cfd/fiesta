@@ -31,6 +31,8 @@ int getglobint(lua_State *L, const char *var) {
     int isnum, result;
     lua_getglobal(L, var);
     result = (int)lua_tointegerx(L, -1, &isnum);
+    if (lua_isnil(L, -1))
+        error(L, "'%s' is nil\n",var);
     if (!isnum)
         error(L, "'%s' should be an integer\n", var);
     lua_pop(L,1);
@@ -149,6 +151,13 @@ struct inputConfig executeConfiguration(std::string fName){
     cf.alpha       = getglobdbl (L, "alpha");
     cf.beta        = getglobdbl (L, "beta");
     cf.betae       = getglobdbl (L, "betae");
+    cf.noise       = getglobint (L, "noise");
+    if (cf.noise == 1){
+        cf.n_dh        = getglobdbl (L, "n_dh");
+        cf.n_eta       = getglobdbl (L, "n_eta");
+        cf.n_coff      = getglobdbl (L, "n_coff");
+        cf.n_nt        = getglobint (L, "n_nt");
+    }
     if (cf.ndim == 3){
         cf.glbl_nck    = getglobint (L, "nk" );
         cf.dz          = getglobdbl (L, "dz" );

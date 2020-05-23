@@ -107,6 +107,7 @@ void printConfig(struct inputConfig cf, int cFlag){
         cout << "    Num Cells Z = " << c(cFlag,CYA) << cf.glbl_nck << c(cFlag,NON) << ", dz = " << scientific << c(cFlag,CYA) << cf.dz << c(cFlag,NON)<< endl;
     cout << "    Num Cells Total: " << scientific << c(cFlag,CYA) << (double)cf.glbl_nck*cf.glbl_ncj*cf.glbl_nci << c(cFlag,NON) << endl;
 
+    // Options
     cout << c(cFlag,GRE) << "Options:" << c(cFlag,NON) << endl;
     if (cf.scheme == 1)
         cout << "    Using 5th order weno scheme" << endl;
@@ -115,14 +116,19 @@ void printConfig(struct inputConfig cf, int cFlag){
     if (cf.scheme == 3)
         cout << "    Using Quick scheme" << endl;
     if (cf.visc)
-        cout << setw(15) << left << "    Viscosity " << c(cFlag,YEL) << "enabled" << c(cFlag,NON) <<  endl;
+        cout << setw(18) << left << "    Viscosity " << c(cFlag,YEL) << "enabled" << c(cFlag,NON) <<  endl;
     else
-        cout << setw(15) << left << "    Viscosity " << c(cFlag,YEL) << "disabled" << c(cFlag,NON) << endl;
+        cout << setw(18) << left << "    Viscosity " << c(cFlag,YEL) << "disabled" << c(cFlag,NON) << endl;
     // C-Equations
     if (cf.ceq)
-        cout << setw(15) << left << "    C-Equation " << c(cFlag,YEL) << "enabled" << c(cFlag,NON) << endl;
+        cout << setw(18) << left << "    C-Equation " << c(cFlag,YEL) << "enabled" << c(cFlag,NON) << endl;
     else
-        cout << setw(15) << left << "    C-Equation " << c(cFlag,YEL) << "disabled" << c(cFlag,NON) << endl;
+        cout << setw(18) << left << "    C-Equation " << c(cFlag,YEL) << "disabled" << c(cFlag,NON) << endl;
+    // Noise Removal
+    if (cf.noise == 1)
+        cout << setw(18) << left << "    Noise Removal " << c(cFlag,YEL) << "enabled" << c(cFlag,NON) << endl;
+    else
+        cout << setw(18) << left << "    Noise Removal " << c(cFlag,YEL) << "disabled" << c(cFlag,NON) << endl;
 
 
     // Gas Properties

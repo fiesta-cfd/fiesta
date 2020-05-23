@@ -362,52 +362,61 @@ hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*
     if (cf.ceq == 1){
         timers["ceq"]       = fiestaTimer("C-Equation");
     }
-    timers["noise"]         = fiestaTimer("Noise Removal");
+    if (cf.noise == 1){
+        timers["noise"]         = fiestaTimer("Noise Removal");
+    }
 };
 
 void hydro2dvisc_func::preStep(){}
 void hydro2dvisc_func::postStep(){
-    int M = 0;
-    int N = 0;
-    double coff;
 
-    if ((cf.nci-1) % 2 == 0)
-        M = (cf.nci-1)/2;
-    else
-        M = cf.nci/2;
+    if (cf.noise == 1){
+        int M = 0;
+        int N = 0;
+        double coff;
 
-    if ((cf.ncj-1) % 2 == 0)
-        N = (cf.ncj-1)/2;
-    else
-        N = cf.ncj/2;
+        if ((cf.nci-1) % 2 == 0)
+            M = (cf.nci-1)/2;
+        else
+            M = cf.nci/2;
 
-    double etat = 5.0e-3;
-    double dh = 5.0e-4;
-    double doff = 0.1;
+        if ((cf.ncj-1) % 2 == 0)
+            N = (cf.ncj-1)/2;
+        else
+            N = cf.ncj/2;
 
-    policy_f noise_pol = policy_f({0,0},{M,N});
-    policy_f cell_pol  = policy_f({cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng});
+        //double etat = 5.0e-3;
+        //double dh = 5.0e-4;
+        //double doff = 0.1;
 
-    if (cf.ceq == 1){
-        double maxCh;
-        Kokkos::parallel_reduce(cell_pol,maxCvar2D(var,1,cd), Kokkos::Max<double>(maxCh));
+        policy_f noise_pol = policy_f({0,0},{M,N});
+        policy_f cell_pol  = policy_f({cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng});
+
+        if (cf.ceq == 1){
+            double maxCh;
+            Kokkos::parallel_reduce(cell_pol,maxCvar2D(var,1,cd), Kokkos::Max<double>(maxCh));
 #ifndef NOMPI
-        MPI_Allreduce(&maxCh,&maxCh,1,MPI_DOUBLE,MPI_MAX,cf.comm);
+            MPI_Allreduce(&maxCh,&maxCh,1,MPI_DOUBLE,MPI_MAX,cf.comm);
 #endif
-    coff = doff*maxCh;
+            coff = cf.n_coff*maxCh;
 
+        }else{
+            coff = 0.0;
+        }
+
+
+        timers["noise"].reset();
+        for (int v=0; v<2; ++v){
+        //int v = 2;
+            Kokkos::parallel_for( noise_pol, detectNoise2D(var,noise,cf.n_dh,coff,cd,v) );
+            for (int tau=0; tau<cf.n_nt; ++tau){
+                Kokkos::parallel_for( cell_pol,  removeNoise2D(dvar,var,noise,cf.n_eta,cd,v) );
+                Kokkos::parallel_for( cell_pol,  updateNoise2D(dvar,var,v) );
+            }
+        }
+        Kokkos::fence();
+        timers["noise"].accumulate();
     }
-
-
-    timers["noise"].reset();
-    for (int v=0; v<2; ++v){
-    //int v = 2;
-        Kokkos::parallel_for( noise_pol, detectNoise2D(var,noise,dh,coff,cd,v) );
-        Kokkos::parallel_for( cell_pol,  removeNoise2D(dvar,var,noise,etat,cd,v) );
-        Kokkos::parallel_for( cell_pol,  updateNoise2D(dvar,var,v) );
-    }
-    Kokkos::fence();
-    timers["noise"].accumulate();
 
 }
 void hydro2dvisc_func::preSim(){}
