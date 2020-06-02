@@ -35,7 +35,7 @@ public:
     FS4D var;
     FS4D dvar;
     FS4D tmp1;
-    FS4D tmp2;
+//    FS4D tmp2;
     FS4D grid;
 
     std::map<std::string, fiestaTimer> timers;

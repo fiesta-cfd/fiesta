@@ -328,21 +328,27 @@ struct applyViscousTerm2dv {
 hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){
     
     grid    = Kokkos::View<double****,FS_LAYOUT>("coords", cf.ni+2*cf.ng, cf.nj+2*cf.ng, cf.nk+2*cf.ng, 3);
-    var     = Kokkos::View<double****,FS_LAYOUT>("var",    cf.ngi,cf.ngj,cf.ngk,cf.nvt+3); // Primary Variable Array
+    var     = Kokkos::View<double****,FS_LAYOUT>("var",    cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Primary Variable Array
     tmp1    = Kokkos::View<double****,FS_LAYOUT>("tmp1",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Arrayr1
-    tmp2    = Kokkos::View<double****,FS_LAYOUT>("tmp2",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Array2
+    //tmp2    = Kokkos::View<double****,FS_LAYOUT>("tmp2",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Array2
     dvar    = Kokkos::View<double****,FS_LAYOUT>("dvar",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // RHS Output
     p       = Kokkos::View<double**  ,FS_LAYOUT>("p",      cf.ngi,cf.ngj);                 // Pressure
     T       = Kokkos::View<double**  ,FS_LAYOUT>("T",      cf.ngi,cf.ngj);                 // Temperature
     rho     = Kokkos::View<double**  ,FS_LAYOUT>("rho",    cf.ngi,cf.ngj);                 // Total Density
-    qx      = Kokkos::View<double**  ,FS_LAYOUT>("qx",     cf.ngi,cf.ngj);                 // Heat Fluxes in X direction
-    qy      = Kokkos::View<double**  ,FS_LAYOUT>("qy",     cf.ngi,cf.ngj);                 // Heat Fluxes in X direction
     fluxx   = Kokkos::View<double**  ,FS_LAYOUT>("fluxx",  cf.ngi,cf.ngj);                 // Advective Fluxes in X direction
     fluxy   = Kokkos::View<double**  ,FS_LAYOUT>("fluxy",  cf.ngi,cf.ngj);                 // Advective Fluxes in Y direction
-    stressx = Kokkos::View<double****,FS_LAYOUT>("stressx",cf.ngi,cf.ngj,2,2);             // stress tensor on x faces
-    stressy = Kokkos::View<double****,FS_LAYOUT>("stressy",cf.ngi,cf.ngj,2,2);             // stress tensor on y faces
-    gradRho = Kokkos::View<double*** ,FS_LAYOUT>("gradRho",cf.ngi,cf.ngj,4);               // stress tensor on y faces
-    noise   = Kokkos::View<int   **  ,FS_LAYOUT>("noise"  ,cf.ngi,cf.ngj);
+    if (cf.visc == 1){
+        qx      = Kokkos::View<double**  ,FS_LAYOUT>("qx",     cf.ngi,cf.ngj);                 // Heat Fluxes in X direction
+        qy      = Kokkos::View<double**  ,FS_LAYOUT>("qy",     cf.ngi,cf.ngj);                 // Heat Fluxes in X direction
+        stressx = Kokkos::View<double****,FS_LAYOUT>("stressx",cf.ngi,cf.ngj,2,2);             // stress tensor on x faces
+        stressy = Kokkos::View<double****,FS_LAYOUT>("stressy",cf.ngi,cf.ngj,2,2);             // stress tensor on y faces
+    }
+    if (cf.ceq == 1){
+        gradRho = Kokkos::View<double*** ,FS_LAYOUT>("gradRho",cf.ngi,cf.ngj,4);               // stress tensor on y faces
+    }
+    if (cf.noise == 1){
+        noise   = Kokkos::View<int   **  ,FS_LAYOUT>("noise"  ,cf.ngi,cf.ngj);
+    }
     cd = mcd;
 
     timers["flux"]       = fiestaTimer("Flux Calculation");
@@ -482,17 +488,18 @@ void hydro2dvisc_func::compute(){
         timers["visc"].accumulate();
     }
 
-    double maxS;
-    double maxG;
-    double maxGh;
-    double maxTau1;
-    double maxTau2;
-    double mu;
-    double maxC;
-    double maxCh;
-    double maxT1;
-    double maxT2;
     if (cf.ceq == 1){
+        double maxS;
+        double maxG;
+        double maxGh;
+        double maxTau1;
+        double maxTau2;
+        double mu;
+        double maxC;
+        double maxCh;
+        double maxT1;
+        double maxT2;
+
         timers["ceq"].reset();
         Kokkos::parallel_reduce(cell_pol,maxWaveSpeed2D(var,p,rho,cd), Kokkos::Max<double>(maxS));
         Kokkos::parallel_reduce(cell_pol,maxGradRho2D(gradRho,1), Kokkos::Max<double>(maxG));

@@ -446,7 +446,7 @@ void cgnsWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS
 
     int idx;
 
-    for (int vn=0; vn<cf.nvt+3; ++vn){
+    for (int vn=0; vn<cf.nvt; ++vn){
         snprintf(dName,32,"Var%d",vn);
         if (cf.ndim == 3){
             for (int k=cf.ng; k<cf.nck+cf.ng; ++k){

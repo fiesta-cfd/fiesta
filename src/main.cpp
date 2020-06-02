@@ -22,9 +22,9 @@
 
 using namespace std;
 
-void fnExit1(void){
-    Kokkos::finalize();
-}
+//void fnExit1(void){
+//    Kokkos::finalize();
+//}
 
 int main(int argc, char* argv[]){
 
@@ -70,12 +70,13 @@ int main(int argc, char* argv[]){
 
     // Initialize kokkos and set kokkos finalize as exit function.
     Kokkos::initialize(argc, argv);
-    atexit(fnExit1);
+//    atexit(fnExit1);
 
     // Execute input file and generate simulation configuration
     struct inputConfig cf;
     cf = executeConfiguration(fName);
 
+    {
 #ifndef NOMPI
     // Perform MPI decomposition and assign cells to ranks
     cf = mpi_init(cf);
@@ -235,14 +236,14 @@ int main(int argc, char* argv[]){
         f->compute();
 
         //assign temporary variables
-        mytmp = f->tmp1;
+        //mytmp = f->tmp1;
         myvar = f->var;
         mydvar = f->dvar;
 
         // Second stage update
         Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nvt}),
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
-            myvar(i,j,k,v) = myvar(i,j,k,v) + cf.dt*mydvar(i,j,k,v);
+            myvar(i,j,k,v) = mytmp(i,j,k,v) + cf.dt*mydvar(i,j,k,v);
         });
 
         //post timestep hook
@@ -341,6 +342,10 @@ int main(int argc, char* argv[]){
     }
 
     
+    //delete &m;
+    }
+
+    Kokkos::finalize();
     // finalize mpi
 #ifndef NOMPI
     MPI_Finalize();

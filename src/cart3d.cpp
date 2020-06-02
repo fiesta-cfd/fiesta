@@ -683,7 +683,7 @@ hydroc3d_func::hydroc3d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd
     grid    = Kokkos::View<double****  ,FS_LAYOUT>("coords", cf.ni, cf.nj, cf.nk, 3);
     var     = Kokkos::View<double****  ,FS_LAYOUT>("var",    cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Primary Variable Array
     tmp1    = Kokkos::View<double****  ,FS_LAYOUT>("tmp1",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Arrayr1
-    tmp2    = Kokkos::View<double****  ,FS_LAYOUT>("tmp2",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Array2
+    //tmp2    = Kokkos::View<double****  ,FS_LAYOUT>("tmp2",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Array2
     dvar    = Kokkos::View<double****  ,FS_LAYOUT>("dvar",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // RHS Output
     p       = Kokkos::View<double***   ,FS_LAYOUT>("p",      cf.ngi,cf.ngj,cf.ngk);        // Pressure
     T       = Kokkos::View<double***   ,FS_LAYOUT>("T",      cf.ngi,cf.ngj,cf.ngk);        // Temperature

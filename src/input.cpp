@@ -146,11 +146,13 @@ struct inputConfig executeConfiguration(std::string fName){
     cf.tstart      = getglobint (L, "tstart");
     cf.time        = getglobdbl (L, "time");
     cf.ceq         = getglobdbl (L, "ceq");
-    cf.kap         = getglobdbl (L, "kappa");
-    cf.eps         = getglobdbl (L, "epsilon");
-    cf.alpha       = getglobdbl (L, "alpha");
-    cf.beta        = getglobdbl (L, "beta");
-    cf.betae       = getglobdbl (L, "betae");
+    if (cf.ceq == 1){
+        cf.kap         = getglobdbl (L, "kappa");
+        cf.eps         = getglobdbl (L, "epsilon");
+        cf.alpha       = getglobdbl (L, "alpha");
+        cf.beta        = getglobdbl (L, "beta");
+        cf.betae       = getglobdbl (L, "betae");
+    }
     cf.noise       = getglobint (L, "noise");
     if (cf.noise == 1){
         cf.n_dh        = getglobdbl (L, "n_dh");
