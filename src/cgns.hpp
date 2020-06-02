@@ -3,10 +3,10 @@
 #define CGNS_H
 
 #include "input.hpp"
+#include "writer.hpp"
 extern "C" {
 #include "cgnslib.h"
 #include "pcgnslib.h"
-#include "writer.hpp"
 }
 
 class cgnsWriter : public writer{
