@@ -35,33 +35,30 @@ cmake ../fiesta -DCUDA=on
 ```
 With no options, Fiesta will be built with CPU support.  Use '-DCUDA=on' for nvidia GPUs.  Use '-DOPENMP=on' for openMP support on CPUs.
 
-If desired, specify an installation directory with '-DCMAKE_INSTALL_PREFIX=/path/to/install'.
+If desired, specify an installation directory with '-DCMAKE_INSTALL_PREFIX=/path/to/install'.  If not specified, the executable will be built in the build directory.
 
 Build the code:
 ```
 make -j
 ```
-or
+or, if an installation directory was specified
 ```
 make install -j
 ```
-
-The resulting executable is statically linked, so there is no need to keep the third party libraries in the path, e.g.  "export LD_LIBRARY_PATH" is not necessary. 
 
 ### Run an interactive job
 Copy a sample input file to a scratch directory.
 
 ```
-cd /your/users/scratch/directory
+cd /lustre/scratch3/turquoise/<moniker>
 mkdir fiesta-test && cd fiesta-test
-cp ~/fiesta-dev/fiesta/test/ideal_expansion_3D/fiesta.lua .
+cp ~/fiesta-dev/fiesta/test/ideal_expansion_2D/fiesta.lua .
 ```
 
 Edit the 'fiesta.lua' file to change the number of mpi processes for 4 GPUs.  e.g.:
 ```
 procsx = 2
 procsy = 2
-procsz = 1
 ```
 
 Then run the code with:
