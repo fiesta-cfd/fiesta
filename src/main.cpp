@@ -4,6 +4,8 @@
 #include "mpi.hpp"
 #include "cgns.hpp"
 #include <mpi.h>
+#else
+#include "vtk.hpp"
 #endif
 #include "bc.hpp"
 #include "Kokkos_Core.hpp"
@@ -120,9 +122,12 @@ int main(int argc, char* argv[]){
     }
 
     // Create writer object
-#ifndef NOMPI
+#ifdef NOMPI
+    serialVTKWriter w(cf,f->grid,f->var);
+#else
     cgnsWriter w(cf,f->grid,f->var);
 #endif
+    
 
     // If not restarting, generate initial conditions and grid
     if (cf.restart == 0){
@@ -148,7 +153,7 @@ int main(int argc, char* argv[]){
     
 
     // Read Restart or Write initial conditions
-#ifndef NOMPI
+//#ifndef NOMPI
     if (cf.restart == 1){
         if (cf.rank == 0) cout << c(cFlag,GRE) << "Loading Restart File:" << c(cFlag,NON) << endl;
         loadTimer.reset();
@@ -176,7 +181,7 @@ int main(int argc, char* argv[]){
                 cout << "    Wrote in: " << c(cFlag,CYA) << writeTimer.getf() << c(cFlag,NON) << endl;
     }
 
-#endif
+//#endif
 
     // stop initialization timer
     initTimer.stop();
@@ -257,7 +262,7 @@ int main(int argc, char* argv[]){
                          << c(cFlag,CYA) << right << setw(0) << t+1 << c(cFlag,NON) << "/" << c(cFlag,CYA) << left << setw(0) << cf.tend << c(cFlag,NON) << ", "
                          << c(cFlag,CYA) << right << setw(0) << setprecision(3) << scientific << time << "s" << c(cFlag,NON) << endl;
         }
-#ifndef NOMPI
+//#ifndef NOMPI
         // Write solution file if necessary
         if (cf.write_freq > 0){
             if ((t+1) % cf.write_freq == 0){
@@ -276,7 +281,7 @@ int main(int argc, char* argv[]){
                 f->timers["resWrite"].accumulate();
             }
         }
-#endif
+//#endif
         // Print status chevk if necessary
         if (cf.stat_freq > 0){
             if ((t+1) % cf.stat_freq == 0){
