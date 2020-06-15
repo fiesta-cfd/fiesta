@@ -12,16 +12,17 @@ struct findInitialCell2D{
     FS4D grid;
     FSP2D particles;
     int p;
+    int ng;
 
-    findInitialCell2D(FS4D g_, FSP2D part_, int p_) : grid(g_), particles(part_), p(p_) {}
+    findInitialCell2D(FS4D g_, FSP2D part_, int p_, int ng_) : grid(g_), particles(part_), p(p_), ng(ng_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j) const {
 
         if (particles(p).x >= grid(i,j,0,0) && particles(p).x < grid(i+1,j,0,0)){
             if (particles(p).y >= grid(i,j,0,1) && particles(p).y < grid(i,j+1,0,1)){
-                particles(p).ci = i;
-                particles(p).cj = j;
+                particles(p).ci = i+ng;
+                particles(p).cj = j+ng;
             }
         }
     }
@@ -34,9 +35,10 @@ struct advectParticles2D{
     FSP2D particles;
     double dt;
     int imax,jmax;
+    int ng;
 
-    advectParticles2D(FS4D v_, FS2D r_, FS4D g_, FSP2D part_, double dt_, int im_, int jm_)
-           : var(v_), rho(r_), grid(g_), particles(part_), dt(dt_), imax(im_), jmax(jm_) {}
+    advectParticles2D(FS4D v_, FS2D r_, FS4D g_, FSP2D part_, double dt_, int im_, int jm_, int ng_)
+           : var(v_), rho(r_), grid(g_), particles(part_), dt(dt_), imax(im_), jmax(jm_), ng(ng_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int p) const {
@@ -44,10 +46,12 @@ struct advectParticles2D{
             // get particle local cell indices
             int i = particles(p).ci;
             int j = particles(p).cj;
+            int ii = i+ng;
+            int jj = j+ng;
 
             // compute local cell average velocity
-            double u = var(i,j,0,0)/rho(i,j);
-            double v = var(i,j,0,1)/rho(i,j);
+            double u = var(ii,jj,0,0)/rho(ii,jj);
+            double v = var(ii,jj,0,1)/rho(ii,jj);
             
 
             // calculate position change

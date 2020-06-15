@@ -494,12 +494,12 @@ void hydro2dvisc_func::postStep(){
 
         // advect particles
         timers["padvect"].reset();
-        Kokkos::parallel_for( cf.p_np, advectParticles2D(var,rho,grid,particles,cf.dt,cf.nci,cf.ncj) );
+        Kokkos::parallel_for( cf.p_np, advectParticles2D(var,rho,grid,particles,cf.dt,cf.nci,cf.ncj,cf.ng) );
 
 //        // find new cells
 //        policy_f grid_pol  = policy_f({0,0},{cf.nci, cf.ncj});
 //        for (int p=0; p<cf.p_np; ++p){
-//            Kokkos::parallel_for( grid_pol, findInitialCell2D(grid,particles,p) );
+//            Kokkos::parallel_for( grid_pol, findInitialCell2D(grid,particles,p,cf.ng) );
 //        }
         Kokkos::fence();
         timers["padvect"].accumulate();
@@ -516,11 +516,11 @@ void hydro2dvisc_func::preSim(){
         double ymax = 6.0;
         double xmax = 2.0;
         double dpx = xmax/((double)(cf.p_np-1));
-        double dpy = 2.0/((double)(cf.p_np-1));
+        double dpy = 10.0/((double)(cf.p_np-1));
         for (int p=0; p<cf.p_np; ++p){
             particlesH(p).state = 1;
-            particlesH(p).x = p*dpx;
-            particlesH(p).y = ymax - p*dpy;
+            particlesH(p).x = 1.0;
+            particlesH(p).y = p*dpy;
             //cout << p << " " << particlesH(p).state;
             //cout      << " " << particlesH(p).x;
             //cout      << " " << particlesH(p).y;
@@ -556,9 +556,9 @@ void hydro2dvisc_func::preSim(){
         } // end initial write
 
         // find initial cell id
-        policy_f grid_pol  = policy_f({0,0},{cf.nci, cf.ncj});
+        policy_f grid_pol  = policy_f({0,0},{cf.nci,cf.ncj});
         for (int p=0; p<cf.p_np; ++p){
-            Kokkos::parallel_for( grid_pol, findInitialCell2D(grid,particles,p) );
+            Kokkos::parallel_for( grid_pol, findInitialCell2D(grid,particles,p,cf.ng) );
         }
         Kokkos::fence();
         timers["psetup"].accumulate();
