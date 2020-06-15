@@ -11,6 +11,7 @@
 #include "flux.hpp"
 #include "ceq.hpp"
 #include <iomanip>
+#include <fstream>
 
 struct calculateGravity {
     FS4D dvar;
