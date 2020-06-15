@@ -5,6 +5,7 @@
 #include <locale>
 #include "unistd.h"
 #include "output.hpp"
+#include "Kokkos_Core.hpp"
 
 using namespace std;
 
@@ -57,6 +58,8 @@ void printSplash(int cFlag){
 void printConfig(struct inputConfig cf, int cFlag){
 
     cout.precision(2);
+
+    //Kokkos::print_configuration(cout,1);
 
     cout << "Title: " << c(cFlag,BLU) << cf.title << c(cFlag,NON) << endl;
     cout << "Input File Name: " << c(cFlag,CYA) << "'" << cf.inputFname << "'" << c(cFlag,NON) << endl << endl;
