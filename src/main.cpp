@@ -204,6 +204,7 @@ int main(int argc, char* argv[]){
 
     for (int t=tstart; t<cf.tend; ++t){
         time = time + cf.dt;
+        cf.t = t+1;
 
         //pre timestep hook
         f->preStep();
@@ -224,11 +225,14 @@ int main(int argc, char* argv[]){
         FS4D mydvar = f->dvar;
 
         // First stage update
+        f->timers["rk"].reset();
         Kokkos::parallel_for("Loop1", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nvt}),
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
             mytmp(i,j,k,v) = myvar(i,j,k,v);
             myvar(i,j,k,v) = myvar(i,j,k,v) + 0.5*cf.dt*mydvar(i,j,k,v);
         });
+        Kokkos::fence();
+        f->timers["rk"].accumulate();
 
         // apply boundary conditions
 #ifndef NOMPI
@@ -246,10 +250,13 @@ int main(int argc, char* argv[]){
         mydvar = f->dvar;
 
         // Second stage update
+        f->timers["rk"].reset();
         Kokkos::parallel_for("Loop2", policy_1({0,0,0,0},{cf.ngi, cf.ngj, cf.ngk, cf.nvt}),
                KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v) {
             myvar(i,j,k,v) = mytmp(i,j,k,v) + cf.dt*mydvar(i,j,k,v);
         });
+        Kokkos::fence();
+        f->timers["rk"].accumulate();
 
         //post timestep hook
         f->postStep();

@@ -102,6 +102,7 @@ void serialVTKWriter::writeSolution(struct inputConfig cf, const FS4D gridD, con
         }
     }
     
+    f.flush();
     f.close();
 
     

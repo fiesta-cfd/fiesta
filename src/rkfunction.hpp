@@ -42,8 +42,8 @@ public:
     //std::map<std::string, int> timers;
 
 protected:
+    struct inputConfig& cf;
     Kokkos::View<double*> mcd;
-    struct inputConfig cf;
 };
 
 #endif

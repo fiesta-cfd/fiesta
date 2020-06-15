@@ -10,6 +10,7 @@
 #include "cart2d.hpp"
 #include "flux.hpp"
 #include "ceq.hpp"
+#include <iomanip>
 
 struct calculateGravity {
     FS4D dvar;
@@ -349,6 +350,11 @@ hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*
     if (cf.noise == 1){
         noise   = Kokkos::View<int   **  ,FS_LAYOUT>("noise"  ,cf.ngi,cf.ngj);
     }
+#ifdef NOMPI
+    if (cf.particle == 1){
+        particles = Kokkos::View<particleStruct*>("particles",cf.p_np);
+    }
+#endif
     cd = mcd;
 
     timers["flux"]       = fiestaTimer("Flux Calculation");
@@ -357,6 +363,7 @@ hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*
     timers["solWrite"] = fiestaTimer("Solution Write Time");
     timers["resWrite"] = fiestaTimer("Restart Write Time");
     timers["statCheck"] = fiestaTimer("Status Check");
+    timers["rk"] = fiestaTimer("Runge Stage Update");
     if (cf.gravity == 1){
         timers["gravity"]     = fiestaTimer("Gravity Term");
     }
@@ -371,9 +378,17 @@ hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*
     if (cf.noise == 1){
         timers["noise"]         = fiestaTimer("Noise Removal");
     }
+    if (cf.particle == 1){
+        timers["padvect"] = fiestaTimer("Particle Advection");
+        timers["pwrite"] = fiestaTimer("Particle Write");
+        timers["psetup"] = fiestaTimer("Particle Setup");
+    }
 };
 
-void hydro2dvisc_func::preStep(){}
+void hydro2dvisc_func::preStep(){
+
+}
+
 void hydro2dvisc_func::postStep(){
 
     if (cf.noise == 1){
@@ -422,10 +437,134 @@ void hydro2dvisc_func::postStep(){
         }
         Kokkos::fence();
         timers["noise"].accumulate();
+    } //end noise
+
+#ifdef NOMPI
+    if (cf.particle == 1){
+
+        Kokkos::View<particleStruct*>::HostMirror particlesH = Kokkos::create_mirror_view(particles);
+        Kokkos::deep_copy(particlesH, particles);
+
+        if (cf.write_freq > 0){
+            if ((cf.t) % cf.write_freq == 0){
+                timers["pwrite"].reset();
+                stringstream ss;
+                ss << "particle-" << setw(7) << setfill('0') << cf.t << ".vtk";
+                ofstream f;
+                //f.open("particle.vtk");
+                f.open(ss.str());
+                f << "# vtk DataFile Version 4.2" << endl;
+                f << "Test Particles" << endl;
+                f << "ASCII" << endl;
+                f << "DATASET POLYDATA" << endl;
+                f << "POINTS " << cf.p_np << " float" << endl;
+                for (int p=0; p<cf.p_np; ++p){
+                    f << particlesH(p).x << " " << particlesH(p).y << " " << "0.0" << endl;
+                }
+                f << "VERTICES " << cf.p_np << " " << cf.p_np*2 <<endl;
+                for (int p=0; p<cf.p_np; ++p){
+                    f << "1 " << p << endl;
+                }
+                f << "POINT_DATA " << cf.p_np << endl;
+                f << "SCALARS state float" << endl;
+                f << "LOOKUP_TABLE default" << endl;
+                for (int p=0; p<cf.p_np; ++p){
+                    f << particlesH(p).state << endl;
+                }
+                f.flush();
+                f.close();
+                Kokkos::fence();
+                timers["pwrite"].accumulate();
+                //for (int p=0; p<cf.p_np; ++p){
+                //    cout << p << ":(" << particlesH(p).ci << ", " << particlesH(p).cj << ") ";
+                //}
+                //cout << endl;
+            }
+        } // end particle write
+
+        // calculate density and othe secondary variables
+        policy_f ghost_pol = policy_f({0,0},{cf.ngi, cf.ngj});
+
+        // Calcualte Total Density and Pressure Fields
+        timers["calcSecond"].reset();
+        Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure2dv(var,p,rho,T,cd) );
+        Kokkos::fence();
+        timers["calcSecond"].accumulate();
+
+        // advect particles
+        timers["padvect"].reset();
+        Kokkos::parallel_for( cf.p_np, advectParticles2D(var,rho,grid,particles,cf.dt,cf.nci,cf.ncj) );
+
+        // find new cells
+        policy_f grid_pol  = policy_f({0,0},{cf.nci, cf.ncj});
+        for (int p=0; p<cf.p_np; ++p){
+            Kokkos::parallel_for( grid_pol, findInitialCell2D(grid,particles,p) );
+        }
+        Kokkos::fence();
+        timers["padvect"].accumulate();
     }
+#endif
 
 }
-void hydro2dvisc_func::preSim(){}
+void hydro2dvisc_func::preSim(){
+
+    if (cf.particle == 1){
+        timers["psetup"].reset();
+        Kokkos::View<particleStruct*>::HostMirror particlesH = Kokkos::create_mirror_view(particles);
+
+        double ymax = 6.0;
+        double xmax = 2.0;
+        double dpx = xmax/((double)(cf.p_np-1));
+        double dpy = 2.0/((double)(cf.p_np-1));
+        for (int p=0; p<cf.p_np; ++p){
+            particlesH(p).state = 1;
+            particlesH(p).x = p*dpx;
+            particlesH(p).y = ymax - p*dpy;
+            //cout << p << " " << particlesH(p).state;
+            //cout      << " " << particlesH(p).x;
+            //cout      << " " << particlesH(p).y;
+            //cout << endl;
+        }
+
+        Kokkos::deep_copy(particles, particlesH);
+
+        if (cf.write_freq > 0){
+            stringstream ss;
+            ss << "particle-" << setw(7) << setfill('0') << cf.t << ".vtk";
+            ofstream f;
+            //f.open("particle.vtk");
+            f.open(ss.str());
+            f << "# vtk DataFile Version 4.2" << endl;
+            f << "Test Particles" << endl;
+            f << "ASCII" << endl;
+            f << "DATASET POLYDATA" << endl;
+            f << "POINTS " << cf.p_np << " float" << endl;
+            for (int p=0; p<cf.p_np; ++p){
+                f << particlesH(p).x << " " << particlesH(p).y << " " << "0.0" << endl;
+            }
+            f << "VERTICES " << cf.p_np << " " << cf.p_np*2 <<endl;
+            for (int p=0; p<cf.p_np; ++p){
+                f << "1 " << p << endl;
+            }
+            f << "POINT_DATA " << cf.p_np << endl;
+            f << "SCALARS state float" << endl;
+            f << "LOOKUP_TABLE default" << endl;
+            for (int p=0; p<cf.p_np; ++p){
+                f << particlesH(p).state << endl;
+            }
+        } // end initial write
+
+        // find initial cell id
+        policy_f grid_pol  = policy_f({0,0},{cf.nci, cf.ncj});
+        for (int p=0; p<cf.p_np; ++p){
+            Kokkos::parallel_for( grid_pol, findInitialCell2D(grid,particles,p) );
+        }
+        Kokkos::fence();
+        timers["psetup"].accumulate();
+    }
+        
+
+}
 void hydro2dvisc_func::postSim(){}
 
 

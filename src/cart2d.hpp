@@ -3,6 +3,7 @@
 #include "rkfunction.hpp"
 #include "Kokkos_Core.hpp"
 #include "noise.hpp"
+#include "particle.hpp"
 
 class hydro2dvisc_func : public rk_func {
 
@@ -27,4 +28,6 @@ public:
     FS3D gradRho;
     FS2D_I noise;          // Pressure
     FS1D cd;
+//    Kokkos::View<particleStruct*> particles;
+    FSP2D particles;
 };

@@ -144,6 +144,7 @@ struct inputConfig executeConfiguration(std::string fName){
     std::string scheme(getglobstr (L, "scheme"));
     std::string title(getglobstr (L, "title"));
     cf.tstart      = getglobint (L, "tstart");
+    cf.t = cf.tstart;
     cf.time        = getglobdbl (L, "time");
     cf.ceq         = getglobdbl (L, "ceq");
     if (cf.ceq == 1){
@@ -167,6 +168,10 @@ struct inputConfig executeConfiguration(std::string fName){
         cf.zPer        = getglobint (L, "zPer" );
         cf.bcH         = getglobint (L, "bcZmin" );
         cf.bcF         = getglobint (L, "bcZmax" );
+    }
+    cf.particle        = getglobint (L, "particle");
+    if (cf.particle == 1){
+        cf.p_np        = getglobint (L, "p_np" );
     }
     
 
