@@ -64,10 +64,26 @@ struct advectParticles2D{
             if (particles(p).y+dy > grid(i,jmax,0,1))
                 particles(p).state = 0;
 
+            // move particle
             particles(p).x += dx;
             particles(p).y += dy;
 
-            
+            // check if particle moved to new cell
+            if (particles(p).x < grid(i,j,0,0)){
+                particles(p).ci -= 1;
+                if (particles(p).y < grid(i,j,0,1)){
+                    particles(p).cj -= 1;
+                }else if (particles(p).y >= grid(i,j+1,0,1)){
+                    particles(p).cj += 1;
+                }
+            }else if (particles(p).x >= grid(i+1,j,0,0)){
+                particles(p).ci += 1;
+                if (particles(p).y < grid(i,j,0,1)){
+                    particles(p).cj -= 1;
+                }else if (particles(p).y >= grid(i,j+1,0,1)){
+                    particles(p).cj += 1;
+                }
+            }
         }
     }
 };

@@ -496,11 +496,11 @@ void hydro2dvisc_func::postStep(){
         timers["padvect"].reset();
         Kokkos::parallel_for( cf.p_np, advectParticles2D(var,rho,grid,particles,cf.dt,cf.nci,cf.ncj) );
 
-        // find new cells
-        policy_f grid_pol  = policy_f({0,0},{cf.nci, cf.ncj});
-        for (int p=0; p<cf.p_np; ++p){
-            Kokkos::parallel_for( grid_pol, findInitialCell2D(grid,particles,p) );
-        }
+//        // find new cells
+//        policy_f grid_pol  = policy_f({0,0},{cf.nci, cf.ncj});
+//        for (int p=0; p<cf.p_np; ++p){
+//            Kokkos::parallel_for( grid_pol, findInitialCell2D(grid,particles,p) );
+//        }
         Kokkos::fence();
         timers["padvect"].accumulate();
     }
