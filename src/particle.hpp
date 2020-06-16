@@ -93,8 +93,8 @@ struct advectParticles2D{
             // interpolate to x on top and bottom edges
             double Ru1 = ((x2-x)/(x2-x1))*Qu11 + ((x-x1)/(x2-x1))*Qu12; //top edge u
             double Rv1 = ((x2-x)/(x2-x1))*Qv11 + ((x-x1)/(x2-x1))*Qv12; //top edge v
-            double Rv2 = ((x2-x)/(x2-x1))*Qv22 + ((x-x1)/(x2-x1))*Qv22; //bottom edge u
-            double Ru2 = ((x2-x)/(x2-x1))*Qu22 + ((x-x1)/(x2-x1))*Qu22; //bottom edge v
+            double Rv2 = ((x2-x)/(x2-x1))*Qv21 + ((x-x1)/(x2-x1))*Qv22; //bottom edge u
+            double Ru2 = ((x2-x)/(x2-x1))*Qu21 + ((x-x1)/(x2-x1))*Qu22; //bottom edge v
             // interpolate to y
             double lu = ((y2-y)/(y2-y1))*Ru2 + ((y-y1)/(y2-y1))*Ru1;
             double lv = ((y2-y)/(y2-y1))*Rv2 + ((y-y1)/(y2-y1))*Rv1;
