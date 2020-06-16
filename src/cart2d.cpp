@@ -329,7 +329,7 @@ struct applyViscousTerm2dv {
 
 hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){
     
-    grid    = Kokkos::View<double****,FS_LAYOUT>("coords", cf.ni+2*cf.ng, cf.nj+2*cf.ng, cf.nk+2*cf.ng, 3);
+    grid    = Kokkos::View<double****,FS_LAYOUT>("coords", cf.ni, cf.nj, cf.nk, 3);
     var     = Kokkos::View<double****,FS_LAYOUT>("var",    cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Primary Variable Array
     tmp1    = Kokkos::View<double****,FS_LAYOUT>("tmp1",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Arrayr1
     //tmp2    = Kokkos::View<double****,FS_LAYOUT>("tmp2",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Array2
@@ -472,6 +472,16 @@ void hydro2dvisc_func::postStep(){
                 for (int p=0; p<cf.p_np; ++p){
                     f << particlesH(p).state << endl;
                 }
+                f << "SCALARS ci float" << endl;
+                f << "LOOKUP_TABLE default" << endl;
+                for (int p=0; p<cf.p_np; ++p){
+                    f << particlesH(p).ci << endl;
+                }
+                f << "SCALARS cj float" << endl;
+                f << "LOOKUP_TABLE default" << endl;
+                for (int p=0; p<cf.p_np; ++p){
+                    f << particlesH(p).cj << endl;
+                }
                 f.flush();
                 f.close();
                 Kokkos::fence();
@@ -516,16 +526,24 @@ void hydro2dvisc_func::preSim(){
         double ymax = 6.0;
         double xmax = 2.0;
         double dpx = xmax/((double)(cf.p_np-1));
-        double dpy = 10.0/((double)(cf.p_np-1));
+        double dpy = 9.0/((double)(cf.p_np-1));
         for (int p=0; p<cf.p_np; ++p){
             particlesH(p).state = 1;
             particlesH(p).x = 1.0;
-            particlesH(p).y = p*dpy;
+            particlesH(p).y = 0.5+p*dpy;
             //cout << p << " " << particlesH(p).state;
             //cout      << " " << particlesH(p).x;
             //cout      << " " << particlesH(p).y;
             //cout << endl;
         }
+
+        // find initial cell id
+        policy_f grid_pol  = policy_f({0,0},{cf.nci,cf.ncj});
+        for (int p=0; p<cf.p_np; ++p){
+            Kokkos::parallel_for( grid_pol, findInitialCell2D(grid,particles,p,cf.ng) );
+        }
+        Kokkos::fence();
+        timers["psetup"].accumulate();
 
         Kokkos::deep_copy(particles, particlesH);
 
@@ -553,15 +571,17 @@ void hydro2dvisc_func::preSim(){
             for (int p=0; p<cf.p_np; ++p){
                 f << particlesH(p).state << endl;
             }
+            f << "SCALARS ci float" << endl;
+            f << "LOOKUP_TABLE default" << endl;
+            for (int p=0; p<cf.p_np; ++p){
+                f << particlesH(p).ci << endl;
+            }
+            f << "SCALARS cj float" << endl;
+            f << "LOOKUP_TABLE default" << endl;
+            for (int p=0; p<cf.p_np; ++p){
+                f << particlesH(p).cj << endl;
+            }
         } // end initial write
-
-        // find initial cell id
-        policy_f grid_pol  = policy_f({0,0},{cf.nci,cf.ncj});
-        for (int p=0; p<cf.p_np; ++p){
-            Kokkos::parallel_for( grid_pol, findInitialCell2D(grid,particles,p,cf.ng) );
-        }
-        Kokkos::fence();
-        timers["psetup"].accumulate();
     }
         
 
