@@ -493,7 +493,7 @@ void hydro2dvisc_func::postStep(){
             }
         } // end particle write
 
-        // calculate density and othe secondary variables
+        // execution policy for all cells including ghost cells
         policy_f ghost_pol = policy_f({0,0},{cf.ngi, cf.ngj});
 
         // Calcualte Total Density and Pressure Fields
@@ -504,13 +504,7 @@ void hydro2dvisc_func::postStep(){
 
         // advect particles
         timers["padvect"].reset();
-        Kokkos::parallel_for( cf.p_np, advectParticles2D(var,rho,grid,particles,cf.dt,cf.nci,cf.ncj,cf.ng) );
-
-//        // find new cells
-//        policy_f grid_pol  = policy_f({0,0},{cf.nci, cf.ncj});
-//        for (int p=0; p<cf.p_np; ++p){
-//            Kokkos::parallel_for( grid_pol, findInitialCell2D(grid,particles,p,cf.ng) );
-//        }
+        Kokkos::parallel_for( cf.p_np, advectParticles2D(var,rho,grid,particles,cf.dt,cf.ng) );
         Kokkos::fence();
         timers["padvect"].accumulate();
     }
