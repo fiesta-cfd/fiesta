@@ -329,7 +329,7 @@ struct applyViscousTerm2dv {
 
 hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){
     
-    grid    = Kokkos::View<double****,FS_LAYOUT>("coords", cf.ni, cf.nj, cf.nk, 3);
+    grid    = Kokkos::View<double****,FS_LAYOUT>("coords", cf.ni+1, cf.nj+1, cf.nk, 3);
     var     = Kokkos::View<double****,FS_LAYOUT>("var",    cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Primary Variable Array
     tmp1    = Kokkos::View<double****,FS_LAYOUT>("tmp1",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Arrayr1
     //tmp2    = Kokkos::View<double****,FS_LAYOUT>("tmp2",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Array2
@@ -530,6 +530,7 @@ void hydro2dvisc_func::preSim(){
             //cout      << " " << particlesH(p).y;
             //cout << endl;
         }
+        Kokkos::deep_copy(particles, particlesH);
 
         // find initial cell id
         policy_f grid_pol  = policy_f({0,0},{cf.nci,cf.ncj});
@@ -539,7 +540,6 @@ void hydro2dvisc_func::preSim(){
         Kokkos::fence();
         timers["psetup"].accumulate();
 
-        Kokkos::deep_copy(particles, particlesH);
 
         if (cf.write_freq > 0){
             stringstream ss;
@@ -577,8 +577,6 @@ void hydro2dvisc_func::preSim(){
             }
         } // end initial write
     }
-        
-
 }
 void hydro2dvisc_func::postSim(){}
 
