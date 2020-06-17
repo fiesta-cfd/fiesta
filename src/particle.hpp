@@ -1,14 +1,15 @@
 #include "fiesta.hpp"
 
 struct particleStruct {
-    int ci,cj;
-    double x,y;
-    int state;
+    int ci,cj;  // particle cell index
+    double x,y; // particle position
+    int state; // particle state (1=enabled, 0=disabled)
 };
 
-typedef typename Kokkos::View<particleStruct*> FSP2D;
+typedef typename Kokkos::View<particleStruct*> FSP2D; // kokkos typename for array or particle structs
 
 struct findInitialCell2D{
+    // functor for doing initial cell search for particles created by position
     FS4D grid;
     FSP2D particles;
     int p;
@@ -31,6 +32,7 @@ struct findInitialCell2D{
 };
 
 struct advectParticles2D{
+    // functor for mocing particles and finding their new cells and states
     FS4D var;
     FS2D rho;
     FS4D grid;
