@@ -1,17 +1,17 @@
 struct computeFluxWeno2D {
     FS4D var;
     FS2D p;
+    FS3D vel;
     FS2D rho;
-    FS2D wenox;
-    FS2D wenoy;
-    Kokkos::View<double*> cd;
+    FS2D fluxx;
+    FS2D fluxy;
+    //Kokkos::View<double*> cd;
+    FS1D cd;
     int v;
     double eps = 0.000001;
 
-    computeFluxWeno2D (FS4D var_, FS2D p_, FS2D rho_,
-                         FS2D wenox_, FS2D wenoy_, Kokkos::View<double*> cd_, int v_)
-                         : var(var_), p(p_), rho(rho_),
-                           wenox(wenox_), wenoy(wenoy_), cd(cd_), v(v_) {}
+    computeFluxWeno2D (FS4D var_, FS2D p_, FS2D r_, FS3D u_, FS2D fx_, FS2D fy_, FS1D cd_, int v_)
+                      : var(var_), p(p_), rho(r_), vel(u_), fluxx(fx_), fluxy(fy_), cd(cd_), v(v_) {}
     
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j) const {
@@ -23,11 +23,8 @@ struct computeFluxWeno2D {
 
         //calculate cell face velocities (in positive direction) with 4th order interpolation
         //velocity is momentum divided by total density
-        ur = ( -     var(i+2,j,0,0)/rho(i+2,j) + 7.0*var(i+1,j,0,0)/rho(i+1,j)
-               + 7.0*var(i  ,j,0,0)/rho(i  ,j) -     var(i-1,j,0,0)/rho(i-1,j) )/12.0;
-
-        vr = ( -     var(i,j+2,0,1)/rho(i,j+2) + 7.0*var(i,j+1,0,1)/rho(i,j+1)
-               + 7.0*var(i,j  ,0,1)/rho(i,j  ) -     var(i,j-1,0,1)/rho(i,j-1) )/12.0;
+        ur = ( -vel(i+2,j,0) + 7.0*vel(i+1,j,0) + 7.0*vel(i,j,0) - vel(i-1,j,0) )/12.0;
+        vr = ( -vel(i,j+2,1) + 7.0*vel(i,j+1,1) + 7.0*vel(i,j,1) - vel(i,j-1,1) )/12.0;
 
         //for each direction
         for (int idx=0; idx<2; ++idx){
@@ -100,10 +97,10 @@ struct computeFluxWeno2D {
 
             //calculate weno flux
             if (idx == 0){
-                wenox(i,j) = ur*w/dx;
+                fluxx(i,j) = ur*w/dx;
             }
             if (idx == 1) {
-                wenoy(i,j) = vr*w/dy;
+                fluxy(i,j) = vr*w/dy;
             }
         }
     }

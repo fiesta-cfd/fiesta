@@ -66,6 +66,7 @@ struct inputConfig {
     int noise,n_nt;
     int particle, p_np;
     int t;
+    int grid;
 
     int out_freq, stat_freq, write_freq, restart_freq;
 };

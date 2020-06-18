@@ -12,6 +12,7 @@
 #include "debug.hpp"
 #include "cart3d.hpp"
 #include "cart2d.hpp"
+#include "gen2d.hpp"
 #include "rkfunction.hpp"
 #include <iostream>
 #include <cstdio>
@@ -118,7 +119,11 @@ int main(int argc, char* argv[]){
     if (cf.ndim == 3){
         f = new hydroc3d_func(cf,cd);
     }else{
-        f = new hydro2dvisc_func(cf,cd);
+        if (cf.grid == 1){
+            f = new gen2d_func(cf,cd);
+        }else{
+            f = new cart2d_func(cf,cd);
+        }
     }
 
     // Create writer object

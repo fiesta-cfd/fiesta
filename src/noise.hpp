@@ -1,3 +1,6 @@
+#ifndef NOISE_HPP
+#define NOISE_HPP
+
 struct detectNoise2D {
     FS4D var;
     FS2D_I noise;
@@ -140,3 +143,4 @@ struct updateNoise2D {
         
     }
 };
+#endif

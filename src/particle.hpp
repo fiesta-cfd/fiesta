@@ -1,3 +1,6 @@
+#ifndef PARTICLE_HPP
+#define PARTICLE_HPP
+
 #include "fiesta.hpp"
 
 struct particleStruct {
@@ -134,3 +137,4 @@ struct advectParticles2D{
         }
     }
 };
+#endif

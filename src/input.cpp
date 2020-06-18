@@ -125,8 +125,6 @@ struct inputConfig executeConfiguration(std::string fName){
     cf.glbl_ncj    = getglobint (L, "nj" );
     cf.ns          = getglobint (L, "ns" );
     cf.dt          = getglobdbl (L, "dt" );
-    cf.dx          = getglobdbl (L, "dx" );
-    cf.dy          = getglobdbl (L, "dy" );
     cf.R           = getglobdbl (L, "R" );
     cf.visc        = getglobdbl (L, "visc" );
     cf.xProcs      = getglobint (L, "procsx");
@@ -143,6 +141,7 @@ struct inputConfig executeConfiguration(std::string fName){
     cf.sfName      = getglobstr (L, "restartName");
     std::string scheme(getglobstr (L, "scheme"));
     std::string title(getglobstr (L, "title"));
+    std::string grid(getglobstr (L, "grid"));
     cf.tstart      = getglobint (L, "tstart");
     cf.t = cf.tstart;
     cf.time        = getglobdbl (L, "time");
@@ -163,7 +162,6 @@ struct inputConfig executeConfiguration(std::string fName){
     }
     if (cf.ndim == 3){
         cf.glbl_nck    = getglobint (L, "nk" );
-        cf.dz          = getglobdbl (L, "dz" );
         cf.zProcs      = getglobint (L, "procsz");
         cf.zPer        = getglobint (L, "zPer" );
         cf.bcH         = getglobint (L, "bcZmin" );
@@ -190,6 +188,21 @@ struct inputConfig executeConfiguration(std::string fName){
         cf.scheme = 2;
     if (scheme.compare("quick")==0)
         cf.scheme = 3;
+
+    if (grid.compare("generalized")==0){
+        cf.grid = 1;
+        cf.dx = 1.0;
+        cf.dy = 1.0;
+        if (cf.ndim == 3)
+            cf.dz = 1.0;
+    }
+    if (grid.compare("cartesian")==0){
+        cf.grid = 0;
+        cf.dx          = getglobdbl (L, "dx" );
+        cf.dy          = getglobdbl (L, "dy" );
+        if (cf.ndim == 3)
+            cf.dz          = getglobdbl (L, "dz" );
+    }
 
     int isnum;
 
@@ -249,10 +262,11 @@ struct inputConfig executeConfiguration(std::string fName){
         cf.zPer = 0;
     }
 
+    // nvt = Number of Variables Total (including c variables)
     cf.nvt = cf.nv;
     if (cf.ceq == 1) cf.nvt += 5;
 
-    /* calculate number of nodes from number of cells */
+    /* calculate number of grid vertices from number of cells */
     cf.glbl_ni = cf.glbl_nci + 1;
     cf.glbl_nj = cf.glbl_ncj + 1;
     cf.glbl_nk = cf.glbl_nck + 1;
@@ -357,42 +371,56 @@ int loadInitialConditions(struct inputConfig cf, const FS4D deviceV){
 }
 
 int loadGrid(struct inputConfig cf, const FS4D deviceV){
-    
-    double z;
-    int isnum;
-    
-    lua_State *L = luaL_newstate(); //Opens Lua
-    luaL_openlibs(L);               //opens the standard libraries
-
-    /* Open and run Lua configuration file */
-    if (luaL_loadfile(L,cf.inputFname.c_str()) || lua_pcall(L,0,0,0))
-        error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
 
     FS4DH hostV = Kokkos::create_mirror_view(deviceV);
-    for (int v=0; v<cf.ndim; ++v){
+
+    if (cf.grid == 1){
+    
+        double z;
+        int isnum;
+        
+        lua_State *L = luaL_newstate(); //Opens Lua
+        luaL_openlibs(L);               //opens the standard libraries
+
+        /* Open and run Lua configuration file */
+        if (luaL_loadfile(L,cf.inputFname.c_str()) || lua_pcall(L,0,0,0))
+            error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
+
+        for (int v=0; v<cf.ndim; ++v){
+            for (int k=0; k<cf.nk; ++k){
+                for (int j=0; j<cf.nj; ++j){
+                    for (int i=0; i<cf.ni; ++i){
+                        lua_getglobal(L,"g");
+                        lua_pushnumber(L,cf.iStart+i);
+                        lua_pushnumber(L,cf.jStart+j);
+                        lua_pushnumber(L,cf.kStart+k);
+                        lua_pushnumber(L,v);
+                        if (lua_pcall(L,4,1,0) != LUA_OK)
+                            error(L, "error running function 'f': %s\n",lua_tostring(L, -1));
+                        z = lua_tonumberx(L,-1,&isnum);
+                        if (!isnum)
+                            error(L, "function 'f' should return a number");
+                        lua_pop(L,1);
+                        
+                        hostV(i,j,k,v) = z;
+                    }
+                }
+            }
+        }
+        
+        lua_close(L);
+        
+    }else{
         for (int k=0; k<cf.nk; ++k){
             for (int j=0; j<cf.nj; ++j){
                 for (int i=0; i<cf.ni; ++i){
-                    lua_getglobal(L,"g");
-                    lua_pushnumber(L,cf.iStart+i);
-                    lua_pushnumber(L,cf.jStart+j);
-                    lua_pushnumber(L,cf.kStart+k);
-                    lua_pushnumber(L,v);
-                    if (lua_pcall(L,4,1,0) != LUA_OK)
-                        error(L, "error running function 'f': %s\n",lua_tostring(L, -1));
-                    z = lua_tonumberx(L,-1,&isnum);
-                    if (!isnum)
-                        error(L, "function 'f' should return a number");
-                    lua_pop(L,1);
-                    
-                    hostV(i,j,k,v) = z;
+                    hostV(i,j,k,0) = i*cf.dx;
+                    hostV(i,j,k,1) = j*cf.dy;
+                    hostV(i,j,k,2) = k*cf.dz;
                 }
             }
         }
     }
-    
-    lua_close(L);
-    
     Kokkos::deep_copy(deviceV,hostV);
     
     return 0;

@@ -93,6 +93,22 @@ struct calculateRhoAndPressure2dv {
     }
 };
 
+struct computeVelocity2D {
+    FS4D var;
+    FS2D rho;
+    FS3D vel;
+
+    computeVelocity2D (FS4D var_, FS2D r_, FS3D v_)
+         : var(var_), rho(r_), vel(v_) {}
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int j) const {
+
+        vel(i,j,0) = var(i,j,0,0)/rho(i,j);
+        vel(i,j,1) = var(i,j,0,1)/rho(i,j);
+    }
+};
+
 
 struct advect2dv {
     
@@ -327,13 +343,13 @@ struct applyViscousTerm2dv {
     }
 };
 
-hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){
+cart2d_func::cart2d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_func(cf_,cd_){
     
     grid    = Kokkos::View<double****,FS_LAYOUT>("coords", cf.ni, cf.nj, cf.nk, 3);
     var     = Kokkos::View<double****,FS_LAYOUT>("var",    cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Primary Variable Array
     tmp1    = Kokkos::View<double****,FS_LAYOUT>("tmp1",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Arrayr1
-    //tmp2    = Kokkos::View<double****,FS_LAYOUT>("tmp2",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Array2
     dvar    = Kokkos::View<double****,FS_LAYOUT>("dvar",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // RHS Output
+    vel     = Kokkos::View<double*** ,FS_LAYOUT>("vel",    cf.ngi,cf.ngj,2);               // velocity
     p       = Kokkos::View<double**  ,FS_LAYOUT>("p",      cf.ngi,cf.ngj);                 // Pressure
     T       = Kokkos::View<double**  ,FS_LAYOUT>("T",      cf.ngi,cf.ngj);                 // Temperature
     rho     = Kokkos::View<double**  ,FS_LAYOUT>("rho",    cf.ngi,cf.ngj);                 // Total Density
@@ -386,11 +402,11 @@ hydro2dvisc_func::hydro2dvisc_func(struct inputConfig &cf_, Kokkos::View<double*
     }
 };
 
-void hydro2dvisc_func::preStep(){
+void cart2d_func::preStep(){
 
 }
 
-void hydro2dvisc_func::postStep(){
+void cart2d_func::postStep(){
 
     if (cf.noise == 1){
         int M = 0;
@@ -511,7 +527,7 @@ void hydro2dvisc_func::postStep(){
 #endif
 
 }
-void hydro2dvisc_func::preSim(){
+void cart2d_func::preSim(){
 
     if (cf.particle == 1){
         timers["psetup"].reset();
@@ -580,10 +596,10 @@ void hydro2dvisc_func::preSim(){
         
 
 }
-void hydro2dvisc_func::postSim(){}
+void cart2d_func::postSim(){}
 
 
-void hydro2dvisc_func::compute(){
+void cart2d_func::compute(){
 
     policy_f ghost_pol = policy_f({0,0},{cf.ngi, cf.ngj});
     policy_f cell_pol  = policy_f({cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng});
@@ -593,6 +609,7 @@ void hydro2dvisc_func::compute(){
     // Calcualte Total Density and Pressure Fields
     timers["calcSecond"].reset();
     Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure2dv(var,p,rho,T,cd) );
+    Kokkos::parallel_for( ghost_pol, computeVelocity2D(var,rho,vel) );
     Kokkos::fence();
     timers["calcSecond"].accumulate();
 
@@ -604,7 +621,7 @@ void hydro2dvisc_func::compute(){
         }else if (cf.scheme == 2){
             Kokkos::parallel_for( face_pol, computeFluxCentered2D(var,p,rho,fluxx,fluxy,cd,v) );
         }else{
-            Kokkos::parallel_for( face_pol, computeFluxWeno2D(var,p,rho,fluxx,fluxy,cd,v) );
+            Kokkos::parallel_for( face_pol, computeFluxWeno2D(var,p,rho,vel,fluxx,fluxy,cd,v) );
         }
         Kokkos::fence();
         Kokkos::parallel_for( cell_pol, advect2dv(dvar,fluxx,fluxy,cd,v) );
