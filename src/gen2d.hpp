@@ -28,4 +28,24 @@ public:
     FS2D J;
 //    Kokkos::View<particleStruct*> particles;
     FSP2D particles;
+
+#ifndef NOMPI
+    FS4D ls;
+    FS4D lr;
+    FS4D rs;
+    FS4D rr;
+    FS4D bs;
+    FS4D br;
+    FS4D ts;
+    FS4D tr;
+    
+    FS4DH lsH;
+    FS4DH lrH;
+    FS4DH rsH;
+    FS4DH rrH;
+    FS4DH bsH;
+    FS4DH brH;
+    FS4DH tsH;
+    FS4DH trH;
+#endif
 };

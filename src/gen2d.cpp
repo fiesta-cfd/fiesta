@@ -66,19 +66,16 @@ struct computeTransformedVelocity2D {
     FS4D var;
     FS4D metrics;
     FS2D rho;
-    FS2D J;
     FS3D vel;
 
-    computeTransformedVelocity2D (FS4D var_, FS4D m_, FS2D j_, FS2D r_, FS3D v_)
-         : var(var_), metrics(m_), J(j_), rho(r_), vel(v_) {}
+    computeTransformedVelocity2D (FS4D var_, FS4D m_, FS2D r_, FS3D v_)
+         : var(var_), metrics(m_), rho(r_), vel(v_) {}
 
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j) const {
 
-        vel(i,j,0) = ( metrics(i,j,0,0)*var(i,j,0,0)/rho(i,j) + metrics(i,j,0,1)*var(i,j,0,1)/rho(i,j) );///J(i,j);
-        vel(i,j,1) = ( metrics(i,j,1,0)*var(i,j,0,0)/rho(i,j) + metrics(i,j,1,1)*var(i,j,0,1)/rho(i,j) );///J(i,j);
-        //printf("%d, %d, %f, %f, %f, %f\n",i,j, metrics(i,j,0,0), metrics(i,j,0,1), metrics(i,j,1,0), metrics(i,j,1,1));
-        //printf("%d, %d, %f, %f\n",i,j,vel(i,j,0),vel(i,j,1));
+        vel(i,j,0) = ( metrics(i,j,0,0)*var(i,j,0,0)/rho(i,j) + metrics(i,j,0,1)*var(i,j,0,1)/rho(i,j) );
+        vel(i,j,1) = ( metrics(i,j,1,0)*var(i,j,0,0)/rho(i,j) + metrics(i,j,1,1)*var(i,j,0,1)/rho(i,j) );
     }
 };
 
@@ -86,14 +83,13 @@ struct computeTransformedVelocity2D {
 struct advectGen2D {
     
     FS4D dvar;
-    FS2D J;
     FS2D fluxx;
     FS2D fluxy;
-    Kokkos::View<double*> cd;
+    FS1D cd;
     int v;
 
-    advectGen2D (FS4D dvar_, FS2D j_, FS2D fx_, FS2D fy_, Kokkos::View<double*> cd_, int v_)
-        : dvar(dvar_), J(j_), fluxx(fx_), fluxy(fy_), cd(cd_), v(v_) {}
+    advectGen2D (FS4D dvar_, FS2D fx_, FS2D fy_, FS1D cd_, int v_)
+        : dvar(dvar_), fluxx(fx_), fluxy(fy_), cd(cd_), v(v_) {}
     
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j) const {
@@ -103,8 +99,6 @@ struct advectGen2D {
         a = -( (fluxx(i,j) - fluxx(i-1,j))
                           +(fluxy(i,j) - fluxy(i,j-1)) );
 
-        //if (i==2002 && j==3)
-        //    printf("adv %d: %f\n",v,a);
         dvar(i,j,0,v) = a;
     }
 };
@@ -112,12 +106,12 @@ struct advectGen2D {
 struct applyGenPressure2D {
     
     FS4D dvar;
-    FS2D p,J;
+    FS2D p;
     FS4D m;
     FS1D cd;
 
-    applyGenPressure2D (FS4D dvar_, FS4D m_, FS2D j_, FS2D p_, FS1D cd_)
-        : dvar(dvar_), m(m_), J(j_), p(p_), cd(cd_) {}
+    applyGenPressure2D (FS4D dvar_, FS4D m_, FS2D p_, FS1D cd_)
+        : dvar(dvar_), m(m_), p(p_), cd(cd_) {}
     
     KOKKOS_INLINE_FUNCTION
     void operator()(const int i, const int j) const {
@@ -127,21 +121,13 @@ struct applyGenPressure2D {
         double dxipxiy;
         double detpety;
 
-        //dxipxix = ( p(i-2,j)*m(i-2,j,0,0)/J(i-2,j) - 8.0*p(i-1,j)*m(i-1,j,0,0)/J(i-1,j) + 8.0*p(i+1,j)*m(i+1,j,0,0)/J(i+1,j) - p(i+2,j)*m(i+2,j,0,0)/J(i+2,j) )/(12.0);
-        //detpetx = ( p(i,j-2)*m(i,j-2,1,0)/J(i,j-2) - 8.0*p(i,j-1)*m(i,j-1,1,0)/J(i,j-1) + 8.0*p(i,j+1)*m(i,j+1,1,0)/J(i,j+1) - p(i,j+2)*m(i,j+2,1,0)/J(i,j+2) )/(12.0);
-        //dxipxiy = ( p(i-2,j)*m(i-2,j,0,1)/J(i-2,j) - 8.0*p(i-1,j)*m(i-1,j,0,1)/J(i-1,j) + 8.0*p(i+1,j)*m(i+1,j,0,1)/J(i+1,j) - p(i+2,j)*m(i+2,j,0,1)/J(i+2,j) )/(12.0);
-        //detpety = ( p(i,j-2)*m(i,j-2,1,1)/J(i,j-2) - 8.0*p(i,j-1)*m(i,j-1,1,1)/J(i,j-1) + 8.0*p(i,j+1)*m(i,j+1,1,1)/J(i,j+1) - p(i,j+2)*m(i,j+2,1,1)/J(i,j+2) )/(12.0);
-
         dxipxix = ( p(i-2,j)*m(i-2,j,0,0) - 8.0*p(i-1,j)*m(i-1,j,0,0) + 8.0*p(i+1,j)*m(i+1,j,0,0) - p(i+2,j)*m(i+2,j,0,0) )/(12.0);
         detpetx = ( p(i,j-2)*m(i,j-2,1,0) - 8.0*p(i,j-1)*m(i,j-1,1,0) + 8.0*p(i,j+1)*m(i,j+1,1,0) - p(i,j+2)*m(i,j+2,1,0) )/(12.0);
         dxipxiy = ( p(i-2,j)*m(i-2,j,0,1) - 8.0*p(i-1,j)*m(i-1,j,0,1) + 8.0*p(i+1,j)*m(i+1,j,0,1) - p(i+2,j)*m(i+2,j,0,1) )/(12.0);
         detpety = ( p(i,j-2)*m(i,j-2,1,1) - 8.0*p(i,j-1)*m(i,j-1,1,1) + 8.0*p(i,j+1)*m(i,j+1,1,1) - p(i,j+2)*m(i,j+2,1,1) )/(12.0);
 
-        //dvar(i,j,0,0) = dvar(i,j,0,0) - (dxipxix + detpetx);
-        //dvar(i,j,0,1) = dvar(i,j,0,1) - (dxipxiy + detpety);
         dvar(i,j,0,0) = ( dvar(i,j,0,0) - (dxipxix + detpetx) );
         dvar(i,j,0,1) = ( dvar(i,j,0,1) - (dxipxiy + detpety) );
-        //printf("%d, %d, %f, %f\n",i,j,dvar(i,j,0,0),dvar(i,j,0,1));
     }
 };
 
@@ -149,7 +135,6 @@ gen2d_func::gen2d_func(struct inputConfig &cf_, Kokkos::View<double*> & cd_):rk_
     
     grid    = Kokkos::View<double****,FS_LAYOUT>("coords", cf.ni, cf.nj, cf.nk, 3);
     metrics = Kokkos::View<double****,FS_LAYOUT>("metrics", cf.ngi, cf.ngj, 2, 2);
-    J       = Kokkos::View<double**  ,FS_LAYOUT>("jacobian", cf.ngi, cf.ngj);
     var     = Kokkos::View<double****,FS_LAYOUT>("var",    cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Primary Variable Array
     tmp1    = Kokkos::View<double****,FS_LAYOUT>("tmp1",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // Temporary Variable Arrayr1
     dvar    = Kokkos::View<double****,FS_LAYOUT>("dvar",   cf.ngi,cf.ngj,cf.ngk,cf.nvt); // RHS Output
@@ -193,12 +178,6 @@ void gen2d_func::preStep(){
 
 void gen2d_func::postStep(){
 
-    //policy_f3 var_pol = policy_f3({cf.ng,cf.ng,0},{cf.ngi-cf.ng,cf.ngj-cf.ng,cf.nv});
-    //Kokkos::parallel_for("postJac",var_pol,KOKKOS_LAMBDA (const int i, const int j, const int v){
-    //    var(i,j,0,v) = J(i,j)*var(i,j,0,v);
-//  //      printf("%d, %d, %d, %f, %f\n",i,j,v,var(i,j,0,v),J(i,j));
-    //});
-
     if (cf.noise == 1){
         int M = 0;
         int N = 0;
@@ -213,10 +192,6 @@ void gen2d_func::postStep(){
             N = (cf.ncj-1)/2;
         else
             N = cf.ncj/2;
-
-        //double etat = 5.0e-3;
-        //double dh = 5.0e-4;
-        //double doff = 0.1;
 
         policy_f noise_pol = policy_f({0,0},{M,N});
         policy_f cell_pol  = policy_f({cf.ng,cf.ng},{cf.ngi-cf.ng, cf.ngj-cf.ng});
@@ -325,36 +300,115 @@ void gen2d_func::preSim(){
 
     // compute metrics
     timers["calcMetrics"].reset();
-    Kokkos::parallel_for( cell_pol, computeMetrics2D(metrics,J,grid) );
+    Kokkos::parallel_for( cell_pol, computeMetrics2D(metrics,grid) );
+
+#ifndef NOMPI
+    //mpi exchange of metrics
+    ls = Kokkos::View<double****,FS_LAYOUT>("leftSend",cf.ng,cf.ngj,2,2);
+    lr = Kokkos::View<double****,FS_LAYOUT>("leftRecv",cf.ng,cf.ngj,2,2);
+    rs = Kokkos::View<double****,FS_LAYOUT>("rightSend",cf.ng,cf.ngj,2,2);
+    rr = Kokkos::View<double****,FS_LAYOUT>("rightRecv",cf.ng,cf.ngj,2,2);
+    bs = Kokkos::View<double****,FS_LAYOUT>("bottomSend",cf.ngi,cf.ng,2,2);
+    br = Kokkos::View<double****,FS_LAYOUT>("bottomRecv",cf.ngi,cf.ng,2,2);
+    ts = Kokkos::View<double****,FS_LAYOUT>("topSend",cf.ngi,cf.ng,2,2);
+    tr = Kokkos::View<double****,FS_LAYOUT>("topRecv",cf.ngi,cf.ng,2,2);
+    
+    lsH = Kokkos::create_mirror_view(ls);
+    lrH = Kokkos::create_mirror_view(lr);
+    rsH = Kokkos::create_mirror_view(rs);
+    rrH = Kokkos::create_mirror_view(rr);
+    bsH = Kokkos::create_mirror_view(bs);
+    brH = Kokkos::create_mirror_view(br);
+    tsH = Kokkos::create_mirror_view(ts);
+    trH = Kokkos::create_mirror_view(tr);
+
+    policy_f4 xPol = policy_f4({0,0,0,0},{cf.ng,cf.ngj,2,2});
+    policy_f4 yPol = policy_f4({0,0,0,0},{cf.ngi,cf.ng,2,2});
+
+    Kokkos::parallel_for( xPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int l){
+        ls(i,j,k,l) = metrics(cf.ng+i,j,k,l);
+        rs(i,j,k,l) = metrics(cf.nci+i,j,k,l);
+    });
+    Kokkos::parallel_for( yPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int l){
+        bs(i,j,k,l) = metrics(i,cf.ng+j,k,l);
+        ts(i,j,k,l) = metrics(i,cf.ncj+j,k,l);
+    });
+    Kokkos::deep_copy(lsH,ls);
+    Kokkos::deep_copy(rsH,rs);
+    Kokkos::deep_copy(bsH,bs);
+    Kokkos::deep_copy(tsH,ts);
+
+    MPI_Request reqs[8];
+
+    MPI_Isend(lsH.data(), cf.ng*cf.ngj*4, MPI_DOUBLE, cf.xMinus,           0, cf.comm, &reqs[0]);
+    MPI_Irecv(lrH.data(), cf.ng*cf.ngj*4, MPI_DOUBLE, cf.xMinus, MPI_ANY_TAG, cf.comm, &reqs[1]);
+
+    MPI_Isend(rsH.data(), cf.ng*cf.ngj*4, MPI_DOUBLE, cf.xPlus,           0, cf.comm, &reqs[2]);
+    MPI_Irecv(rrH.data(), cf.ng*cf.ngj*4, MPI_DOUBLE, cf.xPlus, MPI_ANY_TAG, cf.comm, &reqs[3]);
+
+    MPI_Isend(bsH.data(), cf.ngi*cf.ng*4, MPI_DOUBLE, cf.yMinus,           0, cf.comm, &reqs[4]);
+    MPI_Irecv(brH.data(), cf.ngi*cf.ng*4, MPI_DOUBLE, cf.yMinus, MPI_ANY_TAG, cf.comm, &reqs[5]);
+
+    MPI_Isend(tsH.data(), cf.ngi*cf.ng*4, MPI_DOUBLE, cf.yPlus,           0, cf.comm, &reqs[6]);
+    MPI_Irecv(trH.data(), cf.ngi*cf.ng*4, MPI_DOUBLE, cf.yPlus, MPI_ANY_TAG, cf.comm, &reqs[7]);
+
+    MPI_Waitall(8, reqs, MPI_STATUS_IGNORE);
+
+    Kokkos::deep_copy(lr,lrH);
+    Kokkos::deep_copy(rr,rrH);
+    Kokkos::deep_copy(br,brH);
+    Kokkos::deep_copy(tr,trH);
+
+    Kokkos::parallel_for( xPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int l){
+        metrics(i,j,k,l) = lr(i,j,k,l);
+        metrics(cf.ngi-cf.ng+i,j,k,l) = rr(i,j,k,l);
+    });
+    Kokkos::parallel_for( yPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int l){
+        metrics(i,j,k,l) = br(i,j,k,l);
+        metrics(i,cf.ngj-cf.ng+j,k,l) = tr(i,j,k,l);
+    });
+#endif
+
+    if (cf.xMinus < 0){
+        Kokkos::parallel_for("metricbcl",policy_f({0,0},{cf.ng,cf.ngi}),
+            KOKKOS_LAMBDA (const int g, const int i){
+                metrics(i,cf.ng-g-1,0,0) = metrics(i,cf.ng+g,0,0);
+                metrics(i,cf.ng-g-1,0,1) = metrics(i,cf.ng+g,0,1);
+                metrics(i,cf.ng-g-1,1,0) = metrics(i,cf.ng+g,1,0);
+                metrics(i,cf.ng-g-1,1,1) = metrics(i,cf.ng+g,1,1);
+        });
+    }
+    if (cf.xPlus < 0){
+        Kokkos::parallel_for("metricbcr",policy_f({0,0},{cf.ng,cf.ngi}),
+            KOKKOS_LAMBDA (const int g, const int i){
+                metrics(i,cf.ngi-1-g,0,0) = metrics(i,cf.nci+g,0,0);
+                metrics(i,cf.ngi-1-g,0,1) = metrics(i,cf.nci+g,0,1);
+                metrics(i,cf.ngi-1-g,1,0) = metrics(i,cf.nci+g,1,0);
+                metrics(i,cf.ngi-1-g,1,1) = metrics(i,cf.nci+g,1,1);
+        });
+    }
+    if (cf.yMinus < 0){
+        Kokkos::parallel_for("metricbcb",policy_f({0,0},{cf.ng,cf.ngj}),
+            KOKKOS_LAMBDA (const int g, const int j){
+                metrics(cf.ng-g-1,j,0,0) = metrics(cf.ng+g,j,0,0);
+                metrics(cf.ng-g-1,j,0,1) = metrics(cf.ng+g,j,0,1);
+                metrics(cf.ng-g-1,j,1,0) = metrics(cf.ng+g,j,1,0);
+                metrics(cf.ng-g-1,j,1,1) = metrics(cf.ng+g,j,1,1);
+        });
+    }
+    if (cf.yPlus < 0){
+        Kokkos::parallel_for("metricbct",policy_f({0,0},{cf.ng,cf.ngj}),
+            KOKKOS_LAMBDA (const int g, const int j){
+                metrics(cf.ngj-1-g,j,0,0) = metrics(cf.ncj+g,j,0,0);
+                metrics(cf.ngj-1-g,j,0,1) = metrics(cf.ncj+g,j,0,1);
+                metrics(cf.ngj-1-g,j,1,0) = metrics(cf.ncj+g,j,1,0);
+                metrics(cf.ngj-1-g,j,1,1) = metrics(cf.ncj+g,j,1,1);
+        });
+    }
+
+
     Kokkos::fence();
     timers["calcMetrics"].accumulate();
-
-    Kokkos::parallel_for("metricbcx",policy_f({0,0},{cf.ng,cf.ngi}),
-        KOKKOS_LAMBDA (const int g, const int i){
-            metrics(i,cf.ng-g-1,0,0) = metrics(i,cf.ng+g,0,0);
-            metrics(i,cf.ng-g-1,0,1) = metrics(i,cf.ng+g,0,1);
-            metrics(i,cf.ng-g-1,1,0) = metrics(i,cf.ng+g,1,0);
-            metrics(i,cf.ng-g-1,1,1) = metrics(i,cf.ng+g,1,1);
-            J(i,cf.ng-g-1) = J(i,cf.ng+g);
-            metrics(i,cf.ngi-1-g,0,0) = metrics(i,cf.nci+g,0,0);
-            metrics(i,cf.ngi-1-g,0,1) = metrics(i,cf.nci+g,0,1);
-            metrics(i,cf.ngi-1-g,1,0) = metrics(i,cf.nci+g,1,0);
-            metrics(i,cf.ngi-1-g,1,1) = metrics(i,cf.nci+g,1,1);
-            J(i,cf.ngi-1-g) = J(i,cf.nci+g);
-    });
-    Kokkos::parallel_for("metricbcy",policy_f({0,0},{cf.ng,cf.ngj}),
-        KOKKOS_LAMBDA (const int g, const int j){
-            metrics(cf.ng-g-1,j,0,0) = metrics(cf.ng+g,j,0,0);
-            metrics(cf.ng-g-1,j,0,1) = metrics(cf.ng+g,j,0,1);
-            metrics(cf.ng-g-1,j,1,0) = metrics(cf.ng+g,j,1,0);
-            metrics(cf.ng-g-1,j,1,1) = metrics(cf.ng+g,j,1,1);
-            J(cf.ng-g-1,j) = J(cf.ng+g,j);
-            metrics(cf.ngj-1-g,j,0,0) = metrics(cf.ncj+g,j,0,0);
-            metrics(cf.ngj-1-g,j,0,1) = metrics(cf.ncj+g,j,0,1);
-            metrics(cf.ngj-1-g,j,1,0) = metrics(cf.ncj+g,j,1,0);
-            metrics(cf.ngj-1-g,j,1,1) = metrics(cf.ncj+g,j,1,1);
-            J(cf.ngj-1-g,j) = J(cf.ncj+g,j);
-    });
 
     if (cf.particle == 1){
         timers["psetup"].reset();
@@ -436,7 +490,7 @@ void gen2d_func::compute(){
     // Calcualte Total Density and Pressure Fields
     timers["calcSecond"].reset();
     Kokkos::parallel_for( ghost_pol, calculateRhoAndPressure2dv(var,p,rho,T,cd) );
-    Kokkos::parallel_for( ghost_pol, computeTransformedVelocity2D(var,metrics,J,rho,tvel) );
+    Kokkos::parallel_for( ghost_pol, computeTransformedVelocity2D(var,metrics,rho,tvel) );
     Kokkos::fence();
     timers["calcSecond"].accumulate();
 
@@ -451,14 +505,14 @@ void gen2d_func::compute(){
             Kokkos::parallel_for( face_pol, computeFluxWeno2D(var,p,rho,tvel,fluxx,fluxy,cd,v) );
         }
         Kokkos::fence();
-        Kokkos::parallel_for( cell_pol, advectGen2D(dvar,J,fluxx,fluxy,cd,v) );
+        Kokkos::parallel_for( cell_pol, advectGen2D(dvar,fluxx,fluxy,cd,v) );
         Kokkos::fence();
         timers["flux"].accumulate();
     }
 
     // Apply Pressure Gradient Term
     timers["pressgrad"].reset();
-    Kokkos::parallel_for( cell_pol, applyGenPressure2D(dvar,metrics,J,p,cd) );
+    Kokkos::parallel_for( cell_pol, applyGenPressure2D(dvar,metrics,p,cd) );
     Kokkos::fence();
     timers["pressgrad"].accumulate();
 }
