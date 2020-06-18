@@ -1,3 +1,5 @@
+#ifndef CEQ_HPP
+#define CEQ_HPP
 struct maxCvar2D {
     
     FS4D dvar;
@@ -374,3 +376,4 @@ struct applyCeq2D {
         //    printf("### DEBUG ### %e: %e - %e\n",aTilde,diffu,diffv);
     }
 };
+#endif

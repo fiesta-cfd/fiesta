@@ -2,6 +2,12 @@
 #define FIESTA_HPP
 
 #include "Kokkos_Core.hpp"
+#include "debug.hpp"
+//#include "input.hpp"
+#include <ostream>
+#include <sstream>
+#include <iomanip>
+#include <fstream>
 
 //#define FS_LAYOUT  Kokkos::LayoutRight
 //#define FS_LAYOUT  Kokkos::LayoutLeft

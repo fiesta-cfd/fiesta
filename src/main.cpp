@@ -77,6 +77,7 @@ int main(int argc, char* argv[]){
 
     // Execute input file and generate simulation configuration
     struct inputConfig cf;
+MYDBG
     cf = executeConfiguration(fName);
 
     {

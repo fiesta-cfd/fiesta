@@ -1,9 +1,21 @@
 #include "fiesta.hpp"
 #include "input.hpp"
 #include "rkfunction.hpp"
-#include "Kokkos_Core.hpp"
+#include "input.hpp"
+#ifndef NOMPI
+#include "mpi.hpp"
+#endif
+#include "bc.hpp"
+#include "flux.hpp"
+#include "advect.hpp"
+#include "presgrad.hpp"
+#include "secondary.hpp"
+#include "velocity.hpp"
+#include "viscosity.hpp"
+#include "buoyancy.hpp"
 #include "noise.hpp"
 #include "particle.hpp"
+#include "ceq.hpp"
 
 class cart2d_func : public rk_func {
 
@@ -16,19 +28,19 @@ public:
     void preSim();
     void postSim();
 
-    FS2D p;          // Pressure
-    FS3D vel;        // Velocity
-    FS2D T;          // Pressure
-    FS2D rho;      // Total Density
-    FS2D qx;  // Weno Fluxes in X direction
-    FS2D qy;  // Weno Fluxes in X direction
-    FS2D fluxx;  // Weno Fluxes in X direction
-    FS2D fluxy;  // Weno Fluxes in Y direction
-    FS4D stressx;  // stress tensor on x faces
-    FS4D stressy;  // stress tensor on y faces
-    FS3D gradRho;
-    FS2D_I noise;          // Pressure
-    FS1D cd;
-//    Kokkos::View<particleStruct*> particles;
-    FSP2D particles;
+    FS2D p;            // Pressure
+    FS3D vel;          // Velocity
+    FS2D T;            // Temperature
+    FS2D rho;          // Total Density
+    FS2D qx;           // Heat Fluxes in X direction
+    FS2D qy;           // Heat Fluxes in X direction
+    FS2D fluxx;        // Weno Fluxes in X direction
+    FS2D fluxy;        // Weno Fluxes in Y direction
+    FS4D stressx;      // stress tensor on x faces
+    FS4D stressy;      // stress tensor on y faces
+    FS3D gradRho;      // Density Gradient array
+    FS2D_I noise;      // Noise indicator array
+    FS1D cd;           // Device configuration array
+//    FSP2D particles;   // Particle array
+//    FSP2DH particlesH; // Particle host array
 };

@@ -7,6 +7,7 @@
 #include <map>
 #include <string>
 #include "timer.hpp"
+#include "particle.hpp"
 
 class writer
 {

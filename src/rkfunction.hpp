@@ -7,17 +7,7 @@
 #include <map>
 #include <string>
 #include "timer.hpp"
-
-/***
- *
- * Base class for Runge-Kutta function arguments. This is the main feature
- * enabling modularity.  Various schemes or physics can be implemented in
- * classes derived from this class.  Derived classes must implement a 
- * constructor (which initializes the base constructor) and a compute()
- * function which takes a 4d view as the first argument for input and a
- * 4d view as the second argument for output.
- *
- **/
+#include "particle.hpp"
 
 class rk_func
 {
@@ -35,11 +25,14 @@ public:
     FS4D var;
     FS4D dvar;
     FS4D tmp1;
-//    FS4D tmp2;
     FS4D grid;
+    FSP2D particles;   // Particle array
+    FSP2DH particlesH; // Particle host array
 
     std::map<std::string, fiestaTimer> timers;
-    //std::map<std::string, int> timers;
+    policy_f ghostPol = policy_f({0,0},{1,1});
+    policy_f cellPol = policy_f({0,0},{1,1});
+    policy_f facePol = policy_f({0,0},{1,1});
 
 protected:
     struct inputConfig& cf;

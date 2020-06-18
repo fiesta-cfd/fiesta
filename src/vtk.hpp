@@ -4,6 +4,7 @@
 
 #include "input.hpp"
 #include "writer.hpp"
+
 class serialVTKWriter : public writer{
 
 public:
@@ -21,6 +22,7 @@ private:
 
     FS4DH gridH;
     FS4DH varH;
+//    FSP2DH particlesH;
 };
 
 #endif

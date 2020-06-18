@@ -3,13 +3,14 @@
 
 #include "fiesta.hpp"
 
-struct particleStruct {
+struct particleStruct2D {
     int ci,cj;  // particle cell index
     double x,y; // particle position
     int state; // particle state (1=enabled, 0=disabled)
 };
 
-typedef typename Kokkos::View<particleStruct*> FSP2D; // kokkos typename for array or particle structs
+typedef typename Kokkos::View<particleStruct2D*> FSP2D; // kokkos typename for array or particle structs
+typedef typename Kokkos::View<particleStruct2D*>::HostMirror FSP2DH; // kokkos typename for array or particle structs
 
 struct findInitialCell2D{
     // functor for doing initial cell search for particles created by position
@@ -117,6 +118,7 @@ struct advectParticles2D{
                 particles(p).state = 0;
             if (particles(p).y+dy > grid(gi,jm-1,0,1))
                 particles(p).state = 0;
+//            printf("%d, %d, %d, %d, %d\n",p,im,jm,gi,gj);
 
             // move particle if active
             if (particles(p).state){
@@ -135,8 +137,48 @@ struct advectParticles2D{
             }else if (particles(p).y >= grid(gi,gj+1,0,1)){   // check if exited top
                 particles(p).cj += 1;
             }
+            //printf("%d, %d, %d, %f, %f, %d\n",p,ci,cj,x,y,particles(p).state);
                 
         }
     }
 };
+
+
+inline void writeParticles(struct inputConfig cf, FSP2DH particlesH){
+    stringstream ss;
+    ss << "particle-" << setw(7) << setfill('0') << cf.t << ".vtk";
+    ofstream f;
+    //f.open("particle.vtk");
+    f.open(ss.str());
+    f << "# vtk DataFile Version 4.2" << endl;
+    f << "Test Particles" << endl;
+    f << "ASCII" << endl;
+    f << "DATASET POLYDATA" << endl;
+    f << "POINTS " << cf.p_np << " float" << endl;
+    for (int p=0; p<cf.p_np; ++p){
+        f << particlesH(p).x << " " << particlesH(p).y << " " << "0.0" << endl;
+    }
+    f << "VERTICES " << cf.p_np << " " << cf.p_np*2 <<endl;
+    for (int p=0; p<cf.p_np; ++p){
+        f << "1 " << p << endl;
+    }
+    f << "POINT_DATA " << cf.p_np << endl;
+    f << "SCALARS state float" << endl;
+    f << "LOOKUP_TABLE default" << endl;
+    for (int p=0; p<cf.p_np; ++p){
+        f << particlesH(p).state << endl;
+    }
+    f << "SCALARS ci float" << endl;
+    f << "LOOKUP_TABLE default" << endl;
+    for (int p=0; p<cf.p_np; ++p){
+        f << particlesH(p).ci << endl;
+    }
+    f << "SCALARS cj float" << endl;
+    f << "LOOKUP_TABLE default" << endl;
+    for (int p=0; p<cf.p_np; ++p){
+        f << particlesH(p).cj << endl;
+    }
+    f.flush();
+    f.close();
+}
 #endif

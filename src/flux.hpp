@@ -1,3 +1,5 @@
+#ifndef FLUX_HPP
+#define FLUX_HPP
 struct computeFluxWeno2D {
     FS4D var;
     FS2D p;
@@ -229,3 +231,4 @@ struct computeFluxQuick2D {
         }
     }
 };
+#endif

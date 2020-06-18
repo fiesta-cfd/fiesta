@@ -1,8 +1,17 @@
 #include "fiesta.hpp"
 #include "input.hpp"
 #include "rkfunction.hpp"
-#include "Kokkos_Core.hpp"
 #include "noise.hpp"
+#include "input.hpp"
+#ifndef NOMPI
+#include "mpi.hpp"
+#endif
+#include "metric.hpp"
+#include "flux.hpp"
+#include "advect.hpp"
+#include "secondary.hpp"
+#include "velocity.hpp"
+#include "presgrad.hpp"
 #include "particle.hpp"
 
 class gen2d_func : public rk_func {
@@ -17,35 +26,19 @@ public:
     void postSim();
 
     FS2D p;          // Pressure
-    FS2D T;          // Temperature
-    FS3D tvel;
-    FS2D rho;      // Total Density
-    FS2D fluxx;  // Weno Fluxes in X direction
-    FS2D fluxy;  // Weno Fluxes in Y direction
-    FS2D_I noise;          // Pressure
-    FS1D cd;
-    FS4D metrics;
-    FS2D J;
-//    Kokkos::View<particleStruct*> particles;
-    FSP2D particles;
+    FS2D T;           // Temperature
+    FS3D tvel;         // Transformed velocity
+    FS2D rho;          // Total Density
+    FS2D fluxx;        // Weno Fluxes in X direction
+    FS2D fluxy;        // Weno Fluxes in Y direction
+    FS2D_I noise;      // Noise indicator array
+    FS1D cd;           // Device configuration array
+    FS4D metrics;      // jacobian metrics
+//    FSP2D particles;   // Particle array
+//    FSP2DH particlesH; // Host particle array
 
 #ifndef NOMPI
-    FS4D ls;
-    FS4D lr;
-    FS4D rs;
-    FS4D rr;
-    FS4D bs;
-    FS4D br;
-    FS4D ts;
-    FS4D tr;
-    
-    FS4DH lsH;
-    FS4DH lrH;
-    FS4DH rsH;
-    FS4DH rrH;
-    FS4DH bsH;
-    FS4DH brH;
-    FS4DH tsH;
-    FS4DH trH;
+    FS4D ls, lr, rs, rr, bs, br, ts, tr;
+    FS4DH lsH, lrH, rsH, rrH, bsH, brH, tsH, trH;
 #endif
 };
