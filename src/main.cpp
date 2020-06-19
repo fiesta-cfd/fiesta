@@ -13,6 +13,7 @@
 #include "cart3d.hpp"
 #include "cart2d.hpp"
 #include "gen2d.hpp"
+#include "gen3d.hpp"
 #include "rkfunction.hpp"
 #include <iostream>
 #include <cstdio>
@@ -118,7 +119,8 @@ MYDBG
     /*** Choose Scheme ***/
     rk_func *f;
     if (cf.ndim == 3){
-        f = new hydroc3d_func(cf,cd);
+        //f = new hydroc3d_func(cf,cd);
+        f = new gen3d_func(cf,cd);
     }else{
         if (cf.grid == 1){
             f = new gen2d_func(cf,cd);

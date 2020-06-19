@@ -90,7 +90,7 @@ void printConfig(struct inputConfig cf, int cFlag){
     else
         cout << setw(20) << left << "    Restart writes " << c(cFlag,YEL) << "disabled" << c(cFlag,NON) << endl;
     if (cf.stat_freq > 0)
-        cout << setw(31) << left << "    Status check frequency: " << c(cFlag,CYA) << right << setw(0) << cf.restart_freq << c(cFlag,NON) << endl;
+        cout << setw(31) << left << "    Status check frequency: " << c(cFlag,CYA) << right << setw(0) << cf.stat_freq << c(cFlag,NON) << endl;
     else
         cout << setw(20) << left << "    Status checks " << c(cFlag,YEL) << "disabled" << c(cFlag,NON) << endl;
 

@@ -27,6 +27,47 @@ struct applyPressureGradient2D {
         dvar(i,j,0,1) = p2;
     }
 };
+struct applyGenPressureGradient3D {
+    
+    FS4D dvar;
+    FS3D p;
+    FS5D m;
+    FS1D cd;
+
+    applyGenPressureGradient3D (FS4D dvar_, FS5D m_, FS3D p_, FS1D cd_)
+        : dvar(dvar_), m(m_), p(p_), cd(cd_) {}
+    
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int j, const int k) const {
+        
+        double dxipxix;
+        double detpetx;
+        double dztpztx;
+        double dxipxiy;
+        double detpety;
+        double dztpzty;
+        double dxipxiz;
+        double detpetz;
+        double dztpztz;
+
+        dxipxix = ( p(i-2,j,k)*m(i-2,j,k,0,0) - 8.0*p(i-1,j,k)*m(i-1,j,k,0,0) + 8.0*p(i+1,j,k)*m(i+1,j,k,0,0) - p(i+2,j,k)*m(i+2,j,k,0,0) )/(12.0);
+        detpetx = ( p(i,j-2,k)*m(i,j-2,k,1,0) - 8.0*p(i,j-1,k)*m(i,j-1,k,1,0) + 8.0*p(i,j+1,k)*m(i,j+1,k,1,0) - p(i,j+2,k)*m(i,j+2,k,1,0) )/(12.0);
+        dztpztx = ( p(i,j,k-2)*m(i,j,k-2,2,0) - 8.0*p(i,j,k-1)*m(i,j,k-1,2,0) + 8.0*p(i,j,k+1)*m(i,j,k+1,2,0) - p(i,j,k+2)*m(i,j,k+2,2,0) )/(12.0);
+
+        dxipxiy = ( p(i-2,j,k)*m(i-2,j,k,0,1) - 8.0*p(i-1,j,k)*m(i-1,j,k,0,1) + 8.0*p(i+1,j,k)*m(i+1,j,k,0,1) - p(i+2,j,k)*m(i+2,j,k,0,1) )/(12.0);
+        detpety = ( p(i,j-2,k)*m(i,j-2,k,1,1) - 8.0*p(i,j-1,k)*m(i,j-1,k,1,1) + 8.0*p(i,j+1,k)*m(i,j+1,k,1,1) - p(i,j+2,k)*m(i,j+2,k,1,1) )/(12.0);
+        dztpzty = ( p(i,j,k-2)*m(i,j,k-2,2,1) - 8.0*p(i,j,k-1)*m(i,j,k-1,2,1) + 8.0*p(i,j,k+1)*m(i,j,k+1,2,1) - p(i,j,k+2)*m(i,j,k+2,2,1) )/(12.0);
+
+        dxipxiz = ( p(i-2,j,k)*m(i-2,j,k,0,2) - 8.0*p(i-1,j,k)*m(i-1,j,k,0,2) + 8.0*p(i+1,j,k)*m(i+1,j,k,0,2) - p(i+2,j,k)*m(i+2,j,k,0,2) )/(12.0);
+        detpetz = ( p(i,j-2,k)*m(i,j-2,k,1,2) - 8.0*p(i,j-1,k)*m(i,j-1,k,1,2) + 8.0*p(i,j+1,k)*m(i,j+1,k,1,2) - p(i,j+2,k)*m(i,j+2,k,1,2) )/(12.0);
+        dztpztz = ( p(i,j,k-2)*m(i,j,k-2,2,2) - 8.0*p(i,j,k-1)*m(i,j,k-1,2,2) + 8.0*p(i,j,k+1)*m(i,j,k+1,2,2) - p(i,j,k+2)*m(i,j,k+2,2,2) )/(12.0);
+
+
+        dvar(i,j,k,0) = ( dvar(i,j,k,0) - (dxipxix + detpetx + dztpztx) );
+        dvar(i,j,k,1) = ( dvar(i,j,k,1) - (dxipxiy + detpety + dztpzty) );
+        dvar(i,j,k,2) = ( dvar(i,j,k,2) - (dxipxiz + detpetz + dztpztz) );
+    }
+};
 struct applyGenPressureGradient2D {
     
     FS4D dvar;
@@ -52,6 +93,27 @@ struct applyGenPressureGradient2D {
 
         dvar(i,j,0,0) = ( dvar(i,j,0,0) - (dxipxix + detpetx) );
         dvar(i,j,0,1) = ( dvar(i,j,0,1) - (dxipxiy + detpety) );
+    }
+};
+
+struct applyPressure {
+    
+    FS4D dvar;
+    FS3D p;
+    Kokkos::View<double*> cd;
+
+    applyPressure (FS4D dvar_, FS3D p_, Kokkos::View<double*> cd_)
+        : dvar(dvar_), p(p_), cd(cd_) {}
+    
+    KOKKOS_INLINE_FUNCTION
+    void operator()(const int i, const int j, const int k) const {
+        double dxp = ( p(i-2,j,k) - 8.0*p(i-1,j,k) + 8.0*p(i+1,j,k) - p(i+2,j,k) )/(12.0*cd(1));
+        double dyp = ( p(i,j-2,k) - 8.0*p(i,j-1,k) + 8.0*p(i,j+1,k) - p(i,j+2,k) )/(12.0*cd(2));
+        double dzp = ( p(i,j,k-2) - 8.0*p(i,j,k-1) + 8.0*p(i,j,k+1) - p(i,j,k+2) )/(12.0*cd(3));
+
+        dvar(i,j,k,0) = dvar(i,j,k,0) - dxp;
+        dvar(i,j,k,1) = dvar(i,j,k,1) - dyp;
+        dvar(i,j,k,2) = dvar(i,j,k,2) - dzp;
     }
 };
 #endif
