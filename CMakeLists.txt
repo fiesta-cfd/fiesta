@@ -102,7 +102,7 @@ if (LITE)
     )
 else()
     message("Fiesta Sources" ${FIESTA_SRCS})
-    add_executable(fiesta ${FIESTA_SRCS} src/cgns.cpp src/mpi.cpp)
+    add_executable(fiesta ${FIESTA_SRCS} src/cgns.cpp src/mpi.cpp src/hdf.cpp)
     add_dependencies(fiesta cgnsParallel)
     target_link_libraries(fiesta
                           kokkos

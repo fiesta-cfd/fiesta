@@ -414,9 +414,10 @@ int loadGrid(struct inputConfig cf, const FS4D deviceV){
         for (int k=0; k<cf.nk; ++k){
             for (int j=0; j<cf.nj; ++j){
                 for (int i=0; i<cf.ni; ++i){
-                    hostV(i,j,k,0) = i*cf.dx;
-                    hostV(i,j,k,1) = j*cf.dy;
-                    hostV(i,j,k,2) = k*cf.dz;
+                    hostV(i,j,k,0) = (cf.iStart+i)*cf.dx;
+                    hostV(i,j,k,1) = (cf.jStart+j)*cf.dy;
+                    hostV(i,j,k,2) = (cf.kStart+k)*cf.dz;
+                    //printf("(%d, %d, %d) : (%.1f, %.1f, %.1f)\n",i,j,k,hostV(i,j,k,0),hostV(i,j,k,1),hostV(i,j,k,2));
                 }
             }
         }

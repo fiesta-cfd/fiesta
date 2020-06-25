@@ -29,6 +29,7 @@ double getglobdbl(lua_State *L, const char *var);
 struct inputConfig {
     std::string inputFname;
     std::string title;
+    int xmp,ymp,zmp;
     int ndim;
     int glbl_ni,glbl_nj,glbl_nk;
     int glbl_nci,glbl_ncj,glbl_nck;

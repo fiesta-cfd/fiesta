@@ -67,6 +67,9 @@ struct inputConfig mpi_init(struct inputConfig cf){
         cf.nk = cf.nck + 1;
         cf.ngk = cf.nck + 2*cf.ng;
     }
+    cf.xmp=coords[0];
+    cf.ymp=coords[0];
+    cf.zmp=coords[0];
 
 
     return cf;

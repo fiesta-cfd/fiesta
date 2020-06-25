@@ -3,6 +3,7 @@
 #ifndef NOMPI
 #include "mpi.hpp"
 #include "cgns.hpp"
+#include "hdf.hpp"
 #include <mpi.h>
 #else
 #include "vtk.hpp"
@@ -132,7 +133,8 @@ int main(int argc, char* argv[]){
 #ifdef NOMPI
     serialVTKWriter w(cf,f->grid,f->var);
 #else
-    cgnsWriter w(cf,f->grid,f->var);
+    fstWriter w(cf,f->grid,f->var);
+    //cgnsWriter w(cf,f->grid,f->var);
 #endif
     
 
