@@ -260,6 +260,7 @@ void fstWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS4
             fprintf(xmf, "   </Grid>\n");
             fprintf(xmf, " </Domain>\n");
             fprintf(xmf, "</Xdmf>\n");
+            fclose(xmf);
         }
     }else{
         stringstream filenameStream;
@@ -484,6 +485,7 @@ void fstWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS4
             fprintf(xmf, "   </Grid>\n");
             fprintf(xmf, " </Domain>\n");
             fprintf(xmf, "</Xdmf>\n");
+            fclose(xmf);
         }
         
     }
