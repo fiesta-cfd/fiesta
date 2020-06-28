@@ -229,6 +229,7 @@ struct inputConfig executeConfiguration(std::string fName){
             lua_pop(L,1);
         }
     }else{
+        cf.mu = (double*)malloc(cf.ns*sizeof(double));
         for (int s=0; s<cf.ns; ++s)
             cf.mu[s] = 0.0;
     }
