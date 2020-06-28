@@ -49,6 +49,11 @@ void gen3d_func::preSim() {
     // compute metrics
     timers["calcMetrics"].reset();
     Kokkos::parallel_for( cell_pol3, computeMetrics3D(metrics,grid) );
+Kokkos::fence();
+MYDBG
+
+FS5D &mt = metrics;
+inputConfig& c = cf;
 
 #ifndef NOMPI
     //mpi exchange of metrics
@@ -64,6 +69,8 @@ void gen3d_func::preSim() {
     hr = FS5D("hindRecv"  ,cf.ngi,cf.ngj,cf.ng ,3,3);
     fs = FS5D("frontSend" ,cf.ngi,cf.ngj,cf.ng ,3,3);
     fr = FS5D("frontRecv" ,cf.ngi,cf.ngj,cf.ng ,3,3);
+Kokkos::fence();
+MYDBG
     
     lsH = Kokkos::create_mirror_view(ls);
     lrH = Kokkos::create_mirror_view(lr);
@@ -81,25 +88,40 @@ void gen3d_func::preSim() {
     policy_f5 xPol = policy_f5({0,0,0,0,0},{cf.ng, cf.ngj,cf.ngk,3,3});
     policy_f5 yPol = policy_f5({0,0,0,0,0},{cf.ngi,cf.ng, cf.ngk,3,3});
     policy_f5 zPol = policy_f5({0,0,0,0,0},{cf.ngi,cf.ngj,cf.ng, 3,3});
+Kokkos::fence();
+MYDBG
 
+    FS5D& lsR = ls;
+    FS5D& rsR = rs;
+    FS5D& bsR = bs;
+    FS5D& tsR = ts;
+    FS5D& hsR = hs;
+    FS5D& fsR = fs;
     Kokkos::parallel_for( xPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int m, const int n){
-        ls(i,j,k,m,n) = metrics(cf.ng+i,j,k,m,n);
-        rs(i,j,k,m,n) = metrics(cf.nci+i,j,k,m,n);
+        lsR(i,j,k,m,n) = 1.0;//mt(c.ng+i,j,k,m,n);
+        rsR(i,j,k,m,n) = 1.0;//mt(c.nci+i,j,k,m,n);
     });
+Kokkos::fence();
+MYDBG
     Kokkos::parallel_for( yPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int m, const int n){
-        bs(i,j,k,m,n) = metrics(i,cf.ng+j,k,m,n);
-        ts(i,j,k,m,n) = metrics(i,cf.ncj+j,k,m,n);
+        bsR(i,j,k,m,n) = mt(i,c.ng+j,k,m,n);
+        tsR(i,j,k,m,n) = mt(i,c.ncj+j,k,m,n);
     });
+Kokkos::fence();
+MYDBG
     Kokkos::parallel_for( zPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int m, const int n){
-        hs(i,j,k,m,n) = metrics(i,j,cf.ng+k,m,n);
-        fs(i,j,k,m,n) = metrics(i,j,cf.nck+k,m,n);
+        hsR(i,j,k,m,n) = mt(i,j,c.ng+k,m,n);
+        fsR(i,j,k,m,n) = mt(i,j,c.nck+k,m,n);
     });
+Kokkos::fence();
+MYDBG
     Kokkos::deep_copy(lsH,ls);
     Kokkos::deep_copy(rsH,rs);
     Kokkos::deep_copy(bsH,bs);
     Kokkos::deep_copy(tsH,ts);
     Kokkos::deep_copy(hsH,hs);
     Kokkos::deep_copy(fsH,fs);
+MYDBG
 
     MPI_Request reqs[12];
 
@@ -122,6 +144,7 @@ void gen3d_func::preSim() {
     MPI_Irecv(frH.data(), cf.ngi*cf.ngj*cf.ng*9, MPI_DOUBLE, cf.zPlus, MPI_ANY_TAG, cf.comm, &reqs[11]);
 
     MPI_Waitall(12, reqs, MPI_STATUS_IGNORE);
+MYDBG
 
     Kokkos::deep_copy(lr,lrH);
     Kokkos::deep_copy(rr,rrH);
@@ -129,19 +152,28 @@ void gen3d_func::preSim() {
     Kokkos::deep_copy(tr,trH);
     Kokkos::deep_copy(hr,hrH);
     Kokkos::deep_copy(fr,frH);
+    FS5D& lrR = lr;
+    FS5D& rrR = rr;
+    FS5D& brR = br;
+    FS5D& trR = tr;
+    FS5D& hrR = hr;
+    FS5D& frR = fr;
 
     Kokkos::parallel_for( xPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int m, const int n){
-        metrics(i,j,k,m,n) = lr(i,j,k,m,n);
-        metrics(cf.ngi-cf.ng+i,j,k,m,n) = rr(i,j,k,m,n);
+        mt(i,j,k,m,n) = lrR(i,j,k,m,n);
+        mt(c.ngi-c.ng+i,j,k,m,n) = rrR(i,j,k,m,n);
     });
     Kokkos::parallel_for( yPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int m, const int n){
-        metrics(i,j,k,m,n) = br(i,j,k,m,n);
-        metrics(i,cf.ngj-cf.ng+j,k,m,n) = tr(i,j,k,m,n);
+        mt(i,j,k,m,n) = brR(i,j,k,m,n);
+        mt(i,c.ngj-c.ng+j,k,m,n) = trR(i,j,k,m,n);
     });
     Kokkos::parallel_for( zPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int m, const int n){
-        metrics(i,j,k,m,n) = hr(i,j,k,m,n);
-        metrics(i,j,cf.ngk-cf.ng+k,m,n) = fr(i,j,k,m,n);
+        mt(i,j,k,m,n) = hrR(i,j,k,m,n);
+        mt(i,j,c.ngk-c.ng+k,m,n) = frR(i,j,k,m,n);
     });
+
+Kokkos::fence();
+MYDBG
 #endif
 
     if (cf.xMinus < 0){
@@ -149,49 +181,61 @@ void gen3d_func::preSim() {
             KOKKOS_LAMBDA (const int i, const int j, const int k){
                 for (int m=0; m<3; ++m)
                     for (int n=0; n<3; ++n)
-                        metrics(cf.ng-i-1,j,k,m,n) = metrics(cf.ng+i,j,k,m,n);
+                        mt(c.ng-i-1,j,k,m,n) = mt(c.ng+i,j,k,m,n);
         });
     }
+Kokkos::fence();
+MYDBG
     if (cf.xPlus < 0){
         Kokkos::parallel_for("metricbcr",policy_f3({0,0,0},{cf.ng,cf.ngj,cf.ngk}),
             KOKKOS_LAMBDA (const int i, const int j, const int k){
                 for (int m=0; m<3; ++m)
                     for (int n=0; n<3; ++n)
-                        metrics(cf.ngi-1-i,j,k,m,n) = metrics(cf.nci+i,j,k,m,n);
+                        mt(c.ngi-1-i,j,k,m,n) = mt(c.nci+i,j,k,m,n);
         });
     }
+Kokkos::fence();
+MYDBG
     if (cf.yMinus < 0){
         Kokkos::parallel_for("metricbcb",policy_f3({0,0,0},{cf.ngi,cf.ng,cf.ngk}),
             KOKKOS_LAMBDA (const int i, const int j, const int k){
                 for (int m=0; m<3; ++m)
                     for (int n=0; n<3; ++n)
-                        metrics(i,cf.ng-j-1,k,m,n) = metrics(i,cf.ng+j,k,m,n);
+                        mt(i,c.ng-j-1,k,m,n) = mt(i,c.ng+j,k,m,n);
         });
     }
+Kokkos::fence();
+MYDBG
     if (cf.yPlus < 0){
         Kokkos::parallel_for("metricbct",policy_f3({0,0,0},{cf.ngi,cf.ng,cf.ngk}),
             KOKKOS_LAMBDA (const int i, const int j, const int k){
                 for (int m=0; m<3; ++m)
                     for (int n=0; n<3; ++n)
-                        metrics(i,cf.ngj-1-j,k,m,n) = metrics(i,cf.ncj+j,k,m,n);
+                        mt(i,c.ngj-1-j,k,m,n) = mt(i,c.ncj+j,k,m,n);
         });
     }
+Kokkos::fence();
+MYDBG
     if (cf.zMinus < 0){
         Kokkos::parallel_for("metricbch",policy_f3({0,0,0},{cf.ngi,cf.ngj,cf.ng}),
             KOKKOS_LAMBDA (const int i, const int j, const int k){
                 for (int m=0; m<3; ++m)
                     for (int n=0; n<3; ++n)
-                        metrics(i,j,cf.ng-k-1,m,n) = metrics(i,j,cf.ng+k,m,n);
+                        mt(i,j,c.ng-k-1,m,n) = mt(i,j,c.ng+k,m,n);
         });
     }
+Kokkos::fence();
+MYDBG
     if (cf.zPlus < 0){
         Kokkos::parallel_for("metricbcf",policy_f3({0,0,0},{cf.ngi,cf.ngj,cf.ng}),
             KOKKOS_LAMBDA (const int i, const int j, const int k){
                 for (int m=0; m<3; ++m)
                     for (int n=0; n<3; ++n)
-                        metrics(i,j,cf.ngk-1-k,m,n) = metrics(i,j,cf.nck+k,m,n);
+                        mt(i,j,c.ngk-1-k,m,n) = mt(i,j,c.nck+k,m,n);
         });
     }
+Kokkos::fence();
+MYDBG
 
     Kokkos::fence();
     timers["calcMetrics"].accumulate();
