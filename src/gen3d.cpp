@@ -49,8 +49,6 @@ void gen3d_func::preSim() {
     // compute metrics
     timers["calcMetrics"].reset();
     Kokkos::parallel_for( cell_pol3, computeMetrics3D(metrics,grid) );
-Kokkos::fence();
-MYDBG
 
 FS5D &mt = metrics;
 inputConfig& c = cf;
@@ -69,8 +67,6 @@ inputConfig& c = cf;
     hr = FS5D("hindRecv"  ,cf.ngi,cf.ngj,cf.ng ,3,3);
     fs = FS5D("frontSend" ,cf.ngi,cf.ngj,cf.ng ,3,3);
     fr = FS5D("frontRecv" ,cf.ngi,cf.ngj,cf.ng ,3,3);
-Kokkos::fence();
-MYDBG
     
     lsH = Kokkos::create_mirror_view(ls);
     lrH = Kokkos::create_mirror_view(lr);
@@ -88,8 +84,6 @@ MYDBG
     policy_f5 xPol = policy_f5({0,0,0,0,0},{cf.ng, cf.ngj,cf.ngk,3,3});
     policy_f5 yPol = policy_f5({0,0,0,0,0},{cf.ngi,cf.ng, cf.ngk,3,3});
     policy_f5 zPol = policy_f5({0,0,0,0,0},{cf.ngi,cf.ngj,cf.ng, 3,3});
-Kokkos::fence();
-MYDBG
 
     FS5D& lsR = ls;
     FS5D& rsR = rs;
@@ -98,30 +92,23 @@ MYDBG
     FS5D& hsR = hs;
     FS5D& fsR = fs;
     Kokkos::parallel_for( xPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int m, const int n){
-        lsR(i,j,k,m,n) = 1.0;//mt(c.ng+i,j,k,m,n);
-        rsR(i,j,k,m,n) = 1.0;//mt(c.nci+i,j,k,m,n);
+        lsR(i,j,k,m,n) = mt(c.ng+i,j,k,m,n);
+        rsR(i,j,k,m,n) = mt(c.nci+i,j,k,m,n);
     });
-Kokkos::fence();
-MYDBG
     Kokkos::parallel_for( yPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int m, const int n){
         bsR(i,j,k,m,n) = mt(i,c.ng+j,k,m,n);
         tsR(i,j,k,m,n) = mt(i,c.ncj+j,k,m,n);
     });
-Kokkos::fence();
-MYDBG
     Kokkos::parallel_for( zPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int m, const int n){
         hsR(i,j,k,m,n) = mt(i,j,c.ng+k,m,n);
         fsR(i,j,k,m,n) = mt(i,j,c.nck+k,m,n);
     });
-Kokkos::fence();
-MYDBG
     Kokkos::deep_copy(lsH,ls);
     Kokkos::deep_copy(rsH,rs);
     Kokkos::deep_copy(bsH,bs);
     Kokkos::deep_copy(tsH,ts);
     Kokkos::deep_copy(hsH,hs);
     Kokkos::deep_copy(fsH,fs);
-MYDBG
 
     MPI_Request reqs[12];
 
@@ -144,7 +131,6 @@ MYDBG
     MPI_Irecv(frH.data(), cf.ngi*cf.ngj*cf.ng*9, MPI_DOUBLE, cf.zPlus, MPI_ANY_TAG, cf.comm, &reqs[11]);
 
     MPI_Waitall(12, reqs, MPI_STATUS_IGNORE);
-MYDBG
 
     Kokkos::deep_copy(lr,lrH);
     Kokkos::deep_copy(rr,rrH);
@@ -172,8 +158,6 @@ MYDBG
         mt(i,j,c.ngk-c.ng+k,m,n) = frR(i,j,k,m,n);
     });
 
-Kokkos::fence();
-MYDBG
 #endif
 
     if (cf.xMinus < 0){
@@ -184,8 +168,6 @@ MYDBG
                         mt(c.ng-i-1,j,k,m,n) = mt(c.ng+i,j,k,m,n);
         });
     }
-Kokkos::fence();
-MYDBG
     if (cf.xPlus < 0){
         Kokkos::parallel_for("metricbcr",policy_f3({0,0,0},{cf.ng,cf.ngj,cf.ngk}),
             KOKKOS_LAMBDA (const int i, const int j, const int k){
@@ -194,8 +176,6 @@ MYDBG
                         mt(c.ngi-1-i,j,k,m,n) = mt(c.nci+i,j,k,m,n);
         });
     }
-Kokkos::fence();
-MYDBG
     if (cf.yMinus < 0){
         Kokkos::parallel_for("metricbcb",policy_f3({0,0,0},{cf.ngi,cf.ng,cf.ngk}),
             KOKKOS_LAMBDA (const int i, const int j, const int k){
@@ -204,8 +184,6 @@ MYDBG
                         mt(i,c.ng-j-1,k,m,n) = mt(i,c.ng+j,k,m,n);
         });
     }
-Kokkos::fence();
-MYDBG
     if (cf.yPlus < 0){
         Kokkos::parallel_for("metricbct",policy_f3({0,0,0},{cf.ngi,cf.ng,cf.ngk}),
             KOKKOS_LAMBDA (const int i, const int j, const int k){
@@ -214,8 +192,6 @@ MYDBG
                         mt(i,c.ngj-1-j,k,m,n) = mt(i,c.ncj+j,k,m,n);
         });
     }
-Kokkos::fence();
-MYDBG
     if (cf.zMinus < 0){
         Kokkos::parallel_for("metricbch",policy_f3({0,0,0},{cf.ngi,cf.ngj,cf.ng}),
             KOKKOS_LAMBDA (const int i, const int j, const int k){
@@ -224,8 +200,6 @@ MYDBG
                         mt(i,j,c.ng-k-1,m,n) = mt(i,j,c.ng+k,m,n);
         });
     }
-Kokkos::fence();
-MYDBG
     if (cf.zPlus < 0){
         Kokkos::parallel_for("metricbcf",policy_f3({0,0,0},{cf.ngi,cf.ngj,cf.ng}),
             KOKKOS_LAMBDA (const int i, const int j, const int k){
@@ -234,8 +208,6 @@ MYDBG
                         mt(i,j,c.ngk-1-k,m,n) = mt(i,j,c.nck+k,m,n);
         });
     }
-Kokkos::fence();
-MYDBG
 
     Kokkos::fence();
     timers["calcMetrics"].accumulate();

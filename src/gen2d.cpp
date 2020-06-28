@@ -154,6 +154,8 @@ void gen2d_func::preSim(){
     timers["calcMetrics"].reset();
     Kokkos::parallel_for( cell_pol, computeMetrics2D(metrics,grid) );
 
+    FS4D& mt = metrics;
+    inputConfig& c = cf;
 #ifndef NOMPI
     //mpi exchange of metrics
     ls = Kokkos::View<double****,FS_LAYOUT>("leftSend",cf.ng,cf.ngj,2,2);
@@ -174,16 +176,25 @@ void gen2d_func::preSim(){
     tsH = Kokkos::create_mirror_view(ts);
     trH = Kokkos::create_mirror_view(tr);
 
+    FS4D& lsR = ls;
+    FS4D& lrR = lr;
+    FS4D& rsR = rs;
+    FS4D& rrR = rr;
+    FS4D& bsR = bs;
+    FS4D& brR = br;
+    FS4D& tsR = ts;
+    FS4D& trR = tr;
+
     policy_f4 xPol = policy_f4({0,0,0,0},{cf.ng,cf.ngj,2,2});
     policy_f4 yPol = policy_f4({0,0,0,0},{cf.ngi,cf.ng,2,2});
 
     Kokkos::parallel_for( xPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int l){
-        ls(i,j,k,l) = metrics(cf.ng+i,j,k,l);
-        rs(i,j,k,l) = metrics(cf.nci+i,j,k,l);
+        lsR(i,j,k,l) = mt(cf.ng+i,j,k,l);
+        rsR(i,j,k,l) = mt(cf.nci+i,j,k,l);
     });
     Kokkos::parallel_for( yPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int l){
-        bs(i,j,k,l) = metrics(i,cf.ng+j,k,l);
-        ts(i,j,k,l) = metrics(i,cf.ncj+j,k,l);
+        bsR(i,j,k,l) = mt(i,cf.ng+j,k,l);
+        tsR(i,j,k,l) = mt(i,cf.ncj+j,k,l);
     });
     Kokkos::deep_copy(lsH,ls);
     Kokkos::deep_copy(rsH,rs);
@@ -212,49 +223,49 @@ void gen2d_func::preSim(){
     Kokkos::deep_copy(tr,trH);
 
     Kokkos::parallel_for( xPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int l){
-        metrics(i,j,k,l) = lr(i,j,k,l);
-        metrics(cf.ngi-cf.ng+i,j,k,l) = rr(i,j,k,l);
+        mt(i,j,k,l) = lrR(i,j,k,l);
+        mt(cf.ngi-cf.ng+i,j,k,l) = rrR(i,j,k,l);
     });
     Kokkos::parallel_for( yPol, KOKKOS_LAMBDA (const int i, const int j, const int k, const int l){
-        metrics(i,j,k,l) = br(i,j,k,l);
-        metrics(i,cf.ngj-cf.ng+j,k,l) = tr(i,j,k,l);
+        mt(i,j,k,l) = brR(i,j,k,l);
+        mt(i,cf.ngj-cf.ng+j,k,l) = trR(i,j,k,l);
     });
 #endif
 
-    if (cf.xMinus < 0){
-        Kokkos::parallel_for("metricbcl",policy_f({0,0},{cf.ng,cf.ngi}),
-            KOKKOS_LAMBDA (const int g, const int i){
-                metrics(i,cf.ng-g-1,0,0) = metrics(i,cf.ng+g,0,0);
-                metrics(i,cf.ng-g-1,0,1) = metrics(i,cf.ng+g,0,1);
-                metrics(i,cf.ng-g-1,1,0) = metrics(i,cf.ng+g,1,0);
-                metrics(i,cf.ng-g-1,1,1) = metrics(i,cf.ng+g,1,1);
-        });
-    }
-    if (cf.xPlus < 0){
-        Kokkos::parallel_for("metricbcr",policy_f({0,0},{cf.ng,cf.ngi}),
-            KOKKOS_LAMBDA (const int g, const int i){
-                metrics(i,cf.ngi-1-g,0,0) = metrics(i,cf.nci+g,0,0);
-                metrics(i,cf.ngi-1-g,0,1) = metrics(i,cf.nci+g,0,1);
-                metrics(i,cf.ngi-1-g,1,0) = metrics(i,cf.nci+g,1,0);
-                metrics(i,cf.ngi-1-g,1,1) = metrics(i,cf.nci+g,1,1);
-        });
-    }
     if (cf.yMinus < 0){
-        Kokkos::parallel_for("metricbcb",policy_f({0,0},{cf.ng,cf.ngj}),
-            KOKKOS_LAMBDA (const int g, const int j){
-                metrics(cf.ng-g-1,j,0,0) = metrics(cf.ng+g,j,0,0);
-                metrics(cf.ng-g-1,j,0,1) = metrics(cf.ng+g,j,0,1);
-                metrics(cf.ng-g-1,j,1,0) = metrics(cf.ng+g,j,1,0);
-                metrics(cf.ng-g-1,j,1,1) = metrics(cf.ng+g,j,1,1);
+        Kokkos::parallel_for("metricbcn",policy_f({0,0},{cf.ng,cf.ngi}),
+            KOKKOS_LAMBDA (const int g, const int i){
+                mt(i,c.ng-g-1,0,0) = mt(i,c.ng+g,0,0);
+                mt(i,c.ng-g-1,0,1) = mt(i,c.ng+g,0,1);
+                mt(i,c.ng-g-1,1,0) = mt(i,c.ng+g,1,0);
+                mt(i,c.ng-g-1,1,1) = mt(i,c.ng+g,1,1);
         });
     }
     if (cf.yPlus < 0){
-        Kokkos::parallel_for("metricbct",policy_f({0,0},{cf.ng,cf.ngj}),
+        Kokkos::parallel_for("metricbct",policy_f({0,0},{cf.ng,cf.ngi}),
+            KOKKOS_LAMBDA (const int g, const int i){
+                mt(i,c.ngj-1-g,0,0) = mt(i,c.ncj+g,0,0);
+                mt(i,c.ngj-1-g,0,1) = mt(i,c.ncj+g,0,1);
+                mt(i,c.ngj-1-g,1,0) = mt(i,c.ncj+g,1,0);
+                mt(i,c.ngj-1-g,1,1) = mt(i,c.ncj+g,1,1);
+        });
+    }
+    if (cf.xMinus < 0){
+        Kokkos::parallel_for("metricbcl",policy_f({0,0},{cf.ng,cf.ngj}),
             KOKKOS_LAMBDA (const int g, const int j){
-                metrics(cf.ngj-1-g,j,0,0) = metrics(cf.ncj+g,j,0,0);
-                metrics(cf.ngj-1-g,j,0,1) = metrics(cf.ncj+g,j,0,1);
-                metrics(cf.ngj-1-g,j,1,0) = metrics(cf.ncj+g,j,1,0);
-                metrics(cf.ngj-1-g,j,1,1) = metrics(cf.ncj+g,j,1,1);
+                mt(c.ng-g-1,j,0,0) = mt(c.ng+g,j,0,0);
+                mt(c.ng-g-1,j,0,1) = mt(c.ng+g,j,0,1);
+                mt(c.ng-g-1,j,1,0) = mt(c.ng+g,j,1,0);
+                mt(c.ng-g-1,j,1,1) = mt(c.ng+g,j,1,1);
+        });
+    }
+    if (cf.xPlus < 0){
+        Kokkos::parallel_for("metricbcr",policy_f({0,0},{cf.ng,cf.ngj}),
+            KOKKOS_LAMBDA (const int g, const int j){
+                mt(c.ngi-1-g,j,0,0) = mt(c.nci+g,j,0,0);
+                mt(c.ngi-1-g,j,0,1) = mt(c.nci+g,j,0,1);
+                mt(c.ngi-1-g,j,1,0) = mt(c.nci+g,j,1,0);
+                mt(c.ngi-1-g,j,1,1) = mt(c.nci+g,j,1,1);
         });
     }
 

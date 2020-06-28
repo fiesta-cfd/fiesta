@@ -97,9 +97,6 @@ struct computeMetrics3D {
         metrics(i,j,k,2,1) = jac*(xet*zxi - xxi*zet);
         metrics(i,j,k,2,2) = jac*(xxi*yet - xet*yxi);
         
-//        if (k==25)
-//            //printf("%f, %f, %f, %f, %f, %f, %f, %f, %f\n",xxi,xet,xzt,yxi,yet,yzt,zxi,zet,zzt);
-//            printf("%d, %d, %f, %f, %f, %f\n",i,j,jac,metrics(i,j,k,0,0),metrics(i,j,k,1,1),metrics(i,j,k,2,2));
     }
 };
 #endif

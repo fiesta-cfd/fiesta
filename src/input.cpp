@@ -175,7 +175,6 @@ struct inputConfig executeConfiguration(std::string fName){
 
     cf.gamma = (double*)malloc(cf.ns*sizeof(double));
     cf.M = (double*)malloc(cf.ns*sizeof(double));
-    cf.mu = (double*)malloc(cf.ns*sizeof(double));
     cf.g_vec = (double*)malloc(3*sizeof(double));
     cf.tend = cf.tstart+cf.nt;
 
@@ -220,12 +219,18 @@ struct inputConfig executeConfiguration(std::string fName){
         cf.M[s] = (double)lua_tonumberx(L, -1, &isnum);
         lua_pop(L,1);
     }
-    lua_getglobal(L, "mu");
-    for (int s=0; s<cf.ns; ++s){
-        lua_pushnumber(L, s+1);
-        lua_gettable(L, -2);
-        cf.mu[s] = (double)lua_tonumberx(L, -1, &isnum);
-        lua_pop(L,1);
+    if (cf.visc == 1){
+        cf.mu = (double*)malloc(cf.ns*sizeof(double));
+        lua_getglobal(L, "mu");
+        for (int s=0; s<cf.ns; ++s){
+            lua_pushnumber(L, s+1);
+            lua_gettable(L, -2);
+            cf.mu[s] = (double)lua_tonumberx(L, -1, &isnum);
+            lua_pop(L,1);
+        }
+    }else{
+        for (int s=0; s<cf.ns; ++s)
+            cf.mu[s] = 0.0;
     }
 
     //cf.gravity     = getglobdbl (L, "gravity" );

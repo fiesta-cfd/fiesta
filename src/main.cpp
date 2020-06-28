@@ -192,20 +192,21 @@ int main(int argc, char* argv[]){
 
 //#endif
 
+
+    // pre simulation hook
+    f->preSim();
+
     // stop initialization timer
     initTimer.stop();
+
+    // reset simulation timer
+    simTimer.reset();
 
     // notify simulation start
     if (cf.rank == 0){
         cout << endl << "-----------------------" << endl << endl;
         cout << c(cFlag,GRE) << "Starting Simulation:" << c(cFlag,NON) << endl;
     }
-
-    // reset simulation timer
-    simTimer.reset();
-
-    // pre simulation hook
-    f->preSim();
 
   // // // // // // // //  \\ \\ \\ \\ \\ \\ \\ \\
  // // // // // // MAIN TIME LOOP \\ \\ \\ \\ \\ \\
