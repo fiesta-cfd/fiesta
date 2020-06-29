@@ -6,7 +6,8 @@ title = "2D Idealized Expansion"
 --Restart and Output Options
 out_freq = 0                          --Screen Output Interval
 restart_freq = 0                      --Restart Write Interval
-write_freq = 20                       --Solution Write Interval
+write_freq = 10                       --Solution Write Interval
+stat_freq = 10
 restart = 0                           --Whether or not to use restart file
 time = 0.0                            --Start time of simulation
 tstart = 0                            --Start time index of simulation
@@ -20,6 +21,7 @@ M = {0.02897}                         --Array of Species Molar Masses [kg/mol]
 mu = {2.928e-5}
 visc=0
 scheme="weno5"
+grid="cartesian"
 
 --Time
 nt = 10                               --Time Step at which to end simulation
@@ -52,13 +54,9 @@ bcYmax = 0
 xPer = 0
 yPer = 0
 
--- C-Equation Coefficients
-ceq = 0             --Enable/Disable Cequation
-kappa = 10.0        --Smoothness Factor
-epsilon = 1.0       --Support Factor
-alpha = 10.0        --Anisotropic Coefficient
-beta = 15.0         --Isotropic Coefficient
-betae = 2.0         --Energy Equation Isotropic Coefficient
+ceq = 0
+noise = 0
+particle = 0
 
 function g(i,j,k,v)
     if v==0 then return dx*i end
