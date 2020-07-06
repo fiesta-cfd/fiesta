@@ -21,6 +21,7 @@ M = {0.02897}                         --Array of Species Molar Masses [kg/mol]
 mu = {2.928e-5}
 visc=0
 scheme="weno5"
+grid = "cartesian"
 
 --Time
 nt = 3000                             --Time Step at which to end simulation

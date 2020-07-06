@@ -8,6 +8,7 @@ title = "Inclined Shock Tube"
 out_freq = 20                         --Screen Output Interval
 restart_freq = 5                       --Restart Write Interval
 write_freq = 5                        --Solution Write Interval
+stat_freq = 5
 restart = 0                           --Whether or not to use restart file
 time = 0.0                               --Start time of simulation
 tstart = 0                            --Start time index of simulation
@@ -21,7 +22,8 @@ gamma = {1.402, 1.092}                  --Array of Species Ratio of Specific Hea
 M = {0.028966,0.14606}                 --Array of Species Molar Masses [kg/mol]
 mu = {2.928e-5,1.610e-5}
 visc = 0
-scheme = "centered4"
+scheme = "weno5"
+grid = "cartesian"
 
 --User Parameters
 Ly = 0.1500
@@ -57,12 +59,9 @@ xPer = 0
 yPer = 0
 
 -- C-Equation Coefficients
-ceq = 1             --Enable/Disable Cequation
-kappa = 10.0        --Smoothness Factor
-epsilon = 1.0       --Support Factor
-alpha = 10.0        --Anisotropic Coefficient
-beta = 15.0         --Isotropic Coefficient
-betae = 2.0         --Energy Equation Isotropic Coefficient
+ceq = 0             --Enable/Disable Cequation
+noise = 0
+particle = 0
 
 -- Problem Setup
 gam = gamma[1]
