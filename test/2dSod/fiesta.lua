@@ -21,6 +21,8 @@ M = {0.02897}                         --Array of Species Molar Masses [kg/mol]
 mu = {2.928e-5}
 visc=0
 scheme="weno5"
+grid="cartesian"
+buoyancy=0
 
 --Time
 --nt = 100                                --Time Step at which to end simulation
@@ -61,6 +63,9 @@ epsilon = 1.0       --Support Factor
 alpha = 2.0        --Anisotropic Coefficient
 beta  = 15.0         --Isotropic Coefficient
 betae = 200.0         --Energy Equation Isotropic Coefficient
+
+noise=0
+particle=0
 
 function g(i,j,k,v)
     if v==0 then return dx*i end
