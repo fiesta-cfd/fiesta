@@ -222,7 +222,7 @@ void cart2d_func::compute(){
 
     if (cf.gravity == 1){
         timers["gravity"].reset();
-        Kokkos::parallel_for( cell_pol, calculateGravity(dvar,var,rho,cf.g_accel,cf.g_vec[0],cf.g_vec[1]) );
+        Kokkos::parallel_for( cell_pol, computeBuoyancy(dvar,var,rho) );
         Kokkos::fence();
         timers["gravity"].accumulate();
     }

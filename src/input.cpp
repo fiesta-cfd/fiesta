@@ -234,18 +234,18 @@ struct inputConfig executeConfiguration(std::string fName){
             cf.mu[s] = 0.0;
     }
 
-    //cf.gravity     = getglobdbl (L, "gravity" );
-    cf.gravity = 0;
-    if (cf.gravity == 1){
-        cf.g_accel     = getglobdbl (L, "g_accel" );
-        lua_getglobal(L, "g_vec");
-        for (int d=0; d<3; ++d){
-            lua_pushnumber(L, d+1);
-            lua_gettable(L, -2);
-            cf.g_vec[d] = (double)lua_tonumberx(L, -1, &isnum);
-            lua_pop(L,1);
-        }
-    }
+    cf.gravity     = getglobdbl (L, "gravity" );
+    // cf.gravity = 0;
+    // if (cf.gravity == 1){
+    //     cf.g_accel     = getglobdbl (L, "g_accel" );
+    //     lua_getglobal(L, "g_vec");
+    //     for (int d=0; d<3; ++d){
+    //         lua_pushnumber(L, d+1);
+    //         lua_gettable(L, -2);
+    //         cf.g_vec[d] = (double)lua_tonumberx(L, -1, &isnum);
+    //         lua_pop(L,1);
+    //     }
+    // }
 
     cf.out_freq    = getglobint (L, "out_freq");
     cf.write_freq    = getglobint (L, "write_freq");
