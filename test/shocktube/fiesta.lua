@@ -24,6 +24,7 @@ mu = {2.928e-5,1.610e-5}
 visc = 0
 scheme = "weno5"
 grid = "cartesian"
+buoyancy=0
 
 --User Parameters
 Ly = 0.1500

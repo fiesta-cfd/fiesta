@@ -235,7 +235,7 @@ struct inputConfig executeConfiguration(std::string fName){
             cf.mu[s] = 0.0;
     }
 
-    cf.gravity     = getglobdbl (L, "gravity" );
+    cf.gravity     = getglobdbl (L, "buoyancy" );
     // cf.gravity = 0;
     // if (cf.gravity == 1){
     //     cf.g_accel     = getglobdbl (L, "g_accel" );

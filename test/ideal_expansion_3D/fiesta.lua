@@ -23,6 +23,7 @@ mu = {2.928e-5}
 visc=0
 scheme="weno5"
 grid="cartesian"
+buoyancy=1
 
 --Time
 nt = 20                               --Time Step at which to end simulation
