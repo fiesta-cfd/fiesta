@@ -8,6 +8,7 @@
 #include <math.h>
 #include "lua.hpp"
 #include "Kokkos_Core.hpp"
+#include "particle.hpp"
 #ifndef NOMPI
 #include <mpi.h>
 #endif
@@ -77,5 +78,6 @@ struct inputConfig executeConfiguration(std::string fName);
 
 int loadInitialConditions(struct inputConfig cf, const FS4D v);
 int loadGrid(struct inputConfig cf, const FS4D v);
+int loadParticles(struct inputConfig cf, const FSP2D v);
 
 #endif

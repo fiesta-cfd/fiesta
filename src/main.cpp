@@ -151,6 +151,14 @@ int main(int argc, char* argv[]){
         loadGrid(cf,f->grid);
         gridTimer.stop();
         if (cf.rank == 0) cout << "    Generated in: " << c(cFlag,CYA) << gridTimer.getf() << c(cFlag,NON) << endl << endl;
+
+        if (cf.particle == 1){
+            if (cf.rank == 0) cout << c(cFlag,GRE) << "Generating Particles:" << c(cFlag,NON) << endl;
+            gridTimer.start();
+            loadParticles(cf,f->particles);
+            gridTimer.stop();
+            if (cf.rank == 0) cout << "    Generated in: " << c(cFlag,CYA) << gridTimer.getf() << c(cFlag,NON) << endl << endl;
+        }
     }
 
     // execution policy for Runge Kutta update kernels, should be moved to header

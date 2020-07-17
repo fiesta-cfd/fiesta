@@ -6,8 +6,8 @@ title = "2D Idealized Expansion"
 --Restart and Output Options
 out_freq = 0                          --Screen Output Interval
 restart_freq = 0                      --Restart Write Interval
-write_freq = 500                      --Solution Write Interval
-stat_freq = 200
+write_freq = 100                      --Solution Write Interval
+stat_freq = 2000
 restart = 0                           --Whether or not to use restart file
 time = 0.0                            --Start time of simulation
 tstart = 0                            --Start time index of simulation
@@ -22,9 +22,10 @@ mu = {2.928e-5}
 visc=0
 scheme="weno5"
 grid = "cartesian"
+gravity=0
 
 --Time
-nt = 3000                             --Time Step at which to end simulation
+nt = 2000                             --Time Step at which to end simulation
 dt = 1e-6                             --Time Step Size [s]
 
 --User Parameters
@@ -65,11 +66,16 @@ betae = 2.0         --Energy Equation Isotropic Coefficient
 noise = 0
 
 particle = 1
-p_np = 100
+p_np = 1e4
 
 function g(i,j,k,v)
     if v==0 then return dx*i end
     if v==1 then return dy*j end
+end
+
+function p(p,v)
+    if v==0 then return math.random()*(Lx/1.0) end
+    if v==1 then return math.random()*(Ly/1.0) end
 end
 
 function f(i,j,k,v)

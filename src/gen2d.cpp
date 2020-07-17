@@ -121,7 +121,7 @@ void gen2d_func::postStep(){
             if ((cf.t) % cf.write_freq == 0){
                 timers["pwrite"].reset();
                 Kokkos::deep_copy(particlesH, particles);
-                writeParticles(cf,particlesH);
+                //writeParticles(cf,particlesH);
                 Kokkos::fence();
                 timers["pwrite"].accumulate();
             }
@@ -300,7 +300,7 @@ void gen2d_func::preSim(){
         if (cf.write_freq > 0){
             timers["pwrite"].reset();
             Kokkos::deep_copy(particlesH, particles);
-            writeParticles(cf,particlesH);
+            //writeParticles(cf,particlesH);
             Kokkos::fence();
             timers["pwrite"].accumulate();
         } // end initial write

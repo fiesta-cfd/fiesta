@@ -2,6 +2,7 @@
 #define PARTICLE_HPP
 
 #include "fiesta.hpp"
+#include "input.hpp"
 
 struct particleStruct2D {
     int ci,cj;  // particle cell index
@@ -73,7 +74,7 @@ struct advectParticles2D{
                 }
             }
 
-            // average velocities to cell corners
+            // average velocities to cell corners (interpolate to cell corners for regular grid)
             double Qu11 = (u[0][0]+u[0][1]+u[1][0]+u[1][1])/4.0; //top left
             double Qv11 = (v[0][0]+v[0][1]+v[1][0]+v[1][1])/4.0;
 
@@ -144,41 +145,44 @@ struct advectParticles2D{
 };
 
 
-inline void writeParticles(struct inputConfig cf, FSP2DH particlesH){
-    stringstream ss;
-    ss << "particle-" << setw(7) << setfill('0') << cf.t << ".vtk";
-    ofstream f;
-    //f.open("particle.vtk");
-    f.open(ss.str());
-    f << "# vtk DataFile Version 4.2" << endl;
-    f << "Test Particles" << endl;
-    f << "ASCII" << endl;
-    f << "DATASET POLYDATA" << endl;
-    f << "POINTS " << cf.p_np << " float" << endl;
-    for (int p=0; p<cf.p_np; ++p){
-        f << particlesH(p).x << " " << particlesH(p).y << " " << "0.0" << endl;
-    }
-    f << "VERTICES " << cf.p_np << " " << cf.p_np*2 <<endl;
-    for (int p=0; p<cf.p_np; ++p){
-        f << "1 " << p << endl;
-    }
-    f << "POINT_DATA " << cf.p_np << endl;
-    f << "SCALARS state float" << endl;
-    f << "LOOKUP_TABLE default" << endl;
-    for (int p=0; p<cf.p_np; ++p){
-        f << particlesH(p).state << endl;
-    }
-    f << "SCALARS ci float" << endl;
-    f << "LOOKUP_TABLE default" << endl;
-    for (int p=0; p<cf.p_np; ++p){
-        f << particlesH(p).ci << endl;
-    }
-    f << "SCALARS cj float" << endl;
-    f << "LOOKUP_TABLE default" << endl;
-    for (int p=0; p<cf.p_np; ++p){
-        f << particlesH(p).cj << endl;
-    }
-    f.flush();
-    f.close();
-}
+//typedef typename Kokkos::View<particleStruct2D*>::HostMirror FSP2DH; // kokkos typename for array or particle structs
+//inline void writeParticles(struct inputConfig cf, Kokkos::View<particleStruct2D*>::HostMirror particlesH){
+//inline void writeParticles(struct inputConfig cf, Kokkos::View<particleStruct2D*>::HostMirror pH){
+//    using namespace std;
+//    stringstream ss;
+//    ss << "particle-" << setw(7) << setfill('0') << cf.t << ".vtk";
+//    ofstream f;
+//    //f.open("particle.vtk");
+//    f.open(ss.str());
+//    f << "# vtk DataFile Version 4.2" << endl;
+//    f << "Test Particles" << endl;
+//    f << "ASCII" << endl;
+//    f << "DATASET POLYDATA" << endl;
+//    f << "POINTS " << cf.p_np << " float" << endl;
+//    for (int p=0; p<cf.p_np; ++p){
+//        f << pH(p).x << " " << pH(p).y << " " << "0.0" << endl;
+//    }
+//    f << "VERTICES " << cf.p_np << " " << cf.p_np*2 <<endl;
+//    for (int p=0; p<cf.p_np; ++p){
+//        f << "1 " << p << endl;
+//    }
+//    f << "POINT_DATA " << cf.p_np << endl;
+//    f << "SCALARS state float" << endl;
+//    f << "LOOKUP_TABLE default" << endl;
+//    for (int p=0; p<cf.p_np; ++p){
+//        f << pH(p).state << endl;
+//    }
+//    f << "SCALARS ci float" << endl;
+//    f << "LOOKUP_TABLE default" << endl;
+//    for (int p=0; p<cf.p_np; ++p){
+//        f << pH(p).ci << endl;
+//    }
+//    f << "SCALARS cj float" << endl;
+//    f << "LOOKUP_TABLE default" << endl;
+//    for (int p=0; p<cf.p_np; ++p){
+//        f << pH(p).cj << endl;
+//    }
+//    f.flush();
+//    f.close();
+//}
 #endif

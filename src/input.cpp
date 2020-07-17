@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <getopt.h>
+#include "particle.hpp"
 
 // Lua error function
 void error(lua_State *L, const char *fmt, ...){
@@ -430,5 +431,41 @@ int loadGrid(struct inputConfig cf, const FS4D deviceV){
     }
     Kokkos::deep_copy(deviceV,hostV);
     
+    return 0;
+}
+int loadParticles(struct inputConfig cf, const FSP2D deviceV){
+    
+    if (cf.particle == 1) {
+        FSP2DH particlesH = Kokkos::create_mirror_view(deviceV);
+        double z;
+        int isnum;
+
+        lua_State *L = luaL_newstate(); //Opens Lua
+        luaL_openlibs(L);               //opens the standard libraries
+
+        /* Open and run Lua configuration file */
+        if (luaL_loadfile(L,cf.inputFname.c_str()) || lua_pcall(L,0,0,0))
+            error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
+        for (int p=0; p<cf.p_np; ++p){
+            for (int v=0; v<cf.ndim; ++v){
+                lua_getglobal(L,"p");
+                lua_pushnumber(L,p);
+                lua_pushnumber(L,v);
+                if (lua_pcall(L,2,1,0) != LUA_OK)
+                    error(L, "error running function 'f': %s\n",lua_tostring(L, -1));
+                z = lua_tonumberx(L,-1,&isnum);
+                if (!isnum)
+                    error(L, "function 'p' should return a number");
+                lua_pop(L,1);
+
+                particlesH(p).state = 1;
+                if (v==0) particlesH(p).x = z;
+                if (v==1) particlesH(p).y = z;
+            }
+        }
+
+        Kokkos::deep_copy(deviceV, particlesH);
+    }
+
     return 0;
 }
