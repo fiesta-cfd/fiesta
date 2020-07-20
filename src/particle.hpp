@@ -7,7 +7,7 @@
 struct particleStruct2D {
     int ci,cj;  // particle cell index
     double x,y; // particle position
-    int state; // particle state (1=enabled, 0=disabled)
+    int state;  // particle state (1=enabled, 0=disabled)
 };
 
 typedef typename Kokkos::View<particleStruct2D*> FSP2D; // kokkos typename for array or particle structs
@@ -37,7 +37,7 @@ struct findInitialCell2D{
 };
 
 struct advectParticles2D{
-    // functor for mocing particles and finding their new cells and states
+    // functor for moving particles and finding their new cells and states
     FS4D var;
     FS2D rho;
     FS4D grid;
@@ -110,7 +110,7 @@ struct advectParticles2D{
             double dx = lu*dt;
             double dy = lv*dt;
 
-            // deactivate particle if it will leaves domain
+            // deactivate particle if it will leave domain
             if (particles(p).x+dx < grid(0,gj,0,0))
                 particles(p).state = 0;
             if (particles(p).y+dy < grid(gi,0,0,1))

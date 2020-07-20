@@ -259,7 +259,7 @@ int main(int argc, char* argv[]){
         applyBCs(cf,f->var);
 #endif
 
-        // Seconf stage compute
+        // Second stage compute
         f->compute();
 
         //assign temporary variables
@@ -307,7 +307,7 @@ int main(int argc, char* argv[]){
             }
         }
 //#endif
-        // Print status chevk if necessary
+        // Print status check if necessary
         if (cf.stat_freq > 0){
             if ((t+1) % cf.stat_freq == 0){
                 f->timers["statCheck"].reset();
