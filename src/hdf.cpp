@@ -257,6 +257,13 @@ void fstWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS4
                 fprintf(xmf, "       </DataItem>\n");
                 fprintf(xmf, "     </Attribute>\n");
             }
+            for (int var=cf.nv; var<cf.nvt; ++var){
+                fprintf(xmf, "     <Attribute Name=\"Variable%02d\" AttributeType=\"Scalar\" Center=\"Cell\">\n",var-cf.nv);
+                fprintf(xmf, "       <DataItem Dimensions=\"%d %d\" NumberType=\"Float\" Precision=\"4\" Format=\"HDF\">\n", NY, NX);
+                fprintf(xmf, "        %s:/Solution/Variable%02d\n",filename.c_str(),var);
+                fprintf(xmf, "       </DataItem>\n");
+                fprintf(xmf, "     </Attribute>\n");
+            }
             fprintf(xmf, "   </Grid>\n");
             fprintf(xmf, " </Domain>\n");
             fprintf(xmf, "</Xdmf>\n");
