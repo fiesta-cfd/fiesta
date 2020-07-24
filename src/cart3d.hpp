@@ -13,7 +13,7 @@ public:
     void preSim();
     void postSim();
 
-    FS3D p;
+    FS3D p;		// Pressure
     FS3D T;
     FS3D rho;
     FS3D qx;
