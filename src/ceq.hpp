@@ -179,8 +179,8 @@ struct calculateRhoGrad2D {
 
         gradRho(i,j,0) = (1-i1)*i2*rgrad;
         gradRho(i,j,1) = i1*rgrad;
-        gradRho(i,j,2) =-i1*dxr;
-        gradRho(i,j,3) = i1*dyr;
+        gradRho(i,j,2) =-i1*dyr;
+        gradRho(i,j,3) = i1*dxr;
 
 
         //gradRho(i,j,0) = (1.0-indicator)*indicator2*rgrad;
