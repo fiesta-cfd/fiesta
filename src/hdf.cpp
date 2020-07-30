@@ -9,11 +9,12 @@
 #include "hdf5.h"
 #include <cstdlib>
 #include <cstdio>
+#include "rkfunction.hpp"
 //#include "mpi.hpp"
 
 using namespace std;
 
-fstWriter::fstWriter(struct inputConfig cf, FS4D gridD, FS4D varD){
+fstWriter::fstWriter(struct inputConfig cf, rk_func *f){
     xdp = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
     ydp = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
     zdp = (double*)malloc(cf.ni*cf.nj*cf.nk*sizeof(double));
@@ -27,8 +28,8 @@ fstWriter::fstWriter(struct inputConfig cf, FS4D gridD, FS4D varD){
 
     readV = (double *)malloc(cf.nci*cf.ncj*cf.nck*cf.nv*sizeof(double));
     
-    gridH = Kokkos::create_mirror_view(gridD);
-    varH = Kokkos::create_mirror_view(varD);
+    gridH = Kokkos::create_mirror_view(f->grid);
+    varH = Kokkos::create_mirror_view(f->var);
 }
 
 void fstWriter::writeSPGrid(struct inputConfig cf, const FS4D gridD, const char * fname){
@@ -36,7 +37,7 @@ void fstWriter::writeSPGrid(struct inputConfig cf, const FS4D gridD, const char 
 void fstWriter::writeGrid(struct inputConfig cf, const FS4D gridD ,const char * fname){
 }
 
-void fstWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D varD, int tdx, double time){
+void fstWriter::writeSolution(struct inputConfig cf, rk_func *f, int tdx, double time){
 
     if (cf.ndim == 2){
         stringstream filenameStream;
@@ -76,7 +77,7 @@ void fstWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS4
                  << c(0,CYA) << left << "'" + filename + "'" << c(0,NON) << endl;
         }
 
-        Kokkos::deep_copy(gridH,gridD);
+        Kokkos::deep_copy(gridH,f->grid);
 
         int idx;
         group_id = H5Gcreate(file_id, "/Grid", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -139,7 +140,7 @@ void fstWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS4
 
         // Create group for solution datasets
         group_id = H5Gcreate(file_id, "/Solution", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-        Kokkos::deep_copy(varH,varD);
+        Kokkos::deep_copy(varH,f->var);
         for (int vn=0; vn<cf.nvt; ++vn){
             // Format Dataset Name
             stringstream vnamestream;
@@ -307,7 +308,7 @@ void fstWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS4
                  << c(0,CYA) << left << "'" + filename + "'" << c(0,NON) << endl;
         }
 
-        Kokkos::deep_copy(gridH,gridD);
+        Kokkos::deep_copy(gridH,f->grid);
 
         int idx;
         group_id = H5Gcreate(file_id, "/Grid", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -371,7 +372,7 @@ void fstWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS4
 
         // Create group for solution datasets
         group_id = H5Gcreate(file_id, "/Solution", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-        Kokkos::deep_copy(varH,varD);
+        Kokkos::deep_copy(varH,f->var);
         for (int vn=0; vn<cf.nvt; ++vn){
             // Format Dataset Name
             stringstream vnamestream;
@@ -498,7 +499,7 @@ void fstWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS4
     }
 
 }
-void fstWriter::writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D varD, int tdx, double time){
+void fstWriter::writeRestart(struct inputConfig cf, rk_func *f, int tdx, double time){
 }
 
 

@@ -9,12 +9,12 @@ class fstWriter : public writer{
 
 public:
 
-    fstWriter(struct inputConfig, FS4D gridD, FS4D varD);
+    fstWriter(struct inputConfig, rk_func *f);
     void writeGrid(struct inputConfig cf, const FS4D gridD, const char * fname);
     void writeSPGrid(struct inputConfig cf, const FS4D gridD, const char * fname);
 
-    void writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, int tdx, double time);
-    void writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D deviceV, int tdx, double time);
+    void writeSolution(struct inputConfig cf, rk_func *f, int tdx, double time);
+    void writeRestart(struct inputConfig cf, rk_func *f, int tdx, double time);
 
     void readSolution(struct inputConfig cf, FS4D &deviceG, FS4D &deviceV);
 

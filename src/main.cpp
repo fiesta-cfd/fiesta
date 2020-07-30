@@ -133,7 +133,7 @@ int main(int argc, char* argv[]){
 #ifdef NOMPI
     serialVTKWriter w(cf,f->grid,f->var);
 #else
-    fstWriter w(cf,f->grid,f->var);
+    fstWriter w(cf,f);
     //cgnsWriter w(cf,f->grid,f->var);
 #endif
     
@@ -184,12 +184,12 @@ int main(int argc, char* argv[]){
         writeTimer.start();
         if (cf.write_freq >0){
             solWriteTimer.reset();
-            w.writeSolution(cf,f->grid,f->var,0,0.00);
+            w.writeSolution(cf,f,0,0.00);
             solWriteTimer.accumulate();
         }
         if (cf.restart_freq >0){
             resWriteTimer.reset();
-            w.writeRestart(cf,f->grid,f->var,0,0.00);
+            w.writeRestart(cf,f,0,0.00);
             resWriteTimer.accumulate();
         }
         writeTimer.stop();
@@ -292,7 +292,7 @@ int main(int argc, char* argv[]){
         if (cf.write_freq > 0){
             if ((t+1) % cf.write_freq == 0){
                 f->timers["solWrite"].reset();
-                w.writeSolution(cf,f->grid,f->var,t+1,time);
+                w.writeSolution(cf,f,t+1,time);
                 Kokkos::fence();
                 f->timers["solWrite"].accumulate();
             }
@@ -301,7 +301,7 @@ int main(int argc, char* argv[]){
         if (cf.restart_freq > 0){
             if ((t+1) % cf.restart_freq == 0){
                 f->timers["resWrite"].reset();
-                w.writeRestart(cf,f->grid,f->var,t+1,time);
+                w.writeRestart(cf,f,t+1,time);
                 Kokkos::fence();
                 f->timers["resWrite"].accumulate();
             }
