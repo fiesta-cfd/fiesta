@@ -26,7 +26,7 @@ salloc -N1 -t 4:00:00
 
 Load Required Modules:
 ```
-module load gcc/7.4.0 openmpi/2.1.2 cudatoolkit/10.0 cmake/3.14.6
+module load gcc/7.4.0 openmpi/2.1.2 cudatoolkit/10.1 cmake/3.14.6
 ```
 
 Configure with CMAKE
