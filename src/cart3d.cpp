@@ -1,9 +1,8 @@
 #include "fiesta.hpp"
 #include "input.hpp"
 #ifndef NOMPI
-#include "cgns.hpp"
 #include "mpi.hpp"
-#include <mpi.h>
+#include "mpi.h"
 #endif
 #include "Kokkos_Core.hpp"
 #include "bc.hpp"

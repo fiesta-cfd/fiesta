@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #ifndef NOMPI
-#include <mpi.h>
+#include "mpi.h"
 #endif
 #include <string>
 

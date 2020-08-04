@@ -1,10 +1,9 @@
 #include "fiesta.hpp"
 #include "input.hpp"
 #ifndef NOMPI
-#include "cgns.hpp"
 #include "hdf.hpp"
 #include "mpi.hpp"
-#include <mpi.h>
+#include "mpi.h"
 #else
 #include "vtk.hpp"
 #endif

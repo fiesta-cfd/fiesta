@@ -4,7 +4,7 @@
 #include "input.hpp"
 #ifndef NOMPI
 #include "mpi.hpp"
-#include <mpi.h>
+#include "mpi.h"
 #endif
 
 struct bc_L {

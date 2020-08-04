@@ -4,7 +4,7 @@
 #include "Kokkos_Core.hpp"
 #include "fiesta.hpp"
 #include "input.hpp"
-#include <mpi.h>
+#include "mpi.h"
 
 struct inputConfig mpi_init(struct inputConfig cf);
 

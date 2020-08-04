@@ -79,26 +79,26 @@ if (NOT LITE)
         )
     endif()
 
-    #if (CGNS)
-        # cgns
-        ExternalProject_Add(cgnsParallel
-          SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/cgns
-          INSTALL_DIR ${installdir}
-          CMAKE_ARGS -D CGNS_BUILD_SHARED:BOOL=OFF
-                     -D CGNS_USE_SHARED:BOOL=OFF
-                     -D CGNS_ENABLE_64BIT:BOOL=ON
-                     -D CGNS_ENABLE_HDF5:BOOL=ON
-                     -D HDF5_NEED_MPI:BOOL=ON
-                     -D CGNS_ENABLE_PARALLEL:BOOL=ON
-                     -D CGNS_ENABLE_SCOPING:BOOL=ON
-                     -D CMAKE_INSTALL_PREFIX:PATH=${installDir}
-                     -D CMAKE_PREFIX_PATH:PATH=${installDir}
-        )
-    #endif()
+    ##if (CGNS)
+    #    # cgns
+    #    ExternalProject_Add(cgnsParallel
+    #      SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/cgns
+    #      INSTALL_DIR ${installdir}
+    #      CMAKE_ARGS -D CGNS_BUILD_SHARED:BOOL=OFF
+    #                 -D CGNS_USE_SHARED:BOOL=OFF
+    #                 -D CGNS_ENABLE_64BIT:BOOL=ON
+    #                 -D CGNS_ENABLE_HDF5:BOOL=ON
+    #                 -D HDF5_NEED_MPI:BOOL=ON
+    #                 -D CGNS_ENABLE_PARALLEL:BOOL=ON
+    #                 -D CGNS_ENABLE_SCOPING:BOOL=ON
+    #                 -D CMAKE_INSTALL_PREFIX:PATH=${installDir}
+    #                 -D CMAKE_PREFIX_PATH:PATH=${installDir}
+    #    )
+    ##endif()
     
-    if (NOT HDF5_FOUND)
-        ExternalProject_Add_StepDependencies(cgnsParallel configure hdf5Parallel)
-    endif()
+    #if (NOT HDF5_FOUND)
+    #    ExternalProject_Add_StepDependencies(cgnsParallel configure hdf5Parallel)
+    #endif()
 endif()
 
 include_directories(${installDir}/include)
@@ -115,19 +115,20 @@ if (LITE)
 else()
     if (HDF5_FOUND)
         message("Fiesta Sources" ${FIESTA_SRCS})
-        add_executable(fiesta ${FIESTA_SRCS} src/cgns.cpp src/mpi.cpp src/hdf.cpp)
-        add_dependencies(fiesta cgnsParallel)
+        add_executable(fiesta ${FIESTA_SRCS}  src/mpi.cpp src/hdf.cpp)
+        #add_executable(fiesta ${FIESTA_SRCS} src/cgns.cpp src/mpi.cpp src/hdf.cpp)
+        #add_dependencies(fiesta cgnsParallel)
         target_link_libraries(fiesta
                               kokkos
                               ${MPI_CXX_LIBRARIES}
                               ${HDF5_C_LIBRARIES}
-                              ${installDir}/lib/libcgns.a
+        #                      ${installDir}/lib/libcgns.a
                               lua
         )
     else()
         message("Fiesta Sources" ${FIESTA_SRCS})
         add_executable(fiesta ${FIESTA_SRCS} src/cgns.cpp src/mpi.cpp src/hdf.cpp)
-        add_dependencies(fiesta cgnsParallel)
+#        add_dependencies(fiesta cgnsParallel)
         target_link_libraries(fiesta
                               kokkos
                               ${MPI_CXX_LIBRARIES}

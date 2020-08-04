@@ -3,7 +3,7 @@
 #include <iomanip>
 #include <locale>
 #ifndef NOMPI
-#include <mpi.h>
+#include "mpi.h"
 #endif
 #include "output.hpp"
 #include <cmath>
