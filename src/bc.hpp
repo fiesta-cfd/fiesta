@@ -1,5 +1,5 @@
-#include "fiesta.hpp"
 #include "Kokkos_Core.hpp"
+#include "fiesta.hpp"
 #include "input.hpp"
 #ifndef NOMPI
 #include "mpi.hpp"

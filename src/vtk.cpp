@@ -1,163 +1,174 @@
-#include "fiesta.hpp"
 #include "vtk.hpp"
+#include "fiesta.hpp"
 //#include "Kokkos_Core.hpp"
 #include "debug.hpp"
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <iomanip>
 #include "output.hpp"
+#include "rkfunction.hpp"
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
 
 using namespace std;
 
-serialVTKWriter::serialVTKWriter(struct inputConfig cf, FS4D gridD, FS4D varD){
-    
-    gridH = Kokkos::create_mirror_view(gridD);
-    varH = Kokkos::create_mirror_view(varD);
+serialVTKWriter::serialVTKWriter(struct inputConfig cf, FS4D gridD, FS4D varD) {
+
+  gridH = Kokkos::create_mirror_view(gridD);
+  varH = Kokkos::create_mirror_view(varD);
 }
 
-//struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y, double *z,const char * fname){
-void serialVTKWriter::writeGrid(struct inputConfig cf, const FS4D gridD ,const char * fname){
-}
-//struct inputConfig writeSPGrid(struct inputConfig cf, float *x, float *y, float *z, const char * fname){
-void serialVTKWriter::writeSPGrid(struct inputConfig cf, const FS4D gridD, const char * fname){
-}
+// struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y,
+// double *z,const char * fname){
+void serialVTKWriter::writeGrid(struct inputConfig cf, const FS4D gridD,
+                                const char *fname) {}
+// struct inputConfig writeSPGrid(struct inputConfig cf, float *x, float *y,
+// float *z, const char * fname){
+void serialVTKWriter::writeSPGrid(struct inputConfig cf, const FS4D gridD,
+                                  const char *fname) {}
 
-void serialVTKWriter::writeRestart(struct inputConfig cf, const FS4D gridD, const FS4D varD, int tdx, double time){
-}
+void serialVTKWriter::writeRestart(struct inputConfig cf, rk_func *f, int tdx,
+                                   double time) {}
 
-//void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const FS4D deviceV, int tdx, double time){
-void serialVTKWriter::writeSolution(struct inputConfig cf, const FS4D gridD, const FS4D varD, int tdx, double time){
+// void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const
+// FS4D deviceV, int tdx, double time){
+void serialVTKWriter::writeSolution(struct inputConfig cf, rk_func *mod,
+                                    int tdx, double time) {
 
-    Kokkos::deep_copy(varH,varD);
-    Kokkos::deep_copy(gridH,gridD);
+  Kokkos::deep_copy(varH, mod->var);
+  Kokkos::deep_copy(gridH, mod->grid);
 
-    stringstream ss;
-    ss << "solution-" << setw(7) << setfill('0') << tdx << ".vtk";
-    string fsname = ss.str();
+  stringstream ss;
+  ss << "solution-" << setw(7) << setfill('0') << tdx << ".vtk";
+  string fsname = ss.str();
 
-    if (cf.rank == 0){
-        cout << c(0,YEL) << left << setw(22) << "    Writing Solution: " << c(0,NON)
-             << c(0,CYA) << left << "'" + fsname + "'" << c(0,NON) << endl;
-    }
+  if (cf.rank == 0) {
+    cout << c(0, YEL) << left << setw(22)
+         << "    Writing Solution: " << c(0, NON) << c(0, CYA) << left
+         << "'" + fsname + "'" << c(0, NON) << endl;
+  }
 
-    std::ofstream f;
-    f.open(ss.str());
-    f << "# vtk DataFile Version 4.2" << endl;
-    f << cf.title.c_str() << endl;
-    f << "BINARY\nDATASET STRUCTURED_GRID" << endl;
-    //f << "ASCII\nDATASET STRUCTURED_GRID" << endl;
-    //if (cf.ndim == 3){
-        f << "DIMENSIONS " << cf.ni << " " << cf.nj << " " << cf.nk << endl;
-        f << "POINTS " << cf.ni*cf.nj*cf.nk << " double" << endl;
-        for (int k=0; k < cf.nk; k++) {
-            for (int j=0; j < cf.nj; j++) {
-                for (int i=0; i < cf.ni; i++) {
-                    for (int v=0; v<3; v++){
-                        char data[8], *pDouble = (char *)(double*)(&gridH(i,j,k,v));
-                        for (int b=0; b<8; ++b)
-                            data[b] = pDouble[7-b];
-                        f.write(data,8);
-                    }
-                    //f << gridH(i,j,k,0) << " " << gridH(i,j,k,1) << " " << gridH(i,j,k,2) << endl;
-                }
-            }
+  std::ofstream f;
+  f.open(ss.str());
+  f << "# vtk DataFile Version 4.2" << endl;
+  f << cf.title.c_str() << endl;
+  f << "BINARY\nDATASET STRUCTURED_GRID" << endl;
+  // f << "ASCII\nDATASET STRUCTURED_GRID" << endl;
+  // if (cf.ndim == 3){
+  f << "DIMENSIONS " << cf.ni << " " << cf.nj << " " << cf.nk << endl;
+  f << "POINTS " << cf.ni * cf.nj * cf.nk << " double" << endl;
+  for (int k = 0; k < cf.nk; k++) {
+    for (int j = 0; j < cf.nj; j++) {
+      for (int i = 0; i < cf.ni; i++) {
+        for (int v = 0; v < 3; v++) {
+          char data[8], *pDouble = (char *)(double *)(&gridH(i, j, k, v));
+          for (int b = 0; b < 8; ++b)
+            data[b] = pDouble[7 - b];
+          f.write(data, 8);
         }
-    //}else{
-    //    f << "DIMENSIONS " << cf.ni << " " << cf.nj << endl;
-    //    f << "POINTS " << cf.ni*cf.nj << " float" << endl;
-    //    for (int j=0; j < cf.nj; j++) {
-    //        for (int i=0; i < cf.ni; i++) {
-    //            f << gridH(i,j,0,0) << " " << gridH(i,j,0,1) << endl;
-    //        }
-    //    }
-    //}
-
-    int ncells = cf.nci*cf.ncj*cf.nck;
-    f << "CELL_DATA " << ncells << endl;
-    f << "FIELD FieldData 1" << endl;
-    f << "Variables " << cf.nv << " " << ncells << " double" << endl;
-    for (int k=0; k < cf.nck; k++) {
-        for (int j=0; j < cf.ncj; j++) {
-            for (int i=0; i < cf.nci; i++) {
-                for (int v=0; v < cf.nv; v++) {
-                    if (cf.ndim == 3){
-                        char data[8], *pDouble = (char *)(double*)(&varH(i+cf.ng,j+cf.ng,k+cf.ng,v));
-                        for (int b=0; b<8; ++b)
-                            data[b] = pDouble[7-b];
-                        f.write(data,8);
-                        //f.write((char*)&varH(i+cf.ng,j+cf.ng,k+cf.ng,v),sizeof(double));
-                        //f << setprecision(6) << scientific << varH(i+cf.ng,j+cf.ng,k+cf.ng,v) << " ";
-                    }else{
-                        char data[8], *pDouble = (char *)(double*)(&varH(i+cf.ng,j+cf.ng,k,v));
-                        for (int b=0; b<8; ++b)
-                            data[b] = pDouble[7-b];
-                        f.write(data,8);
-                        //f.write((char*)&varH(i+cf.ng,j+cf.ng,k,v),sizeof(double));
-                        //f << setprecision(6) << scientific << varH(i+cf.ng,j+cf.ng,k,v) << " ";
-                    }
-                }
-                //f << endl;
-            }
-        }
+        // f << gridH(i,j,k,0) << " " << gridH(i,j,k,1) << " " << gridH(i,j,k,2)
+        // << endl;
+      }
     }
-    
-    f.flush();
-    f.close();
+  }
+  //}else{
+  //    f << "DIMENSIONS " << cf.ni << " " << cf.nj << endl;
+  //    f << "POINTS " << cf.ni*cf.nj << " float" << endl;
+  //    for (int j=0; j < cf.nj; j++) {
+  //        for (int i=0; i < cf.ni; i++) {
+  //            f << gridH(i,j,0,0) << " " << gridH(i,j,0,1) << endl;
+  //        }
+  //    }
+  //}
 
-    //if (cf.particles==1){
-    //    stringstream ss;
-    //    ss << "particle-" << setw(7) << setfill('0') << cf.t << ".vtk";
-    //    ofstream f;
-    //    //f.open("particle.vtk");
-    //    f.open(ss.str());
-    //    f << "# vtk DataFile Version 4.2" << endl;
-    //    f << "Test Particles" << endl;
-    //    f << "ASCII" << endl;
-    //    f << "DATASET POLYDATA" << endl;
-    //    f << "POINTS " << cf.p_np << " float" << endl;
-    //    for (int p=0; p<cf.p_np; ++p){
-    //        f << pH(p).x << " " << pH(p).y << " " << "0.0" << endl;
-    //    }
-    //    f << "VERTICES " << cf.p_np << " " << cf.p_np*2 <<endl;
-    //    for (int p=0; p<cf.p_np; ++p){
-    //        f << "1 " << p << endl;
-    //    }
-    //    f << "POINT_DATA " << cf.p_np << endl;
-    //    f << "SCALARS state float" << endl;
-    //    f << "LOOKUP_TABLE default" << endl;
-    //    for (int p=0; p<cf.p_np; ++p){
-    //        f << pH(p).state << endl;
-    //    }
-    //    f << "SCALARS ci float" << endl;
-    //    f << "LOOKUP_TABLE default" << endl;
-    //    for (int p=0; p<cf.p_np; ++p){
-    //        f << pH(p).ci << endl;
-    //    }
-    //    f << "SCALARS cj float" << endl;
-    //    f << "LOOKUP_TABLE default" << endl;
-    //    for (int p=0; p<cf.p_np; ++p){
-    //        f << pH(p).cj << endl;
-    //    }
-    //    f.flush();
-    //    f.close();
-    //}
+  int ncells = cf.nci * cf.ncj * cf.nck;
+  f << "CELL_DATA " << ncells << endl;
+  f << "FIELD FieldData 1" << endl;
+  f << "Variables " << cf.nv << " " << ncells << " double" << endl;
+  for (int k = 0; k < cf.nck; k++) {
+    for (int j = 0; j < cf.ncj; j++) {
+      for (int i = 0; i < cf.nci; i++) {
+        for (int v = 0; v < cf.nv; v++) {
+          if (cf.ndim == 3) {
+            char data[8], *pDouble = (char *)(double *)(&varH(
+                              i + cf.ng, j + cf.ng, k + cf.ng, v));
+            for (int b = 0; b < 8; ++b)
+              data[b] = pDouble[7 - b];
+            f.write(data, 8);
+            // f.write((char*)&varH(i+cf.ng,j+cf.ng,k+cf.ng,v),sizeof(double));
+            // f << setprecision(6) << scientific <<
+            // varH(i+cf.ng,j+cf.ng,k+cf.ng,v) << " ";
+          } else {
+            char data[8],
+                *pDouble =
+                    (char *)(double *)(&varH(i + cf.ng, j + cf.ng, k, v));
+            for (int b = 0; b < 8; ++b)
+              data[b] = pDouble[7 - b];
+            f.write(data, 8);
+            // f.write((char*)&varH(i+cf.ng,j+cf.ng,k,v),sizeof(double));
+            // f << setprecision(6) << scientific << varH(i+cf.ng,j+cf.ng,k,v)
+            // << " ";
+          }
+        }
+        // f << endl;
+      }
+    }
+  }
 
-    
+  f.flush();
+  f.close();
 
-    //if (cf.numProcs == 1){
-    //    std::ofstream myfile;
-    //    myfile.open("output.txt");
-    //    for (int i=cf.ng; i<cf.nci; ++i){
-    //       int  idx = (cf.nci*cf.ncj)*0+cf.nci*3+i;
-//  //          myfile << x[idx] << ", " << hostV(i,3,0,0) << ", " << hostV(i,3,0,1) << ", " << hostV(i,3,0,2) << ", " << hostV(i,3,0,3) << std::endl;
-    //        myfile << x[idx] << ", " << hostV(i,3,0,3) << std::endl;
-    //    }
-    //    myfile << std::endl;
-    //    myfile.close();
-    //}
+  // if (cf.particles==1){
+  //    stringstream ss;
+  //    ss << "particle-" << setw(7) << setfill('0') << cf.t << ".vtk";
+  //    ofstream f;
+  //    //f.open("particle.vtk");
+  //    f.open(ss.str());
+  //    f << "# vtk DataFile Version 4.2" << endl;
+  //    f << "Test Particles" << endl;
+  //    f << "ASCII" << endl;
+  //    f << "DATASET POLYDATA" << endl;
+  //    f << "POINTS " << cf.p_np << " float" << endl;
+  //    for (int p=0; p<cf.p_np; ++p){
+  //        f << pH(p).x << " " << pH(p).y << " " << "0.0" << endl;
+  //    }
+  //    f << "VERTICES " << cf.p_np << " " << cf.p_np*2 <<endl;
+  //    for (int p=0; p<cf.p_np; ++p){
+  //        f << "1 " << p << endl;
+  //    }
+  //    f << "POINT_DATA " << cf.p_np << endl;
+  //    f << "SCALARS state float" << endl;
+  //    f << "LOOKUP_TABLE default" << endl;
+  //    for (int p=0; p<cf.p_np; ++p){
+  //        f << pH(p).state << endl;
+  //    }
+  //    f << "SCALARS ci float" << endl;
+  //    f << "LOOKUP_TABLE default" << endl;
+  //    for (int p=0; p<cf.p_np; ++p){
+  //        f << pH(p).ci << endl;
+  //    }
+  //    f << "SCALARS cj float" << endl;
+  //    f << "LOOKUP_TABLE default" << endl;
+  //    for (int p=0; p<cf.p_np; ++p){
+  //        f << pH(p).cj << endl;
+  //    }
+  //    f.flush();
+  //    f.close();
+  //}
 
+  // if (cf.numProcs == 1){
+  //    std::ofstream myfile;
+  //    myfile.open("output.txt");
+  //    for (int i=cf.ng; i<cf.nci; ++i){
+  //       int  idx = (cf.nci*cf.ncj)*0+cf.nci*3+i;
+  //  //          myfile << x[idx] << ", " << hostV(i,3,0,0) << ", " <<
+  //  hostV(i,3,0,1) << ", " << hostV(i,3,0,2) << ", " << hostV(i,3,0,3) <<
+  //  std::endl;
+  //        myfile << x[idx] << ", " << hostV(i,3,0,3) << std::endl;
+  //    }
+  //    myfile << std::endl;
+  //    myfile.close();
+  //}
 }
 
-void serialVTKWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD){
-}
+void serialVTKWriter::readSolution(struct inputConfig cf, FS4D &gridD,
+                                   FS4D &varD) {}
