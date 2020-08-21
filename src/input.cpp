@@ -7,6 +7,7 @@
 #include <getopt.h>
 #include <iostream>
 #include <string>
+#include <regex>
 
 // Lua error function
 void error(lua_State *L, const char *fmt, ...) {
@@ -21,8 +22,38 @@ void error(lua_State *L, const char *fmt, ...) {
 // Lua get boolean value
 int getglobbool(lua_State *L, const char *var) {
   int result;
+  int isnil;
   lua_getglobal(L, var);
-  result = (int)lua_toboolean(L, -1);
+  if (lua_isnumber(L,-1)) printf("number\n");
+  if (lua_istable(L,-1)) printf("table\n");
+  if (lua_isstring(L,-1)) printf("string\n");
+  if (lua_isnil(L,-1)) printf("nil\n");
+  if (lua_isnone(L,-1)) printf("none\n");
+  if (lua_isinteger(L,-1)) printf("integer\n");
+
+  isnil = lua_isnoneornil(L,-1);
+  if (isnil){
+    error(L,"Error Reading Input File: Could not read value for '%s', a boolean value was expected.\n",var);
+  }else{
+    if ( lua_isstring(L,-1) ) {
+      const char *iresult;
+      iresult = lua_tostring(L,-1);
+
+      std::string str(iresult);
+      std::regex rgxtrue(R"(\.?(true|on|enable|enabled|1)\.?)",std::regex_constants::icase);
+      std::regex rgxfalse(R"(\.?(false|off|disable|disabled|0)\.?)",std::regex_constants::icase);
+
+      if ( std::regex_match(str,rgxtrue) ){
+        result = 1;
+      } else if ( std::regex_match(str,rgxfalse) ) {
+        result = 0;
+      } else {
+        error(L,"Error Reading Input File: Unknown value for '%s', a boolean value was expected.\n",var);
+      }
+    } else {
+      result = lua_toboolean(L,-1);
+    }
+  }
   lua_pop(L, 1);
   return result;
 }
@@ -128,10 +159,9 @@ struct inputConfig executeConfiguration(std::string fName) {
   cf.ns = getglobint(L, "ns");
   cf.dt = getglobdbl(L, "dt");
   cf.R = getglobdbl(L, "R");
-  cf.visc = getglobdbl(L, "visc");
+  cf.visc = getglobbool(L, "visc");
   cf.xProcs = getglobint(L, "procsx");
   cf.yProcs = getglobint(L, "procsy");
-  // cf.ng          = getglobint (L, "ng" );
   cf.ng = 3;
   cf.xPer = getglobint(L, "xPer");
   cf.yPer = getglobint(L, "yPer");
