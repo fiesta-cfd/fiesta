@@ -105,6 +105,10 @@ void getCommandlineOptions(int argc, char **argv, int &version_flag,
   static struct option long_options[] = {
       {"version", no_argument, NULL, 'v'},
       {"color", optional_argument, NULL, 'c'},
+      {"kokkos-ndevices", optional_argument, NULL, 'n'},
+      {"kokkos-threads", optional_argument, NULL, 'n'},
+      {"kokkos-help", optional_argument, NULL, 'n'},
+      {"kokkos-numa", optional_argument, NULL, 'n'},
       {NULL, 0, NULL, 0}};
 
   std::string copt;
