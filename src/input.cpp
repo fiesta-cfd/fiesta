@@ -20,20 +20,17 @@ void error(lua_State *L, const char *fmt, ...) {
 }
 
 // Lua get boolean value
-int getglobbool(lua_State *L, const char *var) {
+int getglobbool(lua_State *L, const char *var, int defaultable, int default_value) {
   int result;
   int isnil;
   lua_getglobal(L, var);
-  if (lua_isnumber(L,-1)) printf("number\n");
-  if (lua_istable(L,-1)) printf("table\n");
-  if (lua_isstring(L,-1)) printf("string\n");
-  if (lua_isnil(L,-1)) printf("nil\n");
-  if (lua_isnone(L,-1)) printf("none\n");
-  if (lua_isinteger(L,-1)) printf("integer\n");
 
   isnil = lua_isnoneornil(L,-1);
   if (isnil){
-    error(L,"Error Reading Input File: Could not read value for '%s', a boolean value was expected.\n",var);
+    if (defaultable)
+      return default_value;
+    else
+      error(L,"Error Reading Input File: Could not read value for '%s', a boolean value was expected.\n",var);
   }else{
     if ( lua_isstring(L,-1) ) {
       const char *iresult;
@@ -59,41 +56,54 @@ int getglobbool(lua_State *L, const char *var) {
 }
 
 // Lua get integer value
-int getglobint(lua_State *L, const char *var) {
+int getglobint(lua_State *L, const char *var, int defaultable, int default_value) {
   int isnum, result;
   lua_getglobal(L, var);
+  if (lua_isnoneornil(L, -1)){
+    if (defaultable)
+      return default_value;
+    else
+      error(L, "Error Reading Input File: Could not read value for '%s', an integer was expected.\n", var);
+  }
   result = (int)lua_tointegerx(L, -1, &isnum);
-  if (lua_isnil(L, -1))
-    error(L, "'%s' is nil\n", var);
   if (!isnum)
-    error(L, "'%s' should be an integer\n", var);
+    error(L, "Error Reading Input File: Could not read value for '%s', an integer was expected.\n", var);
   lua_pop(L, 1);
   return result;
 }
 
 // Lua get double value
-double getglobdbl(lua_State *L, const char *var) {
+double getglobdbl(lua_State *L, const char *var, int defaultable, double default_value) {
   int isnum;
   double result;
   lua_getglobal(L, var);
+  if (lua_isnoneornil(L, -1)){
+    if (defaultable)
+      return default_value;
+    else
+      error(L, "Error Reading Input File: Could not read value for '%s', an integer was expected.\n", var);
+  }
   result = (double)lua_tonumberx(L, -1, &isnum);
   if (!isnum)
-    error(L, "'%s' should be a double\n", var);
+    error(L, "Error Reading Input File: Could not read value for '%s', an integer was expected.\n", var);
   lua_pop(L, 1);
   return result;
 }
 
 // Lua get string
-char *getglobstr(lua_State *L, const char *var) {
+std::string getglobstr(lua_State *L, const char *var, int defaultable, std::string default_value) {
   // size_t len;
-  const char *iresult;
-  char *result;
+  const char *result;
   result = (char *)malloc(32 * sizeof(char));
   lua_getglobal(L, var);
-  iresult = lua_tostring(L, -1);
-  strcpy(result, iresult);
-  // result = lua_tolstring(L, -1, &len);
-  return result;
+  if (lua_isnoneornil(L, -1)){
+    if (defaultable)
+      return default_value;
+    else
+      error(L, "Error Reading Input File: Could not read value for '%s', an string was expected.\n", var);
+  }
+  result = lua_tostring(L, -1);
+  return std::string(result);
 }
 
 void getCommandlineOptions(int argc, char **argv, int &version_flag,
@@ -156,56 +166,56 @@ struct inputConfig executeConfiguration(std::string fName) {
     error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
 
   /* get global variables from Lua results */
-  cf.ndim = getglobint(L, "ndim");
-  cf.nt = getglobint(L, "nt");
-  cf.glbl_nci = getglobint(L, "ni");
-  cf.glbl_ncj = getglobint(L, "nj");
-  cf.ns = getglobint(L, "ns");
-  cf.dt = getglobdbl(L, "dt");
-  cf.R = getglobdbl(L, "R");
-  cf.visc = getglobbool(L, "visc");
-  cf.xProcs = getglobint(L, "procsx");
-  cf.yProcs = getglobint(L, "procsy");
+  cf.ndim = getglobint(L, "ndim",1,2);
+  cf.nt = getglobint(L, "nt",0,0);
+  cf.glbl_nci = getglobint(L, "ni",0,0);
+  cf.glbl_ncj = getglobint(L, "nj",0,0);
+  cf.ns = getglobint(L, "ns",0,0);
+  cf.dt = getglobdbl(L, "dt",0,0.0);
+  cf.R = getglobdbl(L, "R",0,0.0);
+  cf.visc = getglobbool(L, "visc",1,0);
+  cf.xProcs = getglobint(L, "procsx",1,1);
+  cf.yProcs = getglobint(L, "procsy",1,1);
   cf.ng = 3;
-  cf.xPer = getglobint(L, "xPer");
-  cf.yPer = getglobint(L, "yPer");
-  cf.bcL = getglobint(L, "bcXmin");
-  cf.bcR = getglobint(L, "bcXmax");
-  cf.bcB = getglobint(L, "bcYmin");
-  cf.bcT = getglobint(L, "bcYmax");
-  cf.restart = getglobint(L, "restart");
-  cf.sfName = getglobstr(L, "restartName");
-  std::string scheme(getglobstr(L, "scheme"));
-  std::string title(getglobstr(L, "title"));
-  std::string grid(getglobstr(L, "grid"));
-  cf.tstart = getglobint(L, "tstart");
+  cf.xPer = getglobint(L, "xPer",1,0);
+  cf.yPer = getglobint(L, "yPer",1,0);
+  cf.bcL = getglobint(L, "bcXmin",1,0);
+  cf.bcR = getglobint(L, "bcXmax",1,0);
+  cf.bcB = getglobint(L, "bcYmin",1,0);
+  cf.bcT = getglobint(L, "bcYmax",1,0);
+  cf.restart = getglobbool(L, "restart",1,0);
+  cf.sfName = getglobstr(L, "restartName",1,"restart-0000000.h5").c_str();
+  std::string scheme = getglobstr(L, "scheme",1,"weno5");
+  std::string title = getglobstr(L, "title",0,"none");
+  std::string grid = getglobstr(L, "grid",1,"cartesian");
+  cf.tstart = getglobint(L, "tstart",1,0);
   cf.t = cf.tstart;
-  cf.time = getglobdbl(L, "time");
-  cf.ceq = getglobdbl(L, "ceq");
+  cf.time = getglobdbl(L, "time",1,0.0);
+  cf.ceq = getglobbool(L, "ceq",1,0);
   if (cf.ceq == 1) {
-    cf.kap = getglobdbl(L, "kappa");
-    cf.eps = getglobdbl(L, "epsilon");
-    cf.alpha = getglobdbl(L, "alpha");
-    cf.beta = getglobdbl(L, "beta");
-    cf.betae = getglobdbl(L, "betae");
+    cf.kap = getglobdbl(L, "kappa",0,0.0);
+    cf.eps = getglobdbl(L, "epsilon",0,0.0);
+    cf.alpha = getglobdbl(L, "alpha",0,0.0);
+    cf.beta = getglobdbl(L, "beta",0,0.0);
+    cf.betae = getglobdbl(L, "betae",0,0.0);
   }
-  cf.noise = getglobint(L, "noise");
+  cf.noise = getglobbool(L, "noise",1,0);
   if (cf.noise == 1) {
-    cf.n_dh = getglobdbl(L, "n_dh");
-    cf.n_eta = getglobdbl(L, "n_eta");
-    cf.n_coff = getglobdbl(L, "n_coff");
-    cf.n_nt = getglobint(L, "n_nt");
+    cf.n_dh = getglobdbl(L, "n_dh",0,0.0);
+    cf.n_eta = getglobdbl(L, "n_eta",0,0.0);
+    cf.n_coff = getglobdbl(L, "n_coff",0,0.0);
+    cf.n_nt = getglobint(L, "n_nt",1,1);
   }
   if (cf.ndim == 3) {
-    cf.glbl_nck = getglobint(L, "nk");
-    cf.zProcs = getglobint(L, "procsz");
-    cf.zPer = getglobint(L, "zPer");
-    cf.bcH = getglobint(L, "bcZmin");
-    cf.bcF = getglobint(L, "bcZmax");
+    cf.glbl_nck = getglobint(L, "nk",0,0);
+    cf.zProcs = getglobint(L, "procsz",1,1);
+    cf.zPer = getglobint(L, "zPer",1,0);
+    cf.bcH = getglobint(L, "bcZmin",1,0);
+    cf.bcF = getglobint(L, "bcZmax",1,0);
   }
-  cf.particle = getglobint(L, "particle");
+  cf.particle = getglobbool(L, "particle",1,0);
   if (cf.particle == 1) {
-    cf.p_np = getglobint(L, "p_np");
+    cf.p_np = getglobint(L, "p_np",0,0);
   }
 
   cf.gamma = (double *)malloc(cf.ns * sizeof(double));
@@ -232,10 +242,10 @@ struct inputConfig executeConfiguration(std::string fName) {
   }
   if (grid.compare("cartesian") == 0) {
     cf.grid = 0;
-    cf.dx = getglobdbl(L, "dx");
-    cf.dy = getglobdbl(L, "dy");
+    cf.dx = getglobdbl(L, "dx",0,0.0);
+    cf.dy = getglobdbl(L, "dy",0,0.0);
     if (cf.ndim == 3)
-      cf.dz = getglobdbl(L, "dz");
+      cf.dz = getglobdbl(L, "dz",0,0.0);
   }
 
   int isnum;
@@ -269,10 +279,10 @@ struct inputConfig executeConfiguration(std::string fName) {
       cf.mu[s] = 0.0;
   }
 
-  cf.gravity = getglobdbl(L, "buoyancy");
+  cf.gravity = getglobbool(L, "buoyancy",1,0);
   // cf.gravity = 0;
   // if (cf.gravity == 1){
-  //     cf.g_accel     = getglobdbl (L, "g_accel" );
+  //     cf.g_accel     = getglobdbl (L, "g_accel",1,9.8);
   //     lua_getglobal(L, "g_vec");
   //     for (int d=0; d<3; ++d){
   //         lua_pushnumber(L, d+1);
@@ -282,10 +292,10 @@ struct inputConfig executeConfiguration(std::string fName) {
   //     }
   // }
 
-  cf.out_freq = getglobint(L, "out_freq");
-  cf.write_freq = getglobint(L, "write_freq");
-  cf.restart_freq = getglobint(L, "restart_freq");
-  cf.stat_freq = getglobint(L, "stat_freq");
+  cf.out_freq = getglobint(L, "out_freq",1,0);
+  cf.write_freq = getglobint(L, "write_freq",1,0);
+  cf.restart_freq = getglobint(L, "restart_freq",1,0);
+  cf.stat_freq = getglobint(L, "stat_freq",1,0);
 
   cf.nv = 4 + cf.ns;
 
