@@ -10,8 +10,10 @@ class fiestaTimer {
 
 public:
   fiestaTimer();
+  fiestaTimer(int format);
   fiestaTimer(string description);
   string name;
+  int format;
   void accumulate();
   double get();
   void clear();
@@ -20,7 +22,9 @@ public:
   void stop();
   string describe();
   string getf();
+  string getf(int format);
   string checkf();
+  string checkf(int format);
   double check();
   string formatTime(double tin);
 

@@ -25,8 +25,7 @@ int getglobbool(lua_State *L, const char *var, int defaultable, int default_valu
   int isnil;
   lua_getglobal(L, var);
 
-  isnil = lua_isnoneornil(L,-1);
-  if (isnil){
+  if (lua_isnoneornil(L,-1)){
     if (defaultable)
       return default_value;
     else
@@ -106,15 +105,21 @@ std::string getglobstr(lua_State *L, const char *var, int defaultable, std::stri
   return std::string(result);
 }
 
-void getCommandlineOptions(int argc, char **argv, int &version_flag,
-                           int &color_flag, std::string &inputFname) {
+struct commandArgs getCommandlineOptions(int argc, char **argv){
 
-  version_flag = 0;
-  color_flag = 0;
+  // create command argumet structure
+  struct commandArgs cArgs;
 
+  cArgs.fileName = "fiesta.lua";
+  cArgs.timeFormat = 0;
+  cArgs.versionFlag = 0;
+  cArgs.colorFlag = 0;
+
+  // create options
   static struct option long_options[] = {
       {"version", no_argument, NULL, 'v'},
       {"color", optional_argument, NULL, 'c'},
+      {"decimal-time", optional_argument, NULL, 't'},
       {"kokkos-ndevices", optional_argument, NULL, 'n'},
       {"kokkos-threads", optional_argument, NULL, 'n'},
       {"kokkos-help", optional_argument, NULL, 'n'},
@@ -133,29 +138,37 @@ void getCommandlineOptions(int argc, char **argv, int &version_flag,
         copt = "auto";
       break;
     case 'v':
-      version_flag = 1;
+      cArgs.versionFlag = 1;
+      break;
+    case 't':
+      if (optarg)
+        cArgs.timeFormat = atoi(optarg);
+      else
+        cArgs.timeFormat = 2;
       break;
     }
   }
 
   if (copt.compare("off") == 0)
-    color_flag = 0;
+    cArgs.colorFlag = 0;
   else if (copt.compare("on") == 0)
-    color_flag = 1;
+    cArgs.colorFlag = 1;
   else if (copt.compare("auto") == 0)
-    color_flag = 2;
+    cArgs.colorFlag = 2;
 
   if (optind < argc)
-    inputFname = std::string(argv[optind]);
+    cArgs.fileName = std::string(argv[optind]);
   else
-    inputFname = std::string("fiesta.lua");
+    cArgs.fileName = std::string("fiesta.lua");
+
+  return cArgs;
 }
 
-struct inputConfig executeConfiguration(std::string fName) {
+struct inputConfig executeConfiguration(struct commandArgs cargs) {
 
   struct inputConfig cf;
 
-  cf.inputFname = fName;
+  cf.inputFname = cargs.fileName;
 
   /* Create Lua State */
   lua_State *L = luaL_newstate(); // Opens Lua

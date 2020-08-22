@@ -32,16 +32,12 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
 
-  // Create variables for command line information
-  int cFlag, vFlag;
-  string fName;
-
   // Get the command line options including input file name if supplied.
-  getCommandlineOptions(argc, argv, vFlag, cFlag, fName);
+  struct commandArgs cArgs = getCommandlineOptions(argc, argv);
 
   // If the --version command line option is present, then just print version
   // and compilation information and exit.
-  if (vFlag) {
+  if (cArgs.versionFlag) {
     cout << "Fiesta" << endl;
     cout << "Version:    '" << FIESTA_VERSION << "'" << endl;
     cout << "Build Type: '" << FIESTA_OPTIONS << "'" << endl;
@@ -70,7 +66,7 @@ int main(int argc, char *argv[]) {
   // Print spash screen with logo, version number and compilation info
   // to signify process startup.
   if (temp_rank == 0)
-    printSplash(cFlag);
+    printSplash(cArgs.colorFlag);
 
   // Initialize kokkos and set kokkos finalize as exit function.
   Kokkos::initialize(argc, argv);
@@ -78,7 +74,7 @@ int main(int argc, char *argv[]) {
 
   // Execute input file and generate simulation configuration
   struct inputConfig cf;
-  cf = executeConfiguration(fName);
+  cf = executeConfiguration(cArgs);
 
   {
 #ifndef NOMPI
@@ -91,7 +87,7 @@ int main(int argc, char *argv[]) {
 
     // Print out configuration
     if (cf.rank == 0)
-      printConfig(cf, cFlag);
+      printConfig(cf, cArgs.colorFlag);
 
     // Create and copy minimal configuration array for data needed
     // withing Kokkos kernels.
@@ -140,36 +136,36 @@ int main(int argc, char *argv[]) {
     // If not restarting, generate initial conditions and grid
     if (cf.restart == 0) {
       if (cf.rank == 0)
-        cout << c(cFlag, GRE)
-             << "Generating Initial Conditions:" << c(cFlag, NON) << endl;
+        cout << c(cArgs.colorFlag, GRE)
+             << "Generating Initial Conditions:" << c(cArgs.colorFlag, NON) << endl;
       loadTimer.start();
       loadInitialConditions(cf, f->var);
       loadTimer.stop();
       if (cf.rank == 0)
-        cout << "    Generated in: " << c(cFlag, CYA) << loadTimer.getf()
-             << c(cFlag, NON) << endl
+        cout << "    Generated in: " << c(cArgs.colorFlag, CYA) << loadTimer.getf(cArgs.timeFormat)
+             << c(cArgs.colorFlag, NON) << endl
              << endl;
 
       if (cf.rank == 0)
-        cout << c(cFlag, GRE) << "Generating Grid:" << c(cFlag, NON) << endl;
+        cout << c(cArgs.colorFlag, GRE) << "Generating Grid:" << c(cArgs.colorFlag, NON) << endl;
       gridTimer.start();
       loadGrid(cf, f->grid);
       gridTimer.stop();
       if (cf.rank == 0)
-        cout << "    Generated in: " << c(cFlag, CYA) << gridTimer.getf()
-             << c(cFlag, NON) << endl
+        cout << "    Generated in: " << c(cArgs.colorFlag, CYA) << gridTimer.getf(cArgs.timeFormat)
+             << c(cArgs.colorFlag, NON) << endl
              << endl;
 
       if (cf.particle == 1) {
         if (cf.rank == 0)
-          cout << c(cFlag, GRE) << "Generating Particles:" << c(cFlag, NON)
+          cout << c(cArgs.colorFlag, GRE) << "Generating Particles:" << c(cArgs.colorFlag, NON)
                << endl;
         gridTimer.start();
         loadParticles(cf, f->particles);
         gridTimer.stop();
         if (cf.rank == 0)
-          cout << "    Generated in: " << c(cFlag, CYA) << gridTimer.getf()
-               << c(cFlag, NON) << endl
+          cout << "    Generated in: " << c(cArgs.colorFlag, CYA) << gridTimer.getf(cArgs.timeFormat)
+               << c(cArgs.colorFlag, NON) << endl
                << endl;
       }
     }
@@ -186,18 +182,18 @@ int main(int argc, char *argv[]) {
     //#ifndef NOMPI
     if (cf.restart == 1) {
       if (cf.rank == 0)
-        cout << c(cFlag, GRE) << "Loading Restart File:" << c(cFlag, NON)
+        cout << c(cArgs.colorFlag, GRE) << "Loading Restart File:" << c(cArgs.colorFlag, NON)
              << endl;
       loadTimer.reset();
       w.readSolution(cf, f->grid, f->var);
       loadTimer.stop();
-      cout << "    Loaded in: " << setprecision(2) << c(cFlag, CYA)
-           << loadTimer.get() << "s" << c(cFlag, NON) << endl;
+      cout << "    Loaded in: " << setprecision(2) << c(cArgs.colorFlag, CYA)
+           << loadTimer.getf(cArgs.timeFormat) << "s" << c(cArgs.colorFlag, NON) << endl;
     } else {
       if (cf.rank == 0)
         if (cf.write_freq > 0 || cf.restart_freq > 0)
-          cout << c(cFlag, GRE)
-               << "Writing Initial Conditions:" << c(cFlag, NON) << endl;
+          cout << c(cArgs.colorFlag, GRE)
+               << "Writing Initial Conditions:" << c(cArgs.colorFlag, NON) << endl;
       writeTimer.start();
       if (cf.write_freq > 0) {
         solWriteTimer.reset();
@@ -212,8 +208,8 @@ int main(int argc, char *argv[]) {
       writeTimer.stop();
       if (cf.rank == 0)
         if (cf.write_freq > 0 || cf.restart_freq > 0)
-          cout << "    Wrote in: " << c(cFlag, CYA) << writeTimer.getf()
-               << c(cFlag, NON) << endl;
+          cout << "    Wrote in: " << c(cArgs.colorFlag, CYA) << writeTimer.getf(cArgs.timeFormat)
+               << c(cArgs.colorFlag, NON) << endl;
     }
 
     //#endif
@@ -230,7 +226,7 @@ int main(int argc, char *argv[]) {
     // notify simulation start
     if (cf.rank == 0) {
       cout << endl << "-----------------------" << endl << endl;
-      cout << c(cFlag, GRE) << "Starting Simulation:" << c(cFlag, NON) << endl;
+      cout << c(cArgs.colorFlag, GRE) << "Starting Simulation:" << c(cArgs.colorFlag, NON) << endl;
     }
 
     // // // // // // // //  \\ \\ \\ \\ \\ \\ \\ \\
@@ -303,12 +299,12 @@ int main(int argc, char *argv[]) {
       if (cf.rank == 0) {
         if (cf.out_freq > 0)
           if ((t + 1) % cf.out_freq == 0)
-            cout << c(cFlag, YEL) << left << setw(15)
-                 << "    Iteration:" << c(cFlag, NON) << c(cFlag, CYA) << right
-                 << setw(0) << t + 1 << c(cFlag, NON) << "/" << c(cFlag, CYA)
-                 << left << setw(0) << cf.tend << c(cFlag, NON) << ", "
-                 << c(cFlag, CYA) << right << setw(0) << setprecision(3)
-                 << scientific << time << "s" << c(cFlag, NON) << endl;
+            cout << c(cArgs.colorFlag, YEL) << left << setw(15)
+                 << "    Iteration:" << c(cArgs.colorFlag, NON) << c(cArgs.colorFlag, CYA) << right
+                 << setw(0) << t + 1 << c(cArgs.colorFlag, NON) << "/" << c(cArgs.colorFlag, CYA)
+                 << left << setw(0) << cf.tend << c(cArgs.colorFlag, NON) << ", "
+                 << c(cArgs.colorFlag, CYA) << right << setw(0) << setprecision(3)
+                 << scientific << time << "s" << c(cArgs.colorFlag, NON) << endl;
       }
       //#ifndef NOMPI
       // Write solution file if necessary
@@ -334,7 +330,7 @@ int main(int argc, char *argv[]) {
       if (cf.stat_freq > 0) {
         if ((t + 1) % cf.stat_freq == 0) {
           f->timers["statCheck"].reset();
-          statusCheck(cFlag, cf, f->var, t + 1, time, totalTimer);
+          statusCheck(cArgs.colorFlag, cf, f->var, t + 1, time, totalTimer);
           f->timers["statCheck"].accumulate();
         }
       }
@@ -348,7 +344,7 @@ int main(int argc, char *argv[]) {
 
     // notify simulation complete
     if (cf.rank == 0)
-      cout << c(cFlag, GRE) << "Simulation Complete!" << c(cFlag, NON) << endl;
+      cout << c(cArgs.colorFlag, GRE) << "Simulation Complete!" << c(cArgs.colorFlag, NON) << endl;
 
     // Sort computer timers
     typedef std::function<bool(std::pair<std::string, fiestaTimer>,
@@ -368,42 +364,42 @@ int main(int argc, char *argv[]) {
     if (cf.rank == 0) {
       cout << endl << "-----------------------" << endl << endl;
       cout.precision(2);
-      cout << c(cFlag, GRE) << left << setw(36)
-           << "Total Time:" << c(cFlag, NON) << c(cFlag, CYA) << right
-           << setw(13) << totalTimer.get() << c(cFlag, NON) << endl
+      cout << c(cArgs.colorFlag, GRE) << left << setw(36)
+           << "Total Time:" << c(cArgs.colorFlag, NON) << c(cArgs.colorFlag, CYA) << right
+           << setw(13) << totalTimer.getf(cArgs.timeFormat) << c(cArgs.colorFlag, NON) << endl
            << endl;
 
-      cout << c(cFlag, GRE) << left << setw(36)
-           << "  Setup Time:" << c(cFlag, NON) << c(cFlag, CYA) << right
-           << setw(13) << initTimer.get() << c(cFlag, NON) << endl;
+      cout << c(cArgs.colorFlag, GRE) << left << setw(36)
+           << "  Setup Time:" << c(cArgs.colorFlag, NON) << c(cArgs.colorFlag, CYA) << right
+           << setw(13) << initTimer.getf(cArgs.timeFormat) << c(cArgs.colorFlag, NON) << endl;
       if (cf.restart == 1)
-        cout << c(cFlag, NON) << left << setw(36)
-             << "    Restart Read:" << c(cFlag, NON) << c(cFlag, CYA) << right
-             << setw(13) << loadTimer.get() << c(cFlag, NON) << endl
+        cout << c(cArgs.colorFlag, NON) << left << setw(36)
+             << "    Restart Read:" << c(cArgs.colorFlag, NON) << c(cArgs.colorFlag, CYA) << right
+             << setw(13) << loadTimer.getf(cArgs.timeFormat) << c(cArgs.colorFlag, NON) << endl
              << endl;
       else {
-        cout << c(cFlag, NON) << left << setw(36)
-             << "    Initial Condition Generation:" << c(cFlag, NON)
-             << c(cFlag, CYA) << right << setw(13) << loadTimer.get()
-             << c(cFlag, NON) << endl;
-        cout << c(cFlag, NON) << left << setw(36)
-             << "    Grid Generation:" << c(cFlag, NON) << c(cFlag, CYA)
-             << right << setw(13) << gridTimer.get() << c(cFlag, NON) << endl;
-        cout << c(cFlag, NON) << left << setw(36)
-             << "    Initial Consition WriteTime:" << c(cFlag, NON)
-             << c(cFlag, CYA) << right << setw(13) << writeTimer.get()
-             << c(cFlag, NON) << endl
+        cout << c(cArgs.colorFlag, NON) << left << setw(36)
+             << "    Initial Condition Generation:" << c(cArgs.colorFlag, NON)
+             << c(cArgs.colorFlag, CYA) << right << setw(13) << loadTimer.getf(cArgs.timeFormat)
+             << c(cArgs.colorFlag, NON) << endl;
+        cout << c(cArgs.colorFlag, NON) << left << setw(36)
+             << "    Grid Generation:" << c(cArgs.colorFlag, NON) << c(cArgs.colorFlag, CYA)
+             << right << setw(13) << gridTimer.getf(cArgs.timeFormat) << c(cArgs.colorFlag, NON) << endl;
+        cout << c(cArgs.colorFlag, NON) << left << setw(36)
+             << "    Initial Consition WriteTime:" << c(cArgs.colorFlag, NON)
+             << c(cArgs.colorFlag, CYA) << right << setw(13) << writeTimer.getf(cArgs.timeFormat)
+             << c(cArgs.colorFlag, NON) << endl
              << endl;
       }
 
-      cout << c(cFlag, GRE) << left << setw(36)
-           << "  Simulation Time:" << c(cFlag, NON) << c(cFlag, CYA) << right
-           << setw(13) << simTimer.get() << c(cFlag, NON) << endl;
+      cout << c(cArgs.colorFlag, GRE) << left << setw(36)
+           << "  Simulation Time:" << c(cArgs.colorFlag, NON) << c(cArgs.colorFlag, CYA) << right
+           << setw(13) << simTimer.getf(cArgs.timeFormat) << c(cArgs.colorFlag, NON) << endl;
       for (auto tmr : stmr) {
-        cout << c(cFlag, NON) << left << setw(36)
-             << "    " + tmr.second.describe() + ":" << c(cFlag, NON)
-             << c(cFlag, CYA) << right << setw(13) << tmr.second.get()
-             << c(cFlag, NON) << endl;
+        cout << c(cArgs.colorFlag, NON) << left << setw(36)
+             << "    " + tmr.second.describe() + ":" << c(cArgs.colorFlag, NON)
+             << c(cArgs.colorFlag, CYA) << right << setw(13) << tmr.second.getf(cArgs.timeFormat)
+             << c(cArgs.colorFlag, NON) << endl;
       }
       cout << " " << endl;
     }

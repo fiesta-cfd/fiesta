@@ -22,7 +22,22 @@ fiestaTimer::fiestaTimer(string n_) : description(n_) {
 
 void fiestaTimer::accumulate() { time = time + timer->seconds(); }
 double fiestaTimer::get() { return time; }
-string fiestaTimer::getf() { return formatTime(time); }
+
+string fiestaTimer::getf() {
+  return formatTime(time);
+}
+
+string fiestaTimer::getf(int format) {
+  if (format == 0){
+    return formatTime(time);
+  }else{
+    stringstream ss;
+    ss.precision(format);
+    ss.setf(ios::scientific);
+    ss << time;
+    return ss.str();
+  }
+}
 void fiestaTimer::clear() { time = 0.0; }
 void fiestaTimer::reset() { timer->reset(); }
 void fiestaTimer::start() {
@@ -31,6 +46,17 @@ void fiestaTimer::start() {
 }
 void fiestaTimer::stop() { time = timer->seconds(); }
 string fiestaTimer::checkf() { return formatTime(timer->seconds()); }
+string fiestaTimer::checkf(int format) {
+  if (format == 0){
+    return formatTime(time);
+  }else{
+    stringstream ss;
+    ss.precision(format);
+    ss.setf(ios::scientific);
+    ss << time;
+    return ss.str();
+  }
+}
 double fiestaTimer::check() { return timer->seconds(); }
 string fiestaTimer::formatTime(double tin) {
   int d;

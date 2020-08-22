@@ -73,9 +73,15 @@ struct inputConfig {
   int out_freq, stat_freq, write_freq, restart_freq;
 };
 
-void getCommandlineOptions(int argc, char **argv, int &vFlag, int &cFlag,
-                           std::string &fName);
-struct inputConfig executeConfiguration(std::string fName);
+struct commandArgs {
+  int versionFlag;
+  int colorFlag;
+  int timeFormat;
+  std::string fileName;
+};
+
+struct commandArgs getCommandlineOptions(int argc, char **argv);
+struct inputConfig executeConfiguration(struct commandArgs cargs);
 
 int loadInitialConditions(struct inputConfig cf, const FS4D v);
 int loadGrid(struct inputConfig cf, const FS4D v);
