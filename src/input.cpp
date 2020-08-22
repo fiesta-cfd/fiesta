@@ -333,7 +333,10 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   /* calculate number of grid vertices from number of cells */
   cf.glbl_ni = cf.glbl_nci + 1;
   cf.glbl_nj = cf.glbl_ncj + 1;
-  cf.glbl_nk = cf.glbl_nck + 1;
+  if (cf.ndim == 3)
+    cf.glbl_nk = cf.glbl_nck + 1;
+  else
+    cf.glbl_nk = 1;
 
   /* Set MPI defaults for 1 processor*/
   cf.rank = 0;
@@ -344,7 +347,10 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
 
   cf.ngi = cf.nci + 2 * cf.ng;
   cf.ngj = cf.ncj + 2 * cf.ng;
-  cf.ngk = cf.nck + 2 * cf.ng;
+  if (cf.ndim == 3)
+    cf.ngk = cf.nck + 2 * cf.ng;
+  else
+    cf.ngk = 1;
 
   cf.iStart = 0;
   cf.iEnd = cf.nci;
@@ -355,7 +361,10 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
 
   cf.ni = cf.nci + 1;
   cf.nj = cf.ncj + 1;
-  cf.nk = cf.nck + 1;
+  if (cf.ndim == 3)
+    cf.nk = cf.nck + 1;
+  else
+    cf.nk = 1;
 
   cf.xMinus = -1 + cf.xPer;
   cf.xPlus = -1 + cf.xPer;

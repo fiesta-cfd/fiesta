@@ -53,7 +53,7 @@ struct inputConfig mpi_init(struct inputConfig cf) {
     cf.kStart = 0;
     cf.kEnd = 1;
     cf.nck = 1;
-    cf.nk = 2;
+    cf.nk = 1;
   } else {
     rem = cf.glbl_nck % cf.zProcs;
     cf.nck = floor(cf.glbl_nck / cf.zProcs);

@@ -17,6 +17,10 @@ public:
 
   void readSolution(struct inputConfig cf, FS4D &deviceG, FS4D &deviceV);
 
+  template<typename T>
+  void writeHDF(struct inputConfig cf, rk_func *f, int tdx,
+                              double time, T* x, T* var, string name);
+
 private:
   double *xdp;
   double *ydp;
