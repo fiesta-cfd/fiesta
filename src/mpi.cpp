@@ -87,6 +87,9 @@ struct inputConfig mpi_init(struct inputConfig cf) {
   cf.subdomainOffset[1] = cf.jStart;
   cf.subdomainOffset[2] = cf.kStart;
 
+  if (cf.particle == 1)
+    cf.p_np += cf.rank;
+
   return cf;
 }
 

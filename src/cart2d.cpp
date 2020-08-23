@@ -27,12 +27,10 @@ cart2d_func::cart2d_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_)
   if (cf.noise == 1) {
     noise = FS2D_I("noise", cf.ngi, cf.ngj);
   }
-#ifdef NOMPI
   if (cf.particle == 1) {
     particles = FSP2D("particles", cf.p_np);
     particlesH = Kokkos::create_mirror_view(particles);
   }
-#endif
   cd = mcd;
 
   timers["flux"] = fiestaTimer("Flux Calculation");
@@ -118,9 +116,10 @@ void cart2d_func::postStep() {
     timers["noise"].accumulate();
   } // end noise
 
-#ifdef NOMPI
+//#ifdef NOMPI
   if (cf.particle == 1) {
     // write particle data
+#ifdef NOMPI
     if (cf.write_freq > 0) {
       if ((cf.t) % cf.write_freq == 0) {
         timers["pwrite"].reset();
@@ -167,24 +166,25 @@ void cart2d_func::postStep() {
         timers["pwrite"].accumulate();
       }
     } // end particle write
-
-    // execution policy for all cells including ghost cells
-    policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
-
-    // Calcualte Total Density and Pressure Fields
-    timers["calcSecond"].reset();
-    Kokkos::parallel_for(ghostPol, calculateRhoPT2D(var, p, rho, T, cd));
-    Kokkos::fence();
-    timers["calcSecond"].accumulate();
-
-    // advect particles
-    timers["padvect"].reset();
-    Kokkos::parallel_for(
-        cf.p_np, advectParticles2D(var, rho, grid, particles, cf.dt, cf.ng));
-    Kokkos::fence();
-    timers["padvect"].accumulate();
-  }
 #endif
+
+//     // execution policy for all cells including ghost cells
+//     policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
+// 
+//     // Calcualte Total Density and Pressure Fields
+//     timers["calcSecond"].reset();
+//     Kokkos::parallel_for(ghostPol, calculateRhoPT2D(var, p, rho, T, cd));
+//     Kokkos::fence();
+//     timers["calcSecond"].accumulate();
+// 
+//     // advect particles
+//     timers["padvect"].reset();
+//     Kokkos::parallel_for(
+//         cf.p_np, advectParticles2D(var, rho, grid, particles, cf.dt, cf.ng));
+//     Kokkos::fence();
+//     timers["padvect"].accumulate();
+  }
+//#endif
 }
 void cart2d_func::preSim() {
 
@@ -200,6 +200,7 @@ void cart2d_func::preSim() {
     Kokkos::fence();
     timers["psetup"].accumulate();
 
+#ifdef NOMPI
     Kokkos::View<particleStruct2D *>::HostMirror particlesH =
         Kokkos::create_mirror_view(particles);
     Kokkos::deep_copy(particlesH, particles);
@@ -249,6 +250,7 @@ void cart2d_func::preSim() {
 
       Kokkos::fence();
     } // end initial write
+#endif
   }
 }
 void cart2d_func::postSim() {}

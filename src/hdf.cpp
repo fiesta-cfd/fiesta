@@ -3,6 +3,7 @@
 #include "hdf5.h"
 #include "output.hpp"
 #include "rkfunction.hpp"
+#include "particle.hpp"
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -10,18 +11,38 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+//#ifndef NOMPI
+//#include "mpi.h"
+//#endif
 
 using namespace std;
 
+template <typename T, typename C>
+void invertArray(int ndim, T* out, C* in){
+  for (int i=0; i<ndim; ++i){
+    out[i] = in[ndim-1-i];
+  }
+}
+
 void writeDataItem(FILE* xmf, string path, int ndim, int* dims){
-  if (ndim == 2)
+  if (ndim == 1)
+    fprintf(xmf, "       <DataItem Dimensions=\"%d\" NumberType=\"Float\" " "Precision=\"4\" Format=\"HDF\">\n",dims[0]);
+  else if (ndim == 2)
     fprintf(xmf, "       <DataItem Dimensions=\"%d %d\" NumberType=\"Float\" " "Precision=\"4\" Format=\"HDF\">\n",dims[0],dims[1]);
   else
     fprintf(xmf, "       <DataItem Dimensions=\"%d %d %d\" NumberType=\"Float\" " "Precision=\"4\" Format=\"HDF\">\n",dims[0],dims[2],dims[2]);
   fprintf(xmf, "        %s\n", path.c_str());
   fprintf(xmf, "       </DataItem>\n");
 }
-void write_xmf(string fname, string hname, double time, int ndim, int *dims, int nv, int nvt){
+//void write_xmf(string fname, string hname, double time, int ndim, int *dims, int nv, int nvt){
+void write_xmf(string fname, string hname, double time, struct inputConfig &cf, int np){
+
+    int dims[cf.ndim];
+    invertArray(cf.ndim,dims,cf.globalCellDims);
+    int ndim = cf.ndim;
+    int nv = cf.nv;
+    int nvt = cf.nvt;
+
     int gdims[ndim];
     for (int i=0; i<ndim; ++i) gdims[i] = dims[i]+1;
     stringstream path;
@@ -85,6 +106,29 @@ void write_xmf(string fname, string hname, double time, int ndim, int *dims, int
       fprintf(xmf, "     </Attribute>\n");
     }
     fprintf(xmf, "   </Grid>\n");
+    if (cf.particle == 1){
+      fprintf(xmf, "   <Grid Name=\"particles\" >\n");
+        fprintf(xmf, "     <Topology TopologyType=\"Polyvertex\" NumberOfElements=\"%d\"/>\n", np);
+      if (ndim == 2){
+        fprintf(xmf, "     <Geometry GeometryType=\"X_Y\">\n");
+      }else{
+        fprintf(xmf, "     <Geometry GeometryType=\"X_Y_Z\">\n");
+      }
+      for (int d=0; d<ndim; ++d){
+        path.str("");
+        path << hname << ":/Particles/Dim" << d;
+        writeDataItem(xmf, path.str(), 1, &np);
+      }
+      fprintf(xmf, "     </Geometry>\n");
+
+      fprintf(xmf, "     <Attribute Name=\"State\" " "AttributeType=\"Scalar\" Center=\"Node\">\n");
+      path.str("");
+      path << hname << ":/Particles/state";
+      writeDataItem(xmf, path.str(), 1, &np);
+      fprintf(xmf, "     </Attribute>\n");
+
+      fprintf(xmf, "   </Grid>\n");
+    }
     fprintf(xmf, " </Domain>\n");
     fprintf(xmf, "</Xdmf>\n");
     fclose(xmf);
@@ -111,12 +155,6 @@ template <> hid_t getH5Type<float>(){ return H5T_NATIVE_FLOAT; }
 template <> hid_t getH5Type<double>(){ return H5T_NATIVE_DOUBLE; }
 template <> hid_t getH5Type<int>(){ return H5T_NATIVE_INT; }
 
-template <typename T, typename C>
-void invertArray(int ndim, T* out, C* in){
-  for (int i=0; i<ndim; ++i){
-    out[i] = in[ndim-1-i];
-  }
-}
 
 template <typename S>
 void write_h5(hid_t group_id, string dname, int ndim,
@@ -163,6 +201,10 @@ fstWriter::fstWriter(struct inputConfig cf, rk_func *f) {
 
   vsp = (float *)malloc(cf.nci * cf.ncj * cf.nck * sizeof(float));
   vdp = (double *)malloc(cf.nci * cf.ncj * cf.nck * sizeof(double));
+
+  psp = (float*)malloc(cf.p_np*sizeof(float));
+  pdp = (double*)malloc(cf.p_np*sizeof(double));
+  pi = (int*)malloc(cf.p_np*sizeof(int));
 
   readV = (double *)malloc(cf.nci * cf.ncj * cf.nck * cf.nv * sizeof(double));
 
@@ -252,11 +294,43 @@ void fstWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   }
   H5Gclose(group_id);
 
+  Kokkos::View<particleStruct2D *>::HostMirror parH =
+      Kokkos::create_mirror_view(f->particles);
+
+  int nParticles[cf.numProcs];
+  MPI_Allgather(&cf.p_np,1,MPI_INT,nParticles,1,MPI_INT,cf.comm);
+  hsize_t pOffset = 0;
+  for (int i=0; i<cf.rank; ++i)
+    pOffset += nParticles[i];
+  hsize_t globalPartDim =0;
+  for (int i=0; i<cf.numProcs; ++i)
+    globalPartDim += nParticles[i];
+  hsize_t localPartDims = cf.p_np;
+  printf("%d: %d: %lld: %lld\n",cf.rank,nParticles[cf.rank],pOffset,globalPartDim);
+  
+  float * partX = (float*)malloc(cf.p_np*sizeof(float));
+  int * partS = (int*)malloc(cf.p_np*sizeof(int));
+  Kokkos::deep_copy(parH,f->particles);
+
+  group_id = H5Gcreate(file_id, "/Particles", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  {
+    string vname("Dim0");
+    for (int p=0; p<cf.p_np; ++p) partX[p] = parH(p).x;
+    write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
+
+    vname = string("Dim1");
+    for (int p=0; p<cf.p_np; ++p) partX[p] = parH(p).y;
+    write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
+
+    vname =string("state");
+    for (int p=0; p<cf.p_np; ++p) partS[p] = parH(p).state;
+    write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partS); 
+  }
+  H5Gclose(group_id);
+
   close_h5(file_id);
 
-  int cdims[cf.ndim];
-  invertArray(cf.ndim,cdims,cf.globalCellDims);
-  write_xmf(xmfName.str(), hdfName.str(), time, cf.ndim, cdims, cf.nv, cf.nvt);
+  write_xmf(xmfName.str(), hdfName.str(), time, cf, globalPartDim);
 }
 
 void fstWriter::writeSolution(struct inputConfig cf, rk_func *f, int tdx,

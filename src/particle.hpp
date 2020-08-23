@@ -36,6 +36,7 @@ struct findInitialCell2D {
         // cells own their left and bottom edges
         particles(p).ci = i + ng;
         particles(p).cj = j + ng;
+//        printf("Found Particle in (%d, %d) with coordinates (%.2f, %.2f)\n",particles(p).ci,particles(p).cj,particles(p).x,particles(p).y);
       }
     }
   }

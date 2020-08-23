@@ -29,6 +29,10 @@ private:
   float *ysp;
   float *zsp;
 
+  float* psp;
+  double* pdp;
+  int* pi;
+
   double *vdp;
   float *vsp;
   double *readV;
