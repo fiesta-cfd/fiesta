@@ -21,7 +21,7 @@ void writeDataItem(FILE* xmf, string path, int ndim, int* dims){
   fprintf(xmf, "        %s\n", path.c_str());
   fprintf(xmf, "       </DataItem>\n");
 }
-void write_xmf(string fname, string hname, int ndim, int *dims, int nv, int nvt){
+void write_xmf(string fname, string hname, double time, int ndim, int *dims, int nv, int nvt){
     int gdims[ndim];
     for (int i=0; i<ndim; ++i) gdims[i] = dims[i]+1;
     stringstream path;
@@ -34,6 +34,7 @@ void write_xmf(string fname, string hname, int ndim, int *dims, int nv, int nvt)
     fprintf(xmf, " <Domain>\n");
 
     fprintf(xmf, "   <Grid Name=\"mesh1\" GridType=\"Uniform\">\n");
+    fprintf(xmf, "     <Time Value=\"%e\" />\n",time);
     if (ndim == 2){
       fprintf(xmf, "     <Topology TopologyType=\"2DSMesh\" NumberOfElements=\"%d %d\"/>\n", dims[0]+1, dims[1]+1);
       fprintf(xmf, "     <Geometry GeometryType=\"X_Y\">\n");
@@ -255,7 +256,7 @@ void fstWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
 
   int cdims[cf.ndim];
   invertArray(cf.ndim,cdims,cf.globalCellDims);
-  write_xmf(xmfName.str(), hdfName.str(), cf.ndim, cdims, cf.nv, cf.nvt);
+  write_xmf(xmfName.str(), hdfName.str(), time, cf.ndim, cdims, cf.nv, cf.nvt);
 }
 
 void fstWriter::writeSolution(struct inputConfig cf, rk_func *f, int tdx,
