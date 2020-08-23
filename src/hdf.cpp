@@ -89,7 +89,7 @@ void write_xmf(string fname, string hname, int ndim, int *dims, int nv, int nvt)
     fclose(xmf);
 }
 
-hid_t open_h5(MPI_Comm comm, MPI_Info info, string fname){
+hid_t openHDF5ForWrite(MPI_Comm comm, MPI_Info info, string fname){
   hid_t fid,pid;
 
   pid = H5Pcreate(H5P_FILE_ACCESS);
@@ -110,9 +110,16 @@ template <> hid_t getH5Type<float>(){ return H5T_NATIVE_FLOAT; }
 template <> hid_t getH5Type<double>(){ return H5T_NATIVE_DOUBLE; }
 template <> hid_t getH5Type<int>(){ return H5T_NATIVE_INT; }
 
+template <typename T, typename C>
+void invertArray(int ndim, T* out, C* in){
+  for (int i=0; i<ndim; ++i){
+    out[i] = in[ndim-1-i];
+  }
+}
+
 template <typename S>
-void write_h5(hid_t group_id, string dname, S* data, int ndim,
-                   hsize_t* dims_global, hsize_t* dims_local, hsize_t* offset){
+void write_h5(hid_t group_id, string dname, int ndim,
+                   hsize_t* dims_global, hsize_t* dims_local, hsize_t* offset, S* data){
 
   // identifiers
   hid_t filespace, memspace, dset_id, plist_id, dtype_id;
@@ -154,7 +161,7 @@ fstWriter::fstWriter(struct inputConfig cf, rk_func *f) {
   xsp = (float *)malloc(cf.ni * cf.nj * cf.nk * sizeof(float));
 
   vsp = (float *)malloc(cf.nci * cf.ncj * cf.nck * sizeof(float));
-  v = (double *)malloc(cf.nci * cf.ncj * cf.nck * sizeof(double));
+  vdp = (double *)malloc(cf.nci * cf.ncj * cf.nck * sizeof(double));
 
   readV = (double *)malloc(cf.nci * cf.ncj * cf.nck * cf.nv * sizeof(double));
 
@@ -173,40 +180,21 @@ void fstWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
 
   int pad = (int)log10(cf.nt) + 1;
 
+  hsize_t offset[cf.ndim], gridCount[cf.ndim], cellCount[cf.ndim];
+  hsize_t gridDims[cf.ndim], cellDims[cf.ndim];
+  invertArray(cf.ndim,offset,cf.subdomainOffset);
+  invertArray(cf.ndim,gridCount,cf.localGridDims);
+  invertArray(cf.ndim,cellCount,cf.localCellDims);
+  invertArray(cf.ndim,gridDims,cf.globalGridDims);
+  invertArray(cf.ndim,cellDims,cf.globalCellDims);
+
   // format hdf5 and xdmf filenames
   stringstream baseName, xmfName, hdfName;
   baseName << name << "-" << setw(pad) << setfill('0') << tdx;
   hdfName << baseName.str() << ".h5";
   xmfName << baseName.str() << ".xmf";
 
-  hsize_t dimsg[cf.ndim];                 // dataset dimensions
-  hsize_t dims[cf.ndim];                  // chunk dimensions
-  hsize_t offset[cf.ndim];                  // chunk dimensions
   int idx;
-
-  // get offsets
-  if (cf.ndim == 2){
-    offset[0] = cf.jStart;
-    offset[1] = cf.iStart;
-  }else{
-    offset[0] = cf.kStart;
-    offset[1] = cf.jStart;
-    offset[2] = cf.iStart;
-  }
-
-  if (cf.ndim == 2){
-    dimsg[0] = cf.glbl_nj;
-    dimsg[1] = cf.glbl_ni;
-    dims[0] = cf.nj;
-    dims[1] = cf.ni;
-  }else{
-    dimsg[0] = cf.glbl_nk;
-    dimsg[1] = cf.glbl_nj;
-    dimsg[2] = cf.glbl_ni;
-    dims[0] = cf.nk;
-    dims[1] = cf.nj;
-    dims[2] = cf.ni;
-  }
 
   // identifiers
   hid_t file_id, group_id;
@@ -218,7 +206,7 @@ void fstWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   }
 
   // open file
-  file_id = open_h5(cf.comm, MPI_INFO_NULL, hdfName.str());
+  file_id = openHDF5ForWrite(cf.comm, MPI_INFO_NULL, hdfName.str());
 
   // create grid group
   group_id = H5Gcreate(file_id, "/Grid", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -234,24 +222,9 @@ void fstWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
         }
       }
     }
-    write_h5<T>(group_id, vname.str(), x, cf.ndim, dimsg, dims, offset); 
+    write_h5<T>(group_id, vname.str(), cf.ndim, gridDims, gridCount, offset, x); 
   }
   H5Gclose(group_id);
-
-  // create solution group
-  if (cf.ndim == 2){
-    dimsg[0] = cf.glbl_ncj;
-    dimsg[1] = cf.glbl_nci;
-    dims[0] = cf.ncj;
-    dims[1] = cf.nci;
-  }else{
-    dimsg[0] = cf.glbl_nck;
-    dimsg[1] = cf.glbl_ncj;
-    dimsg[2] = cf.glbl_nci;
-    dims[0] = cf.nck;
-    dims[1] = cf.ncj;
-    dims[2] = cf.nci;
-  }
 
   group_id = H5Gcreate(file_id, "/Solution", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   for (int vn = 0; vn < cf.nvt; ++vn) {
@@ -274,22 +247,14 @@ void fstWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
         }
       }
     }
-    write_h5<T>(group_id, vname.str(), var, cf.ndim, dimsg, dims, offset); 
+    write_h5<T>(group_id, vname.str(), cf.ndim, cellDims, cellCount, offset, var); 
   }
   H5Gclose(group_id);
 
   close_h5(file_id);
 
   int cdims[cf.ndim];
-  if (cf.ndim == 2){
-    cdims[0] = cf.ncj;
-    cdims[1] = cf.nci;
-  }else{
-    cdims[0] = cf.nck;
-    cdims[1] = cf.ncj;
-    cdims[2] = cf.nci;
-  }
-
+  invertArray(cf.ndim,cdims,cf.globalCellDims);
   write_xmf(xmfName.str(), hdfName.str(), cf.ndim, cdims, cf.nv, cf.nvt);
 }
 
@@ -300,7 +265,126 @@ void fstWriter::writeSolution(struct inputConfig cf, rk_func *f, int tdx,
 
 void fstWriter::writeRestart(struct inputConfig cf, rk_func *f, int tdx,
                              double time) {
-    writeHDF(cf, f, tdx, time, xdp, v, "restart");
+    writeHDF(cf, f, tdx, time, xdp, vdp, "restart");
 }
 
-void fstWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD) {}
+hid_t openHDF5ForRead(string fname){
+  hid_t fid;
+  fid = H5Fopen(fname.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+  return fid;
+}
+
+void checkDataDimensions(hid_t filespace, int ndim, hsize_t* dims){
+
+  int rank;
+  herr_t status;
+  hsize_t dimsg[ndim];
+
+  // get and check rank
+  rank      = H5Sget_simple_extent_ndims(filespace);
+  if (ndim != rank){
+    printf("Number of dimensions of restart file different than expected\n");
+    exit(EXIT_FAILURE);
+  }
+
+  // get dimensions
+  status    = H5Sget_simple_extent_dims(filespace, dimsg, NULL);
+
+  // check dimensions
+  for (int d=0; d<ndim; ++d){
+    if (dims[d] != dimsg[d]){
+      printf("Dimension extents of restart file different than expected\n");
+      exit (EXIT_FAILURE);
+    }
+  }
+
+}
+
+
+template <typename T>
+void read_H5(hid_t fid, string path, int ndim, hsize_t* dims, hsize_t* offset, hsize_t* count, T* data){
+
+  // identifiers
+  hid_t dset_id, filespace, memspace, dtype_id;
+  herr_t status;
+
+  // get hd5 datatype
+  dtype_id = getH5Type<T>();
+
+  // open dataset
+  dset_id = H5Dopen(fid,path.c_str(),H5P_DEFAULT);
+
+  // get filespace
+  filespace = H5Dget_space(dset_id);    /* Get filespace handle first. */
+
+  // check dimensions
+  checkDataDimensions(filespace, ndim, dims);
+
+  // specify memory space for this mpi rank
+  memspace =  H5Screate_simple(ndim, count, NULL);
+
+  // create hyperslab and read data
+  status = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, count, NULL);
+  status = H5Dread(dset_id, dtype_id, memspace, filespace, H5P_DEFAULT, data);
+
+  // close identifiers
+  H5Sclose(memspace);
+  H5Sclose(filespace);
+  H5Dclose(dset_id);
+}
+
+void fstWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD) {
+
+  hsize_t offset[cf.ndim], gridCount[cf.ndim], cellCount[cf.ndim];
+  hsize_t gridDims[cf.ndim], cellDims[cf.ndim];
+  invertArray(cf.ndim,offset,cf.subdomainOffset);
+  invertArray(cf.ndim,gridCount,cf.localGridDims);
+  invertArray(cf.ndim,cellCount,cf.localCellDims);
+  invertArray(cf.ndim,gridDims,cf.globalGridDims);
+  invertArray(cf.ndim,cellDims,cf.globalCellDims);
+
+  // open restart file for reading
+  hid_t fid;
+  fid = openHDF5ForRead(cf.restartName);
+  int idx;
+
+  // read grid
+  for (int v=0; v<cf.ndim; ++v){
+    stringstream pathString;
+    pathString << "/Grid/Dimension" << v;
+    read_H5(fid, pathString.str(), cf.ndim, gridDims, offset, gridCount, xdp);
+    for (int i = 0; i < cf.ni; ++i) {
+      for (int j = 0; j < cf.nj; ++j) {
+        for (int k = 0; k < cf.nk; ++k) {
+          idx = (cf.ni * cf.nj) * k + cf.ni * j + i;
+          gridH(i, j, k, v) = xdp[idx];
+        }
+      }
+    }
+  }
+
+  // read cell data
+  int koffset, ii, jj, kk;
+  if (cf.ndim == 3) koffset = cf.ng;
+  else koffset = 0;
+  for (int v=0; v<cf.nvt; ++v){
+    stringstream pathString;
+    pathString << "/Solution/Variable" << setw(2) << setfill('0') << v;
+    read_H5(fid, pathString.str(), cf.ndim, cellDims, offset, cellCount, vdp);
+    for (int k = koffset; k < cf.nck + koffset; ++k) {
+      for (int j = cf.ng; j < cf.ncj + cf.ng; ++j) {
+        for (int i = cf.ng; i < cf.nci + cf.ng; ++i) {
+          ii = i - cf.ng;
+          jj = j - cf.ng;
+          kk = k - koffset;
+          idx = (cf.nci * cf.ncj) * kk + cf.nci * jj + ii;
+          varH(i, j, k, v) = vdp[idx];
+        }
+      }
+    }
+  }
+  
+  H5Fclose(fid);
+  Kokkos::deep_copy(gridH,gridD);
+  Kokkos::deep_copy(varH,varD);
+}

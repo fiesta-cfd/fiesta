@@ -82,7 +82,7 @@ void printConfig(struct inputConfig cf, int cFlag) {
   cout << c(cFlag, GRE) << "Restart:" << c(cFlag, NON) << endl;
   if (cf.restart) {
     cout << "    Running from Restart File: " << c(cFlag, CYA) << "'"
-         << cf.sfName << "'" << c(cFlag, NON) << endl;
+         << cf.restartName << "'" << c(cFlag, NON) << endl;
     cout << "    Start Time:  " << scientific << c(cFlag, CYA) << cf.time
          << c(cFlag, NON) << endl;
     cout << "    Start Index: " << c(cFlag, CYA) << cf.tstart << c(cFlag, NON)

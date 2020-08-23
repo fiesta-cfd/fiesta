@@ -71,6 +71,22 @@ struct inputConfig mpi_init(struct inputConfig cf) {
   cf.ymp = coords[0];
   cf.zmp = coords[0];
 
+  cf.globalGridDims[0] = cf.glbl_ni;
+  cf.globalGridDims[1] = cf.glbl_nj;
+  cf.globalGridDims[2] = cf.glbl_nk;
+  cf.globalCellDims[0] = cf.glbl_nci;
+  cf.globalCellDims[1] = cf.glbl_ncj;
+  cf.globalCellDims[2] = cf.glbl_nck;
+  cf.localGridDims[0] = cf.ni;
+  cf.localGridDims[1] = cf.nj;
+  cf.localGridDims[2] = cf.nk;
+  cf.localCellDims[0] = cf.nci;
+  cf.localCellDims[1] = cf.ncj;
+  cf.localCellDims[2] = cf.nck;
+  cf.subdomainOffset[0] = cf.iStart;
+  cf.subdomainOffset[1] = cf.jStart;
+  cf.subdomainOffset[2] = cf.kStart;
+
   return cf;
 }
 

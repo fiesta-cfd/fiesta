@@ -29,7 +29,7 @@ private:
   float *ysp;
   float *zsp;
 
-  double *v;
+  double *vdp;
   float *vsp;
   double *readV;
   FS4DH gridH;

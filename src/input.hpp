@@ -59,7 +59,7 @@ struct inputConfig {
   int ng, ngi, ngj, ngk;
   int xPer, yPer, zPer;
   int restart;
-  const char *sfName;
+  std::string restartName;
   int tstart, tend;
   double time;
   double ceq, kap, eps, alpha, beta, betae;
@@ -69,6 +69,12 @@ struct inputConfig {
   int particle, p_np;
   int t;
   int grid;
+
+  int globalGridDims[3];
+  int globalCellDims[3];
+  int localGridDims[3];
+  int localCellDims[3];
+  int subdomainOffset[3];
 
   int out_freq, stat_freq, write_freq, restart_freq;
 };

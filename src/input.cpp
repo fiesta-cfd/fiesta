@@ -197,9 +197,9 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   cf.bcB = getglobint(L, "bcYmin",1,0);
   cf.bcT = getglobint(L, "bcYmax",1,0);
   cf.restart = getglobbool(L, "restart",1,0);
-  cf.sfName = getglobstr(L, "restartName",1,"restart-0000000.h5").c_str();
+  cf.restartName = getglobstr(L, "restartName",1,"restart-0000000.h5");
   std::string scheme = getglobstr(L, "scheme",1,"weno5");
-  std::string title = getglobstr(L, "title",0,"none");
+  cf.title = getglobstr(L, "title",0,"none");
   std::string grid = getglobstr(L, "grid",1,"cartesian");
   cf.tstart = getglobint(L, "tstart",1,0);
   cf.t = cf.tstart;
@@ -236,7 +236,6 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   cf.g_vec = (double *)malloc(3 * sizeof(double));
   cf.tend = cf.tstart + cf.nt;
 
-  cf.title = title;
 
   cf.scheme = 1;
   if (scheme.compare("weno5") == 0)
