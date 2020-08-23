@@ -134,6 +134,7 @@ void write_xmf(string fname, string hname, double time, struct inputConfig &cf, 
     fclose(xmf);
 }
 
+// open and hdf5 file for writing
 hid_t openHDF5ForWrite(MPI_Comm comm, MPI_Info info, string fname){
   hid_t fid,pid;
 
@@ -145,17 +146,26 @@ hid_t openHDF5ForWrite(MPI_Comm comm, MPI_Info info, string fname){
   return fid;
 }
 
+// open an hdf5 file for reading only
+hid_t openHDF5ForRead(string fname){
+  hid_t fid;
+  fid = H5Fopen(fname.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+  return fid;
+}
+
+// close an hdf5 file
 void close_h5(hid_t fid){
   H5Fclose(fid);
 }
 
+// function to return hdf5 type id given c++ type
 template <typename H> hid_t getH5Type();
-
 template <> hid_t getH5Type<float>(){ return H5T_NATIVE_FLOAT; }
 template <> hid_t getH5Type<double>(){ return H5T_NATIVE_DOUBLE; }
 template <> hid_t getH5Type<int>(){ return H5T_NATIVE_INT; }
 
 
+// writer function for hdf5
 template <typename S>
 void write_h5(hid_t group_id, string dname, int ndim,
                    hsize_t* dims_global, hsize_t* dims_local, hsize_t* offset, S* data){
@@ -212,17 +222,15 @@ fstWriter::fstWriter(struct inputConfig cf, rk_func *f) {
   varH = Kokkos::create_mirror_view(f->var);
 }
 
-void fstWriter::writeSPGrid(struct inputConfig cf, const FS4D gridD,
-                            const char *fname) {}
-void fstWriter::writeGrid(struct inputConfig cf, const FS4D gridD,
-                          const char *fname) {}
-
 template<typename T>
 void fstWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
                               double time, T* x, T* var, string name) {
 
+  // calcualte string width for time index
   int pad = (int)log10(cf.nt) + 1;
+  int idx;
 
+  // invert dimension arrays to c order
   hsize_t offset[cf.ndim], gridCount[cf.ndim], cellCount[cf.ndim];
   hsize_t gridDims[cf.ndim], cellDims[cf.ndim];
   invertArray(cf.ndim,offset,cf.subdomainOffset);
@@ -237,11 +245,11 @@ void fstWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   hdfName << baseName.str() << ".h5";
   xmfName << baseName.str() << ".xmf";
 
-  int idx;
 
   // identifiers
   hid_t file_id, group_id;
 
+  // write a message
   if (cf.rank == 0) {
     cout << c(0, YEL) << left << setw(22)
          << "    Writing File: " << c(0, NON) << c(0, CYA) << left
@@ -251,7 +259,7 @@ void fstWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   // open file
   file_id = openHDF5ForWrite(cf.comm, MPI_INFO_NULL, hdfName.str());
 
-  // create grid group
+  // create grid group and write grid data
   group_id = H5Gcreate(file_id, "/Grid", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   Kokkos::deep_copy(gridH,f->grid);
   for (int vn = 0; vn < cf.ndim; ++vn) {
@@ -269,6 +277,7 @@ void fstWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   }
   H5Gclose(group_id);
 
+  // create solution group and write solution data
   group_id = H5Gcreate(file_id, "/Solution", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   for (int vn = 0; vn < cf.nvt; ++vn) {
     // Format Dataset Name
@@ -294,61 +303,51 @@ void fstWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   }
   H5Gclose(group_id);
 
-  Kokkos::View<particleStruct2D *>::HostMirror parH =
-      Kokkos::create_mirror_view(f->particles);
+  if (cf.particle == 1){
 
-  int nParticles[cf.numProcs];
-  MPI_Allgather(&cf.p_np,1,MPI_INT,nParticles,1,MPI_INT,cf.comm);
-  hsize_t pOffset = 0;
-  for (int i=0; i<cf.rank; ++i)
-    pOffset += nParticles[i];
-  hsize_t globalPartDim =0;
-  for (int i=0; i<cf.numProcs; ++i)
-    globalPartDim += nParticles[i];
-  hsize_t localPartDims = cf.p_np;
-  printf("%d: %d: %lld: %lld\n",cf.rank,nParticles[cf.rank],pOffset,globalPartDim);
-  
-  float * partX = (float*)malloc(cf.p_np*sizeof(float));
-  int * partS = (int*)malloc(cf.p_np*sizeof(int));
-  Kokkos::deep_copy(parH,f->particles);
+    // get global particle count and offsets
+    int nParticles[cf.numProcs];
+    MPI_Allgather(&cf.p_np,1,MPI_INT,nParticles,1,MPI_INT,cf.comm);
+    hsize_t pOffset = 0;
+    for (int i=0; i<cf.rank; ++i)
+      pOffset += nParticles[i];
+    hsize_t globalPartDim =0;
+    for (int i=0; i<cf.numProcs; ++i)
+      globalPartDim += nParticles[i];
+    hsize_t localPartDims = cf.p_np;
+    
+    // temporary arrays for particle writing
+    float * partX = (float*)malloc(cf.p_np*sizeof(float));
+    int * partS = (int*)malloc(cf.p_np*sizeof(int));
+    Kokkos::View<particleStruct2D *>::HostMirror parH =
+        Kokkos::create_mirror_view(f->particles);
+    Kokkos::deep_copy(parH,f->particles);
 
-  group_id = H5Gcreate(file_id, "/Particles", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  {
-    string vname("Dim0");
-    for (int p=0; p<cf.p_np; ++p) partX[p] = parH(p).x;
-    write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
+    // create particle group and write partivle data
+    group_id = H5Gcreate(file_id, "/Particles", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    {
+      string vname("Dim0");
+      for (int p=0; p<cf.p_np; ++p) partX[p] = parH(p).x;
+      write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
 
-    vname = string("Dim1");
-    for (int p=0; p<cf.p_np; ++p) partX[p] = parH(p).y;
-    write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
+      vname = string("Dim1");
+      for (int p=0; p<cf.p_np; ++p) partX[p] = parH(p).y;
+      write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
 
-    vname =string("state");
-    for (int p=0; p<cf.p_np; ++p) partS[p] = parH(p).state;
-    write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partS); 
+      vname =string("state");
+      for (int p=0; p<cf.p_np; ++p) partS[p] = parH(p).state;
+      write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partS); 
+    }
+    H5Gclose(group_id);
+    write_xmf(xmfName.str(), hdfName.str(), time, cf, globalPartDim);
+  } else {
+    write_xmf(xmfName.str(), hdfName.str(), time, cf, 0);
   }
-  H5Gclose(group_id);
 
   close_h5(file_id);
-
-  write_xmf(xmfName.str(), hdfName.str(), time, cf, globalPartDim);
 }
 
-void fstWriter::writeSolution(struct inputConfig cf, rk_func *f, int tdx,
-                              double time) {
-    writeHDF(cf, f, tdx, time, xsp, vsp, "sol");
-}
-
-void fstWriter::writeRestart(struct inputConfig cf, rk_func *f, int tdx,
-                             double time) {
-    writeHDF(cf, f, tdx, time, xdp, vdp, "restart");
-}
-
-hid_t openHDF5ForRead(string fname){
-  hid_t fid;
-  fid = H5Fopen(fname.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  return fid;
-}
-
+// check dimensions of restart file against expected values
 void checkDataDimensions(hid_t filespace, int ndim, hsize_t* dims){
 
   int rank;
@@ -375,7 +374,7 @@ void checkDataDimensions(hid_t filespace, int ndim, hsize_t* dims){
 
 }
 
-
+// reader function for hdf5
 template <typename T>
 void read_H5(hid_t fid, string path, int ndim, hsize_t* dims, hsize_t* offset, hsize_t* count, T* data){
 
@@ -408,6 +407,7 @@ void read_H5(hid_t fid, string path, int ndim, hsize_t* dims, hsize_t* offset, h
   H5Dclose(dset_id);
 }
 
+// Read Cell Data from Restart File
 void fstWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD) {
 
   hsize_t offset[cf.ndim], gridCount[cf.ndim], cellCount[cf.ndim];
@@ -463,3 +463,23 @@ void fstWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD) {
   Kokkos::deep_copy(gridH,gridD);
   Kokkos::deep_copy(varH,varD);
 }
+
+// write solution file
+void fstWriter::writeSolution(struct inputConfig cf, rk_func *f, int tdx,
+                              double time) {
+    writeHDF(cf, f, tdx, time, xsp, vsp, "sol");
+}
+
+// write restart file
+void fstWriter::writeRestart(struct inputConfig cf, rk_func *f, int tdx,
+                             double time) {
+    writeHDF(cf, f, tdx, time, xdp, vdp, "restart");
+}
+
+// deprecated 
+void fstWriter::writeSPGrid(struct inputConfig cf, const FS4D gridD,
+                            const char *fname) {}
+
+// deprecated 
+void fstWriter::writeGrid(struct inputConfig cf, const FS4D gridD,
+                          const char *fname) {}
