@@ -14,6 +14,9 @@ execute_process(COMMAND bash -c "cd ${CMAKE_CURRENT_LIST_DIR} && git rev-parse -
 string(STRIP ${GIT_VER} GIT_VER)
 string(STRIP ${GIT_BRANCH} GIT_BRANCH)
 set(FIESTA_VER "${GIT_BRANCH}-${GIT_VER}")
+set_property(GLOBAL APPEND
+    PROPERTY CMAKE_CONF8GURE_DEPENDS
+    "${CMAKE_SOURCE_DIR}/.git/index")
 if (LITE)
     set(FIESTA_OPTS "LITE")
 else()
