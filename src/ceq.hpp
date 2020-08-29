@@ -68,7 +68,7 @@ struct maxWaveSpeed2D {
 
     gamma = Cp / Cv;
 
-    a = sqrt(gamma * p(i, j, 0) / rho(i, j));
+    a = sqrt(gamma * p(i, j) / rho(i, j));
     s = a + sqrt(var(i, j, 0, 0) * var(i, j, 0, 0) +
                  var(i, j, 0, 1) * var(i, j, 0, 1));
 

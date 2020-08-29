@@ -1,12 +1,15 @@
 cmake_minimum_required(VERSION 3.10)
 include(ExternalProject)
 
+# Switch to nvcc compiler wrapper if building for cuda
 if (CUDA)
   set(CMAKE_CXX_COMPILER "${CMAKE_SOURCE_DIR}/kokkos/bin/nvcc_wrapper")
 endif()
 
-project(Fiesta CXX C)
+# set project name and languages
+project(Fiesta CXX C Fortran)
 
+# get git branch and hash to set version, build type and date variables
 execute_process(COMMAND bash -c "cd ${CMAKE_CURRENT_LIST_DIR} && git describe --tags --dirty=+"
                 OUTPUT_VARIABLE GIT_VER)
 execute_process(COMMAND bash -c "cd ${CMAKE_CURRENT_LIST_DIR} && git rev-parse --abbrev-ref HEAD"
@@ -15,7 +18,7 @@ string(STRIP ${GIT_VER} GIT_VER)
 string(STRIP ${GIT_BRANCH} GIT_BRANCH)
 set(FIESTA_VER "${GIT_BRANCH}-${GIT_VER}")
 set_property(GLOBAL APPEND
-    PROPERTY CMAKE_CONF8GURE_DEPENDS
+    PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/.git/index")
 if (LITE)
     set(FIESTA_OPTS "LITE")
@@ -24,54 +27,73 @@ else()
 endif()
 string(TIMESTAMP BUILD_TIME "%Y-%m-%dT%H:%MZ" UTC)
 
+# compile flags
 list(APPEND CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -O3)
 
-
-# CUDA
+# set kokkos options depending on build type
 if (CUDA)
+  # detect cuda architecture
   find_package(CUDA)
   CUDA_SELECT_NVCC_ARCH_FLAGS(TEST_ARCH Auto)
+
+  # set kokkos architecture flags depending on detected cuda architecture
   if ("${TEST_ARCH_readable}" STREQUAL "sm_35")
-    set(KOKKOS_ARCH "Kepler35" CACHE STRING "")
+    set(Kokkos_ARCH_KEPLER35 ON CACHE BOOL "")
   elseif ("${TEST_ARCH_readable}" STREQUAL "sm_60")
-    set(KOKKOS_ARCH "Pascal60" CACHE STRING "")
+    set(Kokkos_ARCH_PASCAL60 ON CACHE BOOL "")
   elseif ("${TEST_ARCH_readable}" STREQUAL "sm_61")
-    set(KOKKOS_ARCH "Pascal61" CACHE STRING "")
+    set(Kokkos_ARCH_PASCAL61 ON CACHE BOOL "")
   elseif ("${TEST_ARCH_readable}" STREQUAL "sm_70")
-    set(KOKKOS_ARCH "Volta70" CACHE STRING "")
+    set(Kokkos_ARCH_VOLTA70 ON CACHE BOOL "")
   endif()
-  message(STATUS ${KOKKOS_ARCH})
-  set(KOKKOS_ENABLE_CUDA ON)
-  set(KOKKOS_ENABLE_CUDA_LAMBDA ON)
+
+  # enable other kokkos cuda options and append build type string
+  set(Kokkos_ENABLE_CUDA ON CACHE BOOL "")
+  set(Kokkos_ENABLE_CUDA_LAMBDA ON CACHE BOOL "")
   set(FIESTA_OPTS "${FIESTA_OPTS}+CUDA")
 elseif(OPENMP)
-  set(KOKKOS_ENABLE_OPENMP ON)
+  # set kokkos openmp optins and append build type string
+  set(Kokkos_ENABLE_OPENMP ON CACHE BOOL "")
   set(FIESTA_OPTS "${FIESTA_OPTS}+OPENMP")
 endif()
+
+# Configure Kokkos
+include_directories(${Kokkos_INCLUDE_DIRS_RET})
 add_subdirectory(kokkos)
 
-# Kokkos
-include_directories(${Kokkos_INCLUDE_DIRS_RET})
 
-
-# lua
+# Configure Lua
 include_directories(lua/src)
 add_subdirectory(lua)
+
+## enforce static build
+#SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+#SET(BUILD_SHARED_LIBS OFF)
+#SET(CMAKE_EXE_LINKER_FLAGS "-static")
+
+# If doing a full build, find mpi
 if (NOT LITE)
     # MPI
     find_package(MPI REQUIRED)
     include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-    
-    find_package(HDF5)
-    include_directories(SYSTEM ${HDF5_C_INCLUDE_DIRS})
-    #include_directories(SYSTEM ${HDF5_CXX_INCLUDE_DIRS} ${HDF5_C_INCLUDE_DIRS})
+endif()
 
-    set(installDir ${CMAKE_CURRENT_BINARY_DIR}/install)
-    if (NOT HDF5_FOUND)
-        # hdf5
+# set install directory for third party components
+set(installDir ${CMAKE_CURRENT_BINARY_DIR}/install)
+
+# If doing a full build, find or build hdf5
+if (NOT LITE)
+    find_package(HDF5)
+
+    if (HDF5_FOUND)
+        include_directories(SYSTEM ${HDF5_C_INCLUDE_DIRS})
+    else()
         ExternalProject_Add(hdf5Parallel
           SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/hdf5
           INSTALL_DIR ${installDir}
+          BUILD_BYPRODUCTS ${installDir}/lib/libhdf5.a
+                           ${installDir}/lib/libhdf5_hl.a
+                           ${installDir}/lib/libhdf5_tools.a
           CMAKE_ARGS -D BUILD_SHARED_LIBS:BOOL=OFF
                      -D BUILD_TESTING:BOOL=OFF
                      -D HDF5_BUILD_EXAMPLES:BOOL=OFF
@@ -81,61 +103,40 @@ if (NOT LITE)
                      -D CMAKE_INSTALL_PREFIX:PATH=${installDir}
         )
     endif()
-
-    ##if (CGNS)
-    #    # cgns
-    #    ExternalProject_Add(cgnsParallel
-    #      SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/cgns
-    #      INSTALL_DIR ${installdir}
-    #      CMAKE_ARGS -D CGNS_BUILD_SHARED:BOOL=OFF
-    #                 -D CGNS_USE_SHARED:BOOL=OFF
-    #                 -D CGNS_ENABLE_64BIT:BOOL=ON
-    #                 -D CGNS_ENABLE_HDF5:BOOL=ON
-    #                 -D HDF5_NEED_MPI:BOOL=ON
-    #                 -D CGNS_ENABLE_PARALLEL:BOOL=ON
-    #                 -D CGNS_ENABLE_SCOPING:BOOL=ON
-    #                 -D CMAKE_INSTALL_PREFIX:PATH=${installDir}
-    #                 -D CMAKE_PREFIX_PATH:PATH=${installDir}
-    #    )
-    ##endif()
-    
-    #if (NOT HDF5_FOUND)
-    #    ExternalProject_Add_StepDependencies(cgnsParallel configure hdf5Parallel)
-    #endif()
 endif()
 
+# include third party headers (might be empty if third party components are provided elsewhere)
 include_directories(${installDir}/include)
 
-# fiesta
+# set base source files
 set(FIESTA_SRCS src/bc.cpp src/status.cpp src/timer.cpp src/input.cpp src/output.cpp src/main.cpp src/rkfunction.cpp src/cart2d.cpp src/cart3d.cpp src/gen2d.cpp src/gen3d.cpp src/writer.cpp)
+
+
 if (LITE)
-    message("Fiesta Sources" ${FIESTA_SRCS})
+    # add LITE only build files and link
     add_executable(fiesta ${FIESTA_SRCS} src/vtk.cpp)
     target_link_libraries(fiesta
                           kokkos
                           lua
     )
 else()
+    # add additional build files for non-lite builds
+    add_executable(fiesta ${FIESTA_SRCS}  src/mpi.cpp src/hdf.cpp)
+
     if (HDF5_FOUND)
-        message("Fiesta Sources" ${FIESTA_SRCS})
-        add_executable(fiesta ${FIESTA_SRCS}  src/mpi.cpp src/hdf.cpp)
-        #add_executable(fiesta ${FIESTA_SRCS} src/cgns.cpp src/mpi.cpp src/hdf.cpp)
-        #add_dependencies(fiesta cgnsParallel)
+        # link to found hdf5 library
         target_link_libraries(fiesta
                               kokkos
                               ${MPI_CXX_LIBRARIES}
                               ${HDF5_C_LIBRARIES}
-        #                      ${installDir}/lib/libcgns.a
                               lua
         )
     else()
-        message("Fiesta Sources" ${FIESTA_SRCS})
-        add_executable(fiesta ${FIESTA_SRCS} src/cgns.cpp src/mpi.cpp src/hdf.cpp)
-#        add_dependencies(fiesta cgnsParallel)
+        # link to built hdf5 library
+        add_dependencies(fiesta hdf5Parallel)
         target_link_libraries(fiesta
                               kokkos
                               ${MPI_CXX_LIBRARIES}
-                              ${installDir}/lib/libcgns.a
                               ${installDir}/lib/libhdf5.a
                               ${installDir}/lib/libhdf5_hl.a
                               ${installDir}/lib/libhdf5_tools.a
@@ -144,6 +145,7 @@ else()
     endif()
 endif()
 
+# add built strings to source code
 target_compile_definitions(fiesta PRIVATE FIESTA_VERSION="${FIESTA_VER}")
 target_compile_definitions(fiesta PRIVATE FIESTA_OPTIONS="${FIESTA_OPTS}")
 target_compile_definitions(fiesta PRIVATE FIESTA_BTIME="${BUILD_TIME}")
@@ -151,10 +153,11 @@ if (LITE)
     target_compile_definitions(fiesta PRIVATE NOMPI)
 endif()
 
-
+# set install destination
 install(TARGETS fiesta
         RUNTIME DESTINATION)
 
+# print build strings
 message("Fiesta Version ${FIESTA_VER}")
 message("Fiesta Build Options ${FIESTA_OPTS}")
 message("Fiesta Build Time ${BUILD_TIME}")
