@@ -229,6 +229,8 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   cf.particle = getglobbool(L, "particle",1,0);
   if (cf.particle == 1) {
     cf.p_np = getglobint(L, "p_np",0,0);
+  } else {
+    cf.p_np = 0;
   }
 
   cf.gamma = (double *)malloc(cf.ns * sizeof(double));

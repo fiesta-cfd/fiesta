@@ -9,6 +9,7 @@ class fstWriter : public writer {
 
 public:
   fstWriter(struct inputConfig, rk_func *f);
+  ~fstWriter();
   void writeGrid(struct inputConfig cf, const FS4D gridD, const char *fname);
   void writeSPGrid(struct inputConfig cf, const FS4D gridD, const char *fname);
 

@@ -464,6 +464,20 @@ void fstWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD) {
   Kokkos::deep_copy(varH,varD);
 }
 
+fstWriter::~fstWriter(){
+  free(xdp);
+  free(xsp);
+  free(vsp);
+  free(vdp);
+  free(psp);
+  free(pdp);
+  free(pi );
+  free(readV);
+       
+  //delete gridH;
+  //delete varH;
+}
+
 // write solution file
 void fstWriter::writeSolution(struct inputConfig cf, rk_func *f, int tdx,
                               double time) {
