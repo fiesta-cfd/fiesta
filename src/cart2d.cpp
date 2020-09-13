@@ -6,8 +6,7 @@ cart2d_func::cart2d_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_)
 
   grid = FS4D("coords", cf.ni, cf.nj, cf.nk, 3);
   var = FS4D("var", cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Primary Variable Array
-  tmp1 = FS4D("tmp1", cf.ngi, cf.ngj, cf.ngk,
-              cf.nvt); // Temporary Variable Arrayr1
+  tmp1 = FS4D("tmp1", cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Temporary Arrayr
   dvar = FS4D("dvar", cf.ngi, cf.ngj, cf.ngk, cf.nvt); // RHS Output
   vel = FS3D("vel", cf.ngi, cf.ngj, 2);                // velocity
   p = FS2D("p", cf.ngi, cf.ngj);                       // Pressure
@@ -18,8 +17,8 @@ cart2d_func::cart2d_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_)
   if (cf.visc == 1) {
     qx = FS2D("qx", cf.ngi, cf.ngj); // Heat Fluxes in X direction
     qy = FS2D("qy", cf.ngi, cf.ngj); // Heat Fluxes in X direction
-    stressx = FS4D("stressx", cf.ngi, cf.ngj, 2, 2); // stress tensor on x faces
-    stressy = FS4D("stressy", cf.ngi, cf.ngj, 2, 2); // stress tensor on y faces
+    stressx = FS4D("stressx", cf.ngi, cf.ngj, 2, 2); // stress on x faces
+    stressy = FS4D("stressy", cf.ngi, cf.ngj, 2, 2); // stress on y faces
   }
   if (cf.ceq == 1) {
     gradRho = FS3D("gradRho", cf.ngi, cf.ngj, 4); // stress tensor on y faces

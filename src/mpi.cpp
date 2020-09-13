@@ -115,14 +115,21 @@ mpiBuffers::mpiBuffers(struct inputConfig cf) {
                                                  cf.ngk, cf.nvt);
   topRecv = Kokkos::View<double ****, FS_LAYOUT>("topRecv", cf.ngi, cf.ng,
                                                  cf.ngk, cf.nvt);
-  backSend = Kokkos::View<double ****, FS_LAYOUT>("backSend", cf.ngi, cf.ngj,
-                                                  cf.ng, cf.nvt);
-  backRecv = Kokkos::View<double ****, FS_LAYOUT>("backRecv", cf.ngi, cf.ngj,
-                                                  cf.ng, cf.nvt);
-  frontSend = Kokkos::View<double ****, FS_LAYOUT>("frontSend", cf.ngi, cf.ngj,
-                                                   cf.ng, cf.nvt);
-  frontRecv = Kokkos::View<double ****, FS_LAYOUT>("frontRecv", cf.ngi, cf.ngj,
-                                                   cf.ng, cf.nvt);
+  if (cf.ndim == 3){
+    backSend = Kokkos::View<double ****, FS_LAYOUT>("backSend", cf.ngi, cf.ngj,
+                                                    cf.ng, cf.nvt);
+    backRecv = Kokkos::View<double ****, FS_LAYOUT>("backRecv", cf.ngi, cf.ngj,
+                                                    cf.ng, cf.nvt);
+    frontSend = Kokkos::View<double ****, FS_LAYOUT>("frontSend", cf.ngi, cf.ngj,
+                                                     cf.ng, cf.nvt);
+    frontRecv = Kokkos::View<double ****, FS_LAYOUT>("frontRecv", cf.ngi, cf.ngj,
+                                                     cf.ng, cf.nvt);
+  }else{
+    backSend = Kokkos::View<double ****, FS_LAYOUT>("backSend",1,1,1,1);
+    backRecv = Kokkos::View<double ****, FS_LAYOUT>("backRecv",1,1,1,1);
+    frontSend = Kokkos::View<double ****, FS_LAYOUT>("frontSend",1,1,1,1);
+    frontRecv = Kokkos::View<double ****, FS_LAYOUT>("frontRecv",1,1,1,1);
+  }
   leftSend_H = Kokkos::create_mirror_view(leftSend);
   leftRecv_H = Kokkos::create_mirror_view(leftRecv);
   rightSend_H = Kokkos::create_mirror_view(rightSend);
