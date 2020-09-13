@@ -172,7 +172,7 @@ int main(int argc, char *argv[]) {
 
     // execution policy for Runge Kutta update kernels, should be moved to
     // header
-    typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_1;
+    typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_1;
 
     // Variables to track time step information
     double time = cf.time;
@@ -272,11 +272,13 @@ int main(int argc, char *argv[]) {
       // First stage update
       f->timers["rk"].reset();
       Kokkos::parallel_for(
-          "Loop1", policy_1({0, 0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk, cf.nvt}),
-          KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
-            mytmp(i, j, k, v) = myvar(i, j, k, v);
-            myvar(i, j, k, v) =
+          "Loop1", policy_1({0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk}),
+          KOKKOS_LAMBDA(const int i, const int j, const int k) {
+            for (int v=0; v<cf.nvt; ++v){
+              mytmp(i, j, k, v) = myvar(i, j, k, v);
+              myvar(i, j, k, v) =
                 myvar(i, j, k, v) + 0.5 * cf.dt * mydvar(i, j, k, v);
+            }
           });
       Kokkos::fence();
       f->timers["rk"].accumulate();
@@ -299,9 +301,11 @@ int main(int argc, char *argv[]) {
       // Second stage update
       f->timers["rk"].reset();
       Kokkos::parallel_for(
-          "Loop2", policy_1({0, 0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk, cf.nvt}),
-          KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
-            myvar(i, j, k, v) = mytmp(i, j, k, v) + cf.dt * mydvar(i, j, k, v);
+          "Loop2", policy_1({0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk}),
+          KOKKOS_LAMBDA(const int i, const int j, const int k) {
+            for (int v=0; v<cf.nvt; ++v){
+              myvar(i, j, k, v) = mytmp(i, j, k, v) + cf.dt * mydvar(i, j, k, v);
+            }
           });
       Kokkos::fence();
       f->timers["rk"].accumulate();
