@@ -167,21 +167,21 @@ void cart2d_func::postStep() {
     } // end particle write
 #endif
 
-//     // execution policy for all cells including ghost cells
-//     policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
-// 
-//     // Calcualte Total Density and Pressure Fields
-//     timers["calcSecond"].reset();
-//     Kokkos::parallel_for(ghostPol, calculateRhoPT2D(var, p, rho, T, cd));
-//     Kokkos::fence();
-//     timers["calcSecond"].accumulate();
-// 
-//     // advect particles
-//     timers["padvect"].reset();
-//     Kokkos::parallel_for(
-//         cf.p_np, advectParticles2D(var, rho, grid, particles, cf.dt, cf.ng));
-//     Kokkos::fence();
-//     timers["padvect"].accumulate();
+     // execution policy for all cells including ghost cells
+     policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
+ 
+     // Calcualte Total Density and Pressure Fields
+     timers["calcSecond"].reset();
+     Kokkos::parallel_for(ghostPol, calculateRhoPT2D(var, p, rho, T, cd));
+     Kokkos::fence();
+     timers["calcSecond"].accumulate();
+ 
+     // advect particles
+     timers["padvect"].reset();
+     Kokkos::parallel_for(
+         cf.p_np, advectParticles2D(var, rho, grid, particles, cf.dt, cf.ng));
+     Kokkos::fence();
+     timers["padvect"].accumulate();
   }
 //#endif
 }

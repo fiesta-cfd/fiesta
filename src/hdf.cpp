@@ -126,6 +126,24 @@ void write_xmf(string fname, string hname, double time, struct inputConfig &cf, 
       path << hname << ":/Particles/state";
       writeDataItem(xmf, path.str(), 1, &np);
       fprintf(xmf, "     </Attribute>\n");
+ 
+      fprintf(xmf, "     <Attribute Name=\"u\" " "AttributeType=\"Scalar\" Center=\"Node\">\n");
+      path.str("");
+      path << hname << ":/Particles/xvel";
+      writeDataItem(xmf, path.str(), 1, &np);
+      fprintf(xmf, "     </Attribute>\n");
+ 
+      fprintf(xmf, "     <Attribute Name=\"r\" " "AttributeType=\"Scalar\" Center=\"Node\">\n");
+      path.str("");
+      path << hname << ":/Particles/r";
+      writeDataItem(xmf, path.str(), 1, &np);
+      fprintf(xmf, "     </Attribute>\n");
+
+      fprintf(xmf, "     <Attribute Name=\"m\" " "AttributeType=\"Scalar\" Center=\"Node\">\n");
+      path.str("");
+      path << hname << ":/Particles/m";
+      writeDataItem(xmf, path.str(), 1, &np);
+      fprintf(xmf, "     </Attribute>\n");
 
       fprintf(xmf, "   </Grid>\n");
     }
@@ -337,6 +355,22 @@ void fstWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
       vname =string("state");
       for (int p=0; p<cf.p_np; ++p) partS[p] = parH(p).state;
       write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partS); 
+
+      vname =string("xvel");
+      for (int p=0; p<cf.p_np; ++p) partX[p] = parH(p).u;
+      write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
+
+      vname =string("yvel");
+      for (int p=0; p<cf.p_np; ++p) partX[p] = parH(p).v;
+      write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
+
+      vname =string("r");
+      for (int p=0; p<cf.p_np; ++p) partX[p] = parH(p).r;
+      write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
+
+      vname =string("m");
+      for (int p=0; p<cf.p_np; ++p) partX[p] = parH(p).m;
+      write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
     }
     H5Gclose(group_id);
     write_xmf(xmfName.str(), hdfName.str(), time, cf, globalPartDim);

@@ -515,7 +515,7 @@ int loadParticles(struct inputConfig cf, const FSP2D deviceV) {
     if (luaL_loadfile(L, cf.inputFname.c_str()) || lua_pcall(L, 0, 0, 0))
       error(L, "Cannot run config file: %s\n", lua_tostring(L, -1));
     for (int p = 0; p < cf.p_np; ++p) {
-      for (int v = 0; v < cf.ndim; ++v) {
+      for (int v = 0; v < cf.ndim+2; ++v) {
         lua_getglobal(L, "p");
         lua_pushnumber(L, p);
         lua_pushnumber(L, v);
@@ -527,10 +527,16 @@ int loadParticles(struct inputConfig cf, const FSP2D deviceV) {
         lua_pop(L, 1);
 
         particlesH(p).state = 1;
+        particlesH(p).u = 0.0;
+        particlesH(p).v = 0.0;
         if (v == 0)
           particlesH(p).x = z;
         if (v == 1)
           particlesH(p).y = z;
+        if (v == 2)
+          particlesH(p).r = z;
+        if (v == 3)
+          particlesH(p).m = z;
       }
     }
 

@@ -8,6 +8,9 @@ struct particleStruct2D {
   int ci, cj;  // particle cell index
   double x, y; // particle position
   int state;   // particle state (1=enabled, 0=disabled)
+  double u,v;
+  double m;
+  double r;
 };
 
 typedef typename Kokkos::View<particleStruct2D *>
@@ -119,9 +122,28 @@ struct advectParticles2D {
       double lu = ((y2 - y) / (y2 - y1)) * Ru2 + ((y - y1) / (y2 - y1)) * Ru1;
       double lv = ((y2 - y) / (y2 - y1)) * Rv2 + ((y - y1) / (y2 - y1)) * Rv1;
 
+      // calculate force F=6*pi*mu*r*v
+      double Fx = 0.000552 * particles(p).r*(lu-particles(p).u);
+      double Fy = 0.000552 * particles(p).r*(lv-particles(p).v);
+      //double Fx = 0.000552 * 0.002 *(lu-particles(p).u);
+      //double Fy = 0.000552 * 0.002 *(lv-particles(p).v);
+
+      // calculate acceleration
+      double ax = Fx/particles(p).m;
+      double ay = Fy/particles(p).m;
+      //double ax = Fx/0.00000001;
+      //double ay = Fy/0.00000001;
+
+      // calculate change in velocity
+      particles(p).u += ax*dt;
+      particles(p).v += ay*dt;
+
       // calculate change in position
-      double dx = lu * dt;
-      double dy = lv * dt;
+      double dx = particles(p).u*dt + 0.5*ax*dt*dt;
+      double dy = particles(p).v*dt + 0.5*ay*dt*dt;
+ 
+      //double dx = lu*dt;
+      //double dy = lv*dt;
 
       // deactivate particle if it will leave domain
       if (particles(p).x + dx < grid(0, gj, 0, 0))
