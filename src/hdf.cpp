@@ -494,8 +494,8 @@ void fstWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD) {
   }
   
   H5Fclose(fid);
-  Kokkos::deep_copy(gridH,gridD);
-  Kokkos::deep_copy(varH,varD);
+  Kokkos::deep_copy(gridD,gridH);
+  Kokkos::deep_copy(varD,varH);
 }
 
 fstWriter::~fstWriter(){
