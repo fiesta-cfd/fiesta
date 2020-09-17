@@ -188,22 +188,23 @@ int main(int argc, char *argv[]) {
       loadTimer.reset();
       w.readSolution(cf, f->grid, f->var);
       loadTimer.stop();
-      cout << "    Loaded in: " << setprecision(2) << c(cArgs.colorFlag, CYA)
-           << loadTimer.getf(cArgs.timeFormat) << "s" << c(cArgs.colorFlag, NON) << endl;
       if (cf.rank == 0)
-        if (cf.write_freq > 0 || cf.restart_freq > 0)
-          cout << c(cArgs.colorFlag, GRE)
-               << "Writing Initial Conditions:" << c(cArgs.colorFlag, NON) << endl;
-      if (cf.write_freq > 0) {
-        solWriteTimer.reset();
-        w.writeSolution(cf, f, 0, 0.00);
-        solWriteTimer.accumulate();
-      }
-      writeTimer.stop();
-      if (cf.rank == 0)
-        if (cf.write_freq > 0 || cf.restart_freq > 0)
-          cout << "    Wrote in: " << c(cArgs.colorFlag, CYA) << writeTimer.getf(cArgs.timeFormat)
-               << c(cArgs.colorFlag, NON) << endl;
+        cout << "    Loaded in: " << setprecision(2) << c(cArgs.colorFlag, CYA)
+             << loadTimer.getf(cArgs.timeFormat) << "s" << c(cArgs.colorFlag, NON) << endl;
+      // if (cf.rank == 0)
+      //   if (cf.write_freq > 0 || cf.restart_freq > 0)
+      //     cout << c(cArgs.colorFlag, GRE)
+      //          << "Writing Initial Conditions:" << c(cArgs.colorFlag, NON) << endl;
+      // if (cf.write_freq > 0) {
+      //   solWriteTimer.reset();
+      //   w.writeSolution(cf, f, 0, 0.00);
+      //   solWriteTimer.accumulate();
+      // }
+      // writeTimer.stop();
+      // if (cf.rank == 0)
+      //   if (cf.write_freq > 0 || cf.restart_freq > 0)
+      //     cout << "    Wrote in: " << c(cArgs.colorFlag, CYA) << writeTimer.getf(cArgs.timeFormat)
+      //          << c(cArgs.colorFlag, NON) << endl;
     } else {
       if (cf.rank == 0)
         if (cf.write_freq > 0 || cf.restart_freq > 0)
