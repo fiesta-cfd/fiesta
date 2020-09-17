@@ -395,8 +395,10 @@ void cart2d_func::compute() {
                          updateCeq2D(dvar, var, gradRho, maxS, cd, cf.kap,
                                      cf.eps, maxG, maxGh, maxTau1, maxTau2));
 
-    Kokkos::parallel_for(cell_pol, applyCeq2D(dvar, var, rho, cf.beta, cf.betae,
-                                              cf.alpha, maxC, maxCh, mu, cd));
+    if (cf.t >= cf.st){
+      Kokkos::parallel_for(cell_pol, applyCeq2D(dvar, var, rho, cf.beta, cf.betae,
+                                                cf.alpha, maxC, maxCh, mu, cd));
+    }
 
     Kokkos::fence();
     timers["ceq"].accumulate();

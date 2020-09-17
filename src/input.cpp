@@ -211,6 +211,7 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
     cf.alpha = getglobdbl(L, "alpha",0,0.0);
     cf.beta = getglobdbl(L, "beta",0,0.0);
     cf.betae = getglobdbl(L, "betae",0,0.0);
+    cf.n_nt = getglobint(L, "st",1,10);
   }
   cf.noise = getglobbool(L, "noise",1,0);
   if (cf.noise == 1) {
