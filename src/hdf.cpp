@@ -35,7 +35,7 @@ void writeDataItem(FILE* xmf, string path, int ndim, int* dims){
   fprintf(xmf, "       </DataItem>\n");
 }
 //void write_xmf(string fname, string hname, double time, int ndim, int *dims, int nv, int nvt){
-void write_xmf(string fname, string hname, double time, struct inputConfig &cf, int np){
+void write_xmf(string fname, string hname, double time, struct inputConfig &cf, int np, vector<string> vNames, vector<string> vxNames ){
 
     int dims[cf.ndim];
     invertArray(cf.ndim,dims,cf.globalCellDims);
@@ -49,11 +49,15 @@ void write_xmf(string fname, string hname, double time, struct inputConfig &cf, 
 
     FILE *xmf = 0;
     xmf = fopen(fname.c_str(), "w");
+
+    // Header
     fprintf(xmf, "<?xml version=\"1.0\" ?>\n");
     fprintf(xmf, "<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>\n");
     fprintf(xmf, "<Xdmf Version=\"3.0\">\n");
     fprintf(xmf, " <Domain>\n");
 
+
+    // Grid Header
     fprintf(xmf, "   <Grid Name=\"mesh1\" GridType=\"Uniform\">\n");
     fprintf(xmf, "     <Time Value=\"%e\" />\n",time);
     if (ndim == 2){
@@ -64,6 +68,7 @@ void write_xmf(string fname, string hname, double time, struct inputConfig &cf, 
       fprintf(xmf, "     <Geometry GeometryType=\"X_Y_Z\">\n");
     }
 
+    // Grid Coordinate Arrays
     for (int d=0; d<ndim; ++d){
       path.str("");
       path << hname << ":/Grid/Dimension" << d;
@@ -71,6 +76,7 @@ void write_xmf(string fname, string hname, double time, struct inputConfig &cf, 
     }
     fprintf(xmf, "     </Geometry>\n");
 
+    // Momentum Vector
     fprintf(xmf, "     <Attribute Name=\"Momentum\" AttributeType=\"Vector\" " "Center=\"Cell\">\n");
     if (ndim == 2)
       fprintf(xmf, "      <DataItem Dimensions=\"%d %d 2\" Function=\"JOIN($0,$1)\" " "ItemType=\"Function\">\n",dims[0],dims[1]);
@@ -85,27 +91,49 @@ void write_xmf(string fname, string hname, double time, struct inputConfig &cf, 
     fprintf(xmf, "      </DataItem>\n");
     fprintf(xmf, "     </Attribute>\n");
 
+    // Other Variables
     fprintf(xmf, "     <Attribute Name=\"Energy\" AttributeType=\"Scalar\" " "Center=\"Cell\">\n");
     path.str("");
     path << hname << ":/Solution/Variable" << setw(2) << setfill('0') << ndim;
     writeDataItem(xmf, path.str(), ndim, dims);
     fprintf(xmf, "     </Attribute>\n");
 
-    for (int var = ndim+1; var < nv; ++var) {
-      fprintf(xmf, "     <Attribute Name=\"Density%02d\" AttributeType=\"Scalar\" " "Center=\"Cell\">\n", var - ndim);
+    for (int var = ndim+1; var < nvt; ++var) {
+      fprintf(xmf, "     <Attribute Name=\"%s\" AttributeType=\"Scalar\" " "Center=\"Cell\">\n",vNames[var].c_str());
       path.str("");
       path << hname << ":/Solution/Variable" << setw(2) << setfill('0') << var;
       writeDataItem(xmf, path.str(), ndim, dims);
       fprintf(xmf, "     </Attribute>\n");
     }
-    for (int var = nv; var < nvt; ++var) {
-      fprintf(xmf, "     <Attribute Name=\"Variable%02d\" " "AttributeType=\"Scalar\" Center=\"Cell\">\n", var - nv);
+
+    // Velocity Vector
+    fprintf(xmf, "     <Attribute Name=\"Velocity\" AttributeType=\"Vector\" " "Center=\"Cell\">\n");
+    if (ndim == 2)
+      fprintf(xmf, "      <DataItem Dimensions=\"%d %d 2\" Function=\"JOIN($0,$1)\" " "ItemType=\"Function\">\n",dims[0],dims[1]);
+    else
+      fprintf(xmf, "      <DataItem Dimensions=\"%d %d %d 3\" Function=\"JOIN($0,$1,$2)\" " "ItemType=\"Function\">\n", dims[0], dims[1],dims[2]);
+
+    for (int d=0; d<ndim; ++d){
       path.str("");
-      path << hname << ":/Solution/Variable" << setw(2) << setfill('0') << var;
+      path << hname << ":/Solution/Variable" << setw(2) << setfill('0') << nvt+d;
+      writeDataItem(xmf, path.str(), ndim, dims);
+    }
+    fprintf(xmf, "      </DataItem>\n");
+    fprintf(xmf, "     </Attribute>\n");
+
+    // Other Extra Variables
+    for (int var = ndim; var < vxNames.size(); ++var) {
+      fprintf(xmf, "     <Attribute Name=\"%s\" AttributeType=\"Scalar\" " "Center=\"Cell\">\n",vxNames[var].c_str());
+      path.str("");
+      path << hname << ":/Solution/Variable" << setw(2) << setfill('0') << var+nvt;
       writeDataItem(xmf, path.str(), ndim, dims);
       fprintf(xmf, "     </Attribute>\n");
     }
+
+    // End Field Variables
     fprintf(xmf, "   </Grid>\n");
+
+    //Particles
     if (cf.particle == 1){
       fprintf(xmf, "   <Grid Name=\"particles\" >\n");
         fprintf(xmf, "     <Topology TopologyType=\"Polyvertex\" NumberOfElements=\"%d\"/>\n", np);
@@ -238,6 +266,7 @@ fstWriter::fstWriter(struct inputConfig cf, rk_func *f) {
 
   gridH = Kokkos::create_mirror_view(f->grid);
   varH = Kokkos::create_mirror_view(f->var);
+  varxH = Kokkos::create_mirror_view(f->varx);
 }
 
 template<typename T>
@@ -319,6 +348,28 @@ void fstWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
     }
     write_h5<T>(group_id, vname.str(), cf.ndim, cellDims, cellCount, offset, var); 
   }
+  for (int vn = 0; vn < f->varxNames.size(); ++vn) {
+    // Format Dataset Name
+    stringstream vname;
+    vname << "Variable" << setw(2) << setfill('0') << vn+cf.nvt;
+
+    Kokkos::deep_copy(varxH,f->varx);
+    int koffset;
+    if (cf.ndim == 3) koffset = cf.ng;
+    else koffset = 0;
+    for (int k = koffset; k < cf.nck + koffset; ++k) {
+      for (int j = cf.ng; j < cf.ncj + cf.ng; ++j) {
+        for (int i = cf.ng; i < cf.nci + cf.ng; ++i) {
+          int ii = i - cf.ng;
+          int jj = j - cf.ng;
+          int kk = k - koffset;
+          idx = (cf.nci * cf.ncj) * kk + cf.nci * jj + ii;
+          var[idx] = varxH(i, j, k, vn);
+        }
+      }
+    }
+    write_h5<T>(group_id, vname.str(), cf.ndim, cellDims, cellCount, offset, var); 
+  }
   H5Gclose(group_id);
 
   if (cf.particle == 1){
@@ -373,9 +424,9 @@ void fstWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
       write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
     }
     H5Gclose(group_id);
-    write_xmf(xmfName.str(), hdfName.str(), time, cf, globalPartDim);
+    write_xmf(xmfName.str(), hdfName.str(), time, cf, globalPartDim,f->varNames,f->varxNames);
   } else {
-    write_xmf(xmfName.str(), hdfName.str(), time, cf, 0);
+    write_xmf(xmfName.str(), hdfName.str(), time, cf, 0,f->varNames,f->varxNames);
   }
 
   close_h5(file_id);

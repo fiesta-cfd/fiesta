@@ -34,6 +34,7 @@ struct inputConfig {
   int ndim;
   int glbl_ni, glbl_nj, glbl_nk;
   int glbl_nci, glbl_ncj, glbl_nck;
+  std::vector<std::string> speciesName;
   double *gamma;
   double *M;
   double *mu;

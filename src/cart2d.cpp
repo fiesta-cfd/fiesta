@@ -1,36 +1,84 @@
 #include "cart2d.hpp"
 #include "vtk.hpp"
 
+std::map<string,int> varxIds;
+
 cart2d_func::cart2d_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_)
     : rk_func(cf_, cd_) {
 
-  grid = FS4D("coords", cf.ni, cf.nj, cf.nk, 3);
-  var = FS4D("var", cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Primary Variable Array
-  tmp1 = FS4D("tmp1", cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Temporary Arrayr
-  dvar = FS4D("dvar", cf.ngi, cf.ngj, cf.ngk, cf.nvt); // RHS Output
-  vel = FS3D("vel", cf.ngi, cf.ngj, 2);                // velocity
-  p = FS2D("p", cf.ngi, cf.ngj);                       // Pressure
-  T = FS2D("T", cf.ngi, cf.ngj);                       // Temperature
-  rho = FS2D("rho", cf.ngi, cf.ngj);                   // Total Density
+  int varxPtr = 0;
+
+  grid  = FS4D("coords", cf.ni, cf.nj, cf.nk, 3);
+  var   = FS4D("var", cf.ngi, cf.ngj, cf.ngk, cf.nvt);     // Primary Variables
+  tmp1  = FS4D("tmp1", cf.ngi, cf.ngj, cf.ngk, cf.nvt);    // Temporary Array
+  dvar  = FS4D("dvar", cf.ngi, cf.ngj, cf.ngk, cf.nvt);    // RHS Output
+  vel   = FS3D("vel", cf.ngi, cf.ngj, 2);                  // velocity
+  p     = FS2D("p", cf.ngi, cf.ngj);                       // Pressure
+  T     = FS2D("T", cf.ngi, cf.ngj);                       // Temperature
+  rho   = FS2D("rho", cf.ngi, cf.ngj);                     // Total Density
   fluxx = FS2D("fluxx", cf.ngi, cf.ngj); // Advective Fluxes in X direction
   fluxy = FS2D("fluxy", cf.ngi, cf.ngj); // Advective Fluxes in Y direction
+
+  varNames.push_back("X-Momentum");
+  varNames.push_back("Y-Momentum");
+  varNames.push_back("Energy");
+  for (int v=0; v<cf.ns; ++v)
+      varNames.push_back("Density " + cf.speciesName[v]);
+
   if (cf.visc == 1) {
-    qx = FS2D("qx", cf.ngi, cf.ngj); // Heat Fluxes in X direction
-    qy = FS2D("qy", cf.ngi, cf.ngj); // Heat Fluxes in X direction
+    qx      = FS2D("qx", cf.ngi, cf.ngj); // Heat Fluxes X direction
+    qy      = FS2D("qy", cf.ngi, cf.ngj); // Heat Fluxes Y direction
     stressx = FS4D("stressx", cf.ngi, cf.ngj, 2, 2); // stress on x faces
     stressy = FS4D("stressy", cf.ngi, cf.ngj, 2, 2); // stress on y faces
   }
+
   if (cf.ceq == 1) {
-    gradRho = FS3D("gradRho", cf.ngi, cf.ngj, 4); // stress tensor on y faces
+    gradRho = FS3D("gradRho", cf.ngi, cf.ngj, 4);    // Density Gradients
+    varNames.push_back("C");
+    varNames.push_back("C_hat");
+    varNames.push_back("Tau_1");
+    varNames.push_back("Tau_2");
+    varNames.push_back("Unused");
   }
+
   if (cf.noise == 1) {
-    noise = FS2D_I("noise", cf.ngi, cf.ngj);
+    noise = FS2D_I("noise", cf.ngi, cf.ngj);         // Noise Indicator
+  varxIds["Noise"]=varxPtr++;
+  varxNames.push_back("Noise");
   }
+
   if (cf.particle == 1) {
-    particles = FSP2D("particles", cf.p_np);
+    particles = FSP2D("particles", cf.p_np);         // Particle Array
     particlesH = Kokkos::create_mirror_view(particles);
   }
+
+  assert(varNames.size() == cf.nvt);
+
+  varxIds["X-Velocity"]=varxPtr++;
+  varxNames.push_back("X-Velocity");
+
+  varxIds["Y-Velocity"]=varxPtr++;
+  varxNames.push_back("Y-Velocity");
+
+  varxIds["Pressure"]=varxPtr++;
+  varxNames.push_back("Pressure");
+
+  varxIds["Temperature"]=varxPtr++;
+  varxNames.push_back("Temperature");
+
+  varxIds["Density"]=varxPtr++;
+  varxNames.push_back("Density");
+
+  for (int i=0; i<varxPtr; ++i)
+    assert(varxIds[varxNames[i]]==i);
+  for(std::pair<std::string,int> element : varxIds)
+    assert(element.first.compare(varxNames[element.second]) == 0);
+  assert(varxNames.size()==varxPtr);
+
+  varx  = FS4D("varx", cf.ngi, cf.ngj, cf.ngk, varxPtr); // Extra Vars
+
   cd = mcd;
+
 
   timers["flux"] = fiestaTimer("Flux Calculation");
   timers["pressgrad"] = fiestaTimer("Pressure Gradient Calculation");
@@ -63,6 +111,32 @@ cart2d_func::cart2d_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_)
 void cart2d_func::preStep() {}
 
 void cart2d_func::postStep() {
+
+      policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
+  if (cf.write_freq >0)
+    if (cf.t % cf.write_freq == 0){
+      //FS3D velx(varx,Kokkos::ALL,Kokkos::ALL,0,make_pair(0,cf.ndim));
+      //FS2D px(varx,Kokkos::ALL,Kokkos::ALL,0,cf.ndim);
+      //FS2D Tx(varx,Kokkos::ALL,Kokkos::ALL,0,cf.ndim+1);
+      //FS2D rhox(varx,Kokkos::ALL,Kokkos::ALL,0,cf.ndim+2);
+      
+
+      // Calcualte Total Density and Pressure Fields
+      timers["calcSecond"].reset();
+      Kokkos::parallel_for(ghost_pol, calculateRhoPT2D(var, p, rho, T, cd));
+      Kokkos::parallel_for(ghost_pol, computeVelocity2D(var, rho, vel));
+      Kokkos::fence();
+      timers["calcSecond"].accumulate();
+
+      Kokkos::parallel_for( "Loop1", ghost_pol,
+        KOKKOS_LAMBDA(const int i, const int j) {
+          varx(i,j,0,varxIds["X-Velocity"]) = vel(i,j,0);
+          varx(i,j,0,varxIds["Y-Velocity"]) = vel(i,j,1);
+          varx(i,j,0,varxIds["Pressure"]) = p(i,j);
+          varx(i,j,0,varxIds["Temperature"]) = T(i,j);
+          varx(i,j,0,varxIds["Density"]) = rho(i,j);
+      });
+    }
 
   if (cf.noise == 1) {
     int M = 0;

@@ -22,6 +22,9 @@ public:
   // virtual void compute(const FS4D & mvar, FS4D & mdvar) = 0;
 
   FS4D var;
+  std::vector<string> varNames;
+  FS4D varx;
+  std::vector<string> varxNames;
   FS4D dvar;
   FS4D tmp1;
   FS4D grid;
