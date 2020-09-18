@@ -349,7 +349,7 @@ int main(int argc, char *argv[]) {
       if (cf.stat_freq > 0) {
         if ((t + 1) % cf.stat_freq == 0) {
           f->timers["statCheck"].reset();
-          statusCheck(cArgs.colorFlag, cf, f->var, t + 1, time, totalTimer);
+          statusCheck(cArgs.colorFlag, cf, f, time, totalTimer, simTimer);
           f->timers["statCheck"].accumulate();
         }
       }

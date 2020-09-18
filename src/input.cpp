@@ -111,7 +111,7 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
   struct commandArgs cArgs;
 
   cArgs.fileName = "fiesta.lua";
-  cArgs.timeFormat = 0;
+  cArgs.timeFormat = 2;
   cArgs.versionFlag = 0;
   cArgs.colorFlag = 0;
 
@@ -119,8 +119,9 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
   static struct option long_options[] = {
       {"version", no_argument, NULL, 'v'},
       {"color", optional_argument, NULL, 'c'},
-      {"decimal-time", optional_argument, NULL, 't'},
+      {"time-format", optional_argument, NULL, 't'},
       {"kokkos-ndevices", optional_argument, NULL, 'n'},
+      {"kokkos-num-devices", optional_argument, NULL, 'n'},
       {"kokkos-threads", optional_argument, NULL, 'n'},
       {"kokkos-help", optional_argument, NULL, 'n'},
       {"kokkos-numa", optional_argument, NULL, 'n'},
@@ -277,6 +278,17 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
     lua_pushnumber(L, s + 1);
     lua_gettable(L, -2);
     cf.M[s] = (double)lua_tonumberx(L, -1, &isnum);
+    lua_pop(L, 1);
+  }
+  lua_getglobal(L, "species_names");
+  for (int s = 0; s < cf.ns; ++s) {
+    lua_pushnumber(L, s + 1);
+    lua_gettable(L, -2);
+    
+    const char *name_c;
+    name_c = (char *)malloc(32 * sizeof(char));
+    name_c = lua_tostring(L, -1);
+    cf.speciesName.push_back(std::string(name_c));
     lua_pop(L, 1);
   }
   if (cf.visc == 1) {

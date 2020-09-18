@@ -2,6 +2,9 @@
 #define SECONDARY_H
 
 struct calculateRhoPT2D {
+  //Kokkos::View<double ****> var;
+  //Kokkos::View<double **> rho,p,T;
+  //Kokkos::View<double *> cd;
   FS4D var;
   FS2D rho, p, T;
   FS1D cd;

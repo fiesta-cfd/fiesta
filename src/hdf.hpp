@@ -39,6 +39,7 @@ private:
   double *readV;
   FS4DH gridH;
   FS4DH varH;
+  FS4DH varxH;
 };
 
 #endif

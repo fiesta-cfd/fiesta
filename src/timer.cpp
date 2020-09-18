@@ -80,11 +80,11 @@ string fiestaTimer::formatTime(double tin) {
   m = temp / 60;
 
   temp = temp - m * 60;
-  s = temp;
+  s = floor(temp);
 
   stringstream ss;
 
-  ss.precision(2);
+  ss.precision(0);
   ss.setf(ios::fixed);
   if (d > 0)
     ss << d << "d";
