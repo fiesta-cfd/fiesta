@@ -18,35 +18,79 @@
 gen3d_func::gen3d_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_)
     : rk_func(cf_, cd_) {
 
-  grid = FS4D("coords", cf.ni, cf.nj, cf.nk, 3);
-  var = FS4D("var", cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Primary Variable Array
-  metrics = FS5D("metrics", cf.ngi, cf.ngj, cf.ngk, 3, 3); // Jacobian Metrics
-  tmp1 = FS4D("tmp1", cf.ngi, cf.ngj, cf.ngk,
-              cf.nvt); // Temporary Variable Arrayr1
-  dvar = FS4D("dvar", cf.ngi, cf.ngj, cf.ngk, cf.nvt); // RHS Output
-  p = FS3D("p", cf.ngi, cf.ngj, cf.ngk);               // Pressure
-  T = FS3D("T", cf.ngi, cf.ngj, cf.ngk);               // Temperature
-  tvel = FS4D("tvel", cf.ngi, cf.ngj, cf.ngk, 3);      // Velocity
-  rho = FS3D("rho", cf.ngi, cf.ngj, cf.ngk);           // Total Density
-  fluxx =
-      FS3D("fluxx", cf.ngi, cf.ngj, cf.ngk); // Advective Fluxes in X direction
-  fluxy =
-      FS3D("fluxy", cf.ngi, cf.ngj, cf.ngk); // Advective Fluxes in Y direction
-  fluxz =
-      FS3D("fluxz", cf.ngi, cf.ngj, cf.ngk); // Advective Fluxes in z direction
+  // Allocate all device arrays here
+  grid    = FS4D("coords",  cf.ni,  cf.nj,  cf.nk,  3);
+  var     = FS4D("var",     cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Primary  Array
+  metrics = FS5D("metrics", cf.ngi, cf.ngj, cf.ngk, 3, 3);   // Metric Tensor
+  tmp1    = FS4D("tmp1",    cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Temporary Array
+  dvar    = FS4D("dvar",    cf.ngi, cf.ngj, cf.ngk, cf.nvt); // RHS Output
+  rho     = FS3D("rho",     cf.ngi, cf.ngj, cf.ngk);         // Total Density
+  p       = FS3D("p",       cf.ngi, cf.ngj, cf.ngk);         // Pressure
+  T       = FS3D("T",       cf.ngi, cf.ngj, cf.ngk);         // Temperature
+  tvel    = FS4D("tvel",    cf.ngi, cf.ngj, cf.ngk,  3);     // Velocity
+  fluxx   = FS3D("fluxx",   cf.ngi, cf.ngj, cf.ngk); // Advective Fluxes in X
+  fluxy   = FS3D("fluxy",   cf.ngi, cf.ngj, cf.ngk); // Advective Fluxes in Y
+  fluxz   = FS3D("fluxz",   cf.ngi, cf.ngj, cf.ngk); // Advective Fluxes in z
   cd = mcd;
 
-  timers["flux"] = fiestaTimer("Flux Calculation");
-  timers["pressgrad"] = fiestaTimer("Pressure Gradient Calculation");
-  timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
-  timers["solWrite"] = fiestaTimer("Solution Write Time");
-  timers["resWrite"] = fiestaTimer("Restart Write Time");
-  timers["statCheck"] = fiestaTimer("Status Check");
+  // Primaty Variable Names
+  varNames.push_back("X-Momentum");
+  varNames.push_back("Y-Momentum");
+  varNames.push_back("Z-Momentum");
+  varNames.push_back("Energy");
+  for (int v=0; v<cf.ns; ++v)
+      varNames.push_back("Density " + cf.speciesName[v]);
+  assert(varNames.size()==cf.nvt);
+
+  // Secondary Variable Names
+  varxNames.push_back("X-Velocity");
+  varxNames.push_back("Y-Velocity");
+  varxNames.push_back("Z-Velocity");
+  varxNames.push_back("Pressure");
+  varxNames.push_back("Temperature");
+  varxNames.push_back("Density");
+
+  // Create Secondary Variable Array
+  varx = FS4D("varx",cf.ngi,cf.ngj,cf.ngk,varxNames.size());
+
+  // Create Timers
+  timers["flux"]        = fiestaTimer("Flux Calculation");
+  timers["pressgrad"]   = fiestaTimer("Pressure Gradient Calculation");
+  timers["calcSecond"]  = fiestaTimer("Secondary Variable Calculation");
+  timers["solWrite"]    = fiestaTimer("Solution Write Time");
+  timers["resWrite"]    = fiestaTimer("Restart Write Time");
+  timers["statCheck"]   = fiestaTimer("Status Check");
   timers["calcMetrics"] = fiestaTimer("Metric Computations");
 };
 
 void gen3d_func::preStep() {}
-void gen3d_func::postStep() {}
+
+void gen3d_func::postStep() {
+  
+  // MDRange Policy for all cells including ghost cells
+  policy_f3 ghost_pol = policy_f3({0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk});
+
+  // Copy secondary variables to extra variables array
+  if (cf.write_freq >0)
+    if (cf.t % cf.write_freq == 0){
+
+      timers["calcSecond"].reset();
+      Kokkos::parallel_for(ghost_pol, calculateRhoPT3D(var, p, rho, T, cd));
+      Kokkos::parallel_for(ghost_pol, computeVelocity3D(var, rho, tvel));
+      Kokkos::fence();
+      timers["calcSecond"].accumulate();
+
+      Kokkos::parallel_for( "CopyVarx", ghost_pol,
+        KOKKOS_LAMBDA(const int i, const int j, const int k) {
+          varx(i,j,k,0) = tvel(i,j,k,0);
+          varx(i,j,k,1) = tvel(i,j,k,1);
+          varx(i,j,k,2) = tvel(i,j,k,2);
+          varx(i,j,k,3) =    p(i,j,k);
+          varx(i,j,k,4) =    T(i,j,k);
+          varx(i,j,k,5) =  rho(i,j,k);
+      });
+    }
+}
 void gen3d_func::preSim() {
   policy_f3 cell_pol3 = policy_f3(
       {cf.ng, cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
@@ -261,7 +305,7 @@ void gen3d_func::compute() {
 
   /**** WENO ****/
   timers["calcSecond"].reset();
-  Kokkos::parallel_for(ghost_pol, calculateRhoPT3D(var, p, rho, cd));
+  Kokkos::parallel_for(ghost_pol, calculateRhoPT3D(var, p, rho, T, cd));
   Kokkos::parallel_for(ghost_pol,
                        computeGenVelocity3D(var, metrics, rho, tvel));
   Kokkos::fence();

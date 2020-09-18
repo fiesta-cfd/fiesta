@@ -145,7 +145,7 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
       if (optarg)
         cArgs.timeFormat = atoi(optarg);
       else
-        cArgs.timeFormat = 2;
+        cArgs.timeFormat = 0;
       break;
     }
   }

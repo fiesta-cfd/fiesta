@@ -908,7 +908,28 @@ hydroc3d_func::hydroc3d_func(struct inputConfig &cf_,
                                                3); //
   mFlux = Kokkos::View<double ******, FS_LAYOUT>("mFlux", 3, 3, cf.ngi, cf.ngj,
                                                  cf.ngk, 3); //
+
   cd = mcd;
+
+  varNames.push_back("X-Momentum");
+  varNames.push_back("Y-Momentum");
+  varNames.push_back("Z-Momentum");
+  varNames.push_back("Energy");
+  for (int v=0; v<cf.ns; ++v)
+  varNames.push_back("Density " + cf.speciesName[v]);
+
+
+  varxNames.push_back("X-Velocity");
+  varxNames.push_back("Y-Velocity");
+  varxNames.push_back("Z-Velocity");
+  varxNames.push_back("Pressure");
+  varxNames.push_back("Temperature");
+  varxNames.push_back("Density");
+
+  varx = FS4D("varx",cf.ngi,cf.ngj,cf.ngk,varxNames.size());
+
+MYDBG
+  assert(varNames.size()==cf.nvt);
 
   timers["flux"] = fiestaTimer("Flux Calculation");
   timers["pressgrad"] = fiestaTimer("Pressure Gradient Calculation");

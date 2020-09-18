@@ -46,6 +46,23 @@ struct computeGenVelocity2D {
   }
 };
 
+struct computeVelocity3D {
+  FS4D var;
+  FS3D rho;
+  FS4D vel;
+
+  computeVelocity3D(FS4D var_, FS3D r_, FS4D v_)
+      : var(var_), rho(r_), vel(v_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j, const int k) const {
+
+    vel(i, j, k, 0) = var(i, j, k, 0) / rho(i, j, k);
+    vel(i, j, k, 1) = var(i, j, k, 1) / rho(i, j, k);
+    vel(i, j, k, 2) = var(i, j, k, 2) / rho(i, j, k);
+  }
+};
+
 struct computeVelocity2D {
   FS4D var;
   FS2D rho;

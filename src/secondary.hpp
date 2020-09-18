@@ -53,12 +53,11 @@ struct calculateRhoPT2D {
 
 struct calculateRhoPT3D {
   FS4D var;
-  FS3D p;
-  FS3D rho;
+  FS3D p, rho, T;
   FS1D cd;
 
-  calculateRhoPT3D(FS4D var_, FS3D p_, FS3D rho_, FS1D cd_)
-      : var(var_), p(p_), rho(rho_), cd(cd_) {}
+  calculateRhoPT3D(FS4D var_, FS3D p_, FS3D rho_, FS3D T_, FS1D cd_)
+      : var(var_), p(p_), rho(rho_), T(T_), cd(cd_) {}
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
@@ -91,6 +90,8 @@ struct calculateRhoPT3D {
                   (0.5 / rho(i, j, k)) * (var(i, j, k, 0) * var(i, j, k, 0) +
                                           var(i, j, k, 1) * var(i, j, k, 1) +
                                           var(i, j, k, 2) * var(i, j, k, 2)));
+    // calcualte cell temperature
+    T(i, j,k) = p(i, j,k) / ((Cp - Cv) * rho(i, j,k));
   }
 };
 
