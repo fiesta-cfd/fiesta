@@ -207,7 +207,7 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
   if (cf.rank == 0) {
 
     // Check for nans and infs and print table
-    for (int v = 0; v < cf.nvt; ++v) {
+    for (int v = 0; v < f->varxNames.size(); ++v) {
       stringstream ss, smax, smin;
 
       vname = f->varxNames[v];

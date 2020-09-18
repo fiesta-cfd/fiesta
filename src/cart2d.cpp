@@ -43,8 +43,8 @@ cart2d_func::cart2d_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_)
 
   if (cf.noise == 1) {
     noise = FS2D_I("noise", cf.ngi, cf.ngj);         // Noise Indicator
-  varxIds["Noise"]=varxPtr++;
-  varxNames.push_back("Noise");
+    varxIds["Noise"]=varxPtr++;
+    varxNames.push_back("Noise");
   }
 
   if (cf.particle == 1) {
