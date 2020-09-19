@@ -98,8 +98,6 @@ void write_xmf(string fname, string hname, double time, struct inputConfig &cf, 
     writeDataItem(xmf, path.str(), ndim, dims);
     fprintf(xmf, "     </Attribute>\n");
 
-    printf("nvt:%d, vnl:%d\n",nvt,vNames.size());
-    printf("nvt:%d, vnl:%d\n",nvt,vxNames.size());
     for (int var = ndim+1; var < nvt; ++var) {
       fprintf(xmf, "     <Attribute Name=\"%s\" AttributeType=\"Scalar\" " "Center=\"Cell\">\n",vNames[var].c_str());
       path.str("");

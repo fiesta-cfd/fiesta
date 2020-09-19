@@ -15,11 +15,11 @@
 #include "secondary.hpp"
 #include "velocity.hpp"
 
-gen3d_func::gen3d_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_)
+gen3d_func::gen3d_func(struct inputConfig &cf_, FS1D &cd_)
     : rk_func(cf_, cd_) {
 
   // Allocate all device arrays here
-  grid    = FS4D("coords",  cf.ni,  cf.nj,  cf.nk,  3);
+  grid    = FS4D("coords",  cf.ni,  cf.nj,  cf.nk,  3);      // Grid Coords
   var     = FS4D("var",     cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Primary  Array
   metrics = FS5D("metrics", cf.ngi, cf.ngj, cf.ngk, 3, 3);   // Metric Tensor
   tmp1    = FS4D("tmp1",    cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Temporary Array
@@ -39,7 +39,7 @@ gen3d_func::gen3d_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_)
   varNames.push_back("Z-Momentum");
   varNames.push_back("Energy");
   for (int v=0; v<cf.ns; ++v)
-      varNames.push_back("Density " + cf.speciesName[v]);
+    varNames.push_back("Density " + cf.speciesName[v]);
   assert(varNames.size()==cf.nvt);
 
   // Secondary Variable Names

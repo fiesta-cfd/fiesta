@@ -12,7 +12,8 @@
 class rk_func {
 
 public:
-  rk_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_);
+  rk_func(struct inputConfig &cf_, FS1D &cd_);
+  //rk_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_);
 
   virtual void compute() = 0;
   virtual void preStep() = 0;

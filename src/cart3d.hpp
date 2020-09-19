@@ -3,10 +3,10 @@
 #include "input.hpp"
 #include "rkfunction.hpp"
 
-class hydroc3d_func : public rk_func {
+class cart3d_func : public rk_func {
 
 public:
-  hydroc3d_func(struct inputConfig &cf, Kokkos::View<double *> &mcd);
+  cart3d_func(struct inputConfig &cf, FS1D &mcd);
   void compute();
   void preStep();
   void postStep();
@@ -16,6 +16,7 @@ public:
   FS3D p;       // Pressure
   FS3D T;       // Temperature
   FS3D rho;     // Total Density
+  FS4D vel;     // Velocity
   FS3D qx;      // Heat Fluxes in X direction
   FS3D qy;      // Heat Fluxes in Y direction
   FS3D qz;      // Heat Fluxes in Z direction

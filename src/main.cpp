@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
 
     // Create and copy minimal configuration array for data needed
     // withing Kokkos kernels.
-    Kokkos::View<double *> cd("deviceCF", 6 + cf.ns * 3);
+    FS1D cd("deviceCF", 6 + cf.ns * 3);
     typename Kokkos::View<double *>::HostMirror hostcd =
         Kokkos::create_mirror_view(cd);
     Kokkos::deep_copy(hostcd, cd);
@@ -115,8 +115,11 @@ int main(int argc, char *argv[]) {
     /*** Choose Scheme ***/
     rk_func *f;
     if (cf.ndim == 3) {
-      // f = new hydroc3d_func(cf,cd);
-      f = new gen3d_func(cf, cd);
+      if (cf.grid == 1) {
+        f = new gen3d_func(cf, cd);
+      } else {
+        f = new cart3d_func(cf,cd);
+      }
     } else {
       if (cf.grid == 1) {
         f = new gen2d_func(cf, cd);

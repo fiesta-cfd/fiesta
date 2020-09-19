@@ -3,12 +3,12 @@
 
 std::map<string,int> varxIds;
 
-cart2d_func::cart2d_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_)
+cart2d_func::cart2d_func(struct inputConfig &cf_, FS1D &cd_)
     : rk_func(cf_, cd_) {
 
   int varxPtr = 0;
 
-  grid  = FS4D("coords", cf.ni, cf.nj, cf.nk, 3);
+  grid  = FS4D("coords", cf.ni, cf.nj, cf.nk, 3);          // Grid Coords
   var   = FS4D("var", cf.ngi, cf.ngj, cf.ngk, cf.nvt);     // Primary Variables
   tmp1  = FS4D("tmp1", cf.ngi, cf.ngj, cf.ngk, cf.nvt);    // Temporary Array
   dvar  = FS4D("dvar", cf.ngi, cf.ngj, cf.ngk, cf.nvt);    // RHS Output

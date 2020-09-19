@@ -19,7 +19,7 @@
 class cart2d_func : public rk_func {
 
 public:
-  cart2d_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_);
+  cart2d_func(struct inputConfig &cf_, FS1D &cd_);
 
   void compute();
   void preStep();

@@ -1,34 +1,49 @@
 #include "gen2d.hpp"
 
-gen2d_func::gen2d_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_)
+gen2d_func::gen2d_func(struct inputConfig &cf_, FS1D &cd_)
     : rk_func(cf_, cd_) {
-  /* Generalized 2D module constructor */
 
-  // Data Structures (see fiesta.hpp to decode typenames)
-  grid = FS4D("grid", cf.ni, cf.nj, cf.nk, 3);       // grid coordinates
-  metrics = FS4D("metrics", cf.ngi, cf.ngj, 2, 2);   // Jacobian metrics
-  var = FS4D("var", cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Primary Variable Array
-  tmp1 = FS4D("tmp1", cf.ngi, cf.ngj, cf.ngk,
-              cf.nvt); // Temporary Variable (for Runge-Kutta)
-  dvar = FS4D("dvar", cf.ngi, cf.ngj, cf.ngk, cf.nvt); // RHS Output
-  tvel = FS3D("vel", cf.ngi, cf.ngj, 2); // Transformed velocity components
-  p = FS2D("p", cf.ngi, cf.ngj);         // Pressure
-  T = FS2D("T", cf.ngi, cf.ngj);         // Temperature
-  rho = FS2D("rho", cf.ngi, cf.ngj);     // Total Density
-  fluxx = FS2D("fluxx", cf.ngi, cf.ngj); // Advective Fluxes in X direction
-  fluxy = FS2D("fluxy", cf.ngi, cf.ngj); // Advective Fluxes in Y direction
+  // Allocate all device variables here
+  grid    = FS4D("grid",    cf.ni,  cf.nj,  cf.nk, 3);       // Grid Coords
+  metrics = FS4D("metrics", cf.ngi, cf.ngj, 2, 2);           // Metric Tensor
+  var     = FS4D("var",     cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Primary Vars
+  tmp1    = FS4D("tmp1",    cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Temporary Vars
+  dvar    = FS4D("dvar",    cf.ngi, cf.ngj, cf.ngk, cf.nvt); // RHS Output
+  tvel    = FS3D("vel",     cf.ngi, cf.ngj, 2);              // Velocity
+  p       = FS2D("p",       cf.ngi, cf.ngj);                 // Pressure
+  T       = FS2D("T",       cf.ngi, cf.ngj);                 // Temperature
+  rho     = FS2D("rho",     cf.ngi, cf.ngj);                 // Total Density
+  fluxx   = FS2D("fluxx",   cf.ngi, cf.ngj);              // Advective Fluxes X
+  fluxy   = FS2D("fluxy",   cf.ngi, cf.ngj);              // Advective Fluxes Y
+
+  // Primary Variable Names
+  varNames.push_back("X-Momentum");
+  varNames.push_back("Y-Momentum");
+  varNames.push_back("Energy");
+  for (int v=0; v<cf.ns; ++v)
+    varNames.push_back("Density " + cf.speciesName[v]);
+  assert(varNames.size() == cf.nvt);
+
   if (cf.noise == 1) {
     noise = FS2D_I("noise", cf.ngi, cf.ngj); // Noise indicator array
   }
-#ifdef NOMPI
   if (cf.particle == 1) {
     particles = FSP2D("particles", cf.p_np); // 2D particle view
     particlesH = Kokkos::create_mirror_view(particles);
   }
-#endif
+
   cd = mcd;
 
-  // Set up timer dictionaries
+  // Secondary Variable Names
+  varxNames.push_back("X-Velocity");
+  varxNames.push_back("Y-Velocity");
+  varxNames.push_back("Pressure");
+  varxNames.push_back("Temperature");
+  varxNames.push_back("Density");
+
+  varx  = FS4D("varx", cf.ngi, cf.ngj, cf.ngk, varxNames.size()); // Extra Vars
+
+  // Create Timers
   timers["flux"] = fiestaTimer("Flux Calculation");
   timers["pressgrad"] = fiestaTimer("Pressure Gradient Calculation");
   timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
@@ -52,38 +67,34 @@ gen2d_func::gen2d_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_)
 };
 
 void gen2d_func::compute() {
-  /* main compute function for generalized 2d module */
+  using namespace Kokkos;
 
   // Calcualte Total Density and Pressure Fields
   timers["calcSecond"].reset();
-  Kokkos::parallel_for(ghostPol, calculateRhoPT2D(var, p, rho, T, cd));
-  Kokkos::parallel_for(ghostPol, computeGenVelocity2D(var, metrics, rho, tvel));
-  Kokkos::fence();
+  parallel_for(ghostPol, calculateRhoPT2D(var, p, rho, T, cd));
+  parallel_for(ghostPol, computeGenVelocity2D(var, metrics, rho, tvel));
+  fence();
   timers["calcSecond"].accumulate();
 
   // Calculate and apply weno fluxes for each variable
   timers["flux"].reset();
   for (int v = 0; v < cf.nv; ++v) {
     if (cf.scheme == 3) {
-      Kokkos::parallel_for(
-          facePol, computeFluxQuick2D(var, p, rho, fluxx, fluxy, cd, v));
+      parallel_for(facePol, computeFluxQuick2D(var,p,rho,fluxx,fluxy,cd,v));
     } else if (cf.scheme == 2) {
-      Kokkos::parallel_for(
-          facePol, computeFluxCentered2D(var, p, rho, fluxx, fluxy, cd, v));
+      parallel_for(facePol, computeFluxCentered2D(var,p,rho,fluxx,fluxy,cd,v));
     } else {
-      Kokkos::parallel_for(
-          facePol, computeFluxWeno2D(var, p, rho, tvel, fluxx, fluxy, cd, v));
+      parallel_for(facePol, computeFluxWeno2D(var,p,rho,tvel,fluxx,fluxy,cd,v));
     }
-    Kokkos::parallel_for(cellPol, advect2D(dvar, fluxx, fluxy, cd, v));
+    parallel_for(cellPol, advect2D(dvar, fluxx, fluxy, cd, v));
   }
-  Kokkos::fence();
+  fence();
   timers["flux"].accumulate();
 
   // Apply Pressure Gradient Term
   timers["pressgrad"].reset();
-  Kokkos::parallel_for(cellPol,
-                       applyGenPressureGradient2D(dvar, metrics, p, cd));
-  Kokkos::fence();
+  parallel_for(cellPol, applyGenPressureGradient2D(dvar, metrics, p, cd));
+  fence();
   timers["pressgrad"].accumulate();
 }
 
@@ -92,7 +103,25 @@ void gen2d_func::preStep() {
 }
 
 void gen2d_func::postStep() {
-  /* Post time step hook executed after the last runge kutta stage */
+
+  if (cf.write_freq >0)
+    if (cf.t % cf.write_freq == 0){
+      timers["calcSecond"].reset();
+      Kokkos::parallel_for(ghostPol, calculateRhoPT2D(var, p, rho, T, cd));
+      Kokkos::parallel_for(ghostPol, computeVelocity2D(var, rho, tvel));
+      Kokkos::fence();
+      timers["calcSecond"].accumulate();
+
+      Kokkos::parallel_for( "CopyVarx", ghostPol,
+        KOKKOS_LAMBDA(const int i, const int j) {
+          varx(i,j,0,0) = tvel(i,j,0);
+          varx(i,j,0,1) = tvel(i,j,1);
+          varx(i,j,0,2) =    p(i,j);
+          varx(i,j,0,3) =    T(i,j);
+          varx(i,j,0,4) =  rho(i,j);
+      });
+    }
+  
 
   if (cf.noise == 1) {
     int M = 0;
