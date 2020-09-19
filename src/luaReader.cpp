@@ -10,6 +10,7 @@
 #include <string>
 #include <regex>
 
+// Construct object and open lua file
 luaReader::luaReader(std::string fname){
   L = luaL_newstate();
   luaL_openlibs(L);
@@ -54,7 +55,7 @@ bool luaReader::getBool(std::string key, bool val){
   return getglobbool(L,key.c_str(),1,1);
 }
 
-// Get arrays
+// Get an array of doubles from a lua table
 void luaReader::getDoubles(std::string key, int n, double *out){
   int isnum;
   lua_getglobal(L, key.c_str());
@@ -66,6 +67,7 @@ void luaReader::getDoubles(std::string key, int n, double *out){
   }
 }
 
+// Get an array of ints from a lua table
 void luaReader::getInts(std::string key, int n, int *out){
   int isnum;
   lua_getglobal(L, key.c_str());
@@ -77,6 +79,7 @@ void luaReader::getInts(std::string key, int n, int *out){
   }
 }
 
+// Get a vector of strings from a lua table
 void luaReader::getStrings(std::string key, int n, std::vector<std::string> &out){
   lua_getglobal(L, key.c_str());
   if (lua_istable(L,-1))
@@ -99,6 +102,7 @@ void luaReader::getStrings(std::string key, int n, std::vector<std::string> &out
     error(L, "Error Reading Input File: A string array was expected at '%s'\n", key.c_str());
 }
 
+// Call lua function from c (takes integer arguments and returns a double)
 double luaReader::call(std::string f, int n, ...){
   lua_getglobal(L, f.c_str());
   int isnum;
@@ -127,6 +131,9 @@ double luaReader::call(std::string f, int n, ...){
 void luaReader::close(){
   lua_close(L);
 }
+
+
+// Private Methods
 
 // Lua error function
 void luaReader::error(lua_State *L, const char *fmt, ...) {
@@ -229,30 +236,3 @@ std::string luaReader::getglobstr(lua_State *L, const char *var, int defaultable
 
   return std::string(result);
 }
-
-
-//  lua_getglobal(L, "gamma");
-//  for (int s = 0; s < cf.ns; ++s) {
-//    lua_pushnumber(L, s + 1);
-//    lua_gettable(L, -2);
-//    cf.gamma[s] = (double)lua_tonumberx(L, -1, &isnum);
-//    lua_pop(L, 1);
-//  }
-//  lua_getglobal(L, "M");
-//  for (int s = 0; s < cf.ns; ++s) {
-//    lua_pushnumber(L, s + 1);
-//    lua_gettable(L, -2);
-//    cf.M[s] = (double)lua_tonumberx(L, -1, &isnum);
-//    lua_pop(L, 1);
-//  }
-//  lua_getglobal(L, "species_names");
-//  for (int s = 0; s < cf.ns; ++s) {
-//    lua_pushnumber(L, s + 1);
-//    lua_gettable(L, -2);
-//    
-//    const char *name_c;
-//    name_c = (char *)malloc(32 * sizeof(char));
-//    name_c = lua_tostring(L, -1);
-//    cf.speciesName.push_back(std::string(name_c));
-//    lua_pop(L, 1);
-//  }
