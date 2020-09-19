@@ -32,49 +32,6 @@ using namespace std;
 //}
 
 int main(int argc, char *argv[]) {
-  printf("LUA TEST\n");
-  luaReader L("fiesta.lua");
-
-  double nd = L.getDouble("dx");
-  printf("dx: %f\n",nd);
-
-  double dd = L.getDouble("dr",0.123);
-  printf("dr: %f\n",dd);
-
-  int    ni = L.getInt("ni");
-  printf("ni: %d\n",ni);
-
-  int    di = L.getInt("nm",457);
-  printf("nm: %d\n",di);
-
-  std::string ns = L.getString("title");
-  printf("title: %s\n",ns.c_str());
-
-  std::string ds = L.getString("kokkos","generalized");
-  printf("kokkos: %s\n",ds.c_str());
-
-  bool nb = L.getBool("visc");
-  printf("visc: %d\n",nb);
-
-  bool db = L.getBool("fiesta",false);
-  printf("fiesta: %d\n",db);
-
-  double *Ma = (double*)malloc(2*sizeof(double));
-  L.getDoubles("mu",2,Ma);
-  printf("mu: %f, %f\n",Ma[0],Ma[1]);
-
-  int *Mb = (int*)malloc(2*sizeof(int));
-  L.getInts("luna",2,Mb);
-  printf("luna: %d, %d\n",Mb[0],Mb[1]);
-
-  std::vector<std::string> Mc;
-  printf("#######\n");
-  L.getStrings("sol",3,Mc);
-  printf("#######\n");
-  printf("sol: %s %s %s\n",Mc[0].c_str(),Mc[1].c_str(),Mc[2].c_str());
-
-  L.close();
-  printf("LUA TEST\n");
   
 
   // Get the command line options including input file name if supplied.

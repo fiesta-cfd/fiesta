@@ -88,7 +88,6 @@ void luaReader::getStrings(std::string key, int n, std::vector<std::string> &out
      
         if (lua_isstring(L,-1)){
           name_c = lua_tostring(L, -1);
-          printf("%d: %s\n",i,name_c);
           out.push_back(std::string(name_c));
           lua_pop(L, 1);
         }else{
@@ -98,6 +97,30 @@ void luaReader::getStrings(std::string key, int n, std::vector<std::string> &out
       }
   else
     error(L, "Error Reading Input File: A string array was expected at '%s'\n", key.c_str());
+}
+
+double luaReader::call(std::string f, int n, ...){
+  lua_getglobal(L, f.c_str());
+  int isnum;
+
+  va_list ap;
+  va_start(ap, n);
+  int v;
+  double z;
+  for(int i=0; i<n; ++i) {
+    v = va_arg(ap, int);
+    lua_pushnumber(L, v);
+  }
+  va_end(ap);
+
+  if (lua_pcall(L, n, 1, 0) != LUA_OK)
+    error(L, "error running function '%s': %s\n",f.c_str(),lua_tostring(L, -1));
+  z = (double)lua_tonumberx(L, -1, &isnum);
+  if (!isnum)
+    error(L, "function '%s' should return a number\n",f.c_str());
+  lua_pop(L, 1);
+
+  return z;
 }
 
 // Close Script
@@ -197,12 +220,14 @@ std::string luaReader::getglobstr(lua_State *L, const char *var, int defaultable
     else
       error(L, "Error Reading Input File: Could not read value for '%s', a string was expected.\n", var);
   }
+
   if (lua_isstring(L,-1)){
     result = lua_tostring(L, -1);
-    return std::string(result);
   }else{
     error(L, "Error Reading Input File: Could not read value for '%s', a string was expected.\n", var);
   }
+
+  return std::string(result);
 }
 
 

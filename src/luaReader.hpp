@@ -20,6 +20,8 @@ public:
   void getInts(std::string,int,int*);
   void getStrings(std::string,int,std::vector<std::string>&);
 
+  double call(std::string, int ,...);
+
 private:
   lua_State *L;
 
