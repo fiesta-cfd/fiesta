@@ -63,7 +63,8 @@ struct inputConfig {
   std::string restartName;
   int tstart, tend;
   double time;
-  double ceq, kap, eps, alpha, beta, betae, st;
+  int ceq,st;
+  double kap, eps, alpha, beta, betae;
   int bcL, bcR, bcB, bcT, bcH, bcF;
   double n_dh, n_coff, n_eta;
   int noise, n_nt;

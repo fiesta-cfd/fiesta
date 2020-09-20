@@ -76,85 +76,86 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   luaReader L(cargs.fileName);
 
   // Required Parameters
-  cf.nt       = L.getDouble("nt");
-  cf.glbl_nci = L.getInt("ni");
-  cf.glbl_ncj = L.getInt("nj");
-  cf.ns       = L.getInt("ns");
-  cf.dt       = L.getDouble("dt");
-  cf.R        = L.getDouble("R");
-  cf.title    = L.getString("title");
-  L.getStrings("species_names",cf.ns,cf.speciesName);
+  L.get("nt",    cf.nt);
+  L.get("ni",    cf.glbl_nci);
+  L.get("nj",    cf.glbl_ncj);
+  L.get("ns",    cf.ns);
+  L.get("dt",    cf.dt);
+  L.get("R",     cf.R);
+  L.get("title", cf.title);
+  L.getArray("species_names",cf.speciesName,cf.ns);
 
   // Defaultable Parameters
-  cf.tstart   = L.getInt("tstart",0);
-  cf.time     = L.getDouble("time",0.0);
-  cf.ceq      = L.getBool("ceq",0);
-  cf.particle = L.getBool("particle",0);
-  cf.noise    = L.getBool("noise",0);
-  cf.gravity  = L.getBool("buoyancy",0);
-  cf.ndim     = L.getDouble("ndim",2);
-  cf.visc     = L.getBool("visc",0);
-  cf.xProcs   = L.getInt("procsx",1);
-  cf.yProcs   = L.getInt("procsy",1);
-  cf.ng       = L.getInt("ng",3);
-  cf.xPer     = L.getInt("xPer",0);
-  cf.yPer     = L.getInt("yPer",0);
-  cf.bcL      = L.getInt("bcXmin",0);
-  cf.bcR      = L.getInt("bcXmax",0);
-  cf.bcB      = L.getInt("bcYmin",0);
-  cf.bcT      = L.getInt("bcYmax",0);
-  cf.restart  = L.getBool("restart",0);
-  cf.out_freq        = L.getInt("out_freq",0);
-  cf.write_freq      = L.getInt("write_freq",0);
-  cf.restart_freq    = L.getInt("restart_freq",0);
-  cf.stat_freq       = L.getInt("stat_freq",0);
-  cf.restartName     = L.getString("restartName","restart-0000000.h5");
-  std::string scheme = L.getString("scheme","weno5");
-  std::string grid   = L.getString("grid","cartesian");
+  L.get("tstart",   cf.tstart,  0);
+  L.get("time",     cf.time,    0.0);
+  L.get("ceq",      cf.ceq,     0);
+  L.get("particle", cf.particle,0);
+  L.get("noise",    cf.noise,   0);
+  L.get("buoyancy", cf.gravity, 0);
+  L.get("ndim",     cf.ndim,    2);
+  L.get("visc",     cf.visc,    0);
+  L.get("procsx",   cf.xProcs,  1);
+  L.get("procsy",   cf.yProcs,  1);
+  L.get("ng",       cf.ng,      3);
+  L.get("xPer",     cf.xPer,    0);
+  L.get("yPer",     cf.yPer,    0);
+  L.get("bcXmin",   cf.bcL,     0);
+  L.get("bcXmax",   cf.bcR,     0);
+  L.get("bcYmin",   cf.bcB,     0);
+  L.get("bcYmac",   cf.bcT,     0);
+  L.get("restart",  cf.restart, 0);
+  L.get("out_freq",     cf.out_freq,    0);
+  L.get("write_freq",   cf.write_freq,  0);
+  L.get("restart_freq", cf.restart_freq,0);
+  L.get("stat_freq",    cf.stat_freq,   0);
+  L.get("restartName",  cf.restartName, "restart-0000000.h5");
 
+  std::string scheme, grid;
+  L.get("scheme", scheme,"weno5");
+  L.get("grid",   grid,"cartesian");
 
   // Dependent Parameters
   if (cf.ceq == 1) {
-    cf.kap = L.getDouble("kappa");
-    cf.eps = L.getDouble("epsilon");
-    cf.alpha = L.getDouble("alpha");
-    cf.beta = L.getDouble("beta");
-    cf.betae = L.getDouble("betae");
-    cf.st = L.getInt("st",10);
+    L.get("kappa",  cf.kap);
+    L.get("epsilon",cf.eps);
+    L.get("alpha",  cf.alpha);
+    L.get("beta",   cf.beta);
+    L.get("betae",  cf.betae);
+    L.get("st",     cf.st,10);
   }
   if (cf.noise == 1) {
-    cf.n_dh = L.getDouble("n_dh");
-    cf.n_eta = L.getDouble("n_eta");
-    cf.n_coff = L.getDouble("n_coff");
-    cf.n_nt = L.getInt("n_nt",1);
+    L.get("n_dh",  cf.n_dh);
+    L.get("n_eta", cf.n_eta);
+    L.get("n_coff",cf.n_coff);
+    L.get("n_nt",  cf.n_nt,1);
   }
   if (cf.ndim == 3) {
-    cf.glbl_nck = L.getInt("nk");
-    cf.zProcs = L.getInt("procsz",1);
-    cf.zPer = L.getInt("zPer",0);
-    cf.bcH = L.getInt("bcZmin",0);
-    cf.bcF = L.getInt("bcZmax",0);
+    L.get("nk",     cf.glbl_nck);
+    L.get("procsz", cf.zProcs,1);
+    L.get("zPer",   cf.zPer,0);
+    L.get("bcZmin", cf.bcH,0);
+    L.get("bcZmaz", cf.bcF,0);
   }
   if (cf.particle == 1) {
-    cf.p_np = L.getInt("p_np");
+    L.get("p_np",cf.p_np);
   } else {
     cf.p_np = 0;
   }
   if (grid.compare("cartesian") == 0) {
     cf.grid = 0;
-    cf.dx = L.getDouble("dx");
-    cf.dy = L.getDouble("dy");
+    L.get("dx",cf.dx);
+    L.get("dy",cf.dy);
     if (cf.ndim == 3)
-      cf.dz = L.getDouble("dz");
+      L.get("dz",cf.dz);
   }
 
-  // Dependent Array Parameters
+  // Array Parameters
   cf.M = (double *)malloc(cf.ns * sizeof(double));
   cf.gamma = (double *)malloc(cf.ns * sizeof(double));
   cf.mu = (double *)malloc(cf.ns * sizeof(double));
-  L.getDoubles("gamma",cf.ns,cf.gamma);
-  L.getDoubles("M",cf.ns,cf.M);
-  L.getDoubles("mu",cf.ns,cf.mu);
+  L.getArray("gamma",cf.gamma,cf.ns);
+  L.getArray("M",cf.M,cf.ns);
+  L.getArray("mu",cf.mu,cf.ns);
 
   // Close Lua File
   L.close();
@@ -181,7 +182,7 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   }
 
   // Calculate time indices
-  cf.t        = cf.tstart;
+  cf.t = cf.tstart;
   cf.tend = cf.tstart + cf.nt;
 
 
@@ -194,10 +195,9 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
     cf.bcH = 0;
     cf.bcF = 0;
     cf.zPer = 0;
+  }else{
+    cf.nv = 4 + cf.ns;
   }
-
-  // Calculate total number of flow variables
-  cf.nv = 4 + cf.ns;
 
   // nvt = Number of Variables Total (including c variables)
   cf.nvt = cf.nv;

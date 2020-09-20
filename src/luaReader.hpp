@@ -7,18 +7,20 @@ public:
   luaReader(std::string fname);
   void close();
 
-  double getDouble(std::string,double);
-  double getDouble(std::string);
-  int getInt(std::string,int);
-  int getInt(std::string);
-  std::string getString(std::string);
-  std::string getString(std::string,std::string);
-  bool getBool(std::string);
-  bool getBool(std::string,bool);
+  template <class T>
+  void get(std::string,T&);
 
-  void getDoubles(std::string,int,double*);
-  void getInts(std::string,int,int*);
-  void getStrings(std::string,int,std::vector<std::string>&);
+  template <class T>
+  void get(std::string,T&,T);
+
+  template <class T>
+  void get(std::string,T&,const char *);
+
+  template <class T>
+  void getArray(std::string,T*,int);
+ 
+  template <class T>
+  void getArray(std::string,std::vector<T>&,int);
 
   double call(std::string, int ,...);
 
@@ -26,8 +28,12 @@ private:
   lua_State *L;
 
   void error(lua_State *, const char *, ...);
-  int getglobbool(lua_State *, const char *, int, int);
-  int getglobint(lua_State *, const char *, int, int);
-  double getglobdbl(lua_State *, const char *, int, double);
-  std::string getglobstr(lua_State *, const char *, int, std::string);
+
+  bool undefined(std::string key);
+
+  bool getBool(std::string);
+  int getInt(std::string);
+  double getDouble(std::string);
+  std::string getString(std::string);
+
 };
