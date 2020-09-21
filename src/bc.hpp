@@ -5,5 +5,4 @@
 #include "mpi.hpp"
 #endif
 
-void applyBCs(struct inputConfig cf, FS4D &u, class mpiBuffers &m);
 void applyBCs(struct inputConfig cf, FS4D &u);

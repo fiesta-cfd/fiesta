@@ -165,65 +165,8 @@ void applyBCs(struct inputConfig cf, FS4D &u) {
   typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_bl;
   typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_bl4;
 
-#ifdef NOMPI
-  if (cf.xPer == 1) {
-    Kokkos::parallel_for(
-        policy_bl4({0, 0, 0, 0}, {cf.nci, cf.ngj, cf.ngk, cf.nvt}),
-        bc_xPer(cf.ng, cf.nci, u));
-  }
-  if (cf.yPer == 1) {
-    Kokkos::parallel_for(
-        policy_bl4({0, 0, 0, 0}, {cf.ngi, cf.ncj, cf.ngk, cf.nvt}),
-        bc_yPer(cf.ng, cf.ncj, u));
-  }
-  if (cf.ndim == 3 && cf.zPer == 1) {
-    Kokkos::parallel_for(
-        policy_bl4({0, 0, 0, 0}, {cf.ngi, cf.ngj, cf.nck, cf.nvt}),
-        bc_zPer(cf.ng, cf.nck, u));
-  }
-
-#endif
-
-  if (cf.xMinus < 0) {
-    Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngj, cf.ngk, cf.nvt}),
-                         bc_L(cf.ng, cf.ng, cf.bcL, u));
-  }
-
-  if (cf.xPlus < 0) {
-    Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngj, cf.ngk, cf.nvt}),
-                         bc_R(cf.ng + cf.nci, cf.ng, cf.bcR, u));
-  }
-
-  if (cf.yMinus < 0) {
-    Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngi, cf.ngk, cf.nvt}),
-                         bc_B(cf.ng, cf.ng, cf.bcB, u));
-  }
-
-  if (cf.yPlus < 0) {
-    Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngi, cf.ngk, cf.nvt}),
-                         bc_T(cf.ng + cf.ncj, cf.ng, cf.bcT, u));
-  }
-
-  if (cf.ndim == 3) {
-    if (cf.zMinus < 0) {
-      Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngi, cf.ngj, cf.nvt}),
-                           bc_H(cf.ng, cf.ng, cf.bcH, u));
-    }
-
-    if (cf.zPlus < 0) {
-      Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngi, cf.ngj, cf.nvt}),
-                           bc_F(cf.ng + cf.nck, cf.ng, cf.bcF, u));
-    }
-  }
-}
-
-void applyBCs(struct inputConfig cf, FS4D &u, class mpiBuffers &m) {
-
-  typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_bl;
-  typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_bl4;
-
 #ifndef NOMPI
-  haloExchange(cf, u, m);
+  haloExchange(cf, u, *(cf.m));
 #else
   if (cf.xPer == 1)
     Kokkos::parallel_for(

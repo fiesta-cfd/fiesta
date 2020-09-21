@@ -24,72 +24,23 @@
 #include <iostream>
 #include <set>
 #include "luaReader.hpp"
+#include "fiesta2.hpp"
 
 using namespace std;
-
-// void fnExit1(void){
-//    Kokkos::finalize();
-//}
 
 int main(int argc, char *argv[]) {
   
 
-  // Get the command line options including input file name if supplied.
-  struct commandArgs cArgs = getCommandlineOptions(argc, argv);
+  struct inputConfig cf = Fiesta::initialize(argc,argv);
 
-  // If the --version command line option is present, then just print version
-  // and compilation information and exit.
-  if (cArgs.versionFlag) {
-    cout << "Fiesta" << endl;
-    cout << "Version:    '" << FIESTA_VERSION << "'" << endl;
-    cout << "Build Type: '" << FIESTA_OPTIONS << "'" << endl;
-    cout << "Build Time: '" << FIESTA_BTIME << "'" << endl;
-    exit(EXIT_SUCCESS);
-  }
-
-  // Create and start some timers
-  fiestaTimer totalTimer;    // Total program timer
-  fiestaTimer initTimer;     // Timer for program initialization
-  fiestaTimer solWriteTimer; // Timer for solution file write times
-  fiestaTimer simTimer;      // Timer for simulation time steppin
-  fiestaTimer loadTimer;     // Timer for I.C. generation or restart read
-  fiestaTimer resWriteTimer; // Timer for restart file writes
-  fiestaTimer gridTimer;     // Timer for grid generation
-  fiestaTimer writeTimer;    // Timer for
-
-  // Initialize command MPI and get rank.
-  int temp_rank;
-  temp_rank = 0;
-#ifndef NOMPI
-  MPI_Init(NULL, NULL);
-  MPI_Comm_rank(MPI_COMM_WORLD, &temp_rank);
-#endif
-
-  // Print spash screen with logo, version number and compilation info
-  // to signify process startup.
-  if (temp_rank == 0)
-    printSplash(cArgs.colorFlag);
-
-  // Initialize kokkos and set kokkos finalize as exit function.
-  Kokkos::initialize(argc, argv);
-  //    atexit(fnExit1);
-
-  // Execute input file and generate simulation configuration
-  struct inputConfig cf;
-  cf = executeConfiguration(cArgs);
+  cf.totalTimer.start();
+  cf.initTimer.start();
 
   {
 #ifndef NOMPI
-    // Perform MPI decomposition and assign cells to ranks
-    cf = mpi_init(cf);
-
     // create mpi buffers
     mpiBuffers m(cf);
 #endif
-
-    // Print out configuration
-    if (cf.rank == 0)
-      printConfig(cf, cArgs.colorFlag);
 
     // Create and copy minimal configuration array for data needed
     // withing Kokkos kernels.
@@ -130,50 +81,7 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    // Create writer object
-#ifdef NOMPI
-    serialVTKWriter w(cf, f->grid, f->var);
-#else
-    fstWriter w(cf, f);
-    // cgnsWriter w(cf,f->grid,f->var);
-#endif
-
-    // If not restarting, generate initial conditions and grid
-    if (cf.restart == 0) {
-      if (cf.rank == 0)
-        cout << c(cArgs.colorFlag, GRE)
-             << "Generating Initial Conditions:" << c(cArgs.colorFlag, NON) << endl;
-      loadTimer.start();
-      loadInitialConditions(cf, f->var);
-      loadTimer.stop();
-      if (cf.rank == 0)
-        cout << "    Generated in: " << c(cArgs.colorFlag, CYA) << loadTimer.getf(cArgs.timeFormat)
-             << c(cArgs.colorFlag, NON) << endl
-             << endl;
-
-      if (cf.rank == 0)
-        cout << c(cArgs.colorFlag, GRE) << "Generating Grid:" << c(cArgs.colorFlag, NON) << endl;
-      gridTimer.start();
-      loadGrid(cf, f->grid);
-      gridTimer.stop();
-      if (cf.rank == 0)
-        cout << "    Generated in: " << c(cArgs.colorFlag, CYA) << gridTimer.getf(cArgs.timeFormat)
-             << c(cArgs.colorFlag, NON) << endl
-             << endl;
-
-      if (cf.particle == 1) {
-        if (cf.rank == 0)
-          cout << c(cArgs.colorFlag, GRE) << "Generating Particles:" << c(cArgs.colorFlag, NON)
-               << endl;
-        gridTimer.start();
-        loadParticles(cf, f->particles);
-        gridTimer.stop();
-        if (cf.rank == 0)
-          cout << "    Generated in: " << c(cArgs.colorFlag, CYA) << gridTimer.getf(cArgs.timeFormat)
-               << c(cArgs.colorFlag, NON) << endl
-               << endl;
-      }
-    }
+    Fiesta::initializeSimulation(cf,f);
 
     // execution policy for Runge Kutta update kernels, should be moved to
     // header
@@ -183,70 +91,19 @@ int main(int argc, char *argv[]) {
     double time = cf.time;
     int tstart = cf.tstart;
 
-    // Read Restart or Write initial conditions
-    //#ifndef NOMPI
-    writeTimer.start();
-    if (cf.restart == 1) {
-      if (cf.rank == 0)
-        cout << c(cArgs.colorFlag, GRE) << "Loading Restart File:" << c(cArgs.colorFlag, NON)
-             << endl;
-      loadTimer.reset();
-      w.readSolution(cf, f->grid, f->var);
-      loadTimer.stop();
-      if (cf.rank == 0)
-        cout << "    Loaded in: " << setprecision(2) << c(cArgs.colorFlag, CYA)
-             << loadTimer.getf(cArgs.timeFormat) << "s" << c(cArgs.colorFlag, NON) << endl;
-      // if (cf.rank == 0)
-      //   if (cf.write_freq > 0 || cf.restart_freq > 0)
-      //     cout << c(cArgs.colorFlag, GRE)
-      //          << "Writing Initial Conditions:" << c(cArgs.colorFlag, NON) << endl;
-      // if (cf.write_freq > 0) {
-      //   solWriteTimer.reset();
-      //   w.writeSolution(cf, f, 0, 0.00);
-      //   solWriteTimer.accumulate();
-      // }
-      // writeTimer.stop();
-      // if (cf.rank == 0)
-      //   if (cf.write_freq > 0 || cf.restart_freq > 0)
-      //     cout << "    Wrote in: " << c(cArgs.colorFlag, CYA) << writeTimer.getf(cArgs.timeFormat)
-      //          << c(cArgs.colorFlag, NON) << endl;
-    } else {
-      if (cf.rank == 0)
-        if (cf.write_freq > 0 || cf.restart_freq > 0)
-          cout << c(cArgs.colorFlag, GRE)
-               << "Writing Initial Conditions:" << c(cArgs.colorFlag, NON) << endl;
-      if (cf.write_freq > 0) {
-        solWriteTimer.reset();
-        w.writeSolution(cf, f, 0, 0.00);
-        solWriteTimer.accumulate();
-      }
-      if (cf.restart_freq > 0) {
-        resWriteTimer.reset();
-        w.writeRestart(cf, f, 0, 0.00);
-        resWriteTimer.accumulate();
-      }
-      writeTimer.stop();
-      if (cf.rank == 0)
-        if (cf.write_freq > 0 || cf.restart_freq > 0)
-          cout << "    Wrote in: " << c(cArgs.colorFlag, CYA) << writeTimer.getf(cArgs.timeFormat)
-               << c(cArgs.colorFlag, NON) << endl;
-    }
-
-    //#endif
-
     // pre simulation hook
     f->preSim();
 
     // stop initialization timer
-    initTimer.stop();
+    cf.initTimer.stop();
 
     // reset simulation timer
-    simTimer.reset();
+    cf.simTimer.reset();
 
     // notify simulation start
     if (cf.rank == 0) {
       cout << endl << "-----------------------" << endl << endl;
-      cout << c(cArgs.colorFlag, GRE) << "Starting Simulation:" << c(cArgs.colorFlag, NON) << endl;
+      cout << c(cf.colorFlag, GRE) << "Starting Simulation:" << c(cf.colorFlag, NON) << endl;
     }
 
     // // // // // // // //  \\ \\ \\ \\ \\ \\ \\ \\
@@ -261,11 +118,7 @@ int main(int argc, char *argv[]) {
       f->preStep();
 
       // apply boundary conditions
-#ifndef NOMPI
-      applyBCs(cf, f->var, m);
-#else
       applyBCs(cf, f->var);
-#endif
 
       // First Stage Compute
       f->compute();
@@ -290,11 +143,7 @@ int main(int argc, char *argv[]) {
       f->timers["rk"].accumulate();
 
       // apply boundary conditions
-#ifndef NOMPI
-      applyBCs(cf, f->var, m);
-#else
       applyBCs(cf, f->var);
-#endif
 
       // Second stage compute
       f->compute();
@@ -319,124 +168,23 @@ int main(int argc, char *argv[]) {
       // post timestep hook
       f->postStep();
 
-      // Print time step info if necessary
-      if (cf.rank == 0) {
-        if (cf.out_freq > 0)
-          if ((t + 1) % cf.out_freq == 0)
-            cout << c(cArgs.colorFlag, YEL) << left << setw(15)
-                 << "    Iteration:" << c(cArgs.colorFlag, NON) << c(cArgs.colorFlag, CYA) << right
-                 << setw(0) << t + 1 << c(cArgs.colorFlag, NON) << "/" << c(cArgs.colorFlag, CYA)
-                 << left << setw(0) << cf.tend << c(cArgs.colorFlag, NON) << ", "
-                 << c(cArgs.colorFlag, CYA) << right << setw(0) << setprecision(3)
-                 << scientific << time << "s" << c(cArgs.colorFlag, NON) << endl;
-      }
-      //#ifndef NOMPI
-      // Write solution file if necessary
-      if (cf.write_freq > 0) {
-        if ((t + 1) % cf.write_freq == 0) {
-          f->timers["solWrite"].reset();
-          w.writeSolution(cf, f, t + 1, time);
-          Kokkos::fence();
-          f->timers["solWrite"].accumulate();
-        }
-      }
-      // Write restart file if necessary
-      if (cf.restart_freq > 0) {
-        if ((t + 1) % cf.restart_freq == 0) {
-          f->timers["resWrite"].reset();
-          w.writeRestart(cf, f, t + 1, time);
-          Kokkos::fence();
-          f->timers["resWrite"].accumulate();
-        }
-      }
-      //#endif
-      // Print status check if necessary
-      if (cf.stat_freq > 0) {
-        if ((t + 1) % cf.stat_freq == 0) {
-          f->timers["statCheck"].reset();
-          statusCheck(cArgs.colorFlag, cf, f, time, totalTimer, simTimer);
-          f->timers["statCheck"].accumulate();
-        }
-      }
+      Fiesta::checkIO(cf,f,t,time);
     } // End main time loop
 
     // post simulation hook
     f->postSim();
 
     // stop simulation timer
-    simTimer.stop();
+    cf.simTimer.stop();
 
     // notify simulation complete
     if (cf.rank == 0)
-      cout << c(cArgs.colorFlag, GRE) << "Simulation Complete!" << c(cArgs.colorFlag, NON) << endl;
+      cout << c(cf.colorFlag, GRE) << "Simulation Complete!" << c(cf.colorFlag, NON) << endl;
 
-    // Sort computer timers
-    typedef std::function<bool(std::pair<std::string, fiestaTimer>,
-                               std::pair<std::string, fiestaTimer>)>
-        Comparator;
-    Comparator compFunctor = [](std::pair<std::string, fiestaTimer> elem1,
-                                std::pair<std::string, fiestaTimer> elem2) {
-      return elem1.second.get() > elem2.second.get();
-    };
-    std::set<std::pair<std::string, fiestaTimer>, Comparator> stmr(
-        f->timers.begin(), f->timers.end(), compFunctor);
-
-    // stop total program timer
-    totalTimer.stop();
-
-    // prin timer values
-    if (cf.rank == 0) {
-      cout << endl << "-----------------------" << endl << endl;
-      cout.precision(2);
-      cout << c(cArgs.colorFlag, GRE) << left << setw(36)
-           << "Total Time:" << c(cArgs.colorFlag, NON) << c(cArgs.colorFlag, CYA) << right
-           << setw(13) << totalTimer.getf(cArgs.timeFormat) << c(cArgs.colorFlag, NON) << endl
-           << endl;
-
-      cout << c(cArgs.colorFlag, GRE) << left << setw(36)
-           << "  Setup Time:" << c(cArgs.colorFlag, NON) << c(cArgs.colorFlag, CYA) << right
-           << setw(13) << initTimer.getf(cArgs.timeFormat) << c(cArgs.colorFlag, NON) << endl;
-      if (cf.restart == 1)
-        cout << c(cArgs.colorFlag, NON) << left << setw(36)
-             << "    Restart Read:" << c(cArgs.colorFlag, NON) << c(cArgs.colorFlag, CYA) << right
-             << setw(13) << loadTimer.getf(cArgs.timeFormat) << c(cArgs.colorFlag, NON) << endl
-             << endl;
-      else {
-        cout << c(cArgs.colorFlag, NON) << left << setw(36)
-             << "    Initial Condition Generation:" << c(cArgs.colorFlag, NON)
-             << c(cArgs.colorFlag, CYA) << right << setw(13) << loadTimer.getf(cArgs.timeFormat)
-             << c(cArgs.colorFlag, NON) << endl;
-        cout << c(cArgs.colorFlag, NON) << left << setw(36)
-             << "    Grid Generation:" << c(cArgs.colorFlag, NON) << c(cArgs.colorFlag, CYA)
-             << right << setw(13) << gridTimer.getf(cArgs.timeFormat) << c(cArgs.colorFlag, NON) << endl;
-        cout << c(cArgs.colorFlag, NON) << left << setw(36)
-             << "    Initial Consition WriteTime:" << c(cArgs.colorFlag, NON)
-             << c(cArgs.colorFlag, CYA) << right << setw(13) << writeTimer.getf(cArgs.timeFormat)
-             << c(cArgs.colorFlag, NON) << endl
-             << endl;
-      }
-
-      cout << c(cArgs.colorFlag, GRE) << left << setw(36)
-           << "  Simulation Time:" << c(cArgs.colorFlag, NON) << c(cArgs.colorFlag, CYA) << right
-           << setw(13) << simTimer.getf(cArgs.timeFormat) << c(cArgs.colorFlag, NON) << endl;
-      for (auto tmr : stmr) {
-        cout << c(cArgs.colorFlag, NON) << left << setw(36)
-             << "    " + tmr.second.describe() + ":" << c(cArgs.colorFlag, NON)
-             << c(cArgs.colorFlag, CYA) << right << setw(13) << tmr.second.getf(cArgs.timeFormat)
-             << c(cArgs.colorFlag, NON) << endl;
-      }
-      cout << " " << endl;
-    }
-
-    // delete &m;
+    Fiesta::reportTimers(cf,f);
   }
 
-  Kokkos::finalize();
-  // finalize mpi
-#ifndef NOMPI
-  MPI_Finalize();
-#endif
+  Fiesta::finalize();
 
-  // exit success
   return 0;
 }

@@ -4,7 +4,7 @@
 using namespace std;
 
 void printSplash(int cFlag);
-void printConfig(struct inputConfig cf, int cFlag);
+void printConfig(struct inputConfig cf);
 
 enum Color { RED, GRE, YEL, BLU, MAG, CYA, NON };
 

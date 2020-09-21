@@ -1,6 +1,7 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+#include "writer.hpp"
 #include "Kokkos_Core.hpp"
 #include "fiesta.hpp"
 #include "lua.hpp"
@@ -13,6 +14,9 @@
 #include "mpi.h"
 #endif
 #include <string>
+#include "timer.hpp"
+//#include "rkfunction.hpp"
+#include <map>
 
 // Lua error function
 void error(lua_State *L, const char *fmt, ...);
@@ -26,8 +30,18 @@ int getglobint(lua_State *L, const char *var);
 // Lua get double value
 double getglobdbl(lua_State *L, const char *var);
 
+
 // configuration structure
 struct inputConfig {
+  fiestaTimer totalTimer;
+  fiestaTimer initTimer;
+  fiestaTimer simTimer;
+  fiestaTimer loadTimer;
+
+  class writer *w;
+  class mpiBuffers *m;
+
+  int colorFlag,timeFormat;
   std::string inputFname;
   std::string title;
   int xmp, ymp, zmp;

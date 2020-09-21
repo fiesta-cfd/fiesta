@@ -3,7 +3,6 @@
 
 #include "Kokkos_Core.hpp"
 #include "debug.hpp"
-//#include "input.hpp"
 #include <fstream>
 #include <iomanip>
 #include <ostream>

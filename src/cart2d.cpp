@@ -1,5 +1,6 @@
 #include "cart2d.hpp"
 #include "vtk.hpp"
+#include "mpi.hpp"
 
 std::map<string,int> varxIds;
 
@@ -80,6 +81,8 @@ cart2d_func::cart2d_func(struct inputConfig &cf_, FS1D &cd_)
   cd = mcd;
 
 
+  timers["gridTimer"] = fiestaTimer("Grid Generation");
+  timers["writeTimer"] = fiestaTimer("Grid Generation");
   timers["flux"] = fiestaTimer("Flux Calculation");
   timers["pressgrad"] = fiestaTimer("Pressure Gradient Calculation");
   timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
@@ -106,7 +109,11 @@ cart2d_func::cart2d_func(struct inputConfig &cf_, FS1D &cd_)
     timers["pwrite"] = fiestaTimer("Particle Write");
     timers["psetup"] = fiestaTimer("Particle Setup");
   }
+
+  m = new mpiBuffers(cf);
 };
+
+
 
 void cart2d_func::preStep() {}
 

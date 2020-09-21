@@ -67,11 +67,23 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
   else
     cArgs.fileName = std::string("fiesta.lua");
 
+  // If the --version command line option is present, then just print version
+  // and compilation information and exit.
+  if (cArgs.versionFlag) {
+    cout << "Fiesta" << endl;
+    cout << "Version:    '" << FIESTA_VERSION << "'" << endl;
+    cout << "Build Type: '" << FIESTA_OPTIONS << "'" << endl;
+    cout << "Build Time: '" << FIESTA_BTIME << "'" << endl;
+    exit(EXIT_SUCCESS);
+  }
+
   return cArgs;
 }
 
 struct inputConfig executeConfiguration(struct commandArgs cargs) {
   struct inputConfig cf;
+  cf.colorFlag = cargs.colorFlag;
+  cf.timeFormat = cargs.timeFormat;
 
   luaReader L(cargs.fileName);
 

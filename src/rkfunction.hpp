@@ -6,6 +6,9 @@
 #include "input.hpp"
 #include "particle.hpp"
 #include "timer.hpp"
+#ifndef NOMPI
+#include "mpi.hpp"
+#endif
 #include <map>
 #include <string>
 
@@ -21,6 +24,10 @@ public:
   virtual void preSim() = 0;
   virtual void postSim() = 0;
   // virtual void compute(const FS4D & mvar, FS4D & mdvar) = 0;
+
+#ifndef NOMPI
+  class mpiBuffers *m;
+#endif
 
   FS4D var;
   std::vector<string> varNames;

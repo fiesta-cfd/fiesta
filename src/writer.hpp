@@ -22,9 +22,9 @@ public:
   virtual void writeSPGrid(struct inputConfig cf, const FS4D gridD,
                            const char *fname) = 0;
 
-  virtual void writeSolution(struct inputConfig cf, rk_func *f, int tdx,
+  virtual void writeSolution(struct inputConfig cf, class rk_func *f, int tdx,
                              double time) = 0;
-  virtual void writeRestart(struct inputConfig cf, rk_func *f, int tdx,
+  virtual void writeRestart(struct inputConfig cf, class rk_func *f, int tdx,
                             double time) = 0;
 
   virtual void readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD) = 0;

@@ -6,7 +6,7 @@
 #include "input.hpp"
 #include "mpi.h"
 
-struct inputConfig mpi_init(struct inputConfig cf);
+void mpi_init(struct inputConfig &cf);
 
 class mpiBuffers {
 

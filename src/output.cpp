@@ -65,7 +65,9 @@ void printSplash(int cFlag) {
   cout << "-----------------------" << endl << endl;
 }
 
-void printConfig(struct inputConfig cf, int cFlag) {
+void printConfig(struct inputConfig cf) {
+if (cf.rank == 0){
+  int cFlag = cf.colorFlag;
 
   cout.precision(2);
 
@@ -190,4 +192,5 @@ void printConfig(struct inputConfig cf, int cFlag) {
   // %6.4f\n",s+1,cf.gamma[s],cf.M[s]);
 
   cout << endl << "-----------------------" << endl << endl << flush;
+}
 }

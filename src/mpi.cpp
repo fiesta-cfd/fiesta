@@ -1,7 +1,7 @@
 #include "mpi.hpp"
 #include "debug.hpp"
 
-struct inputConfig mpi_init(struct inputConfig cf) {
+void mpi_init(struct inputConfig &cf) {
 
   int rem;
 
@@ -89,8 +89,6 @@ struct inputConfig mpi_init(struct inputConfig cf) {
 
   if (cf.particle == 1)
     cf.p_np += cf.rank;
-
-  return cf;
 }
 
 mpiBuffers::mpiBuffers(struct inputConfig cf) {
