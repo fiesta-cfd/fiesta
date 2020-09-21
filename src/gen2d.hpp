@@ -16,7 +16,7 @@
 class gen2d_func : public rk_func {
 
 public:
-  gen2d_func(struct inputConfig &cf_, FS1D &cd_);
+  gen2d_func(struct inputConfig &cf_);
 
   void compute();
   void preStep();

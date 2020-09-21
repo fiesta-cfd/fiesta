@@ -274,9 +274,9 @@ int loadInitialConditions(struct inputConfig cf, const FS4D deviceV) {
       for (int k = cf.ng; k < cf.nck + cf.ng; ++k) {
         for (int j = cf.ng; j < cf.ncj + cf.ng; ++j) {
           for (int i = cf.ng; i < cf.nci + cf.ng; ++i) {
-            ii = i - cf.ng;
-            jj = j - cf.ng;
-            kk = k - cf.ng;
+            ii = cf.iStart + i - cf.ng;
+            jj = cf.jStart + j - cf.ng;
+            kk = cf.kStart + k - cf.ng;
             hostV(i, j, k, v) = L.call("f",4,ii,jj,kk,v);
           }
         }
@@ -284,8 +284,8 @@ int loadInitialConditions(struct inputConfig cf, const FS4D deviceV) {
     } else {
       for (int j = cf.ng; j < cf.ncj + cf.ng; ++j) {
         for (int i = cf.ng; i < cf.nci + cf.ng; ++i) {
-            ii = i - cf.ng;
-            jj = j - cf.ng;
+            ii = cf.iStart + i - cf.ng;
+            jj = cf.jStart + j - cf.ng;
             kk = 0;
             hostV(i, j, 0, v) = L.call("f",4,ii,jj,kk,v);
         }

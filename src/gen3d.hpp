@@ -6,7 +6,7 @@
 class gen3d_func : public rk_func {
 
 public:
-  gen3d_func(struct inputConfig &cf, FS1D &mcd);
+  gen3d_func(struct inputConfig &cf);
   void compute();
   void preStep();
   void postStep();

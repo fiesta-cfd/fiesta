@@ -36,43 +36,20 @@ int main(int argc, char *argv[]) {
 
   cf.totalTimer.start();
   cf.initTimer.start();
-
-  // Create and copy minimal configuration array for data needed
-  // withing Kokkos kernels.
-  FS1D cd("deviceCF", 6 + cf.ns * 3);
-  typename Kokkos::View<double *>::HostMirror hostcd =
-      Kokkos::create_mirror_view(cd);
-  Kokkos::deep_copy(hostcd, cd);
-  hostcd(0) = cf.ns; // number of gas species
-  hostcd(1) = cf.dx; // cell size
-  hostcd(2) = cf.dy; // cell size
-  hostcd(3) = cf.dz; // cell size
-  hostcd(4) = cf.nv; // number of flow variables
-  hostcd(5) = cf.ng; // number of flow variables
- 
-  // include gas properties for each gas species
-  int sdx = 6;
-  for (int s = 0; s < cf.ns; ++s) {
-    hostcd(sdx) = cf.gamma[s];        // ratio of specific heats
-    hostcd(sdx + 1) = cf.R / cf.M[s]; // species gas comstant
-    hostcd(sdx + 2) = cf.mu[s];       // kinematic viscosity
-    sdx += 3;
-  }
-  Kokkos::deep_copy(cd, hostcd); // copy congifuration array to device
  
   // Choose Scheme
   rk_func *f;
   if (cf.ndim == 3) {
     if (cf.grid == 1) {
-      f = new gen3d_func(cf, cd);
+      f = new gen3d_func(cf);
     } else {
-      f = new cart3d_func(cf,cd);
+      f = new cart3d_func(cf);
     }
   } else {
     if (cf.grid == 1) {
-      f = new gen2d_func(cf, cd);
+      f = new gen2d_func(cf);
     } else {
-      f = new cart2d_func(cf, cd);
+      f = new cart2d_func(cf);
     }
   }
  

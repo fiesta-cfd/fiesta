@@ -19,7 +19,7 @@
 class cart2d_func : public rk_func {
 
 public:
-  cart2d_func(struct inputConfig &cf_, FS1D &cd_);
+  cart2d_func(struct inputConfig &cf_);
 
   void compute();
   void preStep();
@@ -39,7 +39,6 @@ public:
   FS4D stressy; // stress tensor on y faces
   FS3D gradRho; // Density Gradient array
   FS2D_I noise; // Noise indicator array
-  FS1D cd;      // Device configuration array
   //    FSP2D particles;   // Particle array
   //    FSP2DH particlesH; // Particle host array
 };

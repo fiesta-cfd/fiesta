@@ -15,8 +15,7 @@
 #include "presgrad.hpp"
 
 
-cart3d_func::cart3d_func(struct inputConfig &cf_, FS1D &cd_)
-    : rk_func(cf_, cd_) {
+cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
 
   // Allocate all device variables here
   grid    = FS4D("coords",    cf.ni,  cf.nj,  cf.nk,  3);      // Grid Coords
@@ -43,8 +42,6 @@ cart3d_func::cart3d_func(struct inputConfig &cf_, FS1D &cd_)
   gradRho = FS4D( "gradRho",  cf.ngi, cf.ngj, cf.ngk, 5);    // Density Gradien
   cFlux   = FS4D("cFlux",     cf.ngi, cf.ngj, cf.ngk, 3);    // 
   mFlux   = FS6D("mFlux", 3,3,cf.ngi, cf.ngj, cf.ngk, 3);    //
-
-  cd = mcd;
 
   // Primary Variable Names
   varNames.push_back("X-Momentum");
@@ -82,6 +79,28 @@ cart3d_func::cart3d_func(struct inputConfig &cf_, FS1D &cd_)
   if (cf.ceq == 1) {
     timers["ceq"] = fiestaTimer("C-Equation");
   }
+
+  // Create and copy minimal configuration array for data needed
+  // withing Kokkos kernels.
+  cd = FS1D("deviceCF", 6 + cf.ns * 3);
+  FS1DH hostcd = Kokkos::create_mirror_view(cd);
+  Kokkos::deep_copy(hostcd, cd);
+  hostcd(0) = cf.ns; // number of gas species
+  hostcd(1) = cf.dx; // cell size
+  hostcd(2) = cf.dy; // cell size
+  hostcd(3) = cf.dz; // cell size
+  hostcd(4) = cf.nv; // number of flow variables
+  hostcd(5) = cf.ng; // number of flow variables
+ 
+  // include gas properties for each gas species
+  int sdx = 6;
+  for (int s = 0; s < cf.ns; ++s) {
+    hostcd(sdx) = cf.gamma[s];        // ratio of specific heats
+    hostcd(sdx + 1) = cf.R / cf.M[s]; // species gas comstant
+    hostcd(sdx + 2) = cf.mu[s];       // kinematic viscosity
+    sdx += 3;
+  }
+  Kokkos::deep_copy(cd, hostcd); // copy congifuration array to device
 };
 
 void cart3d_func::preStep() {}

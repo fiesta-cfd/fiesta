@@ -89,6 +89,7 @@ void mpi_init(struct inputConfig &cf) {
 
   if (cf.particle == 1)
     cf.p_np += cf.rank;
+
 }
 
 mpiBuffers::mpiBuffers(struct inputConfig cf) {

@@ -6,7 +6,7 @@
 class cart3d_func : public rk_func {
 
 public:
-  cart3d_func(struct inputConfig &cf, FS1D &mcd);
+  cart3d_func(struct inputConfig &cf);
   void compute();
   void preStep();
   void postStep();

@@ -15,7 +15,7 @@
 class rk_func {
 
 public:
-  rk_func(struct inputConfig &cf_, FS1D &cd_);
+  rk_func(struct inputConfig &cf_);
   //rk_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_);
 
   virtual void compute() = 0;
@@ -24,10 +24,6 @@ public:
   virtual void preSim() = 0;
   virtual void postSim() = 0;
   // virtual void compute(const FS4D & mvar, FS4D & mdvar) = 0;
-
-#ifndef NOMPI
-  class mpiBuffers *m;
-#endif
 
   FS4D var;
   std::vector<string> varNames;
@@ -46,7 +42,7 @@ public:
 
 protected:
   struct inputConfig &cf;
-  Kokkos::View<double *> mcd;
+  FS1D cd;
 };
 
 #endif
