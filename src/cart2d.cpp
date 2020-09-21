@@ -43,7 +43,6 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
 
   if (cf.noise == 1) {
     noise = FS2D_I("noise", cf.ngi, cf.ngj);         // Noise Indicator
-    varxIds["Noise"]=varxPtr++;
     varxNames.push_back("Noise");
   }
 
@@ -54,28 +53,13 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
 
   assert(varNames.size() == cf.nvt);
 
-  varxIds["X-Velocity"]=varxPtr++;
   varxNames.push_back("X-Velocity");
-
-  varxIds["Y-Velocity"]=varxPtr++;
   varxNames.push_back("Y-Velocity");
-
-  varxIds["Pressure"]=varxPtr++;
   varxNames.push_back("Pressure");
-
-  varxIds["Temperature"]=varxPtr++;
   varxNames.push_back("Temperature");
-
-  varxIds["Density"]=varxPtr++;
   varxNames.push_back("Density");
 
-  for (int i=0; i<varxPtr; ++i)
-    assert(varxIds[varxNames[i]]==i);
-  for(std::pair<std::string,int> element : varxIds)
-    assert(element.first.compare(varxNames[element.second]) == 0);
-  assert(varxNames.size()==varxPtr);
-
-  varx  = FS4D("varx", cf.ngi, cf.ngj, cf.ngk, varxPtr); // Extra Vars
+  varx  = FS4D("varx", cf.ngi, cf.ngj, cf.ngk, varxNames.size()); // Extra Vars
 
   // Create and copy minimal configuration array for data needed
   // withing Kokkos kernels.
@@ -99,9 +83,8 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
   }
   Kokkos::deep_copy(cd, hostcd); // copy congifuration array to device
 
-
-  timers["gridTimer"] = fiestaTimer("Grid Generation");
-  timers["writeTimer"] = fiestaTimer("Grid Generation");
+  //timers["gridTimer"] = fiestaTimer("Grid Generation");
+  //timers["writeTimer"] = fiestaTimer("Grid Generation");
   timers["flux"] = fiestaTimer("Flux Calculation");
   timers["pressgrad"] = fiestaTimer("Pressure Gradient Calculation");
   timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
@@ -140,12 +123,6 @@ void cart2d_func::postStep() {
       policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
   if (cf.write_freq >0)
     if (cf.t % cf.write_freq == 0){
-      //FS3D velx(varx,Kokkos::ALL,Kokkos::ALL,0,make_pair(0,cf.ndim));
-      //FS2D px(varx,Kokkos::ALL,Kokkos::ALL,0,cf.ndim);
-      //FS2D Tx(varx,Kokkos::ALL,Kokkos::ALL,0,cf.ndim+1);
-      //FS2D rhox(varx,Kokkos::ALL,Kokkos::ALL,0,cf.ndim+2);
-      
-
       // Calcualte Total Density and Pressure Fields
       timers["calcSecond"].reset();
       Kokkos::parallel_for(ghost_pol, calculateRhoPT2D(var, p, rho, T, cd));
@@ -155,11 +132,11 @@ void cart2d_func::postStep() {
 
       Kokkos::parallel_for( "Loop1", ghost_pol,
         KOKKOS_LAMBDA(const int i, const int j) {
-          varx(i,j,0,varxIds["X-Velocity"]) = vel(i,j,0);
-          varx(i,j,0,varxIds["Y-Velocity"]) = vel(i,j,1);
-          varx(i,j,0,varxIds["Pressure"]) = p(i,j);
-          varx(i,j,0,varxIds["Temperature"]) = T(i,j);
-          varx(i,j,0,varxIds["Density"]) = rho(i,j);
+          varx(i,j,0,0) = vel(i,j,0);
+          varx(i,j,0,1) = vel(i,j,1);
+          varx(i,j,0,2) = p(i,j);
+          varx(i,j,0,3) = T(i,j);
+          varx(i,j,0,4) = rho(i,j);
       });
     }
 

@@ -1,7 +1,7 @@
 #ifndef PARTICLE_HPP
 #define PARTICLE_HPP
 
-#include "fiesta.hpp"
+#include "kokkosTypes.hpp"
 #include "input.hpp"
 
 struct particleStruct2D {

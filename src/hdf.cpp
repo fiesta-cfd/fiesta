@@ -1,5 +1,5 @@
 #include "hdf.hpp"
-#include "fiesta.hpp"
+#include "kokkosTypes.hpp"
 #include "hdf5.h"
 #include "output.hpp"
 #include "rkfunction.hpp"
@@ -251,7 +251,7 @@ void write_h5(hid_t group_id, string dname, int ndim,
   H5Pclose(plist_id);
 }
 
-fstWriter::fstWriter(struct inputConfig cf, rk_func *f) {
+hdfWriter::hdfWriter(struct inputConfig cf, rk_func *f) {
   xdp = (double *)malloc(cf.ni * cf.nj * cf.nk * sizeof(double));
   xsp = (float *)malloc(cf.ni * cf.nj * cf.nk * sizeof(float));
 
@@ -270,7 +270,7 @@ fstWriter::fstWriter(struct inputConfig cf, rk_func *f) {
 }
 
 template<typename T>
-void fstWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
+void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
                               double time, T* x, T* var, string name) {
 
   // calcualte string width for time index
@@ -493,7 +493,7 @@ void read_H5(hid_t fid, string path, int ndim, hsize_t* dims, hsize_t* offset, h
 }
 
 // Read Cell Data from Restart File
-void fstWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD) {
+void hdfWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD) {
 
   hsize_t offset[cf.ndim], gridCount[cf.ndim], cellCount[cf.ndim];
   hsize_t gridDims[cf.ndim], cellDims[cf.ndim];
@@ -549,7 +549,7 @@ void fstWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD) {
   Kokkos::deep_copy(varD,varH);
 }
 
-fstWriter::~fstWriter(){
+hdfWriter::~hdfWriter(){
   free(xdp);
   free(xsp);
   free(vsp);
@@ -564,21 +564,21 @@ fstWriter::~fstWriter(){
 }
 
 // write solution file
-void fstWriter::writeSolution(struct inputConfig cf, rk_func *f, int tdx,
+void hdfWriter::writeSolution(struct inputConfig cf, rk_func *f, int tdx,
                               double time) {
     writeHDF(cf, f, tdx, time, xsp, vsp, "sol");
 }
 
 // write restart file
-void fstWriter::writeRestart(struct inputConfig cf, rk_func *f, int tdx,
+void hdfWriter::writeRestart(struct inputConfig cf, rk_func *f, int tdx,
                              double time) {
     writeHDF(cf, f, tdx, time, xdp, vdp, "restart");
 }
 
 // deprecated 
-void fstWriter::writeSPGrid(struct inputConfig cf, const FS4D gridD,
+void hdfWriter::writeSPGrid(struct inputConfig cf, const FS4D gridD,
                             const char *fname) {}
 
 // deprecated 
-void fstWriter::writeGrid(struct inputConfig cf, const FS4D gridD,
+void hdfWriter::writeGrid(struct inputConfig cf, const FS4D gridD,
                           const char *fname) {}

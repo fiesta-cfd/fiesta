@@ -1,6 +1,6 @@
 #include "Kokkos_Core.hpp"
 #include "debug.hpp"
-#include "fiesta.hpp"
+#include "kokkosTypes.hpp"
 #include "input.hpp"
 #ifndef NOMPI
 #include "mpi.hpp"

@@ -1,15 +1,15 @@
-#include "fiesta.hpp"
+#include "kokkosTypes.hpp"
 #ifndef FST_H
 #define FST_H
 
 #include "input.hpp"
 #include "writer.hpp"
 
-class fstWriter : public writer {
+class hdfWriter : public writer {
 
 public:
-  fstWriter(struct inputConfig, rk_func *f);
-  ~fstWriter();
+  hdfWriter(struct inputConfig, rk_func *f);
+  ~hdfWriter();
   void writeGrid(struct inputConfig cf, const FS4D gridD, const char *fname);
   void writeSPGrid(struct inputConfig cf, const FS4D gridD, const char *fname);
 

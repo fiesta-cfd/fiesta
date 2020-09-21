@@ -1,74 +1,49 @@
-#include "fiesta2.hpp"
+#include "fiesta.hpp"
 #include "input.hpp"
-//#ifndef NOMPI
-//#include "hdf.hpp"
+#include "debug.hpp"
+#ifndef NOMPI
 #include "mpi.hpp"
-//#include "mpi.h"
-//#else
-//#include "vtk.hpp"
-//#endif
-#include "Kokkos_Core.hpp"
-//#include "bc.hpp"
-//#include "cart2d.hpp"
-//#include "cart3d.hpp"
-//#include "debug.hpp"
-//#include "gen2d.hpp"
-//#include "gen3d.hpp"
+#endif
 #include "output.hpp"
 #include "rkfunction.hpp"
 #include "status.hpp"
-//#include "timer.hpp"
-//#include <cstdio>
-//#include <ctime>
-//#include <iomanip>
 #include <iostream>
 #include <set>
-//#include <set>
-//#include "luaReader.hpp"
-//#include "input.hpp"
 
 using namespace std;
 
 struct inputConfig Fiesta::initialize(int argc, char **argv){
-  // Get the command line options including input file name if supplied.
   struct commandArgs cArgs = getCommandlineOptions(argc, argv);
 
-
-  // Initialize command MPI and get rank.
-  int temp_rank;
-  temp_rank = 0;
+  // Initialize MPI and get temporary rank.
+  int temp_rank = 0;
 #ifndef NOMPI
   MPI_Init(NULL, NULL);
   MPI_Comm_rank(MPI_COMM_WORLD, &temp_rank);
 #endif
 
-  // Print spash screen with logo, version number and compilation info
-  // to signify process startup.
-  if (temp_rank == 0)
-    printSplash(cArgs.colorFlag);
+  if (temp_rank == 0) printSplash(cArgs.colorFlag);
 
   // Initialize kokkos and set kokkos finalize as exit function.
   Kokkos::initialize(argc, argv);
-
 
   // Execute input file and generate simulation configuration
   struct inputConfig cf;
   cf = executeConfiguration(cArgs);
 
-
+#ifndef NOMPI
   mpi_init(cf);
+#endif
   printConfig(cf);
 
   return cf;
 }
 
 void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
-
-  
 #ifdef NOMPI
     cf.w = new serialVTKWriter(cf, f->grid, f->var);
 #else
-    cf.w = new fstWriter(cf, f);
+    cf.w = new hdfWriter(cf, f);
     cf.m = new mpiBuffers(cf);
 #endif
 
@@ -247,7 +222,7 @@ void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
            << "    Grid Generation:" << c(cf.colorFlag, NON) << c(cf.colorFlag, CYA)
            << right << setw(13) << f->timers["gridTimer"].getf(cf.timeFormat) << c(cf.colorFlag, NON) << endl;
       cout << c(cf.colorFlag, NON) << left << setw(36)
-           << "    Initial Consition WriteTime:" << c(cf.colorFlag, NON)
+           << "    Initial Condition WriteTime:" << c(cf.colorFlag, NON)
            << c(cf.colorFlag, CYA) << right << setw(13) << f->timers["writeTimer"].getf(cf.timeFormat)
            << c(cf.colorFlag, NON) << endl
            << endl;

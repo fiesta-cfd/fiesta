@@ -1,37 +1,18 @@
-#include "fiesta.hpp"
+#include "kokkosTypes.hpp"
 #include "input.hpp"
-#ifndef NOMPI
-#include "hdf.hpp"
-#include "mpi.hpp"
-#include "mpi.h"
-#else
-#include "vtk.hpp"
-#endif
-#include "Kokkos_Core.hpp"
-#include "bc.hpp"
+#include "rkfunction.hpp"
+#include "fiesta.hpp"
+#include "rk.hpp"
+#include "debug.hpp"
+
+// Compute Objects
 #include "cart2d.hpp"
 #include "cart3d.hpp"
-#include "debug.hpp"
 #include "gen2d.hpp"
 #include "gen3d.hpp"
-#include "output.hpp"
-#include "rkfunction.hpp"
-#include "status.hpp"
-#include "timer.hpp"
-#include <cstdio>
-#include <ctime>
-#include <iomanip>
-#include <iostream>
-#include <set>
-#include "luaReader.hpp"
-#include "fiesta2.hpp"
-#include "rk.hpp"
-
-using namespace std;
 
 int main(int argc, char *argv[]) {
   
-
   struct inputConfig cf = Fiesta::initialize(argc,argv);
 
   cf.totalTimer.start();
@@ -39,16 +20,16 @@ int main(int argc, char *argv[]) {
  
   // Choose Scheme
   rk_func *f;
-  if (cf.ndim == 3) {
-    if (cf.grid == 1) {
+  if (cf.ndim == 3){
+    if (cf.grid == 1){
       f = new gen3d_func(cf);
-    } else {
+    }else{
       f = new cart3d_func(cf);
     }
-  } else {
-    if (cf.grid == 1) {
+  }else{
+    if (cf.grid == 1){
       f = new gen2d_func(cf);
-    } else {
+    }else{
       f = new cart2d_func(cf);
     }
   }
@@ -75,7 +56,10 @@ int main(int argc, char *argv[]) {
  
   // Post Simulation
   f->postSim();
+
+  // Stop Timers and Report
   cf.simTimer.stop();
+  cf.totalTimer.stop();
   Fiesta::reportTimers(cf,f);
  
   Fiesta::finalize();
