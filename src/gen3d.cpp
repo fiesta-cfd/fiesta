@@ -80,6 +80,7 @@ gen3d_func::gen3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   timers["solWrite"]    = fiestaTimer("Solution Write Time");
   timers["resWrite"]    = fiestaTimer("Restart Write Time");
   timers["statCheck"]   = fiestaTimer("Status Check");
+  timers["rk"] = fiestaTimer("Runge Stage Update");
   timers["calcMetrics"] = fiestaTimer("Metric Computations");
 };
 

@@ -83,8 +83,7 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
   }
   Kokkos::deep_copy(cd, hostcd); // copy congifuration array to device
 
-  //timers["gridTimer"] = fiestaTimer("Grid Generation");
-  //timers["writeTimer"] = fiestaTimer("Grid Generation");
+  // Create Simulation )timers
   timers["flux"] = fiestaTimer("Flux Calculation");
   timers["pressgrad"] = fiestaTimer("Pressure Gradient Calculation");
   timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
@@ -113,8 +112,6 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
   }
 
 };
-
-
 
 void cart2d_func::preStep() {}
 
