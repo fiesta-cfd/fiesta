@@ -12,6 +12,9 @@
 
 using namespace std;
 
+//
+// Initialize Fiesta and fill configuration structure with input file variables
+//
 struct inputConfig Fiesta::initialize(int argc, char **argv){
   struct commandArgs cArgs = getCommandlineOptions(argc, argv);
 
@@ -27,11 +30,11 @@ struct inputConfig Fiesta::initialize(int argc, char **argv){
   // Initialize kokkos and set kokkos finalize as exit function.
   Kokkos::initialize(argc, argv);
 
-  // Execute input file and generate simulation configuration
-  struct inputConfig cf;
-  cf = executeConfiguration(cArgs);
+  // Execute lua script and get input parameters
+  struct inputConfig cf = executeConfiguration(cArgs);
 
 #ifndef NOMPI
+  // perform domain decomposition
   mpi_init(cf);
 #endif
   printConfig(cf);
@@ -39,16 +42,21 @@ struct inputConfig Fiesta::initialize(int argc, char **argv){
   return cf;
 }
 
+//
+// Initialize the simulation and load initial data
+//
 void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
+  //create IO object
 #ifdef NOMPI
-    cf.w = new serialVTKWriter(cf, f->grid, f->var);
+  cf.w = new serialVTKWriter(cf, f->grid, f->var);
 #else
-    cf.w = new hdfWriter(cf, f);
-    cf.m = new mpiBuffers(cf);
+  cf.w = new hdfWriter(cf, f);
+  cf.m = new mpiBuffers(cf);
 #endif
 
   // If not restarting, generate initial conditions and grid
   if (cf.restart == 0) {
+    // Generate Initial Conditions
     if (cf.rank == 0)
       cout << c(cf.colorFlag, GRE)
            << "Generating Initial Conditions:" << c(cf.colorFlag, NON) << endl;
@@ -60,29 +68,33 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
            << c(cf.colorFlag, NON) << endl
            << endl;
 
+    // Generate Grid Coordinates
     if (cf.rank == 0)
       cout << c(cf.colorFlag, GRE) << "Generating Grid:" << c(cf.colorFlag, NON) << endl;
-    f->timers["gridTimer"].start();
+    cf.gridTimer.start();
     loadGrid(cf, f->grid);
-    f->timers["gridTimer"].stop();
+    cf.gridTimer.stop();
     if (cf.rank == 0)
-      cout << "    Generated in: " << c(cf.colorFlag, CYA) << f->timers["gridTimer"].getf(cf.timeFormat)
+      cout << "    Generated in: " << c(cf.colorFlag, CYA) << cf.gridTimer.getf(cf.timeFormat)
            << c(cf.colorFlag, NON) << endl
            << endl;
 
+    // Generate Particles
     if (cf.particle == 1) {
       if (cf.rank == 0)
         cout << c(cf.colorFlag, GRE) << "Generating Particles:" << c(cf.colorFlag, NON)
              << endl;
-      f->timers["gridTimer"].start();
+      f->timers["partTimer"].start();
       loadParticles(cf, f->particles);
-      f->timers["gridTimer"].stop();
+      f->timers["partTimer"].stop();
       if (cf.rank == 0)
-        cout << "    Generated in: " << c(cf.colorFlag, CYA) << f->timers["gridTimer"].getf(cf.timeFormat)
+        cout << "    Generated in: " << c(cf.colorFlag, CYA) << f->timers["partTimer"].getf(cf.timeFormat)
              << c(cf.colorFlag, NON) << endl
              << endl;
     }
 
+    cf.writeTimer.start();
+    // Write Initial Solution File
     if (cf.rank == 0)
       if (cf.write_freq > 0 || cf.restart_freq > 0)
         cout << c(cf.colorFlag, GRE)
@@ -92,19 +104,20 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
       cf.w->writeSolution(cf, f, 0, 0.00);
       f->timers["solWrite"].accumulate();
     }
+    // Write Initial Restart File
     if (cf.restart_freq > 0) {
       f->timers["resWrite"].reset();
       cf.w->writeRestart(cf, f, 0, 0.00);
       f->timers["resWrite"].accumulate();
     }
-    f->timers["writeTimer"].stop();
+    cf.writeTimer.stop();
     if (cf.rank == 0)
       if (cf.write_freq > 0 || cf.restart_freq > 0)
-        cout << "    Wrote in: " << c(cf.colorFlag, CYA) << f->timers["writeTimer"].getf(cf.timeFormat)
+        cout << "    Wrote in: " << c(cf.colorFlag, CYA) << cf.writeTimer.getf(cf.timeFormat)
              << c(cf.colorFlag, NON) << endl;
 
-  }else{
-    f->timers["writeTimer"].start();
+  }else{ // If Restarting, Load Restart File
+    cf.writeTimer.start();
     if (cf.rank == 0)
       cout << c(cf.colorFlag, GRE) << "Loading Restart File:" << c(cf.colorFlag, NON)
            << endl;
@@ -114,25 +127,7 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
     if (cf.rank == 0)
       cout << "    Loaded in: " << setprecision(2) << c(cf.colorFlag, CYA)
            << cf.loadTimer.getf(cf.timeFormat) << "s" << c(cf.colorFlag, NON) << endl;
-    if (cf.rank == 0)
-      if (cf.write_freq > 0 || cf.restart_freq > 0)
-        cout << c(cf.colorFlag, GRE)
-             << "Writing Initial Conditions:" << c(cf.colorFlag, NON) << endl;
-    if (cf.write_freq > 0) {
-      f->timers["solWrite"].reset();
-      cf.w->writeSolution(cf, f, 0, 0.00);
-      f->timers["solWrite"].accumulate();
-    }
-    if (cf.restart_freq > 0) {
-      f->timers["resWrite"].reset();
-      cf.w->writeRestart(cf, f, 0, 0.00);
-      f->timers["resWrite"].accumulate();
-    }
-    f->timers["writeTimer"].stop();
-    if (cf.rank == 0)
-      if (cf.write_freq > 0 || cf.restart_freq > 0)
-        cout << "    Wrote in: " << c(cf.colorFlag, CYA) << f->timers["writeTimer"].getf(cf.timeFormat)
-             << c(cf.colorFlag, NON) << endl;
+
   }
   // notify simulation start
   if (cf.rank == 0) {
@@ -141,8 +136,9 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
   }
 }
 
+// Write solutions, restarts and status checks
 void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time){
-  // Print time step info if necessary
+  // Print current time step
   if (cf.rank == 0) {
     if (cf.out_freq > 0)
       if ((t + 1) % cf.out_freq == 0)
@@ -197,6 +193,7 @@ void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
   std::set<std::pair<std::string, fiestaTimer>, Comparator> stmr(
       f->timers.begin(), f->timers.end(), compFunctor);
 
+  // print timer values
   if (cf.rank == 0) {
     cout << endl << "-----------------------" << endl << endl;
     cout.precision(2);
@@ -220,10 +217,10 @@ void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
            << c(cf.colorFlag, NON) << endl;
       cout << c(cf.colorFlag, NON) << left << setw(36)
            << "    Grid Generation:" << c(cf.colorFlag, NON) << c(cf.colorFlag, CYA)
-           << right << setw(13) << f->timers["gridTimer"].getf(cf.timeFormat) << c(cf.colorFlag, NON) << endl;
+           << right << setw(13) << cf.gridTimer.getf(cf.timeFormat) << c(cf.colorFlag, NON) << endl;
       cout << c(cf.colorFlag, NON) << left << setw(36)
            << "    Initial Condition WriteTime:" << c(cf.colorFlag, NON)
-           << c(cf.colorFlag, CYA) << right << setw(13) << f->timers["writeTimer"].getf(cf.timeFormat)
+           << c(cf.colorFlag, CYA) << right << setw(13) << cf.writeTimer.getf(cf.timeFormat)
            << c(cf.colorFlag, NON) << endl
            << endl;
     }
@@ -241,6 +238,7 @@ void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
   }
 }
  
+// clean up kokkos and mpi
 void Fiesta::finalize(){
   Kokkos::finalize();
 #ifndef NOMPI

@@ -37,6 +37,8 @@ struct inputConfig {
   fiestaTimer initTimer;
   fiestaTimer simTimer;
   fiestaTimer loadTimer;
+  fiestaTimer gridTimer;
+  fiestaTimer writeTimer;
 
   class writer *w;
   class mpiBuffers *m;
