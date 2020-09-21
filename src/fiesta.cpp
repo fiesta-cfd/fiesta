@@ -159,6 +159,11 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
         cout << "    Wrote in: " << c(cf.colorFlag, CYA) << f->timers["writeTimer"].getf(cf.timeFormat)
              << c(cf.colorFlag, NON) << endl;
   }
+  // notify simulation start
+  if (cf.rank == 0) {
+    cout << endl << "-----------------------" << endl << endl;
+   cout << c(cf.colorFlag, GRE) << "Starting Simulation:" << c(cf.colorFlag, NON) << endl;
+  }
 }
 
 void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time){
@@ -202,6 +207,10 @@ void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time){
 }
 
 void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
+  // notify simulation complete
+  if (cf.rank == 0)
+    cout << c(cf.colorFlag, GRE) << "Simulation Complete!" << c(cf.colorFlag, NON) << endl;
+
   // Sort computer timers
   typedef std::function<bool(std::pair<std::string, fiestaTimer>,
                              std::pair<std::string, fiestaTimer>)>

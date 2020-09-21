@@ -109,7 +109,7 @@ endif()
 include_directories(${installDir}/include)
 
 # set base source files
-set(FIESTA_SRCS src/fiesta.cpp src/luaReader.cpp src/bc.cpp src/status.cpp src/timer.cpp src/input.cpp src/output.cpp src/main.cpp src/rkfunction.cpp src/cart2d.cpp src/cart3d.cpp src/gen2d.cpp src/gen3d.cpp src/writer.cpp)
+set(FIESTA_SRCS src/rk.cpp src/fiesta.cpp src/luaReader.cpp src/bc.cpp src/status.cpp src/timer.cpp src/input.cpp src/output.cpp src/main.cpp src/rkfunction.cpp src/cart2d.cpp src/cart3d.cpp src/gen2d.cpp src/gen3d.cpp src/writer.cpp)
 
 
 if (LITE)
