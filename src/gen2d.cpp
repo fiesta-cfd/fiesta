@@ -1,4 +1,5 @@
 #include "gen2d.hpp"
+#include <cassert>
 
 gen2d_func::gen2d_func(struct inputConfig &cf_) : rk_func(cf_) {
 

@@ -11,6 +11,7 @@
 #endif
 #include <map>
 #include <string>
+#include <vector>
 
 class rk_func {
 

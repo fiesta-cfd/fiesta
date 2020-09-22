@@ -17,6 +17,7 @@
 #include "timer.hpp"
 //#include "rkfunction.hpp"
 #include <map>
+#include <vector>
 
 // Lua error function
 void error(lua_State *L, const char *fmt, ...);

@@ -11,6 +11,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <vector>
 //#ifndef NOMPI
 //#include "mpi.h"
 //#endif

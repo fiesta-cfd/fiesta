@@ -1,5 +1,6 @@
 #include <string>
 #include "lua.hpp"
+#include <vector>
 
 class luaReader {
 

@@ -1,4 +1,5 @@
 #include "kokkosTypes.hpp"
+#include <cassert>
 #include "input.hpp"
 #ifndef NOMPI
 #include "mpi.hpp"

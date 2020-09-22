@@ -1,6 +1,7 @@
 #include "cart2d.hpp"
 #include "vtk.hpp"
 #include "mpi.hpp"
+#include <cassert>
 
 std::map<string,int> varxIds;
 
