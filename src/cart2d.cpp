@@ -7,8 +7,6 @@ std::map<string,int> varxIds;
 
 cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
 
-  int varxPtr = 0;
-
   grid  = FS4D("coords", cf.ni, cf.nj, cf.nk, 3);          // Grid Coords
   var   = FS4D("var", cf.ngi, cf.ngj, cf.ngk, cf.nvt);     // Primary Variables
   tmp1  = FS4D("tmp1", cf.ngi, cf.ngj, cf.ngk, cf.nvt);    // Temporary Array
@@ -125,17 +123,9 @@ void cart2d_func::postStep() {
       timers["calcSecond"].reset();
       Kokkos::parallel_for(ghost_pol, calculateRhoPT2D(var, p, rho, T, cd));
       Kokkos::parallel_for(ghost_pol, computeVelocity2D(var, rho, vel));
+      Kokkos::parallel_for(ghost_pol, copyExtraVars2D(varx, vel, p, rho, T));
       Kokkos::fence();
       timers["calcSecond"].accumulate();
-
-      Kokkos::parallel_for( "Loop1", ghost_pol,
-        KOKKOS_LAMBDA(const int i, const int j) {
-          varx(i,j,0,0) = vel(i,j,0);
-          varx(i,j,0,1) = vel(i,j,1);
-          varx(i,j,0,2) = p(i,j);
-          varx(i,j,0,3) = T(i,j);
-          varx(i,j,0,4) = rho(i,j);
-      });
     }
 
   if (cf.noise == 1) {

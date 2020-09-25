@@ -1,10 +1,42 @@
 #ifndef SECONDARY_H
 #define SECONDARY_H
 
+struct copyExtraVars2D {
+  FS4D varx;
+  FS3D vel;
+  FS2D rho, p, T;
+
+  copyExtraVars2D(FS4D varx_, FS3D v_, FS2D p_, FS2D rho_, FS2D T_)
+      : varx(varx_), vel(v_), p(p_), rho(rho_), T(T_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j) const {
+    varx(i,j,0,0) = vel(i,j,0);
+    varx(i,j,0,1) = vel(i,j,1);
+    varx(i,j,0,2) = p(i,j);
+    varx(i,j,0,3) = T(i,j);
+    varx(i,j,0,4) = rho(i,j);
+  }
+};
+struct copyExtraVars3D {
+  FS4D varx;
+  FS4D vel;
+  FS3D rho, p, T;
+
+  copyExtraVars3D(FS4D varx_, FS4D v_, FS3D p_, FS3D rho_, FS3D T_)
+      : varx(varx_), vel(v_), p(p_), rho(rho_), T(T_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j, const int k) const {
+    varx(i,j,k,0) = vel(i,j,k,0);
+    varx(i,j,k,1) = vel(i,j,k,1);
+    varx(i,j,k,2) = vel(i,j,k,2);
+    varx(i,j,k,3) = p(i,j,k);
+    varx(i,j,k,4) = T(i,j,k);
+    varx(i,j,k,5) = rho(i,j,k);
+  }
+};
 struct calculateRhoPT2D {
-  //Kokkos::View<double ****> var;
-  //Kokkos::View<double **> rho,p,T;
-  //Kokkos::View<double *> cd;
   FS4D var;
   FS2D rho, p, T;
   FS1D cd;
