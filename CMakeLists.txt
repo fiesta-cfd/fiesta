@@ -85,7 +85,7 @@ set(installDir ${CMAKE_CURRENT_BINARY_DIR}/install)
 if (NOT LITE)
     find_package(HDF5)
 
-    if (HDF5_FOUND)
+    if (HDF5_FOUND AND HD5F_IS_PARALLEL)
         include_directories(SYSTEM ${HDF5_C_INCLUDE_DIRS})
     else()
         ExternalProject_Add(hdf5Parallel
@@ -126,7 +126,7 @@ else()
     # add additional build files for non-lite builds
     add_executable(fiesta ${FIESTA_SRCS}  src/mpi.cpp src/hdf.cpp)
 
-    if (HDF5_FOUND)
+    if (HDF5_FOUND AND HDF5_IS_PARALLEL)
         # link to found hdf5 library
         target_link_libraries(fiesta
                               kokkos
