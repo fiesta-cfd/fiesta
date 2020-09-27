@@ -17,6 +17,7 @@ public:
   void writeRestart(struct inputConfig cf, rk_func *f, int tdx, double time);
 
   void readSolution(struct inputConfig cf, FS4D &deviceG, FS4D &deviceV);
+  void readTerrain(struct inputConfig cf, FS4D &deviceG);
 
   template<typename T>
   void writeHDF(struct inputConfig cf, rk_func *f, int tdx,

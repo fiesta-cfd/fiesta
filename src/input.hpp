@@ -88,6 +88,7 @@ struct inputConfig {
   int particle, p_np;
   int t;
   int grid;
+  double h;
 
   int globalGridDims[3];
   int globalCellDims[3];
@@ -109,7 +110,7 @@ struct commandArgs getCommandlineOptions(int argc, char **argv);
 struct inputConfig executeConfiguration(struct commandArgs cargs);
 
 int loadInitialConditions(struct inputConfig cf, const FS4D v);
-int loadGrid(struct inputConfig cf, const FS4D v);
+int loadGrid(struct inputConfig cf, FS4D &v);
 int loadParticles(struct inputConfig cf, const FSP2D v);
 
 #endif

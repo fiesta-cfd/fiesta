@@ -9,6 +9,7 @@
 #include <string>
 #include <regex>
 #include "luaReader.hpp"
+#include "hdf.hpp"
 
 struct commandArgs getCommandlineOptions(int argc, char **argv){
 
@@ -160,6 +161,18 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
     if (cf.ndim == 3)
       L.get("dz",cf.dz);
   }
+  if (grid.compare("terrain") == 0) {
+    if (cf.ndim == 3){
+      cf.grid = 2;
+      L.get("dx",cf.dx);
+      L.get("dy",cf.dy);
+      cf.dz = 1.0;
+      L.get("h",cf.h);
+    } else {
+      printf("ndim must be equal to 3 for terrain");
+      exit(EXIT_FAILURE);
+    }
+  }
 
   // Array Parameters
   cf.M = (double *)malloc(cf.ns * sizeof(double));
@@ -309,7 +322,7 @@ void error(lua_State *L, const char *fmt, ...) {
   exit(EXIT_FAILURE);
 }
 
-int loadGrid(struct inputConfig cf, const FS4D deviceV) {
+int loadGrid(struct inputConfig cf, FS4D &deviceV) {
 
   FS4DH hostV = Kokkos::create_mirror_view(deviceV);
 
@@ -331,6 +344,8 @@ int loadGrid(struct inputConfig cf, const FS4D deviceV) {
       }
     }
     L.close();
+  } else if (cf.grid == 2) {
+    cf.w->readTerrain(cf,deviceV);
   } else {
     for (int k = 0; k < cf.nk; ++k) {
       for (int j = 0; j < cf.nj; ++j) {
@@ -342,6 +357,7 @@ int loadGrid(struct inputConfig cf, const FS4D deviceV) {
       }
     }
   }
+
   Kokkos::deep_copy(deviceV, hostV);
 
   return 0;

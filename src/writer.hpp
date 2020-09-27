@@ -28,6 +28,7 @@ public:
                             double time) = 0;
 
   virtual void readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD) = 0;
+  virtual void readTerrain(struct inputConfig cf, FS4D &gridD) = 0;
 
   // protected:
   //    double *xdp;
