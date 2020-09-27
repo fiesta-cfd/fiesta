@@ -275,10 +275,14 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   return cf;
 }
 
-int loadInitialConditions(struct inputConfig cf, const FS4D deviceV) {
+int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
 
   int ii,jj,kk;
+  double x,y,z;
   FS4DH hostV = Kokkos::create_mirror_view(deviceV);
+  FS4DH hostG = Kokkos::create_mirror_view(deviceG);
+
+  Kokkos::deep_copy(hostG,deviceG);
 
   luaReader L(cf.inputFname);
 
@@ -290,7 +294,23 @@ int loadInitialConditions(struct inputConfig cf, const FS4D deviceV) {
             ii = cf.iStart + i - cf.ng;
             jj = cf.jStart + j - cf.ng;
             kk = cf.kStart + k - cf.ng;
-            hostV(i, j, k, v) = L.call("f",4,ii,jj,kk,v);
+            x = 0;
+            y = 0;
+            z = 0;
+            for (int ix=0; ix<2; ++ix){
+              for (int iy=0; iy<2; ++iy){
+                for (int iz=0; iz<2; ++iz){
+                  x += hostG(i+ix-cf.ng,j+iy-cf.ng,k+iz-cf.ng,0);
+                  y += hostG(i+ix-cf.ng,j+iy-cf.ng,k+iz-cf.ng,1);
+                  z += hostG(i+ix-cf.ng,j+iy-cf.ng,k+iz-cf.ng,2);
+                }
+              }
+            }
+            x = x/8.0;
+            y = y/8.0;
+            z = z/8.0;
+            hostV(i, j, k, v) = L.call("f",4,x,y,z,(double)v);
+            //hostV(i, j, k, v) = L.call("f",4,ii,jj,kk,v);
           }
         }
       }

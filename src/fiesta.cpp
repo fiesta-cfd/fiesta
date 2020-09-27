@@ -56,18 +56,6 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
 
   // If not restarting, generate initial conditions and grid
   if (cf.restart == 0) {
-    // Generate Initial Conditions
-    if (cf.rank == 0)
-      cout << c(cf.colorFlag, GRE)
-           << "Generating Initial Conditions:" << c(cf.colorFlag, NON) << endl;
-    cf.loadTimer.start();
-    loadInitialConditions(cf, f->var);
-    cf.loadTimer.stop();
-    if (cf.rank == 0)
-      cout << "    Generated in: " << c(cf.colorFlag, CYA) << cf.loadTimer.getf(cf.timeFormat)
-           << c(cf.colorFlag, NON) << endl
-           << endl;
-
     // Generate Grid Coordinates
     if (cf.rank == 0)
       cout << c(cf.colorFlag, GRE) << "Generating Grid:" << c(cf.colorFlag, NON) << endl;
@@ -76,6 +64,18 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
     cf.gridTimer.stop();
     if (cf.rank == 0)
       cout << "    Generated in: " << c(cf.colorFlag, CYA) << cf.gridTimer.getf(cf.timeFormat)
+           << c(cf.colorFlag, NON) << endl
+           << endl;
+
+    // Generate Initial Conditions
+    if (cf.rank == 0)
+      cout << c(cf.colorFlag, GRE)
+           << "Generating Initial Conditions:" << c(cf.colorFlag, NON) << endl;
+    cf.loadTimer.start();
+    loadInitialConditions(cf, f->var, f->grid);
+    cf.loadTimer.stop();
+    if (cf.rank == 0)
+      cout << "    Generated in: " << c(cf.colorFlag, CYA) << cf.loadTimer.getf(cf.timeFormat)
            << c(cf.colorFlag, NON) << endl
            << endl;
 

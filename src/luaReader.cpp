@@ -121,10 +121,10 @@ double luaReader::call(string f, int n, ...){
 
   va_list ap;
   va_start(ap, n);
-  int v;
+  double v;
   double z;
   for(int i=0; i<n; ++i) {
-    v = va_arg(ap, int);
+    v = va_arg(ap, double);
     lua_pushnumber(L, v);
   }
   va_end(ap);

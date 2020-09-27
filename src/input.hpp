@@ -109,7 +109,7 @@ struct commandArgs {
 struct commandArgs getCommandlineOptions(int argc, char **argv);
 struct inputConfig executeConfiguration(struct commandArgs cargs);
 
-int loadInitialConditions(struct inputConfig cf, const FS4D v);
+int loadInitialConditions(struct inputConfig cf,  FS4D &v, FS4D &g);
 int loadGrid(struct inputConfig cf, FS4D &v);
 int loadParticles(struct inputConfig cf, const FSP2D v);
 
