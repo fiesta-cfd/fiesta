@@ -122,6 +122,7 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   L.get("restart_freq", cf.restart_freq,0);
   L.get("stat_freq",    cf.stat_freq,   0);
   L.get("restartName",  cf.restartName, "restart-0000000.h5");
+  L.get("terrainName", cf.terrainName, "terrain.h5");
 
   std::string scheme, grid;
   L.get("scheme", scheme,"weno5");
@@ -164,9 +165,11 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   if (grid.compare("terrain") == 0) {
     if (cf.ndim == 3){
       cf.grid = 2;
-      L.get("dx",cf.dx);
-      L.get("dy",cf.dy);
+      cf.dx=1.0;
+      cf.dy=1.0;
       cf.dz = 1.0;
+      L.get("tdx",cf.tdx);
+      L.get("tdy",cf.tdy);
       L.get("h",cf.h);
     } else {
       printf("ndim must be equal to 3 for terrain");
@@ -358,7 +361,7 @@ int loadGrid(struct inputConfig cf, FS4D &deviceV) {
             ii = cf.iStart + i;
             jj = cf.jStart + j;
             kk = cf.kStart + k;
-            hostV(i, j, k, v) = L.call("g",4,ii,jj,kk,v);
+            hostV(i, j, k, v) = L.call("g",4,(double)ii,(double)jj,(double)kk,(double)v);
           }
         }
       }

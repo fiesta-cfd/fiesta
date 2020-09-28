@@ -21,13 +21,13 @@ int main(int argc, char *argv[]) {
   // Choose Scheme
   rk_func *f;
   if (cf.ndim == 3){
-    if (cf.grid == 1){
+    if (cf.grid > 0){
       f = new gen3d_func(cf);
     }else{
       f = new cart3d_func(cf);
     }
   }else{
-    if (cf.grid == 1){
+    if (cf.grid > 0){
       f = new gen2d_func(cf);
     }else{
       f = new cart2d_func(cf);

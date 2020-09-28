@@ -89,13 +89,15 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
     cout << c(cFlag, YEL) << "    Status: " << c(cFlag, NON) << endl;
  
     cout << "      Time Step:       " << c(cFlag, CYA) 
-                                      << setprecision(0) << scientific
-                                      << (float)cf.t
+                                      //<< setprecision(0) << scientific
+                                      //<< (float)cf.t
+                                      << cf.t
                                       << c(cFlag, NON)
          << "/" 
                                       << c(cFlag, CYA)
-                                      << setprecision(0) << scientific
-                                      << (float)cf.tend
+                                      //<< setprecision(0) << scientific
+                                      //<< (float)cf.tend
+                                      << cf.tend
                                       << c(cFlag, NON)
          << endl;
 

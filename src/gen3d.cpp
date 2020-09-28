@@ -98,7 +98,8 @@ void gen3d_func::postStep() {
 
       timers["calcSecond"].reset();
       Kokkos::parallel_for(ghost_pol, calculateRhoPT3D(var, p, rho, T, cd));
-      Kokkos::parallel_for(ghost_pol, computeVelocity3D(var, rho, tvel));
+      //Kokkos::parallel_for(ghost_pol, computeVelocity3D(var, rho, tvel));
+      Kokkos::parallel_for(ghost_pol, computeGenVelocity3D(var, metrics, rho, tvel));
       Kokkos::fence();
       timers["calcSecond"].accumulate();
 

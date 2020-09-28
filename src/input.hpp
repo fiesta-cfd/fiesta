@@ -47,6 +47,7 @@ struct inputConfig {
   int colorFlag,timeFormat;
   std::string inputFname;
   std::string title;
+  std::string terrainName;
   int xmp, ymp, zmp;
   int ndim;
   int glbl_ni, glbl_nj, glbl_nk;
@@ -88,7 +89,7 @@ struct inputConfig {
   int particle, p_np;
   int t;
   int grid;
-  double h;
+  double h, tdx, tdy;
 
   int globalGridDims[3];
   int globalCellDims[3];

@@ -563,7 +563,7 @@ void hdfWriter::readTerrain(struct inputConfig cf, FS4D &gridD) {
 
   // open restart file for reading
   hid_t fid;
-  fid = openHDF5ForRead("terrain.h5");
+  fid = openHDF5ForRead(cf.terrainName);
   int idx;
   double h, dz;
 
@@ -573,10 +573,10 @@ void hdfWriter::readTerrain(struct inputConfig cf, FS4D &gridD) {
     for (int j = 0; j < cf.nj; ++j) {
       idx = cf.ni * j + i;
       h = xdp[idx];
-      dz = (cf.h-h)/cf.nk;
+      dz = (cf.h-h)/cf.nck;
       for (int k = 0; k < cf.nk; ++k) {
-        gridH(i, j, k, 0) = cf.dx*i;
-        gridH(i, j, k, 1) = cf.dy*j;
+        gridH(i, j, k, 0) = cf.tdx*i;
+        gridH(i, j, k, 1) = cf.tdy*j;
         gridH(i, j, k, 2) = h + dz*k;
       }
     }
