@@ -10,8 +10,10 @@ from random import random
 from random import seed
 
 np.set_printoptions(linewidth=1000)
-levels = 8
-amp = 1.0
+levels = 7
+#amps = [0,0,0,0,0,0,0,0,0,0,0]
+#amps = [1.5,0.5,0,0,0,0,0,0,0,0,0]
+amp = 1.5
 sd = 468
 
 sz = 2**levels+1
@@ -26,6 +28,7 @@ z[-1,-1] = 5.0
 print('Generating Terrain...')
 for s in range(levels):
     amp = amp/((s+1)**(1.0/2.0))
+    #amp = amps[s]
     skip = 2**(levels-s)
     for j in range(2**s):
         for i in range(2**s):

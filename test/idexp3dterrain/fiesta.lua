@@ -26,7 +26,7 @@ grid="terrain"
 buoyancy=1
 
 --Time
-nt = 1000                             --Time Step at which to end simulation
+nt = 5000                             --Time Step at which to end simulation
 dt = 1e-7                             --Time Step Size [s]
 
 --User Parameters
@@ -36,10 +36,12 @@ Lz = 10.0
 
 --Number of cells
 ndim = 3
-ni = 256            --Simulation size in x direction
-nj = 256            --Simulation Size in y direction
+ni = 128              --Simulation size in x direction
+nj = 128            --Simulation Size in y direction
 nk = 100            --Simulation Size in z direction
 h = 10
+tdx = Lx/ni
+tdy = Ly/nj
 
 --Cell Sizes
 dx = Lx/ni
@@ -68,7 +70,7 @@ noise = 0
 particle = 0
 
 function g(i,j,k,v)
-    if v==0 then return 2*dx*i end
+    if v==0 then return dx*i end
     if v==1 then return dy*j end
     if v==2 then return dz*k end
 end
