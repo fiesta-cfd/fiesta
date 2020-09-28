@@ -294,9 +294,6 @@ int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
       for (int k = cf.ng; k < cf.nck + cf.ng; ++k) {
         for (int j = cf.ng; j < cf.ncj + cf.ng; ++j) {
           for (int i = cf.ng; i < cf.nci + cf.ng; ++i) {
-            ii = cf.iStart + i - cf.ng;
-            jj = cf.jStart + j - cf.ng;
-            kk = cf.kStart + k - cf.ng;
             x = 0;
             y = 0;
             z = 0;
@@ -313,17 +310,23 @@ int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
             y = y/8.0;
             z = z/8.0;
             hostV(i, j, k, v) = L.call("f",4,x,y,z,(double)v);
-            //hostV(i, j, k, v) = L.call("f",4,ii,jj,kk,v);
           }
         }
       }
     } else {
       for (int j = cf.ng; j < cf.ncj + cf.ng; ++j) {
         for (int i = cf.ng; i < cf.nci + cf.ng; ++i) {
-            ii = cf.iStart + i - cf.ng;
-            jj = cf.jStart + j - cf.ng;
-            kk = 0;
-            hostV(i, j, 0, v) = L.call("f",4,ii,jj,kk,v);
+            x = 0;
+            y = 0;
+            for (int ix=0; ix<2; ++ix){
+              for (int iy=0; iy<2; ++iy){
+                x += hostG(i+ix-cf.ng,j+iy-cf.ng,0,0);
+                y += hostG(i+ix-cf.ng,j+iy-cf.ng,0,1);
+              }
+            }
+            x = x/4.0;
+            y = y/4.0;
+            hostV(i, j, 0, v) = L.call("f",4,x,y,0.0,(double)v);
         }
       }
     }
