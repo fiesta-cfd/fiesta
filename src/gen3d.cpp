@@ -103,15 +103,6 @@ void gen3d_func::postStep() {
       Kokkos::fence();
       timers["calcSecond"].accumulate();
 
-      Kokkos::parallel_for( "CopyVarx", ghost_pol,
-        KOKKOS_LAMBDA(const int i, const int j, const int k) {
-          varx(i,j,k,0) = tvel(i,j,k,0);
-          varx(i,j,k,1) = tvel(i,j,k,1);
-          varx(i,j,k,2) = tvel(i,j,k,2);
-          varx(i,j,k,3) =    p(i,j,k);
-          varx(i,j,k,4) =    T(i,j,k);
-          varx(i,j,k,5) =  rho(i,j,k);
-      });
     }
 }
 void gen3d_func::preSim() {

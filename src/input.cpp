@@ -370,6 +370,7 @@ int loadGrid(struct inputConfig cf, FS4D &deviceV) {
       }
     }
     L.close();
+    Kokkos::deep_copy(deviceV, hostV);
   } else if (cf.grid == 2) {
     cf.w->readTerrain(cf,deviceV);
   } else {
@@ -382,9 +383,9 @@ int loadGrid(struct inputConfig cf, FS4D &deviceV) {
         }
       }
     }
+    Kokkos::deep_copy(deviceV, hostV);
   }
 
-  Kokkos::deep_copy(deviceV, hostV);
 
   return 0;
 }
