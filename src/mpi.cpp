@@ -6,8 +6,6 @@ void mpi_init(struct inputConfig &cf) {
   int rem;
 
   int dims[3] = {cf.xProcs, cf.yProcs, cf.zProcs};
-  // int periods[3] = {0,0,0};
-  // printf("Periods = {%d,%d,%d}\n",cf.xPer,cf.yPer,cf.zPer);
   int periods[3] = {cf.xPer, cf.yPer, cf.zPer};
   int coords[3];
 
@@ -93,10 +91,6 @@ void mpi_init(struct inputConfig &cf) {
 }
 
 mpiBuffers::mpiBuffers(struct inputConfig cf) {
-  // int cv = 0;
-  // if (cf.ceq == 1){
-  //    cv = 5;
-  //}
 
   leftSend = Kokkos::View<double ****, FS_LAYOUT>("leftSend", cf.ng, cf.ngj,
                                                   cf.ngk, cf.nvt);
@@ -144,48 +138,25 @@ mpiBuffers::mpiBuffers(struct inputConfig cf) {
 }
 
 void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m) {
-  // int cv = 0;
-  // if (cf.ceq == 1){
-  //    cv = 5;
-  //}
 
   typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_rind;
   policy_rind xPol = policy_rind({0, 0, 0, 0}, {cf.ng, cf.ngj, cf.ngk, cf.nvt});
   policy_rind yPol = policy_rind({0, 0, 0, 0}, {cf.ngi, cf.ng, cf.ngk, cf.nvt});
   policy_rind zPol = policy_rind({0, 0, 0, 0}, {cf.ngi, cf.ngj, cf.ng, cf.nvt});
 
+  int wait_count = 4;
+  MPI_Request reqs[wait_count];
+
+///////////////////////////////////////////////
+// Halo exchange in x direction
+///////////////////////////////////////////////
   Kokkos::parallel_for(
       xPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
         m.leftSend(i, j, k, v) = deviceV(cf.ng + i, j, k, v);
         m.rightSend(i, j, k, v) = deviceV(i + cf.nci, j, k, v);
       });
-  Kokkos::parallel_for(
-      yPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
-        m.bottomSend(i, j, k, v) = deviceV(i, cf.ng + j, k, v);
-        m.topSend(i, j, k, v) = deviceV(i, j + cf.ncj, k, v);
-      });
-  if (cf.ndim == 3) {
-    Kokkos::parallel_for(
-        zPol,
-        KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
-          m.backSend(i, j, k, v) = deviceV(i, j, cf.ng + k, v);
-          m.frontSend(i, j, k, v) = deviceV(i, j, k + cf.nck, v);
-        });
-  }
-
   Kokkos::deep_copy(m.leftSend_H, m.leftSend);
   Kokkos::deep_copy(m.rightSend_H, m.rightSend);
-  Kokkos::deep_copy(m.bottomSend_H, m.bottomSend);
-  Kokkos::deep_copy(m.topSend_H, m.topSend);
-  if (cf.ndim == 3) {
-    Kokkos::deep_copy(m.backSend_H, m.backSend);
-    Kokkos::deep_copy(m.frontSend_H, m.frontSend);
-  }
-
-  int wait_count = 8;
-  if (cf.ndim == 3)
-    wait_count = 12;
-  MPI_Request reqs[wait_count];
 
   // send and recieve left
   MPI_Isend(m.leftSend_H.data(), cf.ng * cf.ngj * cf.ngk * (cf.nvt), MPI_DOUBLE,
@@ -199,54 +170,79 @@ void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m) {
   MPI_Irecv(m.rightRecv_H.data(), cf.ng * cf.ngj * cf.ngk * (cf.nvt),
             MPI_DOUBLE, cf.xPlus, MPI_ANY_TAG, cf.comm, &reqs[3]);
 
-  // send and recieve bottom
-  MPI_Isend(m.bottomSend_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt),
-            MPI_DOUBLE, cf.yMinus, 0, cf.comm, &reqs[4]);
-  MPI_Irecv(m.bottomRecv_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt),
-            MPI_DOUBLE, cf.yMinus, MPI_ANY_TAG, cf.comm, &reqs[5]);
-
-  // send and recieve top
-  MPI_Isend(m.topSend_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt), MPI_DOUBLE,
-            cf.yPlus, 0, cf.comm, &reqs[6]);
-  MPI_Irecv(m.topRecv_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt), MPI_DOUBLE,
-            cf.yPlus, MPI_ANY_TAG, cf.comm, &reqs[7]);
-
-  if (cf.ndim == 3) {
-    // send and recieve back
-    MPI_Isend(m.backSend_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
-              MPI_DOUBLE, cf.zMinus, 0, cf.comm, &reqs[8]);
-    MPI_Irecv(m.backRecv_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
-              MPI_DOUBLE, cf.zMinus, MPI_ANY_TAG, cf.comm, &reqs[9]);
-
-    // send and recieve front
-    MPI_Isend(m.frontSend_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
-              MPI_DOUBLE, cf.zPlus, 0, cf.comm, &reqs[10]);
-    MPI_Irecv(m.frontRecv_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
-              MPI_DOUBLE, cf.zPlus, MPI_ANY_TAG, cf.comm, &reqs[11]);
-  }
-
   MPI_Waitall(wait_count, reqs, MPI_STATUSES_IGNORE);
 
   Kokkos::deep_copy(m.leftRecv, m.leftRecv_H);
   Kokkos::deep_copy(m.rightRecv, m.rightRecv_H);
-  Kokkos::deep_copy(m.bottomRecv, m.bottomRecv_H);
-  Kokkos::deep_copy(m.topRecv, m.topRecv_H);
-  if (cf.ndim == 3) {
-    Kokkos::deep_copy(m.backRecv, m.backRecv_H);
-    Kokkos::deep_copy(m.frontRecv, m.frontRecv_H);
-  }
-
   Kokkos::parallel_for(
       xPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
         deviceV(i, j, k, v) = m.leftRecv(i, j, k, v);
         deviceV(cf.ngi - cf.ng + i, j, k, v) = m.rightRecv(i, j, k, v);
       });
+
+///////////////////////////////////////////////
+// Halo exchange in y direction
+///////////////////////////////////////////////
+  Kokkos::deep_copy(m.bottomSend_H, m.bottomSend);
+  Kokkos::deep_copy(m.topSend_H, m.topSend);
+  Kokkos::parallel_for(
+      yPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
+        m.bottomSend(i, j, k, v) = deviceV(i, cf.ng + j, k, v);
+        m.topSend(i, j, k, v) = deviceV(i, j + cf.ncj, k, v);
+      });
+
+  // send and recieve bottom
+  MPI_Isend(m.bottomSend_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt),
+            MPI_DOUBLE, cf.yMinus, 0, cf.comm, &reqs[0]);
+  MPI_Irecv(m.bottomRecv_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt),
+            MPI_DOUBLE, cf.yMinus, MPI_ANY_TAG, cf.comm, &reqs[1]);
+
+  // send and recieve top
+  MPI_Isend(m.topSend_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt), MPI_DOUBLE,
+            cf.yPlus, 0, cf.comm, &reqs[2]);
+  MPI_Irecv(m.topRecv_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt), MPI_DOUBLE,
+            cf.yPlus, MPI_ANY_TAG, cf.comm, &reqs[3]);
+
+  MPI_Waitall(wait_count, reqs, MPI_STATUSES_IGNORE);
+
+  Kokkos::deep_copy(m.bottomRecv, m.bottomRecv_H);
+  Kokkos::deep_copy(m.topRecv, m.topRecv_H);
   Kokkos::parallel_for(
       yPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
         deviceV(i, j, k, v) = m.bottomRecv(i, j, k, v);
         deviceV(i, cf.ngj - cf.ng + j, k, v) = m.topRecv(i, j, k, v);
       });
+
+///////////////////////////////////////////////
+// Halo exchange in z direction
+///////////////////////////////////////////////
   if (cf.ndim == 3) {
+    Kokkos::deep_copy(m.backSend_H, m.backSend);
+    Kokkos::deep_copy(m.frontSend_H, m.frontSend);
+    Kokkos::parallel_for(
+        zPol,
+        KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
+          m.backSend(i, j, k, v) = deviceV(i, j, cf.ng + k, v);
+          m.frontSend(i, j, k, v) = deviceV(i, j, k + cf.nck, v);
+        });
+
+    // send and recieve back
+    MPI_Isend(m.backSend_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
+              MPI_DOUBLE, cf.zMinus, 0, cf.comm, &reqs[0]);
+    MPI_Irecv(m.backRecv_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
+              MPI_DOUBLE, cf.zMinus, MPI_ANY_TAG, cf.comm, &reqs[1]);
+
+    // send and recieve front
+    MPI_Isend(m.frontSend_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
+              MPI_DOUBLE, cf.zPlus, 0, cf.comm, &reqs[2]);
+    MPI_Irecv(m.frontRecv_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
+              MPI_DOUBLE, cf.zPlus, MPI_ANY_TAG, cf.comm, &reqs[3]);
+
+    MPI_Waitall(wait_count, reqs, MPI_STATUSES_IGNORE);
+
+    Kokkos::deep_copy(m.backRecv, m.backRecv_H);
+    Kokkos::deep_copy(m.frontRecv, m.frontRecv_H);
+
     Kokkos::parallel_for(
         zPol,
         KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
