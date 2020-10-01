@@ -553,31 +553,34 @@ void hdfWriter::readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD) {
 // Read Terrain data into grid array
 void hdfWriter::readTerrain(struct inputConfig cf, FS4D &gridD) {
 
-  hsize_t offset[2], gridCount[2], cellCount[2];
-  hsize_t gridDims[2], cellDims[2];
+  hsize_t offset[2], gridCount[2], gridDims[2];
   invertArray(2,offset,cf.subdomainOffset);
   invertArray(2,gridCount,cf.localGridDims);
-  invertArray(2,cellCount,cf.localCellDims);
   invertArray(2,gridDims,cf.globalGridDims);
-  invertArray(2,cellDims,cf.globalCellDims);
 
   // open restart file for reading
   hid_t fid;
   fid = openHDF5ForRead(cf.terrainName);
-  int idx;
+  int idx,ii,jj,kk;
   double h, dz;
+
+  printf("#### %d: %d, %d\n",cf.rank,cf.kStart,cf.nk);
 
   // read grid
   read_H5(fid, "Height", 2, gridDims, offset, gridCount, xdp);
   for (int i = 0; i < cf.ni; ++i) {
     for (int j = 0; j < cf.nj; ++j) {
       idx = cf.ni * j + i;
+      ii = cf.iStart + i;
+      jj = cf.jStart + j;
+
       h = xdp[idx];
-      dz = (cf.h-h)/cf.nck;
+      dz = (cf.h-h)/cf.glbl_nck;
       for (int k = 0; k < cf.nk; ++k) {
-        gridH(i, j, k, 0) = cf.tdx*i;
-        gridH(i, j, k, 1) = cf.tdy*j;
-        gridH(i, j, k, 2) = h + dz*k;
+        kk = cf.kStart + k;
+        gridH(i, j, k, 0) = cf.tdx*ii;
+        gridH(i, j, k, 1) = cf.tdy*jj;
+        gridH(i, j, k, 2) = h + dz*kk;
       }
     }
   }
