@@ -12,6 +12,7 @@ stride = [2,2,2]
 atts = ["Density","Density SF6"]
 
 fs = glob.glob('sol*.xmf')
+fs = sorted(fs)
 
 rmv = []
 
