@@ -16,6 +16,7 @@ restartName = "restart-000000.cgns"   --Restart File Name
 --Gas Properties
 R = 8.314462                          --Universal Gas Constant [J/(K*mol)]
 ns = 1                                --Number of Gas Species
+species_names={"Air"}
 gamma = {1.40}                        --Array of Species Ratio of Specific Heats
 M = {0.02897}                         --Array of Species Molar Masses [kg/mol]
 mu = {2.928e-5}
@@ -64,7 +65,7 @@ function g(i,j,k,v)
     if v==1 then return dy*j end
 end
 
-function f(i,j,k,v)
+function f(x,y,z,v)
     --[[
     
     Apply initial conditions:  this function is called for every cell (but not ghost cells) and for each flow variable.
@@ -84,8 +85,8 @@ function f(i,j,k,v)
     local ycenter = Ly/2 -- y coordinate of expansion center
     
     --find position and distance from expansion center
-    local xdist = math.abs(xcenter -( (dx/2)+dx*i ))         --X distance from center
-    local ydist = math.abs(ycenter -( (dy/2)+dy*j ))         --Y distance rom center
+    local xdist = math.abs(xcenter -( x ))         --X distance from center
+    local ydist = math.abs(ycenter -( y ))         --Y distance rom center
     local rdist = math.sqrt(xdist*xdist + ydist*ydist)   --Radial distance from center
 
     --Calcualte heat capacity of ambient air and hot air
