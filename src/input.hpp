@@ -5,7 +5,6 @@
 #include "Kokkos_Core.hpp"
 #include "kokkosTypes.hpp"
 #include "lua.hpp"
-#include "particle.hpp"
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -86,7 +85,6 @@ struct inputConfig {
   int bcL, bcR, bcB, bcT, bcH, bcF;
   double n_dh, n_coff, n_eta;
   int noise, n_nt;
-  int particle, p_np;
   int t;
   int grid;
   double h, tdx, tdy;
@@ -112,6 +110,5 @@ struct inputConfig executeConfiguration(struct commandArgs cargs);
 
 int loadInitialConditions(struct inputConfig cf,  FS4D &v, FS4D &g);
 int loadGrid(struct inputConfig cf, FS4D &v);
-int loadParticles(struct inputConfig cf, const FSP2D v);
 
 #endif

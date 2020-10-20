@@ -27,10 +27,6 @@ gen2d_func::gen2d_func(struct inputConfig &cf_) : rk_func(cf_) {
   if (cf.noise == 1) {
     noise = FS2D_I("noise", cf.ngi, cf.ngj); // Noise indicator array
   }
-  if (cf.particle == 1) {
-    particles = FSP2D("particles", cf.p_np); // 2D particle view
-    particlesH = Kokkos::create_mirror_view(particles);
-  }
 
   // Create and copy minimal configuration array for data needed
   // withing Kokkos kernels.
@@ -74,11 +70,6 @@ gen2d_func::gen2d_func(struct inputConfig &cf_) : rk_func(cf_) {
   timers["calcMatrics"] = fiestaTimer("Metric Calculations");
   if (cf.noise == 1) {
     timers["noise"] = fiestaTimer("Noise Removal");
-  }
-  if (cf.particle == 1) {
-    timers["padvect"] = fiestaTimer("Particle Advection");
-    timers["pwrite"] = fiestaTimer("Particle Write");
-    timers["psetup"] = fiestaTimer("Particle Setup");
   }
 
   ghostPol = policy_f({0, 0}, {cf.ngi, cf.ngj});
@@ -174,38 +165,8 @@ void gen2d_func::postStep() {
     Kokkos::fence();
     timers["noise"].accumulate();
   } // end noise
-
-#ifdef NOMPI
-  if (cf.particle == 1) {
-    // write particle data
-    if (cf.write_freq > 0) {
-      if ((cf.t) % cf.write_freq == 0) {
-        timers["pwrite"].reset();
-        Kokkos::deep_copy(particlesH, particles);
-        // writeParticles(cf,particlesH);
-        Kokkos::fence();
-        timers["pwrite"].accumulate();
-      }
-    } // end particle write
-
-    // execution policy for all cells including ghost cells
-    policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
-
-    // Calcualte Total Density and Pressure Fields
-    timers["calcSecond"].reset();
-    Kokkos::parallel_for(ghost_pol, calculateRhoPT2D(var, p, rho, T, cd));
-    Kokkos::fence();
-    timers["calcSecond"].accumulate();
-
-    // advect particles
-    timers["padvect"].reset();
-    Kokkos::parallel_for(
-        cf.p_np, advectParticles2D(var, rho, grid, particles, cf.dt, cf.ng));
-    Kokkos::fence();
-    timers["padvect"].accumulate();
-  }
-#endif
 }
+
 void gen2d_func::preSim() {
 
   // execution policy for all cells including ghost cells
@@ -349,40 +310,6 @@ void gen2d_func::preSim() {
 
   Kokkos::fence();
   timers["calcMetrics"].accumulate();
-
-  if (cf.particle == 1) {
-    timers["psetup"].reset();
-    Kokkos::View<particleStruct2D *>::HostMirror particlesH =
-        Kokkos::create_mirror_view(particles);
-
-    double ymax = 6.0;
-    double xmax = 2.0;
-    double dpx = xmax / ((double)(cf.p_np - 1));
-    double dpy = 9.0 / ((double)(cf.p_np - 1));
-    for (int p = 0; p < cf.p_np; ++p) {
-      particlesH(p).state = 1;
-      particlesH(p).x = 1.0;
-      particlesH(p).y = 0.5 + p * dpy;
-    }
-
-    // find initial cell id
-    policy_f grid_pol = policy_f({0, 0}, {cf.nci, cf.ncj});
-    for (int p = 0; p < cf.p_np; ++p) {
-      Kokkos::parallel_for(grid_pol,
-                           findInitialCell2D(grid, particles, p, cf.ng));
-    }
-    Kokkos::fence();
-    timers["psetup"].accumulate();
-
-    Kokkos::deep_copy(particles, particlesH);
-
-    if (cf.write_freq > 0) {
-      timers["pwrite"].reset();
-      Kokkos::deep_copy(particlesH, particles);
-      // writeParticles(cf,particlesH);
-      Kokkos::fence();
-      timers["pwrite"].accumulate();
-    } // end initial write
-  }
 }
+
 void gen2d_func::postSim() {}

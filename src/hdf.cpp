@@ -3,7 +3,6 @@
 #include "hdf5.h"
 #include "output.hpp"
 #include "rkfunction.hpp"
-#include "particle.hpp"
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -134,48 +133,6 @@ void write_xmf(string fname, string hname, double time, struct inputConfig &cf, 
     // End Field Variables
     fprintf(xmf, "   </Grid>\n");
 
-    //Particles
-    if (cf.particle == 1){
-      fprintf(xmf, "   <Grid Name=\"particles\" >\n");
-        fprintf(xmf, "     <Topology TopologyType=\"Polyvertex\" NumberOfElements=\"%d\"/>\n", np);
-      if (ndim == 2){
-        fprintf(xmf, "     <Geometry GeometryType=\"X_Y\">\n");
-      }else{
-        fprintf(xmf, "     <Geometry GeometryType=\"X_Y_Z\">\n");
-      }
-      for (int d=0; d<ndim; ++d){
-        path.str("");
-        path << hname << ":/Particles/Dim" << d;
-        writeDataItem(xmf, path.str(), 1, &np);
-      }
-      fprintf(xmf, "     </Geometry>\n");
-
-      fprintf(xmf, "     <Attribute Name=\"State\" " "AttributeType=\"Scalar\" Center=\"Node\">\n");
-      path.str("");
-      path << hname << ":/Particles/state";
-      writeDataItem(xmf, path.str(), 1, &np);
-      fprintf(xmf, "     </Attribute>\n");
- 
-      fprintf(xmf, "     <Attribute Name=\"u\" " "AttributeType=\"Scalar\" Center=\"Node\">\n");
-      path.str("");
-      path << hname << ":/Particles/xvel";
-      writeDataItem(xmf, path.str(), 1, &np);
-      fprintf(xmf, "     </Attribute>\n");
- 
-      fprintf(xmf, "     <Attribute Name=\"r\" " "AttributeType=\"Scalar\" Center=\"Node\">\n");
-      path.str("");
-      path << hname << ":/Particles/r";
-      writeDataItem(xmf, path.str(), 1, &np);
-      fprintf(xmf, "     </Attribute>\n");
-
-      fprintf(xmf, "     <Attribute Name=\"m\" " "AttributeType=\"Scalar\" Center=\"Node\">\n");
-      path.str("");
-      path << hname << ":/Particles/m";
-      writeDataItem(xmf, path.str(), 1, &np);
-      fprintf(xmf, "     </Attribute>\n");
-
-      fprintf(xmf, "   </Grid>\n");
-    }
     fprintf(xmf, " </Domain>\n");
     fprintf(xmf, "</Xdmf>\n");
     fclose(xmf);
@@ -258,10 +215,6 @@ hdfWriter::hdfWriter(struct inputConfig cf, rk_func *f) {
 
   vsp = (float *)malloc(cf.nci * cf.ncj * cf.nck * sizeof(float));
   vdp = (double *)malloc(cf.nci * cf.ncj * cf.nck * sizeof(double));
-
-  psp = (float*)malloc(cf.p_np*sizeof(float));
-  pdp = (double*)malloc(cf.p_np*sizeof(double));
-  pi = (int*)malloc(cf.p_np*sizeof(int));
 
   readV = (double *)malloc(cf.nci * cf.ncj * cf.nck * cf.nv * sizeof(double));
 
@@ -373,62 +326,7 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   }
   H5Gclose(group_id);
 
-  if (cf.particle == 1){
-
-    // get global particle count and offsets
-    int nParticles[cf.numProcs];
-    MPI_Allgather(&cf.p_np,1,MPI_INT,nParticles,1,MPI_INT,cf.comm);
-    hsize_t pOffset = 0;
-    for (int i=0; i<cf.rank; ++i)
-      pOffset += nParticles[i];
-    hsize_t globalPartDim =0;
-    for (int i=0; i<cf.numProcs; ++i)
-      globalPartDim += nParticles[i];
-    hsize_t localPartDims = cf.p_np;
-    
-    // temporary arrays for particle writing
-    float * partX = (float*)malloc(cf.p_np*sizeof(float));
-    int * partS = (int*)malloc(cf.p_np*sizeof(int));
-    Kokkos::View<particleStruct2D *>::HostMirror parH =
-        Kokkos::create_mirror_view(f->particles);
-    Kokkos::deep_copy(parH,f->particles);
-
-    // create particle group and write partivle data
-    group_id = H5Gcreate(file_id, "/Particles", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    {
-      string vname("Dim0");
-      for (int p=0; p<cf.p_np; ++p) partX[p] = parH(p).x;
-      write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
-
-      vname = string("Dim1");
-      for (int p=0; p<cf.p_np; ++p) partX[p] = parH(p).y;
-      write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
-
-      vname =string("state");
-      for (int p=0; p<cf.p_np; ++p) partS[p] = parH(p).state;
-      write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partS); 
-
-      vname =string("xvel");
-      for (int p=0; p<cf.p_np; ++p) partX[p] = parH(p).u;
-      write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
-
-      vname =string("yvel");
-      for (int p=0; p<cf.p_np; ++p) partX[p] = parH(p).v;
-      write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
-
-      vname =string("r");
-      for (int p=0; p<cf.p_np; ++p) partX[p] = parH(p).r;
-      write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
-
-      vname =string("m");
-      for (int p=0; p<cf.p_np; ++p) partX[p] = parH(p).m;
-      write_h5(group_id, vname, 1, &globalPartDim, &localPartDims, &pOffset, partX); 
-    }
-    H5Gclose(group_id);
-    write_xmf(xmfName.str(), hdfName.str(), time, cf, globalPartDim,f->varNames,f->varxNames);
-  } else {
-    write_xmf(xmfName.str(), hdfName.str(), time, cf, 0,f->varNames,f->varxNames);
-  }
+  write_xmf(xmfName.str(), hdfName.str(), time, cf, 0,f->varNames,f->varxNames);
 
   close_h5(file_id);
 }

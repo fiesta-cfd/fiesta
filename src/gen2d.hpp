@@ -8,7 +8,6 @@
 #include "advect.hpp"
 #include "flux.hpp"
 #include "metric.hpp"
-#include "particle.hpp"
 #include "presgrad.hpp"
 #include "secondary.hpp"
 #include "velocity.hpp"
@@ -33,8 +32,6 @@ public:
   FS2D_I noise; // Noise indicator array
   FS1D cd;      // Device configuration array
   FS4D metrics; // jacobian metrics
-  //    FSP2D particles;   // Particle array
-  //    FSP2DH particlesH; // Host particle array
 
 #ifndef NOMPI
   FS4D ls, lr, rs, rr, bs, br, ts, tr;

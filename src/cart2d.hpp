@@ -10,7 +10,6 @@
 #include "ceq.hpp"
 #include "flux.hpp"
 #include "noise.hpp"
-#include "particle.hpp"
 #include "presgrad.hpp"
 #include "secondary.hpp"
 #include "velocity.hpp"
@@ -39,6 +38,4 @@ public:
   FS4D stressy; // stress tensor on y faces
   FS3D gradRho; // Density Gradient array
   FS2D_I noise; // Noise indicator array
-  //    FSP2D particles;   // Particle array
-  //    FSP2DH particlesH; // Particle host array
 };

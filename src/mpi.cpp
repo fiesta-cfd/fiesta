@@ -84,10 +84,6 @@ void mpi_init(struct inputConfig &cf) {
   cf.subdomainOffset[0] = cf.iStart;
   cf.subdomainOffset[1] = cf.jStart;
   cf.subdomainOffset[2] = cf.kStart;
-
-  if (cf.particle == 1)
-    cf.p_np += cf.rank;
-
 }
 
 mpiBuffers::mpiBuffers(struct inputConfig cf) {

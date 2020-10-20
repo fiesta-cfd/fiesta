@@ -79,20 +79,6 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
            << c(cf.colorFlag, NON) << endl
            << endl;
 
-    // Generate Particles
-    if (cf.particle == 1) {
-      if (cf.rank == 0)
-        cout << c(cf.colorFlag, GRE) << "Generating Particles:" << c(cf.colorFlag, NON)
-             << endl;
-      f->timers["partTimer"].start();
-      loadParticles(cf, f->particles);
-      f->timers["partTimer"].stop();
-      if (cf.rank == 0)
-        cout << "    Generated in: " << c(cf.colorFlag, CYA) << f->timers["partTimer"].getf(cf.timeFormat)
-             << c(cf.colorFlag, NON) << endl
-             << endl;
-    }
-
     cf.writeTimer.start();
     // Write Initial Solution File
     if (cf.rank == 0)

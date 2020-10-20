@@ -3,7 +3,6 @@
 #include "Kokkos_Core.hpp"
 #include "debug.hpp"
 #include "kokkosTypes.hpp"
-#include "particle.hpp"
 #include "string.h"
 #include <getopt.h>
 #include <iostream>

@@ -4,7 +4,6 @@
 #include "Kokkos_Core.hpp"
 #include "kokkosTypes.hpp"
 #include "input.hpp"
-#include "particle.hpp"
 #include "rkfunction.hpp"
 #include "timer.hpp"
 #include <map>

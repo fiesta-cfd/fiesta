@@ -117,44 +117,6 @@ void serialVTKWriter::writeSolution(struct inputConfig cf, rk_func *mod,
   f.flush();
   f.close();
 
-  // if (cf.particles==1){
-  //    stringstream ss;
-  //    ss << "particle-" << setw(7) << setfill('0') << cf.t << ".vtk";
-  //    ofstream f;
-  //    //f.open("particle.vtk");
-  //    f.open(ss.str());
-  //    f << "# vtk DataFile Version 4.2" << endl;
-  //    f << "Test Particles" << endl;
-  //    f << "ASCII" << endl;
-  //    f << "DATASET POLYDATA" << endl;
-  //    f << "POINTS " << cf.p_np << " float" << endl;
-  //    for (int p=0; p<cf.p_np; ++p){
-  //        f << pH(p).x << " " << pH(p).y << " " << "0.0" << endl;
-  //    }
-  //    f << "VERTICES " << cf.p_np << " " << cf.p_np*2 <<endl;
-  //    for (int p=0; p<cf.p_np; ++p){
-  //        f << "1 " << p << endl;
-  //    }
-  //    f << "POINT_DATA " << cf.p_np << endl;
-  //    f << "SCALARS state float" << endl;
-  //    f << "LOOKUP_TABLE default" << endl;
-  //    for (int p=0; p<cf.p_np; ++p){
-  //        f << pH(p).state << endl;
-  //    }
-  //    f << "SCALARS ci float" << endl;
-  //    f << "LOOKUP_TABLE default" << endl;
-  //    for (int p=0; p<cf.p_np; ++p){
-  //        f << pH(p).ci << endl;
-  //    }
-  //    f << "SCALARS cj float" << endl;
-  //    f << "LOOKUP_TABLE default" << endl;
-  //    for (int p=0; p<cf.p_np; ++p){
-  //        f << pH(p).cj << endl;
-  //    }
-  //    f.flush();
-  //    f.close();
-  //}
-
   // if (cf.numProcs == 1){
   //    std::ofstream myfile;
   //    myfile.open("output.txt");

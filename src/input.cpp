@@ -2,7 +2,6 @@
 #include "Kokkos_Core.hpp"
 #include "debug.hpp"
 #include "kokkosTypes.hpp"
-#include "particle.hpp"
 #include "string.h"
 #include <getopt.h>
 #include <iostream>
@@ -102,7 +101,6 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   L.get("tstart",   cf.tstart,  0);
   L.get("time",     cf.time,    0.0);
   L.get("ceq",      cf.ceq,     0);
-  L.get("particle", cf.particle,0);
   L.get("noise",    cf.noise,   0);
   L.get("buoyancy", cf.gravity, 0);
   L.get("ndim",     cf.ndim,    2);
@@ -149,11 +147,6 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
     L.get("zPer",   cf.zPer,0);
     L.get("bcZmin", cf.bcH,0);
     L.get("bcZmaz", cf.bcF,0);
-  }
-  if (cf.particle == 1) {
-    L.get("p_np",cf.p_np);
-  } else {
-    cf.p_np = 0;
   }
   if (grid.compare("cartesian") == 0) {
     cf.grid = 0;
@@ -386,39 +379,6 @@ int loadGrid(struct inputConfig cf, FS4D &deviceV) {
     Kokkos::deep_copy(deviceV, hostV);
   }
 
-
-  return 0;
-}
-int loadParticles(struct inputConfig cf, const FSP2D deviceV) {
-
-  if (cf.particle == 1) {
-    FSP2DH particlesH = Kokkos::create_mirror_view(deviceV);
-
-    double z;
-    luaReader L(cf.inputFname);
-
-    for (int p = 0; p < cf.p_np; ++p) {
-      for (int v = 0; v < cf.ndim+2; ++v) {
-        z=L.call("p",2,p,v);
-
-        particlesH(p).state = 1;
-        particlesH(p).u = 0.0;
-        particlesH(p).v = 0.0;
-        if (v == 0)
-          particlesH(p).x = z;
-        if (v == 1)
-          particlesH(p).y = z;
-        if (v == 2)
-          particlesH(p).r = z;
-        if (v == 3)
-          particlesH(p).m = z;
-      }
-    }
-
-    L.close();
-
-    Kokkos::deep_copy(deviceV, particlesH);
-  }
 
   return 0;
 }

@@ -45,11 +45,6 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
     varxNames.push_back("Noise");
   }
 
-  if (cf.particle == 1) {
-    particles = FSP2D("particles", cf.p_np);         // Particle Array
-    particlesH = Kokkos::create_mirror_view(particles);
-  }
-
   assert(varNames.size() == cf.nvt);
 
   varxNames.push_back("X-Velocity");
@@ -104,12 +99,6 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
   if (cf.noise == 1) {
     timers["noise"] = fiestaTimer("Noise Removal");
   }
-  if (cf.particle == 1) {
-    timers["padvect"] = fiestaTimer("Particle Advection");
-    timers["pwrite"] = fiestaTimer("Particle Write");
-    timers["psetup"] = fiestaTimer("Particle Setup");
-  }
-
 };
 
 void cart2d_func::preStep() {}
@@ -178,143 +167,9 @@ void cart2d_func::postStep() {
     Kokkos::fence();
     timers["noise"].accumulate();
   } // end noise
-
-//#ifdef NOMPI
-  if (cf.particle == 1) {
-    // write particle data
-#ifdef NOMPI
-    if (cf.write_freq > 0) {
-      if ((cf.t) % cf.write_freq == 0) {
-        timers["pwrite"].reset();
-        Kokkos::deep_copy(particlesH, particles);
-        //        writeParticles(cf,particlesH);
-        stringstream ss;
-        ss << "particle-" << setw(7) << setfill('0') << cf.t << ".vtk";
-        ofstream f;
-        // f.open("particle.vtk");
-        f.open(ss.str());
-        f << "# vtk DataFile Version 4.2" << endl;
-        f << "Test Particles" << endl;
-        f << "ASCII" << endl;
-        f << "DATASET POLYDATA" << endl;
-        f << "POINTS " << cf.p_np << " float" << endl;
-        for (int p = 0; p < cf.p_np; ++p) {
-          f << particlesH(p).x << " " << particlesH(p).y << " "
-            << "0.0" << endl;
-        }
-        f << "VERTICES " << cf.p_np << " " << cf.p_np * 2 << endl;
-        for (int p = 0; p < cf.p_np; ++p) {
-          f << "1 " << p << endl;
-        }
-        f << "POINT_DATA " << cf.p_np << endl;
-        f << "SCALARS state float" << endl;
-        f << "LOOKUP_TABLE default" << endl;
-        for (int p = 0; p < cf.p_np; ++p) {
-          f << particlesH(p).state << endl;
-        }
-        f << "SCALARS ci float" << endl;
-        f << "LOOKUP_TABLE default" << endl;
-        for (int p = 0; p < cf.p_np; ++p) {
-          f << particlesH(p).ci << endl;
-        }
-        f << "SCALARS cj float" << endl;
-        f << "LOOKUP_TABLE default" << endl;
-        for (int p = 0; p < cf.p_np; ++p) {
-          f << particlesH(p).cj << endl;
-        }
-        f.flush();
-        f.close();
-
-        Kokkos::fence();
-        timers["pwrite"].accumulate();
-      }
-    } // end particle write
-#endif
-
-     // execution policy for all cells including ghost cells
-     policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
- 
-     // Calcualte Total Density and Pressure Fields
-     timers["calcSecond"].reset();
-     Kokkos::parallel_for(ghostPol, calculateRhoPT2D(var, p, rho, T, cd));
-     Kokkos::fence();
-     timers["calcSecond"].accumulate();
- 
-     // advect particles
-     timers["padvect"].reset();
-     Kokkos::parallel_for(
-         cf.p_np, advectParticles2D(var, rho, grid, particles, cf.dt, cf.ng));
-     Kokkos::fence();
-     timers["padvect"].accumulate();
-  }
-//#endif
 }
+
 void cart2d_func::preSim() {
-
-  if (cf.particle == 1) {
-    timers["psetup"].reset();
-
-    // find initial cell id
-    policy_f grid_pol = policy_f({0, 0}, {cf.nci, cf.ncj});
-    for (int p = 0; p < cf.p_np; ++p) {
-      Kokkos::parallel_for(grid_pol,
-                           findInitialCell2D(grid, particles, p, cf.ng));
-    }
-    Kokkos::fence();
-    timers["psetup"].accumulate();
-
-#ifdef NOMPI
-    Kokkos::View<particleStruct2D *>::HostMirror particlesH =
-        Kokkos::create_mirror_view(particles);
-    Kokkos::deep_copy(particlesH, particles);
-
-    // write particle data
-    if (cf.write_freq > 0) {
-      timers["pwrite"].reset();
-      Kokkos::deep_copy(particlesH, particles);
-      //   writeParticles(cf,particlesH);
-
-      stringstream ss;
-      ss << "particle-" << setw(7) << setfill('0') << cf.t << ".vtk";
-      ofstream f;
-      // f.open("particle.vtk");
-      f.open(ss.str());
-      f << "# vtk DataFile Version 4.2" << endl;
-      f << "Test Particles" << endl;
-      f << "ASCII" << endl;
-      f << "DATASET POLYDATA" << endl;
-      f << "POINTS " << cf.p_np << " float" << endl;
-      for (int p = 0; p < cf.p_np; ++p) {
-        f << particlesH(p).x << " " << particlesH(p).y << " "
-          << "0.0" << endl;
-      }
-      f << "VERTICES " << cf.p_np << " " << cf.p_np * 2 << endl;
-      for (int p = 0; p < cf.p_np; ++p) {
-        f << "1 " << p << endl;
-      }
-      f << "POINT_DATA " << cf.p_np << endl;
-      f << "SCALARS state float" << endl;
-      f << "LOOKUP_TABLE default" << endl;
-      for (int p = 0; p < cf.p_np; ++p) {
-        f << particlesH(p).state << endl;
-      }
-      f << "SCALARS ci float" << endl;
-      f << "LOOKUP_TABLE default" << endl;
-      for (int p = 0; p < cf.p_np; ++p) {
-        f << particlesH(p).ci << endl;
-      }
-      f << "SCALARS cj float" << endl;
-      f << "LOOKUP_TABLE default" << endl;
-      for (int p = 0; p < cf.p_np; ++p) {
-        f << particlesH(p).cj << endl;
-      }
-      f.flush();
-      f.close();
-
-      Kokkos::fence();
-    } // end initial write
-#endif
-  }
 }
 void cart2d_func::postSim() {}
 

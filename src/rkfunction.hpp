@@ -4,7 +4,6 @@
 #include "Kokkos_Core.hpp"
 #include "kokkosTypes.hpp"
 #include "input.hpp"
-#include "particle.hpp"
 #include "timer.hpp"
 #ifndef NOMPI
 #include "mpi.hpp"
@@ -33,8 +32,6 @@ public:
   FS4D dvar;
   FS4D tmp1;
   FS4D grid;
-  FSP2D particles;   // Particle array
-  FSP2DH particlesH; // Particle host array
 
   std::map<std::string, fiestaTimer> timers;
   policy_f ghostPol = policy_f({0, 0}, {1, 1});
