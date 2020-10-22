@@ -113,7 +113,7 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   L.get("bcXmin",   cf.bcL,     0);
   L.get("bcXmax",   cf.bcR,     0);
   L.get("bcYmin",   cf.bcB,     0);
-  L.get("bcYmac",   cf.bcT,     0);
+  L.get("bcYmax",   cf.bcT,     0);
   L.get("restart",  cf.restart, 0);
   L.get("out_freq",     cf.out_freq,    0);
   L.get("write_freq",   cf.write_freq,  0);
