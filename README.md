@@ -33,9 +33,9 @@ Configure with CMAKE
 ```
 cmake ../fiesta -DCUDA=on
 ```
-With no options, Fiesta will be built with serial CPU support.  Use '-DCUDA=on' for nvidia GPUs.  Use '-DOPENMP=on' for openMP support on CPUs.
+With no options, Fiesta will be built with serial CPU support.  Use `-DCUDA=on` for nvidia GPUs.  Use `-DOPENMP=on` for openMP support.
 
-If desired, specify an installation directory with '-DCMAKE_INSTALL_PREFIX=/path/to/install'.  If not specified, the executable will be built in the build directory.
+If desired, specify an installation directory with `-DCMAKE_INSTALL_PREFIX=/path/to/install`.
 
 Build the code:
 ```
@@ -52,10 +52,10 @@ Copy a sample input file to a scratch directory.
 ```
 cd /lustre/scratch3/turquoise/<moniker>
 mkdir fiesta-test && cd fiesta-test
-cp ~/fiesta-dev/fiesta/test/ideal_expansion_2D/fiesta.lua .
+cp ~/fiesta-dev/fiesta/test/idexp2d/fiesta.lua .
 ```
 
-Edit the 'fiesta.lua' file to change the number of mpi processes for 4 GPUs.  e.g.:
+Edit the 'fiesta.lua' file to specify a domain decomposition appropriate for 4 GPUs.  e.g.:
 ```
 procsx = 2
 procsy = 2
@@ -63,7 +63,7 @@ procsy = 2
 
 Then run the code with:
 ```
-mpirun -n 4 ~/fiesta-dev/build/fiesta fiesta.lua --kokkos-num-devices=4
+mpirun -n 4 ~/fiesta-dev/build/fiesta fiesta.lua --color --kokkos-num-devices=4
 ```
 
 ### Visualizing
