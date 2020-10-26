@@ -273,7 +273,7 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
 
 int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
 
-  int ii,jj,kk;
+  //int ii,jj,kk;
   double x,y,z;
   FS4DH hostV = Kokkos::create_mirror_view(deviceV);
   FS4DH hostG = Kokkos::create_mirror_view(deviceG);

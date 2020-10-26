@@ -37,14 +37,17 @@ struct copyExtraVars3D {
   }
 };
 struct calculateRhoPT2D {
+private:
   FS4D var;
   FS2D rho, p, T;
   FS1D cd;
 
-  calculateRhoPT2D(FS4D var_, FS2D p_, FS2D rho_, FS2D T_, FS1D cd_)
+public:
+  calculateRhoPT2D(const FS4D& var_, FS2D& p_, FS2D& rho_, FS2D& T_, const FS1D& cd_)
       : var(var_), p(p_), rho(rho_), T(T_), cd(cd_) {}
 
-  KOKKOS_INLINE_FUNCTION
+  //KOKKOS_INLINE_FUNCTION
+  __device__ inline
   void operator()(const int i, const int j) const {
 
     int ns = (int)cd(0);

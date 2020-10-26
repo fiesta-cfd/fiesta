@@ -40,7 +40,7 @@ void write_xmf(string fname, string hname, double time, struct inputConfig &cf, 
     int dims[cf.ndim];
     invertArray(cf.ndim,dims,cf.globalCellDims);
     int ndim = cf.ndim;
-    int nv = cf.nv;
+    //int nv = cf.nv;
     int nvt = cf.nvt;
 
     int gdims[ndim];
@@ -176,7 +176,7 @@ void write_h5(hid_t group_id, string dname, int ndim,
 
   // identifiers
   hid_t filespace, memspace, dset_id, plist_id, dtype_id;
-  herr_t status;
+  //herr_t status;
 
   // get type id
   dtype_id = getH5Type<S>();
@@ -193,14 +193,16 @@ void write_h5(hid_t group_id, string dname, int ndim,
 
   // select hyperslab in global filespace
   filespace = H5Dget_space(dset_id);
-  status = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, dims_local, NULL);
+  H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, dims_local, NULL);
+  //status = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, dims_local, NULL);
 
   // create property list for collective dataset write
   plist_id = H5Pcreate(H5P_DATASET_XFER);
   H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
 
   // write data
-  status = H5Dwrite(dset_id, dtype_id, memspace, filespace, plist_id, data);
+  H5Dwrite(dset_id, dtype_id, memspace, filespace, plist_id, data);
+  //status = H5Dwrite(dset_id, dtype_id, memspace, filespace, plist_id, data);
 
   // close sets, spaces and lists
   H5Dclose(dset_id);
@@ -335,7 +337,7 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
 void checkDataDimensions(hid_t filespace, int ndim, hsize_t* dims){
 
   int rank;
-  herr_t status;
+  //herr_t status;
   hsize_t dimsg[ndim];
 
   // get and check rank
@@ -346,7 +348,8 @@ void checkDataDimensions(hid_t filespace, int ndim, hsize_t* dims){
   }
 
   // get dimensions
-  status    = H5Sget_simple_extent_dims(filespace, dimsg, NULL);
+  H5Sget_simple_extent_dims(filespace, dimsg, NULL);
+  //status    = H5Sget_simple_extent_dims(filespace, dimsg, NULL);
 
   // check dimensions
   for (int d=0; d<ndim; ++d){
@@ -364,7 +367,7 @@ void read_H5(hid_t fid, string path, int ndim, hsize_t* dims, hsize_t* offset, h
 
   // identifiers
   hid_t dset_id, filespace, memspace, dtype_id;
-  herr_t status;
+  //herr_t status;
 
   // get hd5 datatype
   dtype_id = getH5Type<T>();
@@ -382,8 +385,10 @@ void read_H5(hid_t fid, string path, int ndim, hsize_t* dims, hsize_t* offset, h
   memspace =  H5Screate_simple(ndim, count, NULL);
 
   // create hyperslab and read data
-  status = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, count, NULL);
-  status = H5Dread(dset_id, dtype_id, memspace, filespace, H5P_DEFAULT, data);
+  H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, count, NULL);
+  H5Dread(dset_id, dtype_id, memspace, filespace, H5P_DEFAULT, data);
+  //status = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, count, NULL);
+  //status = H5Dread(dset_id, dtype_id, memspace, filespace, H5P_DEFAULT, data);
 
   // close identifiers
   H5Sclose(memspace);

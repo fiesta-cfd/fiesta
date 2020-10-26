@@ -246,6 +246,13 @@ void gen3d_func::preSim() {
       });
 
 #endif
+  int mngi = c.ngi;
+  int mngj = c.ngj;
+  int mngk = c.ngk;
+  int mnci = c.nci;
+  int mncj = c.ncj;
+  int mnck = c.nck;
+  int mng = c.ng;
 
   if (cf.xMinus < 0) {
     Kokkos::parallel_for(
@@ -253,7 +260,7 @@ void gen3d_func::preSim() {
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
           for (int m = 0; m < 3; ++m)
             for (int n = 0; n < 3; ++n)
-              mt(c.ng - i - 1, j, k, m, n) = mt(c.ng + i, j, k, m, n);
+              mt(mng - i - 1, j, k, m, n) = mt(mng + i, j, k, m, n);
         });
   }
   if (cf.xPlus < 0) {
@@ -262,7 +269,7 @@ void gen3d_func::preSim() {
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
           for (int m = 0; m < 3; ++m)
             for (int n = 0; n < 3; ++n)
-              mt(c.ngi - 1 - i, j, k, m, n) = mt(c.nci + i, j, k, m, n);
+              mt(mngi - 1 - i, j, k, m, n) = mt(mnci + i, j, k, m, n);
         });
   }
   if (cf.yMinus < 0) {
@@ -271,7 +278,7 @@ void gen3d_func::preSim() {
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
           for (int m = 0; m < 3; ++m)
             for (int n = 0; n < 3; ++n)
-              mt(i, c.ng - j - 1, k, m, n) = mt(i, c.ng + j, k, m, n);
+              mt(i, mng - j - 1, k, m, n) = mt(i, mng + j, k, m, n);
         });
   }
   if (cf.yPlus < 0) {
@@ -280,7 +287,7 @@ void gen3d_func::preSim() {
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
           for (int m = 0; m < 3; ++m)
             for (int n = 0; n < 3; ++n)
-              mt(i, c.ngj - 1 - j, k, m, n) = mt(i, c.ncj + j, k, m, n);
+              mt(i, mngj - 1 - j, k, m, n) = mt(i, mncj + j, k, m, n);
         });
   }
   if (cf.zMinus < 0) {
@@ -289,7 +296,7 @@ void gen3d_func::preSim() {
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
           for (int m = 0; m < 3; ++m)
             for (int n = 0; n < 3; ++n)
-              mt(i, j, c.ng - k - 1, m, n) = mt(i, j, c.ng + k, m, n);
+              mt(i, j, mng - k - 1, m, n) = mt(i, j, mng + k, m, n);
         });
   }
   if (cf.zPlus < 0) {
@@ -298,7 +305,7 @@ void gen3d_func::preSim() {
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
           for (int m = 0; m < 3; ++m)
             for (int n = 0; n < 3; ++n)
-              mt(i, j, c.ngk - 1 - k, m, n) = mt(i, j, c.nck + k, m, n);
+              mt(i, j, mngk - 1 - k, m, n) = mt(i, j, mnck + k, m, n);
         });
   }
 

@@ -146,14 +146,14 @@ void cart3d_func::compute() {
       policy_f3({cf.ng - 1, cf.ng - 1, cf.ng - 1},
                 {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
 
-  double maxS;
+  //double maxS;
 
-  double maxC;
-  double maxCh;
-  double maxC1;
-  double maxC2;
-  double maxC3;
-  double mu, alpha, beta, betae;
+  //double maxC;
+  //double maxCh;
+  //double maxC1;
+  //double maxC2;
+  //double maxC3;
+  //double mu, alpha, beta, betae;
 
   /**** WENO ****/
   timers["calcSecond"].reset();
