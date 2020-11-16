@@ -149,6 +149,11 @@ else()
 endif()
 
 # add built strings to source code
+if(CUDA)
+    target_compile_definitions(fiesta PRIVATE HAVE_CUDA)
+elseif(OPENMP)
+    target_compile_definitions(fiesta PRIVATE HAVE_OPENMP)
+endif()
 target_compile_definitions(fiesta PRIVATE FIESTA_VERSION="${FIESTA_VER}")
 target_compile_definitions(fiesta PRIVATE FIESTA_OPTIONS="${FIESTA_OPTS}")
 target_compile_definitions(fiesta PRIVATE FIESTA_BTIME="${BUILD_TIME}")
