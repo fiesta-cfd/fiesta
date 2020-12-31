@@ -25,23 +25,30 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
       {"version", no_argument, NULL, 'v'},
       {"color", optional_argument, NULL, 'c'},
       {"time-format", optional_argument, NULL, 't'},
-      {"kokkos-ndevices", optional_argument, NULL, 'n'},
-      {"kokkos-num-devices", optional_argument, NULL, 'n'},
-      {"kokkos-threads", optional_argument, NULL, 'n'},
-      {"kokkos-help", optional_argument, NULL, 'n'},
-      {"kokkos-numa", optional_argument, NULL, 'n'},
+      {"kokkos-ndevices", optional_argument, NULL, 'k'},
+      {"kokkos-num-devices", optional_argument, NULL, 'k'},
+      {"kokkos-threads", optional_argument, NULL, 'k'},
+      {"kokkos-help", optional_argument, NULL, 'k'},
+      {"kokkos-numa", optional_argument, NULL, 'k'},
       {NULL, 0, NULL, 0}};
 
   std::string copt;
   int c = 1;
   int opt_index;
-  while ((c = getopt_long(argc, argv, "", long_options, &opt_index)) != -1) {
+  while ((c = getopt_long(argc, argv, "vctn:", long_options, &opt_index)) != -1) {
     switch (c) {
     case 'c':
       if (optarg)
         copt = std::string(optarg);
       else
         copt = "auto";
+      break;
+    case 'n':
+#ifdef HAVE_CUDA
+      cArgs.numDevices = atoi(optarg);
+#elif HAVE_OPENMP
+      cArgs.numThreads = atoi(optarg);
+#endif
       break;
     case 'v':
       cArgs.versionFlag = 1;

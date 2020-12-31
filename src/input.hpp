@@ -102,6 +102,8 @@ struct commandArgs {
   int versionFlag;
   int colorFlag;
   int timeFormat;
+  int numThreads;
+  int numDevices;
   std::string fileName;
 };
 

@@ -18,6 +18,13 @@ using namespace std;
 struct inputConfig Fiesta::initialize(int argc, char **argv){
   struct commandArgs cArgs = getCommandlineOptions(argc, argv);
 
+  Kokkos::InitArguments kokkosArgs;
+#ifdef HAVE_CUDA
+  kokkosArgs.ndevices = cArgs.numDevices;
+#elif HAVE_OPENMP
+  kokkosArgs.num_threads = cArgs.numThreads;
+#endif
+
   // Initialize MPI and get temporary rank.
   int temp_rank = 0;
 #ifndef NOMPI
@@ -28,7 +35,8 @@ struct inputConfig Fiesta::initialize(int argc, char **argv){
   if (temp_rank == 0) printSplash(cArgs.colorFlag);
 
   // Initialize kokkos and set kokkos finalize as exit function.
-  Kokkos::initialize(argc, argv);
+  Kokkos::initialize(kokkosArgs);
+  // Kokkos::initialize(argc, argv);
 
   // Execute lua script and get input parameters
   struct inputConfig cf = executeConfiguration(cArgs);
