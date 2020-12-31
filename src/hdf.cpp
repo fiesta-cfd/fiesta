@@ -30,7 +30,7 @@ void writeDataItem(FILE* xmf, string path, int ndim, int* dims){
   else if (ndim == 2)
     fprintf(xmf, "       <DataItem Dimensions=\"%d %d\" NumberType=\"Float\" " "Precision=\"4\" Format=\"HDF\">\n",dims[0],dims[1]);
   else
-    fprintf(xmf, "       <DataItem Dimensions=\"%d %d %d\" NumberType=\"Float\" " "Precision=\"4\" Format=\"HDF\">\n",dims[0],dims[2],dims[2]);
+    fprintf(xmf, "       <DataItem Dimensions=\"%d %d %d\" NumberType=\"Float\" " "Precision=\"4\" Format=\"HDF\">\n",dims[0],dims[1],dims[2]);
   fprintf(xmf, "        %s\n", path.c_str());
   fprintf(xmf, "       </DataItem>\n");
 }
@@ -282,12 +282,12 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
 
   // create solution group and write solution data
   group_id = H5Gcreate(file_id, "/Solution", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  Kokkos::deep_copy(varH,f->var);
   for (int vn = 0; vn < cf.nvt; ++vn) {
     // Format Dataset Name
     stringstream vname;
     vname << "Variable" << setw(2) << setfill('0') << vn;
 
-    Kokkos::deep_copy(varH,f->var);
     int koffset;
     if (cf.ndim == 3) koffset = cf.ng;
     else koffset = 0;
@@ -304,12 +304,12 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
     }
     write_h5<T>(group_id, vname.str(), cf.ndim, cellDims, cellCount, offset, var); 
   }
+  Kokkos::deep_copy(varxH,f->varx);
   for (int vn = 0; vn < f->varxNames.size(); ++vn) {
     // Format Dataset Name
     stringstream vname;
     vname << "Variable" << setw(2) << setfill('0') << vn+cf.nvt;
 
-    Kokkos::deep_copy(varxH,f->varx);
     int koffset;
     if (cf.ndim == 3) koffset = cf.ng;
     else koffset = 0;

@@ -46,8 +46,7 @@ public:
   calculateRhoPT2D(const FS4D& var_, FS2D& p_, FS2D& rho_, FS2D& T_, const FS1D& cd_)
       : var(var_), p(p_), rho(rho_), T(T_), cd(cd_) {}
 
-  //KOKKOS_INLINE_FUNCTION
-  __device__ inline
+  KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j) const {
 
     int ns = (int)cd(0);
