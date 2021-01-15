@@ -25,19 +25,19 @@ each rank will not be equal.
 ## Problem Duration
 The duration of execution is controlled by the number of time steps set
 with the parameter `nt` (line 29).  `nt` should be less than 4000.  Larger
-values will result in physically meaningless solutions due to boundary
+values will result in unrealistic solutions due to boundary
 interactions.
 
 There are two halo exchanges per time step.
 
 ## Input/Output
 
-Solution files are written in an hdf5 format with a corresponding xmf file used
+Solution files are written in hdf5 format with a corresponding xmf file used
 for visualization software.  The hdf5 writer uses parallel, contiguous
 (non-chunked) hdf5 write operations.
 
 Solution write frequency is controlled by `write_freq`.  Each solution file for this
-problem are approximately 16 GB.
+problem are approximately 53 GB.
 
 ## Compiling Fiesta
 A compiler and mpi implementation is required.  Cuda is required for running the
@@ -54,10 +54,10 @@ openmpi/3.1.6
 cuda/10.2
 hdf5-parallel/1.8.16
 
-Configure the code with:
+Create a build directory somewhere and configure the code with:
 
 ```
-cmake /path/to/source/fiesta -DCUDA=on
+cmake /path/to/fiesta/ -DCUDA=on
 ```
 
 Omit `-DCUDA=on` for cpu only code.
