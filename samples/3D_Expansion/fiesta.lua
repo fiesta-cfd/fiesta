@@ -1,17 +1,18 @@
 --
--- 2D Ideal Expansion
+-- 3D Ideal Expansion
 
-title = "2D Idealized Expansion"
+title = "3D Idealized Expansion"
 
---Restart and Output Options
-out_freq = 0                          --Screen Output Interval
-restart_freq = 0                      --Restart Write Interval
-write_freq = 100                      --Solution Write Interval
+--Output Options
+write_freq = 500                      --Solution Write Interval
 stat_freq = 100
+
+--Restart Options
+restart_freq = 0                      --Restart Write Interval
 restart = 0                           --Whether or not to use restart file
 time = 0.0                            --Start time of simulation
 tstart = 0                            --Start time index of simulation
-restartName = "restart-000000.cgns"   --Restart File Name
+restartName = "restart-000000.h5"   --Restart File Name
 
 --Gas Properties
 R = 8.314462                          --Universal Gas Constant [J/(K*mol)]
@@ -26,7 +27,7 @@ grid="cartesian"
 buoyancy = 0
 
 --Time
-nt = 500                              --Time Step at which to end simulation
+nt = 3000                             --Time Step at which to end simulation
 dt = 1e-6                             --Time Step Size [s]
 
 --User Parameters
@@ -36,9 +37,9 @@ Lz = 10.0
 
 --Number of cells
 ndim = 3
-ni = 150            --Simulation size in x direction
-nj = 150            --Simulation Size in y direction
-nk = 150
+ni = 1000           --Simulation size in x direction
+nj = 1000           --Simulation Size in y direction
+nk = 1000
 
 --Cell Sizes
 dx = Lx/ni
@@ -46,9 +47,9 @@ dy = Ly/nj
 dz = Lz/nk
 
 --MPI Processors
-procsx = 1
-procsy = 1
-procsz = 1
+procsx = 4
+procsy = 4
+procsz = 4
 
 --Boundary Conditions (0: Freeflow, 1: Reflective)
 bcXmin = 1
