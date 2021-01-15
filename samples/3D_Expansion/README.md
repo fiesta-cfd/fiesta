@@ -24,7 +24,7 @@ each rank will not be equal.
 
 ## Problem Duration
 The duration of execution is controlled by the number of time steps set
-with the parameter `nt` (line 29).  `nt` should be less than 4000.  Larger
+with the parameter `nt` (line 29).  `nt` should be less than 40,000.  Larger
 values will result in unrealistic solutions due to boundary
 interactions.
 
