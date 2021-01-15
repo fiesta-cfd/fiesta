@@ -27,8 +27,8 @@ grid="cartesian"
 buoyancy = 0
 
 --Time
-nt = 3000                             --Time Step at which to end simulation
-dt = 1e-6                             --Time Step Size [s]
+nt = 10000                             --Time Step at which to end simulation
+dt = 1e-7                             --Time Step Size [s]
 
 --User Parameters
 Lx = 10.0
