@@ -9,8 +9,9 @@ of 300 Kelvin and a density of 1 kg/m^3.
 ## Problem discretization
 The computational domain is a cube 10 meters on a side.  This cube is
 discretized into 1000 computational cells in each direction for a total of
-1X10^9 cells.  For this problem, the data structures in FIESTA require approximately 1.5 GB of memory per
-1X10^6 cells, so the minimum memory requirements are 1000 GB.
+1X10^9 cells.  For this problem, the data structures in FIESTA require
+approximately 1.5 GB of memory per 1X10^6 cells, so the minimum memory
+requirements are 1000 GB.
 
 The MPI decomposition is controlled by the parameters `procsx`, `procsy`, and
 `procsz` (Lined 44-46 in fiesta.lua).  The defaults for this problem are 4x4x4
@@ -28,6 +29,9 @@ with the parameter `nt` (line 29).  `nt` should be less than 40,000.  Larger
 values will result in unrealistic solutions due to boundary
 interactions.
 
+On 16nodes/64gpus (NVIDIA Tesla P100), 40,000 timesteps takes just under four
+hours wall time.
+
 There are two halo exchanges per time step.
 
 ## Input/Output
@@ -36,8 +40,11 @@ Solution files are written in hdf5 format with a corresponding xmf file used
 for visualization software.  The hdf5 writer uses parallel, contiguous
 (non-chunked) hdf5 write operations.
 
-Solution write frequency is controlled by `write_freq`.  Each solution file for this
-problem are approximately 53 GB.
+Solution write frequency is controlled by `write_freq`.  Each solution file for
+this problem are approximately 53 GB.
+
+The repository includes a sample logfile from running this problem,
+`slurm-fiesta.log`.  Comparisons can be made to this file to check correctness.
 
 ## Compiling Fiesta
 A compiler and mpi implementation is required.  Cuda is required for running the
