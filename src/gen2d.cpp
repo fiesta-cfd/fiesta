@@ -2,7 +2,6 @@
 #include <cassert>
 
 gen2d_func::gen2d_func(struct inputConfig &cf_) : rk_func(cf_) {
-
   // Allocate all device variables here
   grid    = FS4D("grid",    cf.ni,  cf.nj,  cf.nk, 3);       // Grid Coords
   metrics = FS4D("metrics", cf.ngi, cf.ngj, 2, 2);           // Metric Tensor
@@ -67,7 +66,9 @@ gen2d_func::gen2d_func(struct inputConfig &cf_) : rk_func(cf_) {
   timers["resWrite"] = fiestaTimer("Restart Write Time");
   timers["statCheck"] = fiestaTimer("Status Check");
   timers["rk"] = fiestaTimer("Runge Stage Update");
-  timers["calcMatrics"] = fiestaTimer("Metric Calculations");
+  timers["halo"] = fiestaTimer("Halo Exchanges");
+  timers["bc"] = fiestaTimer("Boundary Conditions");
+  timers["calcMetrics"] = fiestaTimer("Metric Calculations");
   if (cf.noise == 1) {
     timers["noise"] = fiestaTimer("Noise Removal");
   }

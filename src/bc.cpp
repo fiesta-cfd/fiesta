@@ -160,58 +160,63 @@ struct bc_zPer {
   }
 };
 
-void applyBCs(struct inputConfig cf, FS4D &u) {
+void applyBCs(struct inputConfig cf, class rk_func *f) {
 
   typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_bl;
   typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_bl4;
 
 #ifndef NOMPI
-  haloExchange(cf, u, *(cf.m));
+  f->timers["halo"].reset();
+  haloExchange(cf, f->var, *(cf.m));
+  f->timers["halo"].accumulate();
+  f->timers["bc"].reset();
 #else
+  f->timers["bc"].reset();
   if (cf.xPer == 1)
     Kokkos::parallel_for(
         policy_bl4({0, 0, 0, 0}, {cf.nci, cf.ngj, cf.ngk, cf.nvt}),
-        bc_xPer(cf.ng, cf.nci, u));
+        bc_xPer(cf.ng, cf.nci, f->var));
   if (cf.yPer == 1)
     Kokkos::parallel_for(
         policy_bl4({0, 0, 0, 0}, {cf.ngi, cf.ncj, cf.ngk, cf.nvt}),
-        bc_yPer(cf.ng, cf.ncj, u));
+        bc_yPer(cf.ng, cf.ncj, f->var));
   if (cf.ndim == 3 && cf.zPer == 1)
     Kokkos::parallel_for(
         policy_bl4({0, 0, 0, 0}, {cf.ngi, cf.ngj, cf.nck, cf.nvt}),
-        bc_zPer(cf.ng, cf.nck, u));
+        bc_zPer(cf.ng, cf.nck, f->var));
 
 #endif
 
   if (cf.xMinus < 0) {
     Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngj, cf.ngk, cf.nvt}),
-                         bc_L(cf.ng, cf.ng, cf.bcL, u));
+                         bc_L(cf.ng, cf.ng, cf.bcL, f->var));
   }
 
   if (cf.xPlus < 0) {
     Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngj, cf.ngk, cf.nvt}),
-                         bc_R(cf.ng + cf.nci, cf.ng, cf.bcR, u));
+                         bc_R(cf.ng + cf.nci, cf.ng, cf.bcR, f->var));
   }
 
   if (cf.yMinus < 0) {
     Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngi, cf.ngk, cf.nvt}),
-                         bc_B(cf.ng, cf.ng, cf.bcB, u));
+                         bc_B(cf.ng, cf.ng, cf.bcB, f->var));
   }
 
   if (cf.yPlus < 0) {
     Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngi, cf.ngk, cf.nvt}),
-                         bc_T(cf.ng + cf.ncj, cf.ng, cf.bcT, u));
+                         bc_T(cf.ng + cf.ncj, cf.ng, cf.bcT, f->var));
   }
 
   if (cf.ndim == 3) {
     if (cf.zMinus < 0) {
       Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngi, cf.ngj, cf.nvt}),
-                           bc_H(cf.ng, cf.ng, cf.bcH, u));
+                           bc_H(cf.ng, cf.ng, cf.bcH, f->var));
     }
 
     if (cf.zPlus < 0) {
       Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngi, cf.ngj, cf.nvt}),
-                           bc_F(cf.ng + cf.nck, cf.ng, cf.bcF, u));
+                           bc_F(cf.ng + cf.nck, cf.ng, cf.bcF, f->var));
     }
   }
+  f->timers["bc"].accumulate();
 }

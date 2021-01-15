@@ -85,6 +85,8 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
   timers["resWrite"] = fiestaTimer("Restart Write Time");
   timers["statCheck"] = fiestaTimer("Status Check");
   timers["rk"] = fiestaTimer("Runge Stage Update");
+  timers["halo"] = fiestaTimer("Halo Exchanges");
+  timers["bc"] = fiestaTimer("Boundary Conditions");
   if (cf.gravity == 1) {
     timers["gravity"] = fiestaTimer("Gravity Term");
   }

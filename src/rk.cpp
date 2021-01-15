@@ -9,7 +9,7 @@
 void rkAdvance(struct inputConfig &cf, class rk_func *f){
   typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_1;
   // apply boundary conditions
-  applyBCs(cf, f->var);
+  applyBCs(cf, f);
 
   // First Stage Compute
   f->compute();
@@ -36,7 +36,7 @@ void rkAdvance(struct inputConfig &cf, class rk_func *f){
   f->timers["rk"].accumulate();
 
   // apply boundary conditions
-  applyBCs(cf, f->var);
+  applyBCs(cf, f);
 
   // Second stage compute
   f->compute();

@@ -5,4 +5,4 @@
 #include "mpi.hpp"
 #endif
 
-void applyBCs(struct inputConfig cf, FS4D &u);
+void applyBCs(struct inputConfig cf, class rk_func *f);
