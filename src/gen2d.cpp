@@ -179,7 +179,13 @@ void gen2d_func::preSim() {
   Kokkos::parallel_for(cell_pol, computeMetrics2D(metrics, grid));
 
   FS4D &mt = metrics;
-  inputConfig &c = cf;
+
+  int mng = cf.ng;
+  int mngi = cf.ngi;
+  int mngj = cf.ngj;
+  int mnci = cf.nci;
+  int mncj = cf.ncj;
+
 #ifndef NOMPI
   // mpi exchange of metrics
   ls = Kokkos::View<double ****, FS_LAYOUT>("leftSend", cf.ng, cf.ngj, 2, 2);
@@ -214,13 +220,13 @@ void gen2d_func::preSim() {
 
   Kokkos::parallel_for(
       xPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int l) {
-        lsR(i, j, k, l) = mt(cf.ng + i, j, k, l);
-        rsR(i, j, k, l) = mt(cf.nci + i, j, k, l);
+        lsR(i, j, k, l) = mt(mng + i, j, k, l);
+        rsR(i, j, k, l) = mt(mnci + i, j, k, l);
       });
   Kokkos::parallel_for(
       yPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int l) {
-        bsR(i, j, k, l) = mt(i, cf.ng + j, k, l);
-        tsR(i, j, k, l) = mt(i, cf.ncj + j, k, l);
+        bsR(i, j, k, l) = mt(i, mng + j, k, l);
+        tsR(i, j, k, l) = mt(i, mncj + j, k, l);
       });
   Kokkos::deep_copy(lsH, ls);
   Kokkos::deep_copy(rsH, rs);
@@ -259,53 +265,53 @@ void gen2d_func::preSim() {
   Kokkos::parallel_for(
       xPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int l) {
         mt(i, j, k, l) = lrR(i, j, k, l);
-        mt(cf.ngi - cf.ng + i, j, k, l) = rrR(i, j, k, l);
+        mt(mngi - mng + i, j, k, l) = rrR(i, j, k, l);
       });
   Kokkos::parallel_for(
       yPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int l) {
         mt(i, j, k, l) = brR(i, j, k, l);
-        mt(i, cf.ngj - cf.ng + j, k, l) = trR(i, j, k, l);
+        mt(i, mngj - mng + j, k, l) = trR(i, j, k, l);
       });
 #endif
 
   if (cf.yMinus < 0) {
     Kokkos::parallel_for(
-        "metricbcn", policy_f({0, 0}, {cf.ng, cf.ngi}),
+        "metricbcn", policy_f({0, 0}, {mng, mngi}),
         KOKKOS_LAMBDA(const int g, const int i) {
-          mt(i, c.ng - g - 1, 0, 0) = mt(i, c.ng + g, 0, 0);
-          mt(i, c.ng - g - 1, 0, 1) = mt(i, c.ng + g, 0, 1);
-          mt(i, c.ng - g - 1, 1, 0) = mt(i, c.ng + g, 1, 0);
-          mt(i, c.ng - g - 1, 1, 1) = mt(i, c.ng + g, 1, 1);
+          mt(i, mng - g - 1, 0, 0) = mt(i, mng + g, 0, 0);
+          mt(i, mng - g - 1, 0, 1) = mt(i, mng + g, 0, 1);
+          mt(i, mng - g - 1, 1, 0) = mt(i, mng + g, 1, 0);
+          mt(i, mng - g - 1, 1, 1) = mt(i, mng + g, 1, 1);
         });
   }
   if (cf.yPlus < 0) {
     Kokkos::parallel_for(
-        "metricbct", policy_f({0, 0}, {cf.ng, cf.ngi}),
+        "metricbct", policy_f({0, 0}, {mng, mngi}),
         KOKKOS_LAMBDA(const int g, const int i) {
-          mt(i, c.ngj - 1 - g, 0, 0) = mt(i, c.ncj + g, 0, 0);
-          mt(i, c.ngj - 1 - g, 0, 1) = mt(i, c.ncj + g, 0, 1);
-          mt(i, c.ngj - 1 - g, 1, 0) = mt(i, c.ncj + g, 1, 0);
-          mt(i, c.ngj - 1 - g, 1, 1) = mt(i, c.ncj + g, 1, 1);
+          mt(i, mngj - 1 - g, 0, 0) = mt(i, mncj + g, 0, 0);
+          mt(i, mngj - 1 - g, 0, 1) = mt(i, mncj + g, 0, 1);
+          mt(i, mngj - 1 - g, 1, 0) = mt(i, mncj + g, 1, 0);
+          mt(i, mngj - 1 - g, 1, 1) = mt(i, mncj + g, 1, 1);
         });
   }
   if (cf.xMinus < 0) {
     Kokkos::parallel_for(
-        "metricbcl", policy_f({0, 0}, {cf.ng, cf.ngj}),
+        "metricbcl", policy_f({0, 0}, {mng, mngj}),
         KOKKOS_LAMBDA(const int g, const int j) {
-          mt(c.ng - g - 1, j, 0, 0) = mt(c.ng + g, j, 0, 0);
-          mt(c.ng - g - 1, j, 0, 1) = mt(c.ng + g, j, 0, 1);
-          mt(c.ng - g - 1, j, 1, 0) = mt(c.ng + g, j, 1, 0);
-          mt(c.ng - g - 1, j, 1, 1) = mt(c.ng + g, j, 1, 1);
+          mt(mng - g - 1, j, 0, 0) = mt(mng + g, j, 0, 0);
+          mt(mng - g - 1, j, 0, 1) = mt(mng + g, j, 0, 1);
+          mt(mng - g - 1, j, 1, 0) = mt(mng + g, j, 1, 0);
+          mt(mng - g - 1, j, 1, 1) = mt(mng + g, j, 1, 1);
         });
   }
   if (cf.xPlus < 0) {
     Kokkos::parallel_for(
-        "metricbcr", policy_f({0, 0}, {cf.ng, cf.ngj}),
+        "metricbcr", policy_f({0, 0}, {mng, mngj}),
         KOKKOS_LAMBDA(const int g, const int j) {
-          mt(c.ngi - 1 - g, j, 0, 0) = mt(c.nci + g, j, 0, 0);
-          mt(c.ngi - 1 - g, j, 0, 1) = mt(c.nci + g, j, 0, 1);
-          mt(c.ngi - 1 - g, j, 1, 0) = mt(c.nci + g, j, 1, 0);
-          mt(c.ngi - 1 - g, j, 1, 1) = mt(c.nci + g, j, 1, 1);
+          mt(mngi - 1 - g, j, 0, 0) = mt(mnci + g, j, 0, 0);
+          mt(mngi - 1 - g, j, 0, 1) = mt(mnci + g, j, 0, 1);
+          mt(mngi - 1 - g, j, 1, 0) = mt(mnci + g, j, 1, 0);
+          mt(mngi - 1 - g, j, 1, 1) = mt(mnci + g, j, 1, 1);
         });
   }
 

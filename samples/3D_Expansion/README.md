@@ -29,8 +29,8 @@ with the parameter `nt` (line 29).  `nt` should be less than 40,000.  Larger
 values will result in unrealistic solutions due to boundary
 interactions.
 
-On 16nodes/64gpus (NVIDIA Tesla P100), 40,000 timesteps takes just under four
-hours wall time.
+On 16nodes/64gpus (NVIDIA Tesla P100), 40,000 timesteps takes about 2.5 hours
+of wall time hours wall time.
 
 There are two halo exchanges per time step.
 
