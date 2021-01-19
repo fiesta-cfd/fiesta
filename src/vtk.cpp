@@ -38,7 +38,7 @@ void serialVTKWriter::writeSolution(struct inputConfig cf, rk_func *mod,
   Kokkos::deep_copy(gridH, mod->grid);
 
   stringstream ss;
-  ss << "solution-" << setw(7) << setfill('0') << tdx << ".vtk";
+  ss cv.pathName << "/" << "solution-" << setw(7) << setfill('0') << tdx << ".vtk";
   string fsname = ss.str();
 
   if (cf.rank == 0) {

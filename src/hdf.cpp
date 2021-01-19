@@ -245,8 +245,8 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   // format hdf5 and xdmf filenames
   stringstream baseName, xmfName, hdfName;
   baseName << name << "-" << setw(pad) << setfill('0') << tdx;
-  hdfName << baseName.str() << ".h5";
-  xmfName << baseName.str() << ".xmf";
+  hdfName << cf.pathName << "/" << baseName.str() << ".h5";
+  xmfName << cf.pathName << "/" << baseName.str() << ".xmf";
 
 
   // identifiers

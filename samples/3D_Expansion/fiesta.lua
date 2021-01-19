@@ -4,11 +4,11 @@
 title = "3D Idealized Expansion"
 
 --Output Options
+--pathName = "/users/beromer/scratch/3D_Test"  --Path where hdf, xmf and vtk solution files will be written
 write_freq = 500                      --Solution Write Interval
 stat_freq = 100
 
 --Restart Options
-restart_freq = 0                      --Restart Write Interval
 restart = 0                           --Whether or not to use restart file
 time = 0.0                            --Start time of simulation
 tstart = 0                            --Start time index of simulation

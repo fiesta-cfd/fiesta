@@ -9,6 +9,8 @@
 #include <regex>
 #include "luaReader.hpp"
 #include "hdf.hpp"
+#include <sys/types.h>
+#include <sys/stat.h>
 
 struct commandArgs getCommandlineOptions(int argc, char **argv){
 
@@ -128,6 +130,17 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   L.get("stat_freq",    cf.stat_freq,   0);
   L.get("restartName",  cf.restartName, "restart-0000000.h5");
   L.get("terrainName", cf.terrainName, "terrain.h5");
+  L.get("pathName",     cf.pathName, ".");
+
+  // Check if pathName is accessable
+  struct stat st;
+  if(stat(cf.pathName.c_str(),&st) != 0){
+    printf("Cannot access: %s\n",cf.pathName.c_str());
+    exit(EXIT_FAILURE);
+  }else if(st.st_mode & S_IFDIR == 0){
+    printf("Cannot access: %s\n",cf.pathName.c_str());
+    exit(EXIT_FAILURE);
+  }
 
   std::string scheme, grid;
   L.get("scheme", scheme,"weno5");

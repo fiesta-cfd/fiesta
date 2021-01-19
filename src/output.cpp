@@ -94,6 +94,7 @@ if (cf.rank == 0){
 
   // Output Frequencies
   cout << c(cFlag, GRE) << "Output:" << c(cFlag, NON) << endl;
+  cout   << "    Path: " << c(cFlag,BLU) << cf.pathName << c(cFlag,NON) << endl;
   if (cf.out_freq > 0)
     cout << setw(31) << left
          << "    Timestep output frequency: " << c(cFlag, CYA) << right

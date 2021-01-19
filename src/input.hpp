@@ -78,6 +78,7 @@ struct inputConfig {
   int xPer, yPer, zPer;
   int restart;
   std::string restartName;
+  std::string pathName;
   int tstart, tend;
   double time;
   int ceq,st;
