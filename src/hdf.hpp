@@ -10,8 +10,8 @@ class hdfWriter : public writer {
 public:
   hdfWriter(struct inputConfig, rk_func *f);
   ~hdfWriter();
-  void writeGrid(struct inputConfig cf, const FS4D gridD, const char *fname);
-  void writeSPGrid(struct inputConfig cf, const FS4D gridD, const char *fname);
+  //void writeGrid(struct inputConfig cf, const FS4D gridD, const char *fname);
+  //void writeSPGrid(struct inputConfig cf, const FS4D gridD, const char *fname);
 
   void writeSolution(struct inputConfig cf, rk_func *f, int tdx, double time);
   void writeRestart(struct inputConfig cf, rk_func *f, int tdx, double time);

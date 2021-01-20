@@ -185,7 +185,7 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
   if (cf.ndim == 2) {
     policy_f cell_pol =
         policy_f({cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
-    for (int v = 0; v < f->varxNames.size(); ++v) {
+    for (size_t v = 0; v < f->varxNames.size(); ++v) {
       Kokkos::parallel_reduce(cell_pol, maxVarFunctor2d(f->varx, v),
                               Kokkos::Max<double>(max[v]));
       Kokkos::parallel_reduce(cell_pol, minVarFunctor2d(f->varx, v),
@@ -199,7 +199,7 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
   } else {
     policy_f3 cell_pol = policy_f3({cf.ng,      cf.ng,          cf.ng},
                                {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk-cf.ng});
-    for (int v = 0; v < f->varxNames.size(); ++v) {
+    for (size_t v = 0; v < f->varxNames.size(); ++v) {
       Kokkos::parallel_reduce(cell_pol, maxVarFunctor3d(f->varx, v),
                               Kokkos::Max<double>(max[v]));
       Kokkos::parallel_reduce(cell_pol, minVarFunctor3d(f->varx, v),
@@ -214,7 +214,7 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
   if (cf.rank == 0) {
 
     // Check for nans and infs and print table
-    for (int v = 0; v < f->varxNames.size(); ++v) {
+    for (size_t v = 0; v < f->varxNames.size(); ++v) {
       stringstream ss, smax, smin;
 
       vname = f->varxNames[v];
