@@ -143,13 +143,22 @@ void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m) {
   int wait_count = 4;
   MPI_Request reqs[wait_count];
 
+
+  int mngi = cf.ngi;
+  int mngj = cf.ngj;
+  int mngk = cf.ngk;
+  int mnci = cf.nci;
+  int mncj = cf.ncj;
+  int mnck = cf.nck;
+  int mng = cf.ng;
+
 ///////////////////////////////////////////////
 // Halo exchange in x direction
 ///////////////////////////////////////////////
   Kokkos::parallel_for(
       xPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
-        m.leftSend(i, j, k, v) = deviceV(cf.ng + i, j, k, v);
-        m.rightSend(i, j, k, v) = deviceV(i + cf.nci, j, k, v);
+        m.leftSend(i, j, k, v) = deviceV(mng + i, j, k, v);
+        m.rightSend(i, j, k, v) = deviceV(i + mnci, j, k, v);
       });
   Kokkos::deep_copy(m.leftSend_H, m.leftSend);
   Kokkos::deep_copy(m.rightSend_H, m.rightSend);
@@ -173,7 +182,7 @@ void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m) {
   Kokkos::parallel_for(
       xPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
         deviceV(i, j, k, v) = m.leftRecv(i, j, k, v);
-        deviceV(cf.ngi - cf.ng + i, j, k, v) = m.rightRecv(i, j, k, v);
+        deviceV(mngi - mng + i, j, k, v) = m.rightRecv(i, j, k, v);
       });
 
 ///////////////////////////////////////////////
@@ -181,8 +190,8 @@ void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m) {
 ///////////////////////////////////////////////
   Kokkos::parallel_for(
       yPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
-        m.bottomSend(i, j, k, v) = deviceV(i, cf.ng + j, k, v);
-        m.topSend(i, j, k, v) = deviceV(i, j + cf.ncj, k, v);
+        m.bottomSend(i, j, k, v) = deviceV(i, mng + j, k, v);
+        m.topSend(i, j, k, v) = deviceV(i, j + mncj, k, v);
       });
   Kokkos::deep_copy(m.bottomSend_H, m.bottomSend);
   Kokkos::deep_copy(m.topSend_H, m.topSend);
@@ -206,7 +215,7 @@ void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m) {
   Kokkos::parallel_for(
       yPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
         deviceV(i, j, k, v) = m.bottomRecv(i, j, k, v);
-        deviceV(i, cf.ngj - cf.ng + j, k, v) = m.topRecv(i, j, k, v);
+        deviceV(i, mngj - mng + j, k, v) = m.topRecv(i, j, k, v);
       });
 
 ///////////////////////////////////////////////
@@ -216,8 +225,8 @@ void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m) {
     Kokkos::parallel_for(
         zPol,
         KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
-          m.backSend(i, j, k, v) = deviceV(i, j, cf.ng + k, v);
-          m.frontSend(i, j, k, v) = deviceV(i, j, k + cf.nck, v);
+          m.backSend(i, j, k, v) = deviceV(i, j, mng + k, v);
+          m.frontSend(i, j, k, v) = deviceV(i, j, k + mnck, v);
         });
     Kokkos::deep_copy(m.backSend_H, m.backSend);
     Kokkos::deep_copy(m.frontSend_H, m.frontSend);
@@ -243,7 +252,7 @@ void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m) {
         zPol,
         KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
           deviceV(i, j, k, v) = m.backRecv(i, j, k, v);
-          deviceV(i, j, cf.ngk - cf.ng + k, v) = m.frontRecv(i, j, k, v);
+          deviceV(i, j, mngk - mng + k, v) = m.frontRecv(i, j, k, v);
         });
   }
 }
