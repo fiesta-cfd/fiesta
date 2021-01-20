@@ -116,7 +116,14 @@ void gen3d_func::preSim() {
   Kokkos::parallel_for(cell_pol3, computeMetrics3D(metrics, grid));
 
   FS5D &mt = metrics;
-  inputConfig &c = cf;
+
+  int mngi = cf.ngi;
+  int mngj = cf.ngj;
+  int mngk = cf.ngk;
+  int mnci = cf.nci;
+  int mncj = cf.ncj;
+  int mnck = cf.nck;
+  int mng = cf.ng;
 
 #ifndef NOMPI
   // mpi exchange of metrics
@@ -159,20 +166,20 @@ void gen3d_func::preSim() {
   Kokkos::parallel_for(
       xPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int m,
                           const int n) {
-        lsR(i, j, k, m, n) = mt(c.ng + i, j, k, m, n);
-        rsR(i, j, k, m, n) = mt(c.nci + i, j, k, m, n);
+        lsR(i, j, k, m, n) = mt(mng + i, j, k, m, n);
+        rsR(i, j, k, m, n) = mt(mnci + i, j, k, m, n);
       });
   Kokkos::parallel_for(
       yPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int m,
                           const int n) {
-        bsR(i, j, k, m, n) = mt(i, c.ng + j, k, m, n);
-        tsR(i, j, k, m, n) = mt(i, c.ncj + j, k, m, n);
+        bsR(i, j, k, m, n) = mt(i, mng + j, k, m, n);
+        tsR(i, j, k, m, n) = mt(i, mncj + j, k, m, n);
       });
   Kokkos::parallel_for(
       zPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int m,
                           const int n) {
-        hsR(i, j, k, m, n) = mt(i, j, c.ng + k, m, n);
-        fsR(i, j, k, m, n) = mt(i, j, c.nck + k, m, n);
+        hsR(i, j, k, m, n) = mt(i, j, mng + k, m, n);
+        fsR(i, j, k, m, n) = mt(i, j, mnck + k, m, n);
       });
   Kokkos::deep_copy(lsH, ls);
   Kokkos::deep_copy(rsH, rs);
@@ -232,33 +239,26 @@ void gen3d_func::preSim() {
       xPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int m,
                           const int n) {
         mt(i, j, k, m, n) = lrR(i, j, k, m, n);
-        mt(c.ngi - c.ng + i, j, k, m, n) = rrR(i, j, k, m, n);
+        mt(mngi - mng + i, j, k, m, n) = rrR(i, j, k, m, n);
       });
   Kokkos::parallel_for(
       yPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int m,
                           const int n) {
         mt(i, j, k, m, n) = brR(i, j, k, m, n);
-        mt(i, c.ngj - c.ng + j, k, m, n) = trR(i, j, k, m, n);
+        mt(i, mngj - mng + j, k, m, n) = trR(i, j, k, m, n);
       });
   Kokkos::parallel_for(
       zPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int m,
                           const int n) {
         mt(i, j, k, m, n) = hrR(i, j, k, m, n);
-        mt(i, j, c.ngk - c.ng + k, m, n) = frR(i, j, k, m, n);
+        mt(i, j, mngk - mng + k, m, n) = frR(i, j, k, m, n);
       });
 
 #endif
-  int mngi = c.ngi;
-  int mngj = c.ngj;
-  int mngk = c.ngk;
-  int mnci = c.nci;
-  int mncj = c.ncj;
-  int mnck = c.nck;
-  int mng = c.ng;
 
   if (cf.xMinus < 0) {
     Kokkos::parallel_for(
-        "metricbcl", policy_f3({0, 0, 0}, {cf.ng, cf.ngj, cf.ngk}),
+        "metricbcl", policy_f3({0, 0, 0}, {mng, mngj, mngk}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
           for (int m = 0; m < 3; ++m)
             for (int n = 0; n < 3; ++n)
@@ -267,7 +267,7 @@ void gen3d_func::preSim() {
   }
   if (cf.xPlus < 0) {
     Kokkos::parallel_for(
-        "metricbcr", policy_f3({0, 0, 0}, {cf.ng, cf.ngj, cf.ngk}),
+        "metricbcr", policy_f3({0, 0, 0}, {mng, mngj, mngk}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
           for (int m = 0; m < 3; ++m)
             for (int n = 0; n < 3; ++n)
@@ -276,7 +276,7 @@ void gen3d_func::preSim() {
   }
   if (cf.yMinus < 0) {
     Kokkos::parallel_for(
-        "metricbcb", policy_f3({0, 0, 0}, {cf.ngi, cf.ng, cf.ngk}),
+        "metricbcb", policy_f3({0, 0, 0}, {mngi, mng, mngk}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
           for (int m = 0; m < 3; ++m)
             for (int n = 0; n < 3; ++n)
@@ -285,7 +285,7 @@ void gen3d_func::preSim() {
   }
   if (cf.yPlus < 0) {
     Kokkos::parallel_for(
-        "metricbct", policy_f3({0, 0, 0}, {cf.ngi, cf.ng, cf.ngk}),
+        "metricbct", policy_f3({0, 0, 0}, {mngi, mng, mngk}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
           for (int m = 0; m < 3; ++m)
             for (int n = 0; n < 3; ++n)
@@ -294,7 +294,7 @@ void gen3d_func::preSim() {
   }
   if (cf.zMinus < 0) {
     Kokkos::parallel_for(
-        "metricbch", policy_f3({0, 0, 0}, {cf.ngi, cf.ngj, cf.ng}),
+        "metricbch", policy_f3({0, 0, 0}, {mngi, mngj, mng}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
           for (int m = 0; m < 3; ++m)
             for (int n = 0; n < 3; ++n)
@@ -303,7 +303,7 @@ void gen3d_func::preSim() {
   }
   if (cf.zPlus < 0) {
     Kokkos::parallel_for(
-        "metricbcf", policy_f3({0, 0, 0}, {cf.ngi, cf.ngj, cf.ng}),
+        "metricbcf", policy_f3({0, 0, 0}, {mngi, mngj, mng}),
         KOKKOS_LAMBDA(const int i, const int j, const int k) {
           for (int m = 0; m < 3; ++m)
             for (int n = 0; n < 3; ++n)

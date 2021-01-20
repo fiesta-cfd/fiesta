@@ -34,8 +34,7 @@ void writeDataItem(FILE* xmf, string path, int ndim, int* dims){
   fprintf(xmf, "        %s\n", path.c_str());
   fprintf(xmf, "       </DataItem>\n");
 }
-//void write_xmf(string fname, string hname, double time, int ndim, int *dims, int nv, int nvt){
-void write_xmf(string fname, string hname, double time, struct inputConfig &cf, int np, vector<string> vNames, vector<string> vxNames ){
+void write_xmf(string fname, string hname, double time, struct inputConfig &cf, vector<string> vNames, vector<string> vxNames ){
 
     int dims[cf.ndim];
     invertArray(cf.ndim,dims,cf.globalCellDims);
@@ -122,7 +121,7 @@ void write_xmf(string fname, string hname, double time, struct inputConfig &cf, 
     fprintf(xmf, "     </Attribute>\n");
 
     // Other Extra Variables
-    for (int var = ndim; var < vxNames.size(); ++var) {
+    for (size_t var = ndim; var < vxNames.size(); ++var) {
       fprintf(xmf, "     <Attribute Name=\"%s\" AttributeType=\"Scalar\" " "Center=\"Cell\">\n",vxNames[var].c_str());
       path.str("");
       path << hname << ":/Solution/Variable" << setw(2) << setfill('0') << var+nvt;
@@ -245,8 +244,8 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   // format hdf5 and xdmf filenames
   stringstream baseName, xmfName, hdfName;
   baseName << name << "-" << setw(pad) << setfill('0') << tdx;
-  hdfName << baseName.str() << ".h5";
-  xmfName << baseName.str() << ".xmf";
+  hdfName << cf.pathName << "/" << baseName.str() << ".h5";
+  xmfName << cf.pathName << "/" << baseName.str() << ".xmf";
 
 
   // identifiers
@@ -305,7 +304,7 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
     write_h5<T>(group_id, vname.str(), cf.ndim, cellDims, cellCount, offset, var); 
   }
   Kokkos::deep_copy(varxH,f->varx);
-  for (int vn = 0; vn < f->varxNames.size(); ++vn) {
+  for (size_t vn = 0; vn < f->varxNames.size(); ++vn) {
     // Format Dataset Name
     stringstream vname;
     vname << "Variable" << setw(2) << setfill('0') << vn+cf.nvt;
@@ -328,7 +327,7 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   }
   H5Gclose(group_id);
 
-  write_xmf(xmfName.str(), hdfName.str(), time, cf, 0,f->varNames,f->varxNames);
+  write_xmf(xmfName.str(), hdfName.str(), time, cf, f->varNames,f->varxNames);
 
   close_h5(file_id);
 }
@@ -519,9 +518,9 @@ void hdfWriter::writeRestart(struct inputConfig cf, rk_func *f, int tdx,
 }
 
 // deprecated 
-void hdfWriter::writeSPGrid(struct inputConfig cf, const FS4D gridD,
-                            const char *fname) {}
+//void hdfWriter::writeSPGrid(struct inputConfig cf, const FS4D gridD,
+//                            const char *fname) {}
 
 // deprecated 
-void hdfWriter::writeGrid(struct inputConfig cf, const FS4D gridD,
-                          const char *fname) {}
+//void hdfWriter::writeGrid(struct inputConfig cf, const FS4D gridD,
+//                          const char *fname) {}
