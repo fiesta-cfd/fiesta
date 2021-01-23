@@ -28,7 +28,13 @@ endif()
 string(TIMESTAMP BUILD_TIME "%Y-%m-%dT%H:%MZ" UTC)
 
 # compile flags
-list(APPEND CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -O3)
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+if (NOT CMAAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo)
+endif()
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -pedantic -Wall -Wextra -fdiagnostics-color=always")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
 
 # set kokkos options depending on build type
 if (CUDA)
