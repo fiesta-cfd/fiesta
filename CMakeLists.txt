@@ -4,6 +4,8 @@ include(ExternalProject)
 # Switch to nvcc compiler wrapper if building for cuda
 if (CUDA)
   set(CMAKE_CXX_COMPILER "${CMAKE_SOURCE_DIR}/kokkos/bin/nvcc_wrapper")
+elseif(AMDGPU)
+  set(CMAKE_CXX_COMPILER "hipcc")
 endif()
 
 # set project name and languages
@@ -57,6 +59,9 @@ if (CUDA)
   set(Kokkos_ENABLE_CUDA ON CACHE BOOL "")
   set(Kokkos_ENABLE_CUDA_LAMBDA ON CACHE BOOL "")
   set(FIESTA_OPTS "${FIESTA_OPTS}+CUDA")
+elseif(AMDGPU)
+  set(Kokkos_ENABLE_HIP ON CACHE BOOL "")
+  set(Kokkos_ARCH_VEGA900 ON CACHE BOOL "")
 elseif(OPENMP)
   # set kokkos openmp optins and append build type string
   set(Kokkos_ENABLE_OPENMP ON CACHE BOOL "")
@@ -89,7 +94,7 @@ set(installDir ${CMAKE_CURRENT_BINARY_DIR}/install)
 
 # If doing a full build, find or build hdf5
 if (NOT LITE)
-    find_package(HDF5)
+    #find_package(HDF5)
 
     if (HDF5_FOUND)
         include_directories(SYSTEM ${HDF5_C_INCLUDE_DIRS})
@@ -132,15 +137,7 @@ else()
     # add additional build files for non-lite builds
     add_executable(fiesta ${FIESTA_SRCS}  src/mpi.cpp src/hdf.cpp)
 
-    if (HDF5_FOUND)
-        # link to found hdf5 library
-        target_link_libraries(fiesta
-                              kokkos
-                              ${MPI_CXX_LIBRARIES}
-                              ${HDF5_C_LIBRARIES}
-                              lua
-        )
-    else()
+   #if (NOT HDF5_FOUND OR HDF)
         # link to built hdf5 library
         add_dependencies(fiesta hdf5Parallel)
         target_link_libraries(fiesta
@@ -151,7 +148,15 @@ else()
                               ${installDir}/lib/libhdf5_tools.a
                               lua
         )
-    endif()
+    #else()
+        ## link to found hdf5 library
+        #target_link_libraries(fiesta
+                              #kokkos
+                              #${MPI_CXX_LIBRARIES}
+                              #${HDF5_C_LIBRARIES}
+                              #lua
+        #)
+    #endif()
 endif()
 
 # add built strings to source code
