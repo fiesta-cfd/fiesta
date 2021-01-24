@@ -11,6 +11,8 @@ endif()
 # set project name and languages
 project(Fiesta CXX C Fortran)
 
+set(CMAKE_CXX_STANDARD 17)
+
 # get git branch and hash to set version, build type and date variables
 execute_process(COMMAND bash -c "cd ${CMAKE_CURRENT_LIST_DIR} && git describe --tags --dirty=+"
                 OUTPUT_VARIABLE GIT_VER)
@@ -62,6 +64,7 @@ if (CUDA)
 elseif(AMDGPU)
   set(Kokkos_ENABLE_HIP ON CACHE BOOL "")
   set(Kokkos_ARCH_VEGA900 ON CACHE BOOL "")
+  set(FIESTA_OPTS "${FIESTA_OPTS}+AMD")
 elseif(OPENMP)
   # set kokkos openmp optins and append build type string
   set(Kokkos_ENABLE_OPENMP ON CACHE BOOL "")
