@@ -116,23 +116,15 @@ void gen2d_func::preStep() {
 
 void gen2d_func::postStep() {
 
-  if (cf.write_freq >0)
-    if (cf.t % cf.write_freq == 0){
+  if (( (cf.write_freq >0) && (cf.t % cf.write_freq == 0) )||
+      ( (cf.stat_freq  >0) && (cf.t % cf.stat_freq  == 0) )){
+
       timers["calcSecond"].reset();
       Kokkos::parallel_for(ghostPol, calculateRhoPT2D(var, p, rho, T, cd));
       Kokkos::parallel_for(ghostPol, computeVelocity2D(var, rho, tvel));
       Kokkos::parallel_for(ghostPol, copyExtraVars2D(varx, tvel, p, rho, T));
       Kokkos::fence();
       timers["calcSecond"].accumulate();
-
-      //Kokkos::parallel_for( "CopyVarx", ghostPol,
-      //  KOKKOS_LAMBDA(const int i, const int j) {
-      //    varx(i,j,0,0) = tvel(i,j,0);
-      //    varx(i,j,0,1) = tvel(i,j,1);
-      //    varx(i,j,0,2) =    p(i,j);
-      //    varx(i,j,0,3) =    T(i,j);
-      //    varx(i,j,0,4) =  rho(i,j);
-      //});
     }
   
 

@@ -108,8 +108,9 @@ void cart2d_func::preStep() {}
 void cart2d_func::postStep() {
 
       policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
-  if (cf.write_freq >0)
-    if (cf.t % cf.write_freq == 0){
+  if (( (cf.write_freq >0) && (cf.t % cf.write_freq == 0) )||
+      ( (cf.stat_freq  >0) && (cf.t % cf.stat_freq  == 0) )){
+
       // Calcualte Total Density and Pressure Fields
       timers["calcSecond"].reset();
       Kokkos::parallel_for(ghost_pol, calculateRhoPT2D(var, p, rho, T, cd));
