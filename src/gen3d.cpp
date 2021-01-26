@@ -95,8 +95,8 @@ void gen3d_func::postStep() {
   policy_f3 ghost_pol = policy_f3({0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk});
 
   // Copy secondary variables to extra variables array
-  if (cf.write_freq >0)
-    if (cf.t % cf.write_freq == 0){
+  if (( (cf.write_freq >0) && (cf.t % cf.write_freq == 0) )||
+      ( (cf.stat_freq  >0) && (cf.t % cf.stat_freq  == 0) )){
 
       timers["calcSecond"].reset();
       Kokkos::parallel_for(ghost_pol, calculateRhoPT3D(var, p, rho, T, cd));

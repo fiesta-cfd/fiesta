@@ -4,10 +4,14 @@ include(ExternalProject)
 # Switch to nvcc compiler wrapper if building for cuda
 if (CUDA)
   set(CMAKE_CXX_COMPILER "${CMAKE_SOURCE_DIR}/kokkos/bin/nvcc_wrapper")
+elseif(AMDGPU)
+  set(CMAKE_CXX_COMPILER "hipcc")
 endif()
 
 # set project name and languages
 project(Fiesta CXX C Fortran)
+
+set(CMAKE_CXX_STANDARD 17)
 
 # get git branch and hash to set version, build type and date variables
 execute_process(COMMAND bash -c "cd ${CMAKE_CURRENT_LIST_DIR} && git describe --tags --dirty=+"
@@ -28,7 +32,13 @@ endif()
 string(TIMESTAMP BUILD_TIME "%Y-%m-%dT%H:%MZ" UTC)
 
 # compile flags
-list(APPEND CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -O3)
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+if (NOT CMAAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo)
+endif()
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -pedantic -Wall -Wextra -fdiagnostics-color=always")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
 
 # set kokkos options depending on build type
 if (CUDA)
@@ -51,6 +61,10 @@ if (CUDA)
   set(Kokkos_ENABLE_CUDA ON CACHE BOOL "")
   set(Kokkos_ENABLE_CUDA_LAMBDA ON CACHE BOOL "")
   set(FIESTA_OPTS "${FIESTA_OPTS}+CUDA")
+elseif(AMDGPU)
+  set(Kokkos_ENABLE_HIP ON CACHE BOOL "")
+  set(Kokkos_ARCH_VEGA900 ON CACHE BOOL "")
+  set(FIESTA_OPTS "${FIESTA_OPTS}+AMD")
 elseif(OPENMP)
   # set kokkos openmp optins and append build type string
   set(Kokkos_ENABLE_OPENMP ON CACHE BOOL "")
@@ -83,9 +97,11 @@ set(installDir ${CMAKE_CURRENT_BINARY_DIR}/install)
 
 # If doing a full build, find or build hdf5
 if (NOT LITE)
-    find_package(HDF5)
+    if (NOT BUILD_HDF5)
+        find_package(HDF5)
+    endif()
 
-    if (HDF5_FOUND)
+    if (HDF5_FOUND AND HDF5_IS_PARALLEL)
         include_directories(SYSTEM ${HDF5_C_INCLUDE_DIRS})
     else()
         ExternalProject_Add(hdf5Parallel
@@ -126,8 +142,9 @@ else()
     # add additional build files for non-lite builds
     add_executable(fiesta ${FIESTA_SRCS}  src/mpi.cpp src/hdf.cpp)
 
-    if (HDF5_FOUND)
-        # link to found hdf5 library
+    if (HDF5_FOUND AND HDF5_IS_PARALLEL)
+        message("### Using System HDF5")
+        # link to built hdf5 library
         target_link_libraries(fiesta
                               kokkos
                               ${MPI_CXX_LIBRARIES}
@@ -135,7 +152,8 @@ else()
                               lua
         )
     else()
-        # link to built hdf5 library
+        # link to found hdf5 library
+        message("### Building HDF5")
         add_dependencies(fiesta hdf5Parallel)
         target_link_libraries(fiesta
                               kokkos

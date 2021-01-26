@@ -17,10 +17,13 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
   // create command argumet structure
   struct commandArgs cArgs;
 
+  // Defaults
   cArgs.fileName = "fiesta.lua";
   cArgs.timeFormat = 2;
   cArgs.versionFlag = 0;
   cArgs.colorFlag = 0;
+  cArgs.numDevices = 1;
+  cArgs.numThreads = 1;
 
   // create options
   static struct option long_options[] = {
