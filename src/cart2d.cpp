@@ -226,7 +226,7 @@ void cart2d_func::compute() {
   if (cf.visc == 1) {
     timers["stress"].reset();
     Kokkos::parallel_for(
-        face_pol, calculateStressTensor2dv(var, rho, T, stressx, stressy, cd));
+        face_pol, calculateStressTensor2dv(var, rho, vel, stressx, stressy, cd));
     Kokkos::fence();
     timers["stress"].accumulate();
 
@@ -237,7 +237,7 @@ void cart2d_func::compute() {
     timers["qflux"].accumulate();
 
     timers["visc"].reset();
-    Kokkos::parallel_for(cell_pol, applyViscousTerm2dv(dvar, var, rho, stressx,
+    Kokkos::parallel_for(cell_pol, applyViscousTerm2dv(dvar, var, rho, vel, stressx,
                                                        stressy, qx, qy, cd));
     Kokkos::fence();
     timers["visc"].accumulate();
