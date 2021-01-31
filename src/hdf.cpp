@@ -242,9 +242,10 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   invertArray(cf.ndim,cellDims,cf.globalCellDims);
 
   // format hdf5 and xdmf filenames
-  stringstream baseName, xmfName, hdfName;
+  stringstream baseName, xmfName, hdfName, hdfBaseName;
   baseName << name << "-" << setw(pad) << setfill('0') << tdx;
-  hdfName << cf.pathName << "/" << baseName.str() << ".h5";
+  hdfBaseName  << baseName.str() << ".h5";
+  hdfName << cf.pathName << "/" << hdfBaseName.str();
   xmfName << cf.pathName << "/" << baseName.str() << ".xmf";
 
 
@@ -327,7 +328,7 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   }
   H5Gclose(group_id);
 
-  write_xmf(xmfName.str(), hdfName.str(), time, cf, f->varNames,f->varxNames);
+  write_xmf(xmfName.str(), hdfBaseName.str(), time, cf, f->varNames,f->varxNames);
 
   close_h5(file_id);
 }
