@@ -23,7 +23,7 @@ struct maxVarFunctor2d {
 
     double s = var(i, j, 0, v);
 
-    if (s > lmax)
+    if (abs(s) > lmax)
       lmax = s;
   }
 };
@@ -40,7 +40,7 @@ struct minVarFunctor2d {
 
     double s = var(i, j, 0, v);
 
-    if (s < lmin)
+    if (abs(s) < lmin)
       lmin = s;
   }
 };
@@ -54,7 +54,7 @@ struct minVarFunctor3d {
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k, double &lmin) const {
     double s = var(i, j, k, v);
-    if (s < lmin)
+    if (abs(s) < lmin)
       lmin = s;
   }
 };
@@ -71,7 +71,7 @@ struct maxVarFunctor3d {
 
     double s = var(i, j, k, v);
 
-    if (s > lmax)
+    if (abs(s) > lmax)
       lmax = s;
   }
 };
