@@ -30,12 +30,12 @@
 #include "vtk.hpp"
 #endif
 
-namespace Fiesta{
-    struct inputConfig initialize(int, char **);
+namespace Fiesta {
+    struct inputConfig initialize(struct inputConfig&,int, char **);
     void initializeSimulation(struct inputConfig&, rk_func*);
     void reportTimers(struct inputConfig&, rk_func*);
     void checkIO(struct inputConfig&, rk_func*, int, double);
-    void finalize();
-};
+    void finalize(struct inputConfig &);
+}
 
 #endif

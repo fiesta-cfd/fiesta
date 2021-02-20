@@ -43,12 +43,18 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
   cArgs.colorFlag = 0;
   cArgs.numDevices = 1;
   cArgs.numThreads = 1;
+  cArgs.verbosity = 3;
+  cArgs.colorLogs = 0;
+  cArgs.logName = "fiesta.log";
 
   // create options
   static struct option long_options[] = {
-      {"version", no_argument, NULL, 'v'},
+      {"version", no_argument, NULL, 'V'},
+      {"verbosity", optional_argument, NULL, 'v'},
       {"color", optional_argument, NULL, 'c'},
+      {"color-logs", no_argument, NULL, 'l'},
       {"time-format", optional_argument, NULL, 't'},
+      {"log-file-name", optional_argument, NULL, 'g'},
       {"kokkos-ndevices", optional_argument, NULL, 'k'},
       {"kokkos-num-devices", optional_argument, NULL, 'k'},
       {"kokkos-threads", optional_argument, NULL, 'k'},
@@ -59,8 +65,14 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
   std::string copt;
   int c = 1;
   int opt_index;
-  while ((c = getopt_long(argc, argv, "vctn:", long_options, &opt_index)) != -1) {
+  while ((c = getopt_long(argc, argv, "lVv:ctn:", long_options, &opt_index)) != -1) {
     switch (c) {
+    case 'g':
+      if (optarg)
+        cArgs.logName = std::string(optarg);
+      else
+        cArgs.logName = "fiesta.log";
+      break;
     case 'c':
       if (optarg)
         copt = std::string(optarg);
@@ -75,6 +87,15 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
 #endif
       break;
     case 'v':
+      if (optarg)
+        cArgs.verbosity = atoi(optarg);
+      else
+        cArgs.verbosity = 4;
+      break;
+    case 'l':
+      cArgs.colorLogs = 1;
+      break;
+    case 'V':
       cArgs.versionFlag = 1;
       break;
     case 't':
@@ -111,10 +132,12 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
   return cArgs;
 }
 
-struct inputConfig executeConfiguration(struct commandArgs cargs) {
-  struct inputConfig cf;
+inputConfig::~inputConfig(){}
+
+void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   cf.colorFlag = cargs.colorFlag;
   cf.timeFormat = cargs.timeFormat;
+  cf.verbosity = cargs.verbosity;
 
   luaReader L(cargs.fileName);
 
@@ -153,6 +176,7 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   L.get("restartName",  cf.restartName, "restart-0000000.h5");
   L.get("terrainName", cf.terrainName, "terrain.h5");
   L.get("pathName",     cf.pathName, ".");
+  L.get("logFilename", cf.logFilename, "fiesta.log");
 
   // Check if pathName is accessable
   struct stat st;
@@ -323,8 +347,6 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   cf.yPlus = -1 + cf.yPer;
   cf.zMinus = -1 + cf.zPer;
   cf.zPlus = -1 + cf.zPer;
-
-  return cf;
 }
 
 int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {

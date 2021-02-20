@@ -278,6 +278,14 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
          << "'" + hdfName.str() + "'" << c(0, NON) << endl;
   }
 
+  //{
+    //stringstream message;
+    //message << "Writing " << hdfName.str();
+    //cf.log->message(message.str());
+  //}
+  cf.log->message("Writing ",hdfName.str());
+
+
   // open file
   file_id = openHDF5ForWrite(cf.comm, MPI_INFO_NULL, hdfName.str());
 
@@ -347,6 +355,12 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   }
   H5Gclose(group_id);
 
+  //{
+  //  stringstream message;
+  //  message << "Writing " << xmfName.str();
+  //  cf.log->message(message.str());
+  //}
+  cf.log->message("Writing ",xmfName.str());
   write_xmf(xmfName.str(), hdfBaseName.str(), time, cf, f->varNames,f->varxNames);
 
   close_h5(file_id);

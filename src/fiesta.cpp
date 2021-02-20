@@ -28,21 +28,15 @@
 #include "status.hpp"
 #include <iostream>
 #include <set>
+#include "log.hpp"
 
 using namespace std;
 
 //
 // Initialize Fiesta and fill configuration structure with input file variables
 //
-struct inputConfig Fiesta::initialize(int argc, char **argv){
+struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **argv){
   struct commandArgs cArgs = getCommandlineOptions(argc, argv);
-
-  Kokkos::InitArguments kokkosArgs;
-#ifdef HAVE_CUDA
-  kokkosArgs.ndevices = cArgs.numDevices;
-#elif HAVE_OPENMP
-  kokkosArgs.num_threads = cArgs.numThreads;
-#endif
 
   // Initialize MPI and get temporary rank.
   int temp_rank = 0;
@@ -51,19 +45,31 @@ struct inputConfig Fiesta::initialize(int argc, char **argv){
   MPI_Comm_rank(MPI_COMM_WORLD, &temp_rank);
 #endif
 
+  cf.log = new Logger(cArgs.verbosity, cArgs.colorFlag, cArgs.colorLogs, temp_rank, cArgs.logName);
+   
+  cf.log->message("Printing Splash");
   if (temp_rank == 0) printSplash(cArgs.colorFlag);
 
-  // Initialize kokkos and set kokkos finalize as exit function.
+  // Initialize Kokkos
+  cf.log->message("Initializing Kokkos");
+  Kokkos::InitArguments kokkosArgs;
+#ifdef HAVE_CUDA
+  kokkosArgs.ndevices = cArgs.numDevices;
+#elif HAVE_OPENMP
+  kokkosArgs.num_threads = cArgs.numThreads;
+#endif
   Kokkos::initialize(kokkosArgs);
-  // Kokkos::initialize(argc, argv);
 
   // Execute lua script and get input parameters
-  struct inputConfig cf = executeConfiguration(cArgs);
+  cf.log->message("Executing Lua Input Script");
+  executeConfiguration(cf,cArgs);
 
 #ifndef NOMPI
-  // perform domain decomposition and MPI initialization.
+  // perform domain decomposition
+  cf.log->message("Initializing MPI Setup");
   mpi_init(cf);
 #endif
+  cf.log->message("Printing Configuration");
   printConfig(cf);
 
   return cf;
@@ -257,9 +263,10 @@ void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
 }
  
 // clean up kokkos and mpi
-void Fiesta::finalize(){
+void Fiesta::finalize(struct inputConfig &cf){
   Kokkos::finalize();
 #ifndef NOMPI
   MPI_Finalize();
 #endif
+  delete cf.log;
 }

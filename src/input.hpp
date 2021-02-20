@@ -36,6 +36,7 @@
 //#include "rkfunction.hpp"
 #include <map>
 #include <vector>
+#include "log.hpp"
 
 // Lua error function
 void error(lua_State *L, const char *fmt, ...);
@@ -51,6 +52,7 @@ double getglobdbl(lua_State *L, const char *var);
 
 // configuration structure
 struct inputConfig {
+  ~inputConfig();
   fiestaTimer totalTimer;
   fiestaTimer initTimer;
   fiestaTimer simTimer;
@@ -60,6 +62,7 @@ struct inputConfig {
 
   class writer *w;
   class mpiHaloExchange *m;
+  class Logger *log;
 
   int colorFlag,timeFormat;
   std::string inputFname;
@@ -108,6 +111,8 @@ struct inputConfig {
   int t;
   int grid;
   double h, tdx, tdy;
+  int verbosity;
+  std::string logFilename;
 
   int globalGridDims[3];
   int globalCellDims[3];
@@ -120,15 +125,18 @@ struct inputConfig {
 
 struct commandArgs {
   int versionFlag;
+  int verbosity;
   int colorFlag;
+  int colorLogs;
   int timeFormat;
   int numThreads;
   int numDevices;
+  std::string logName;
   std::string fileName;
 };
 
 struct commandArgs getCommandlineOptions(int argc, char **argv);
-struct inputConfig executeConfiguration(struct commandArgs cargs);
+void executeConfiguration(struct inputConfig &, struct commandArgs cargs);
 
 int loadInitialConditions(struct inputConfig cf,  FS4D &v, FS4D &g);
 int loadGrid(struct inputConfig cf, FS4D &v);

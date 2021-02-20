@@ -23,6 +23,7 @@
 #include "fiesta.hpp"
 #include "rk.hpp"
 #include "debug.hpp"
+#include "log.hpp"
 
 // Compute Objects
 #include "cart2d.hpp"
@@ -32,11 +33,12 @@
 
 int main(int argc, char *argv[]) {
   
-  struct inputConfig cf = Fiesta::initialize(argc,argv);
+  struct inputConfig cf;
+  Fiesta::initialize(cf,argc,argv);
 
   cf.totalTimer.start();
   cf.initTimer.start();
- 
+
   // Choose Scheme
   rk_func *f;
   if (cf.ndim == 3){
@@ -57,11 +59,13 @@ int main(int argc, char *argv[]) {
   Fiesta::initializeSimulation(cf,f);
  
   // Pre Simulation
+  cf.log->message("Executing pre-simulation hook");
   f->preSim();
   cf.initTimer.stop();
   cf.simTimer.reset();
  
   // Main time loop
+  cf.log->message("Beginning Main Time Loop");
   for (int t = cf.tstart; t < cf.tend; ++t) {
     cf.time += cf.dt;
     cf.t = t + 1;
@@ -74,13 +78,14 @@ int main(int argc, char *argv[]) {
   }
  
   // Post Simulation
+  cf.log->message("Executing post-simulation hook");
   f->postSim();
 
   // Stop Timers and Report
   cf.simTimer.stop();
   cf.totalTimer.stop();
   Fiesta::reportTimers(cf,f);
- 
-  Fiesta::finalize();
+
+  Fiesta::finalize(cf);
   return 0;
 }
