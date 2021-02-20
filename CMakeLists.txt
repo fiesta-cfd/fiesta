@@ -58,7 +58,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
 
 message("######## ${CMAKE_BUILD_TYPE} ########")
-if (CMAKE_BUILD_TYPE=Debug)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(Kokkos_ENABLE_DEBUG ON CACHE BOOL "")
     set(Kokkos_ENABLE_DEBUG_BOUNDS_CHECK ON CACHE BOOL "")
 endif()
@@ -224,6 +224,9 @@ target_compile_definitions(fiesta PRIVATE FIESTA_OPTIONS="${FIESTA_OPTS}")
 target_compile_definitions(fiesta PRIVATE FIESTA_BTIME="${BUILD_TIME}")
 if (LITE)
     target_compile_definitions(fiesta PRIVATE NOMPI)
+endif()
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(fiesta PRIVATE DEBUG)
 endif()
 
 # set install destination

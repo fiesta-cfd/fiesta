@@ -283,7 +283,7 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
     //message << "Writing " << hdfName.str();
     //cf.log->message(message.str());
   //}
-  cf.log->message("Writing ",hdfName.str());
+  cf.log->message("[",cf.t,"] ","Writing ",hdfName.str());
 
 
   // open file
@@ -360,7 +360,7 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   //  message << "Writing " << xmfName.str();
   //  cf.log->message(message.str());
   //}
-  cf.log->message("Writing ",xmfName.str());
+  cf.log->message("[",cf.t,"] ","Writing ",xmfName.str());
   write_xmf(xmfName.str(), hdfBaseName.str(), time, cf, f->varNames,f->varxNames);
 
   close_h5(file_id);

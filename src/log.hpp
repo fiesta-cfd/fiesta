@@ -40,13 +40,29 @@ class Logger {
       logFile.open(logFilename,ios::trunc);
     
       stringstream message;
-      message << "Log started at " << getTime();
+      message << "Log started " << getTime();
       print("Logger",message.str(),green);
+
+      stringstream info;
+      info << "Log level: " << verbosity;
+      print("Logger",info.str(),green);
+
+      if (colorFlag){
+        stringstream cinfo;
+        cinfo << "Color logs enabled";
+        print("Logger",cinfo.str(),green);
+      }
+
+      if (colorLogs){
+        stringstream clinfo;
+        clinfo << "Color log file enabled";
+        print("Logger",clinfo.str(),green);
+      }
     }
 
     ~Logger() {
       stringstream message;
-      message << "Log ended at " << getTime();
+      message << "Log ended " << getTime();
       print("Logger",message.str(),green);
 
       logFile.close();
