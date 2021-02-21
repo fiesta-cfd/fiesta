@@ -134,10 +134,10 @@ class Logger {
             << setw(8) << right << header << ": "
             << message;
 
-        cout << setColor(color)
-            << logString.str()
-            << setColor(none)
-            << endl;
+        // cout << setColor(color)
+        //     << logString.str()
+        //     << setColor(none)
+        //     << endl;
 
         if (colorLogs){
           logFile << setColor(color)
