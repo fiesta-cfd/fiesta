@@ -41,10 +41,6 @@ struct applyPressureGradient2D {
         (p(i, j - 2) - 8.0 * p(i, j - 1) + 8.0 * p(i, j + 1) - p(i, j + 2)) /
         (12.0 * dy);
 
-    if (dxp <= 1e-8)
-      dxp = 0.00;
-    if (dyp <= 1e-8)
-      dyp = 0.00;
     // apply pressure gradient term to right hand side of Euler equation dV/dt =
     // ...
     double p1, p2;
