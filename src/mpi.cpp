@@ -19,7 +19,7 @@
 
 #include "mpi.hpp"
 #include "debug.hpp"
-#include "mpipcl.h"
+// #include "mpipcl.h"
 
 void mpi_init(struct inputConfig &cf) {
 
