@@ -1,0 +1,35 @@
+Please cite the following sources when publishing material that makes use of
+FIESTA.  The first item is a conference paper presented at the AIAA SciTech
+Forum in January 2021 where FIESTA was first discussed and where the first
+validation results were presented.  The second item is a citable archive of the
+current version of FIESTA.
+
+The following items are presented in bibtex format, but additional citation
+formats can be found by following the respective DOI links.
+
+https://doi.org/10.2514/6.2021-0051
+https://doi.org/10.5281/zenodo.4554564
+
+--------------------------------------------------------------------------------
+
+@inproceedings{Romero2021,
+  doi = {10.2514/6.2021-0051},
+  url = {https://doi.org/10.2514/6.2021-0051},
+  year = {2021},
+  month = jan,
+  publisher = {American Institute of Aeronautics and Astronautics},
+  author = {Brian E. Romero and Svetlana Poroseva and Peter Vorobieff and Jon Reisner},
+  title = {Shock Driven Kelvin-Helmholtz Instability},
+  booktitle = {{AIAA} Scitech 2021 Forum}
+}
+
+@misc{Fiesta2021,
+  doi = {10.5281/ZENODO.4554564},
+  url = {https://zenodo.org/record/4554564},
+  author = {Romero,  Brian},
+  keywords = {cfd,  exascale,  gpu,  kokkos},
+  title = {Fiesta},
+  publisher = {Zenodo},
+  year = {2021},
+  copyright = {Closed Access}
+}

@@ -1,3 +1,20 @@
+#  Copyright 2019-2021 The University of New Mexico
+#
+#  This file is part of FIESTA.
+#  
+#  FIESTA is free software: you can redistribute it and/or modify it under the
+#  terms of the GNU Lesser General Public License as published by the Free
+#  Software Foundation, either version 3 of the License, or (at your option) any
+#  later version.
+#  
+#  FIESTA is distributed in the hope that it will be useful, but WITHOUT ANY
+#  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+#  A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+#  details.
+#  
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
+
 cmake_minimum_required(VERSION 3.10)
 include(ExternalProject)
 
@@ -33,12 +50,18 @@ string(TIMESTAMP BUILD_TIME "%Y-%m-%dT%H:%MZ" UTC)
 
 # compile flags
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
-if (NOT CMAAKE_BUILD_TYPE)
+if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -pedantic -Wall -Wextra -fdiagnostics-color=always")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
+
+message("######## ${CMAKE_BUILD_TYPE} ########")
+if (CMAKE_BUILD_TYPE=Debug)
+    set(Kokkos_ENABLE_DEBUG ON CACHE BOOL "")
+    set(Kokkos_ENABLE_DEBUG_BOUNDS_CHECK ON CACHE BOOL "")
+endif()
 
 # set kokkos options depending on build type
 if (CUDA)
