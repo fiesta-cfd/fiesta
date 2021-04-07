@@ -107,52 +107,8 @@ void mpi_init(struct inputConfig &cf) {
 }
 
 mpiBuffers::mpiBuffers(struct inputConfig cf) {
-  allSend = Kokkos::View<double****, FS_LAYOUT>("allSend", cf.ngi, cf.ngj, cf.ngk, cf.nvt);
-
-  leftSend = Kokkos::View<double ****, FS_LAYOUT>("leftSend", cf.ng, cf.ngj,
-                                                  cf.ngk, cf.nvt);
-  leftRecv = Kokkos::View<double ****, FS_LAYOUT>("leftRecv", cf.ng, cf.ngj,
-                                                  cf.ngk, cf.nvt);
-  rightSend = Kokkos::View<double ****, FS_LAYOUT>("rightSend", cf.ng, cf.ngj,
-                                                   cf.ngk, cf.nvt);
-  rightRecv = Kokkos::View<double ****, FS_LAYOUT>("rightRecv", cf.ng, cf.ngj,
-                                                   cf.ngk, cf.nvt);
-  bottomSend = Kokkos::View<double ****, FS_LAYOUT>("bottomSend", cf.ngi, cf.ng,
-                                                    cf.ngk, cf.nvt);
-  bottomRecv = Kokkos::View<double ****, FS_LAYOUT>("bottomRecv", cf.ngi, cf.ng,
-                                                    cf.ngk, cf.nvt);
-  topSend = Kokkos::View<double ****, FS_LAYOUT>("topSend", cf.ngi, cf.ng,
-                                                 cf.ngk, cf.nvt);
-  topRecv = Kokkos::View<double ****, FS_LAYOUT>("topRecv", cf.ngi, cf.ng,
-                                                 cf.ngk, cf.nvt);
-  if (cf.ndim == 3){
-    backSend = Kokkos::View<double ****, FS_LAYOUT>("backSend", cf.ngi, cf.ngj,
-                                                    cf.ng, cf.nvt);
-    backRecv = Kokkos::View<double ****, FS_LAYOUT>("backRecv", cf.ngi, cf.ngj,
-                                                    cf.ng, cf.nvt);
-    frontSend = Kokkos::View<double ****, FS_LAYOUT>("frontSend", cf.ngi, cf.ngj,
-                                                     cf.ng, cf.nvt);
-    frontRecv = Kokkos::View<double ****, FS_LAYOUT>("frontRecv", cf.ngi, cf.ngj,
-                                                     cf.ng, cf.nvt);
-  }else{
-    backSend = Kokkos::View<double ****, FS_LAYOUT>("backSend",1,1,1,1);
-    backRecv = Kokkos::View<double ****, FS_LAYOUT>("backRecv",1,1,1,1);
-    frontSend = Kokkos::View<double ****, FS_LAYOUT>("frontSend",1,1,1,1);
-    frontRecv = Kokkos::View<double ****, FS_LAYOUT>("frontRecv",1,1,1,1);
-  }
-  allSend_H = Kokkos::create_mirror_view(allSend);
-  leftSend_H = Kokkos::create_mirror_view(leftSend);
-  leftRecv_H = Kokkos::create_mirror_view(leftRecv);
-  rightSend_H = Kokkos::create_mirror_view(rightSend);
-  rightRecv_H = Kokkos::create_mirror_view(rightRecv);
-  bottomSend_H = Kokkos::create_mirror_view(bottomSend);
-  bottomRecv_H = Kokkos::create_mirror_view(bottomRecv);
-  topSend_H = Kokkos::create_mirror_view(topSend);
-  topRecv_H = Kokkos::create_mirror_view(topRecv);
-  backSend_H = Kokkos::create_mirror_view(backSend);
-  backRecv_H = Kokkos::create_mirror_view(backRecv);
-  frontSend_H = Kokkos::create_mirror_view(frontSend);
-  frontRecv_H = Kokkos::create_mirror_view(frontRecv);
+  all = Kokkos::View<double****, FS_LAYOUT>("all", cf.ngi, cf.ngj, cf.ngk, cf.nvt);
+  all_H = Kokkos::create_mirror_view(all);
 }
 
 #define FIESTA_HALO_TAG 7223
@@ -178,234 +134,130 @@ void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m) {
   int mnck = cf.nck;
   int mng = cf.ng;
 
-/*
+
 // MPI Datatypes implementation
 ///////////////////////////////////////////////
 // Post all halo exchange receives
 /////////////////////////////////////////////// 
-  MPI_Datatype leftSubArray;
-  MPI_Datatype rightSubArray;
-  MPI_Datatype bottomSubArray;
-  MPI_Datatype topSubArray;
-  MPI_Datatype backSubArray;
-  MPI_Datatype frontSubArray;
+  Kokkos::Profiling::pushRegion("mpi::haloExchange::commitTypes");
+  MPI_Datatype leftRecvSubArray;
+  MPI_Datatype rightRecvSubArray;
+  MPI_Datatype bottomRecvSubArray;
+  MPI_Datatype topRecvSubArray;
+  MPI_Datatype backRecvSubArray;
+  MPI_Datatype frontRecvSubArray;
 
-  int bigsizes[4] = {cf.ngi, cf.ngj, cf.ngk, cf.nvt};  
+  MPI_Datatype leftSendSubArray;
+  MPI_Datatype rightSendSubArray;
+  MPI_Datatype bottomSendSubArray;
+  MPI_Datatype topSendSubArray;
+  MPI_Datatype backSendSubArray;
+  MPI_Datatype frontSendSubArray;
 
-  int xsubsizes[4] = {cf.ng, cf.ngj, cf.ngk, cf.nvt};
+  int bigsizes[4] = {mngi, mngj, mngk, cf.nvt};  
+
+  int xsubsizes[4] = {mng, mngj, mngk, cf.nvt};
   
-  int leftStarts[4] = {cf.ng, 0, 0, 0};
-  MPI_Type_create_subarray(4, bigsizes, xsubsizes, leftStarts, MPI_ORDER_C, MPI_DOUBLE, &leftSubArray);
-  MPI_Type_commit(&leftSubArray);
+  int leftRecvStarts[4] = {0, 0, 0, 0};
+  MPI_Type_create_subarray(4, bigsizes, xsubsizes, leftRecvStarts, MPI_ORDER_C, MPI_DOUBLE, &leftRecvSubArray);
+  MPI_Type_commit(&leftRecvSubArray);
 
-  int rightStarts[4] = {cf.nci, 0, 0, 0};
-  MPI_Type_create_subarray(4, bigsizes, xsubsizes, rightStarts, MPI_ORDER_C, MPI_DOUBLE, &rightSubArray);
-  MPI_Type_commit(&rightSubArray);
+  int leftSendStarts[4] = {mng, 0, 0, 0};
+  MPI_Type_create_subarray(4, bigsizes, xsubsizes, leftSendStarts, MPI_ORDER_C, MPI_DOUBLE, &leftSendSubArray);
+  MPI_Type_commit(&leftSendSubArray);
+
+  int rightRecvStarts[4] = {mngi - mng, 0, 0, 0};
+  MPI_Type_create_subarray(4, bigsizes, xsubsizes, rightRecvStarts, MPI_ORDER_C, MPI_DOUBLE, &rightRecvSubArray);
+  MPI_Type_commit(&rightRecvSubArray);
+
+  int rightSendStarts[4] = {mnci, 0, 0, 0};
+  MPI_Type_create_subarray(4, bigsizes, xsubsizes, rightSendStarts, MPI_ORDER_C, MPI_DOUBLE, &rightSendSubArray);
+  MPI_Type_commit(&rightSendSubArray);
 
 
-  int ysubsizes[4] = {cf.ngi, cf.ng, cf.ngk, cf.nvt};
+  int ysubsizes[4] = {mngi, mng, mngk, cf.nvt};
 
-  int bottomStarts[4] = {0, cf.ng, 0, 0};
-  MPI_Type_create_subarray(4, bigsizes, ysubsizes, bottomStarts, MPI_ORDER_C, MPI_DOUBLE, &bottomSubArray);
-  MPI_Type_commit(&bottomSubArray);
+  int bottomRecvStarts[4] = {0, 0, 0, 0};
+  MPI_Type_create_subarray(4, bigsizes, ysubsizes, bottomRecvStarts, MPI_ORDER_C, MPI_DOUBLE, &bottomRecvSubArray);
+  MPI_Type_commit(&bottomRecvSubArray);
 
-  int topStarts[4] = {0, cf.ncj, 0, 0};
-  MPI_Type_create_subarray(4, bigsizes, ysubsizes, topStarts, MPI_ORDER_C, MPI_DOUBLE, &topSubArray);
-  MPI_Type_commit(&topSubArray);
+  int bottomSendStarts[4] = {0, mng, 0, 0};
+  MPI_Type_create_subarray(4, bigsizes, ysubsizes, bottomSendStarts, MPI_ORDER_C, MPI_DOUBLE, &bottomSendSubArray);
+  MPI_Type_commit(&rightSendSubArray);
+
+  int topRecvStarts[4] = {0, mngj - mng, 0, 0};
+  MPI_Type_create_subarray(4, bigsizes, ysubsizes, topRecvStarts, MPI_ORDER_C, MPI_DOUBLE, &topRecvSubArray);
+  MPI_Type_commit(&topRecvSubArray);
+
+  int topSendStarts[4] = {0, mncj, 0, 0};
+  MPI_Type_create_subarray(4, bigsizes, ysubsizes, topSendStarts, MPI_ORDER_C, MPI_DOUBLE, &topSendSubArray);
+  MPI_Type_commit(&topSendSubArray);
 
   if (cf.ndim == 3) {
-    int zsubsizes[4] = {cf.ngi, cf.ngj, cf.ng, cf.nvt};
+    int zsubsizes[4] = {mngi, mngj, mng, cf.nvt};
     
-    int backStarts[4] = {0, 0,cf.ng, 0};
-    MPI_Type_create_subarray(4, bigsizes, zsubsizes, backStarts, MPI_ORDER_C, MPI_DOUBLE, &backSubArray);
-    MPI_Type_commit(&backSubArray);
+    int backRecvStarts[4] = {0, 0, 0, 0};
+    MPI_Type_create_subarray(4, bigsizes, zsubsizes, backRecvStarts, MPI_ORDER_C, MPI_DOUBLE, &backRecvSubArray);
+    MPI_Type_commit(&backRecvSubArray);
 
-    int frontStarts[4] = {0, 0, cf.nck, 0};
-    MPI_Type_create_subarray(4, bigsizes, zsubsizes, frontStarts, MPI_ORDER_C, MPI_DOUBLE, &frontSubArray);
-    MPI_Type_commit(&frontSubArray);
+    int backSendStarts[4] = {0, 0, mng, 0};
+    MPI_Type_create_subarray(4, bigsizes, zsubsizes, backSendStarts, MPI_ORDER_C, MPI_DOUBLE, &backSendSubArray);
+    MPI_Type_commit(&backSendSubArray);
+
+    int frontRecvStarts[4] = {0, 0, mngk - mng, 0};
+    MPI_Type_create_subarray(4, bigsizes, zsubsizes, frontRecvStarts, MPI_ORDER_C, MPI_DOUBLE, &frontRecvSubArray);
+    MPI_Type_commit(&frontRecvSubArray);
+
+    int frontSendStarts[4] = {0, 0, mnck, 0};
+    MPI_Type_create_subarray(4, bigsizes, ysubsizes, frontSendStarts, MPI_ORDER_C, MPI_DOUBLE, &frontSendSubArray);
+    MPI_Type_commit(&frontSendSubArray);
   }
 
+  Kokkos::Profiling::popRegion(); // mpi::haloExchange:commitTypes
 
+  // GPU -> CPU
+  Kokkos::Profiling::pushRegion("mpi::haloExchange::deepcopy1");
+  Kokkos::deep_copy(deviceV, m.all); // Remove for CUDA-Aware
+  Kokkos::Profiling::popRegion(); // mpi::haloExchange::deepcopy1
+ 
+///////////////////////////////////////////////
+// Post all halo exchange sends
+/////////////////////////////////////////////// 
   Kokkos::Profiling::pushRegion("mpi::haloExchange::postRecv");
-  MPI_Irecv(m.leftRecv_H.data(), cf.ng * cf.ngj * cf.ngk * (cf.nvt), 
-            MPI_DOUBLE, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Irecv(m.rightRecv_H.data(), cf.ng * cf.ngj * cf.ngk * (cf.nvt),
-            MPI_DOUBLE, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Irecv(m.bottomRecv_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt),
-            MPI_DOUBLE, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Irecv(m.topRecv_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt), 
-            MPI_DOUBLE, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Irecv(m.all.data(), 1, leftRecvSubArray, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Irecv(m.all.data(), 1, rightRecvSubArray, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Irecv(m.all.data(), 1, bottomRecvSubArray, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Irecv(m.all.data(), 1, topRecvSubArray, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  
   if (cf.ndim == 3) {
-    MPI_Irecv(m.backRecv_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
-              MPI_DOUBLE, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-    MPI_Irecv(m.frontRecv_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
-              MPI_DOUBLE, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+    MPI_Irecv(m.all.data(), 1, backRecvSubArray, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+    MPI_Irecv(m.all.data(), 1, frontRecvSubArray, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]); 
   }
-  Kokkos::Profiling::popRegion(); // postRecv
-
-
-  Kokkos::deep_copy(deviceV, m.allSend); // Remove for CUDA-Aware
+  Kokkos::Profiling::popRegion(); // mpi::haloExchange::postRecv
 
 ///////////////////////////////////////////////
 // Post all halo exchange sends
 /////////////////////////////////////////////// 
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::copy-send");
-
-  MPI_Isend(m.allSend.data(), 1, leftSubArray, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Isend(m.allSend.data(), 1, rightSubArray, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Isend(m.allSend.data(), 1, bottomSubArray, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Isend(m.allSend.data(), 1, topSubArray, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  Kokkos::Profiling::pushRegion("mpi::haloExchange::postSend");
+  MPI_Isend(m.all.data(), 1, leftSendSubArray, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Isend(m.all.data(), 1, rightSendSubArray, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Isend(m.all.data(), 1, bottomSendSubArray, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Isend(m.all.data(), 1, topSendSubArray, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
   if (cf.ndim == 3) {
-    MPI_Isend(m.allSend.data(), 1, backSubArray, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-    MPI_Isend(m.allSend.data(), 1, frontSubArray, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+    MPI_Isend(m.all.data(), 1, backSendSubArray, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+    MPI_Isend(m.all.data(), 1, frontSendSubArray, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
   }
-
-  Kokkos::Profiling::popRegion(); // copy-send
+  Kokkos::Profiling::popRegion(); // mpi::haloExchange::postSend
 
   // Wait for the sends and receives to finish
   Kokkos::Profiling::pushRegion("mpi::haloExchange::waitall");
   MPI_Waitall(wait_count, reqs, MPI_STATUSES_IGNORE);
-  Kokkos::Profiling::popRegion(); // waitall
-*/
+  Kokkos::Profiling::popRegion(); // mpi::haloExchange::waitall
 
-
-
-///////////////////////////////////////////////
-// Post all halo exchange receives
-///////////////////////////////////////////////
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::postRecv");
-  MPI_Irecv(m.leftRecv_H.data(), cf.ng * cf.ngj * cf.ngk * (cf.nvt), 
-            MPI_DOUBLE, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Irecv(m.rightRecv_H.data(), cf.ng * cf.ngj * cf.ngk * (cf.nvt),
-            MPI_DOUBLE, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Irecv(m.bottomRecv_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt),
-            MPI_DOUBLE, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Irecv(m.topRecv_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt), 
-            MPI_DOUBLE, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  if (cf.ndim == 3) {
-    MPI_Irecv(m.backRecv_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
-              MPI_DOUBLE, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-    MPI_Irecv(m.frontRecv_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
-              MPI_DOUBLE, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  }
-  Kokkos::Profiling::popRegion(); // postRecv
-
-///////////////////////////////////////////////
-// Pack and send in x direction
-///////////////////////////////////////////////
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::copy-send");
-
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::copy-send::x-direction");
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::copy-send::x-direction::copyout");
-  Kokkos::parallel_for(xPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
-        m.leftSend(i, j, k, v) = deviceV(mng + i, j, k, v);
-        m.rightSend(i, j, k, v) = deviceV(i + mnci, j, k, v);
-      });
-  Kokkos::deep_copy(m.leftSend_H, m.leftSend);
-  Kokkos::deep_copy(m.rightSend_H, m.rightSend);
-  Kokkos::Profiling::popRegion(); // x-direction-copyout
-
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::copy-send::x-direction::send");
-  MPI_Isend(m.leftSend_H.data(), cf.ng * cf.ngj * cf.ngk * (cf.nvt), MPI_DOUBLE,
-            cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Isend(m.rightSend_H.data(), cf.ng * cf.ngj * cf.ngk * (cf.nvt),
-            MPI_DOUBLE, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  Kokkos::Profiling::popRegion(); // x-direction-postSend
-
-  Kokkos::Profiling::popRegion(); // copy-send-x-direction
-
-///////////////////////////////////////////////
-// Pack and send in y direction
-///////////////////////////////////////////////
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::copy-send::y-direction");
-
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::copy-send::y-direction::copyout");
-  Kokkos::parallel_for(yPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
-        m.bottomSend(i, j, k, v) = deviceV(i, mng + j, k, v);
-        m.topSend(i, j, k, v) = deviceV(i, j + mncj, k, v);
-      });
-  Kokkos::deep_copy(m.bottomSend_H, m.bottomSend);
-  Kokkos::deep_copy(m.topSend_H, m.topSend);
-  Kokkos::Profiling::popRegion(); // y-direction-copyout
-
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::copy-send::y-direction::send");
-  MPI_Isend(m.bottomSend_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt),
-            MPI_DOUBLE, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Isend(m.topSend_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt), MPI_DOUBLE,
-            cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  Kokkos::Profiling::popRegion(); // y-direction-postSend
-
-  Kokkos::Profiling::popRegion(); // copy-send-y-direction
-
-///////////////////////////////////////////////
-// Pack and send exchange in z direction
-///////////////////////////////////////////////
-  if (cf.ndim == 3) {
-    Kokkos::Profiling::pushRegion("mpi::haloExchange::copy-send::z-direction");
-
-    Kokkos::Profiling::pushRegion("mpi::haloExchange::copy-send::z-direction::copyout");
-    Kokkos::parallel_for( zPol,
-        KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
-          m.backSend(i, j, k, v) = deviceV(i, j, mng + k, v);
-          m.frontSend(i, j, k, v) = deviceV(i, j, k + mnck, v);
-        });
-    Kokkos::deep_copy(m.backSend_H, m.backSend);
-    Kokkos::deep_copy(m.frontSend_H, m.frontSend);
-    Kokkos::Profiling::popRegion(); // z-direction-copyout
-
-    Kokkos::Profiling::pushRegion("mpi::haloExchange::copy-send::z-direction::send");
-    MPI_Isend(m.backSend_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
-              MPI_DOUBLE, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-    MPI_Isend(m.frontSend_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
-              MPI_DOUBLE, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-    Kokkos::Profiling::popRegion(); // z-direction-postSend
-
-    Kokkos::Profiling::popRegion(); // copy-send-z-direction
-  }
-  Kokkos::Profiling::popRegion(); // copy-send
-
-  // Wait for the sends and receives to finish
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::waitall");
-  MPI_Waitall(wait_count, reqs, MPI_STATUSES_IGNORE);
-  Kokkos::Profiling::popRegion(); // waitall
-
-  // Now that the sends and receives are done, copy data back to where it belongs
-  // In theory we could wait for individual receives to finish with waitany or waitsome
-  // and do this as they complete, but that's much more complicated. In the long term,
-  // switching to CUDA-aware MPI and letting it do that is best way to achieve that.
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::copyin");
-
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::copyin::x-direction");
-  Kokkos::deep_copy(m.leftRecv, m.leftRecv_H);
-  Kokkos::deep_copy(m.rightRecv, m.rightRecv_H);
-  Kokkos::parallel_for( xPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
-        deviceV(i, j, k, v) = m.leftRecv(i, j, k, v);
-        deviceV(mngi - mng + i, j, k, v) = m.rightRecv(i, j, k, v);
-      });
-  Kokkos::Profiling::popRegion(); // x-direction-copyin
-
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::copyin::y-direction");
-  Kokkos::deep_copy(m.bottomRecv, m.bottomRecv_H);
-  Kokkos::deep_copy(m.topRecv, m.topRecv_H);
-  Kokkos::parallel_for( yPol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
-        deviceV(i, j, k, v) = m.bottomRecv(i, j, k, v);
-        deviceV(i, mngj - mng + j, k, v) = m.topRecv(i, j, k, v);
-      });
-  Kokkos::Profiling::popRegion(); // y-direction-copyin
-
-  if (cf.ndim == 3) {
-    Kokkos::Profiling::pushRegion("mpi::haloExchange::copyin::z-direction");
-    Kokkos::deep_copy(m.backRecv, m.backRecv_H);
-    Kokkos::deep_copy(m.frontRecv, m.frontRecv_H);
-
-    Kokkos::parallel_for( zPol,
-        KOKKOS_LAMBDA(const int i, const int j, const int k, const int v) {
-          deviceV(i, j, k, v) = m.backRecv(i, j, k, v);
-          deviceV(i, j, mngk - mng + k, v) = m.frontRecv(i, j, k, v);
-        });
-    Kokkos::Profiling::popRegion(); // z-direction-copyin
-  }
-  Kokkos::Profiling::popRegion(); // mpi::haloExchange::copyin
+  // CPU -> GPU
+  Kokkos::Profiling::pushRegion("mpi::haloExchange::deepcopy2");
+  Kokkos::deep_copy(m.all, deviceV); // Remove for CUDA-Aware
+  Kokkos::Profiling::popRegion(); // mpi::haloExchange::deepcopy2
 
   Kokkos::Profiling::popRegion(); // mpi::haloExchange
 }
