@@ -31,11 +31,23 @@ class mpiBuffers {
 
 public:
   mpiBuffers(struct inputConfig cf);
-
-  FS4D all;
-  
+  FS4D all;  
   FS4DH all_H;
-};
+  
+  MPI_Datatype leftRecvSubArray;
+  MPI_Datatype rightRecvSubArray;
+  MPI_Datatype bottomRecvSubArray;
+  MPI_Datatype topRecvSubArray;
+  MPI_Datatype backRecvSubArray;
+  MPI_Datatype frontRecvSubArray;
+
+  MPI_Datatype leftSendSubArray;
+  MPI_Datatype rightSendSubArray;
+  MPI_Datatype bottomSendSubArray;
+  MPI_Datatype topSendSubArray;
+  MPI_Datatype backSendSubArray;
+  MPI_Datatype frontSendSubArray;
+  };
 
 void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m);
 
