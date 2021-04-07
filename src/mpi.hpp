@@ -32,6 +32,7 @@ class mpiBuffers {
 public:
   mpiBuffers(struct inputConfig cf);
 
+  FS4D allSend;
   FS4D leftSend;
   FS4D leftRecv;
   FS4D rightSend;
@@ -45,6 +46,7 @@ public:
   FS4D frontSend;
   FS4D frontRecv;
 
+  FS4DH allSend_H;
   FS4DH leftSend_H;
   FS4DH leftRecv_H;
   FS4DH rightSend_H;

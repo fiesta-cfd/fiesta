@@ -19,6 +19,7 @@
 
 #include "mpi.hpp"
 #include "debug.hpp"
+#include "mpipcl.h"
 
 void mpi_init(struct inputConfig &cf) {
 
@@ -106,6 +107,7 @@ void mpi_init(struct inputConfig &cf) {
 }
 
 mpiBuffers::mpiBuffers(struct inputConfig cf) {
+  allSend = Kokkos::View<double****, FS_LAYOUT>("allSend", cf.ngi, cf.ngj, cf.ngk, cf.nvt);
 
   leftSend = Kokkos::View<double ****, FS_LAYOUT>("leftSend", cf.ng, cf.ngj,
                                                   cf.ngk, cf.nvt);
@@ -138,6 +140,7 @@ mpiBuffers::mpiBuffers(struct inputConfig cf) {
     frontSend = Kokkos::View<double ****, FS_LAYOUT>("frontSend",1,1,1,1);
     frontRecv = Kokkos::View<double ****, FS_LAYOUT>("frontRecv",1,1,1,1);
   }
+  allSend_H = Kokkos::create_mirror_view(allSend);
   leftSend_H = Kokkos::create_mirror_view(leftSend);
   leftRecv_H = Kokkos::create_mirror_view(leftRecv);
   rightSend_H = Kokkos::create_mirror_view(rightSend);
@@ -174,6 +177,98 @@ void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m) {
   int mncj = cf.ncj;
   int mnck = cf.nck;
   int mng = cf.ng;
+
+/*
+// MPI Datatypes implementation
+///////////////////////////////////////////////
+// Post all halo exchange receives
+/////////////////////////////////////////////// 
+  MPI_Datatype leftSubArray;
+  MPI_Datatype rightSubArray;
+  MPI_Datatype bottomSubArray;
+  MPI_Datatype topSubArray;
+  MPI_Datatype backSubArray;
+  MPI_Datatype frontSubArray;
+
+  int bigsizes[4] = {cf.ngi, cf.ngj, cf.ngk, cf.nvt};  
+
+  int xsubsizes[4] = {cf.ng, cf.ngj, cf.ngk, cf.nvt};
+  
+  int leftStarts[4] = {cf.ng, 0, 0, 0};
+  MPI_Type_create_subarray(4, bigsizes, xsubsizes, leftStarts, MPI_ORDER_C, MPI_DOUBLE, &leftSubArray);
+  MPI_Type_commit(&leftSubArray);
+
+  int rightStarts[4] = {cf.nci, 0, 0, 0};
+  MPI_Type_create_subarray(4, bigsizes, xsubsizes, rightStarts, MPI_ORDER_C, MPI_DOUBLE, &rightSubArray);
+  MPI_Type_commit(&rightSubArray);
+
+
+  int ysubsizes[4] = {cf.ngi, cf.ng, cf.ngk, cf.nvt};
+
+  int bottomStarts[4] = {0, cf.ng, 0, 0};
+  MPI_Type_create_subarray(4, bigsizes, ysubsizes, bottomStarts, MPI_ORDER_C, MPI_DOUBLE, &bottomSubArray);
+  MPI_Type_commit(&bottomSubArray);
+
+  int topStarts[4] = {0, cf.ncj, 0, 0};
+  MPI_Type_create_subarray(4, bigsizes, ysubsizes, topStarts, MPI_ORDER_C, MPI_DOUBLE, &topSubArray);
+  MPI_Type_commit(&topSubArray);
+
+  if (cf.ndim == 3) {
+    int zsubsizes[4] = {cf.ngi, cf.ngj, cf.ng, cf.nvt};
+    
+    int backStarts[4] = {0, 0,cf.ng, 0};
+    MPI_Type_create_subarray(4, bigsizes, zsubsizes, backStarts, MPI_ORDER_C, MPI_DOUBLE, &backSubArray);
+    MPI_Type_commit(&backSubArray);
+
+    int frontStarts[4] = {0, 0, cf.nck, 0};
+    MPI_Type_create_subarray(4, bigsizes, zsubsizes, frontStarts, MPI_ORDER_C, MPI_DOUBLE, &frontSubArray);
+    MPI_Type_commit(&frontSubArray);
+  }
+
+
+  Kokkos::Profiling::pushRegion("mpi::haloExchange::postRecv");
+  MPI_Irecv(m.leftRecv_H.data(), cf.ng * cf.ngj * cf.ngk * (cf.nvt), 
+            MPI_DOUBLE, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Irecv(m.rightRecv_H.data(), cf.ng * cf.ngj * cf.ngk * (cf.nvt),
+            MPI_DOUBLE, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Irecv(m.bottomRecv_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt),
+            MPI_DOUBLE, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Irecv(m.topRecv_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt), 
+            MPI_DOUBLE, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  if (cf.ndim == 3) {
+    MPI_Irecv(m.backRecv_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
+              MPI_DOUBLE, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+    MPI_Irecv(m.frontRecv_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
+              MPI_DOUBLE, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  }
+  Kokkos::Profiling::popRegion(); // postRecv
+
+
+  Kokkos::deep_copy(deviceV, m.allSend); // Remove for CUDA-Aware
+
+///////////////////////////////////////////////
+// Post all halo exchange sends
+/////////////////////////////////////////////// 
+  Kokkos::Profiling::pushRegion("mpi::haloExchange::copy-send");
+
+  MPI_Isend(m.allSend.data(), 1, leftSubArray, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Isend(m.allSend.data(), 1, rightSubArray, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Isend(m.allSend.data(), 1, bottomSubArray, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Isend(m.allSend.data(), 1, topSubArray, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  if (cf.ndim == 3) {
+    MPI_Isend(m.allSend.data(), 1, backSubArray, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+    MPI_Isend(m.allSend.data(), 1, frontSubArray, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  }
+
+  Kokkos::Profiling::popRegion(); // copy-send
+
+  // Wait for the sends and receives to finish
+  Kokkos::Profiling::pushRegion("mpi::haloExchange::waitall");
+  MPI_Waitall(wait_count, reqs, MPI_STATUSES_IGNORE);
+  Kokkos::Profiling::popRegion(); // waitall
+*/
+
+
 
 ///////////////////////////////////////////////
 // Post all halo exchange receives
