@@ -19,6 +19,7 @@
 
 #include "mpi.hpp"
 #include "debug.hpp"
+#include <type_traits>
 // #include "mpipcl.h"
 
 void mpi_init(struct inputConfig &cf) {
@@ -88,7 +89,6 @@ void mpi_init(struct inputConfig &cf) {
   cf.xmp = coords[0];
   cf.ymp = coords[0];
   cf.zmp = coords[0];
-
   cf.globalGridDims[0] = cf.glbl_ni;
   cf.globalGridDims[1] = cf.glbl_nj;
   cf.globalGridDims[2] = cf.glbl_nk;
@@ -107,66 +107,75 @@ void mpi_init(struct inputConfig &cf) {
 }
 
 mpiBuffers::mpiBuffers(struct inputConfig cf) {
-  all = Kokkos::View<double****, FS_LAYOUT>("all", cf.ngi, cf.ngj, cf.ngk, cf.nvt);
-  all_H = Kokkos::create_mirror_view(all);
+  //all = Kokkos::View<double****, FS_LAYOUT>("all", cf.ngi, cf.ngj, cf.ngk, cf.nvt);
+  //all_H = Kokkos::create_mirror_view(all);
 
   // MPI Datatypes implementation
+  int order;
+  if (std::is_same<FS_LAYOUT, Kokkos::LayoutLeft>::value) {
+    order = MPI_ORDER_FORTRAN;
+  } else if (std::is_same<FS_LAYOUT, Kokkos::LayoutRight>::value) {
+    order = MPI_ORDER_C;
+  } else {
+    cerr << "Invalid array order in mpiBuffers.\n";
+    exit(-1);
+  }
+
   int bigsizes[4] = {cf.ngi, cf.ngj, cf.ngk, cf.nvt};  
 
   int xsubsizes[4] = {cf.ng, cf.ngj, cf.ngk, cf.nvt};
-  
   int leftRecvStarts[4] = {0, 0, 0, 0};
-  MPI_Type_create_subarray(4, bigsizes, xsubsizes, leftRecvStarts, MPI_ORDER_C, MPI_DOUBLE, &leftRecvSubArray);
+  MPI_Type_create_subarray(4, bigsizes, xsubsizes, leftRecvStarts, order, MPI_DOUBLE, &leftRecvSubArray);
   MPI_Type_commit(&leftRecvSubArray);
 
   int leftSendStarts[4] = {cf.ng, 0, 0, 0};
-  MPI_Type_create_subarray(4, bigsizes, xsubsizes, leftSendStarts, MPI_ORDER_C, MPI_DOUBLE, &leftSendSubArray);
+  MPI_Type_create_subarray(4, bigsizes, xsubsizes, leftSendStarts, order, MPI_DOUBLE, &leftSendSubArray);
   MPI_Type_commit(&leftSendSubArray);
 
   int rightRecvStarts[4] = {cf.ngi - cf.ng, 0, 0, 0};
-  MPI_Type_create_subarray(4, bigsizes, xsubsizes, rightRecvStarts, MPI_ORDER_C, MPI_DOUBLE, &rightRecvSubArray);
+  MPI_Type_create_subarray(4, bigsizes, xsubsizes, rightRecvStarts, order, MPI_DOUBLE, &rightRecvSubArray);
   MPI_Type_commit(&rightRecvSubArray);
 
   int rightSendStarts[4] = {cf.nci, 0, 0, 0};
-  MPI_Type_create_subarray(4, bigsizes, xsubsizes, rightSendStarts, MPI_ORDER_C, MPI_DOUBLE, &rightSendSubArray);
+  MPI_Type_create_subarray(4, bigsizes, xsubsizes, rightSendStarts, order, MPI_DOUBLE, &rightSendSubArray);
   MPI_Type_commit(&rightSendSubArray);
 
 
   int ysubsizes[4] = {cf.ngi, cf.ng, cf.ngk, cf.nvt};
 
   int bottomRecvStarts[4] = {0, 0, 0, 0};
-  MPI_Type_create_subarray(4, bigsizes, ysubsizes, bottomRecvStarts, MPI_ORDER_C, MPI_DOUBLE, &bottomRecvSubArray);
+  MPI_Type_create_subarray(4, bigsizes, ysubsizes, bottomRecvStarts, order, MPI_DOUBLE, &bottomRecvSubArray);
   MPI_Type_commit(&bottomRecvSubArray);
 
   int bottomSendStarts[4] = {0, cf.ng, 0, 0};
-  MPI_Type_create_subarray(4, bigsizes, ysubsizes, bottomSendStarts, MPI_ORDER_C, MPI_DOUBLE, &bottomSendSubArray);
-  MPI_Type_commit(&rightSendSubArray);
+  MPI_Type_create_subarray(4, bigsizes, ysubsizes, bottomSendStarts, order, MPI_DOUBLE, &bottomSendSubArray);
+  MPI_Type_commit(&bottomSendSubArray);
 
   int topRecvStarts[4] = {0, cf.ngj - cf.ng, 0, 0};
-  MPI_Type_create_subarray(4, bigsizes, ysubsizes, topRecvStarts, MPI_ORDER_C, MPI_DOUBLE, &topRecvSubArray);
+  MPI_Type_create_subarray(4, bigsizes, ysubsizes, topRecvStarts, order, MPI_DOUBLE, &topRecvSubArray);
   MPI_Type_commit(&topRecvSubArray);
 
   int topSendStarts[4] = {0, cf.ncj, 0, 0};
-  MPI_Type_create_subarray(4, bigsizes, ysubsizes, topSendStarts, MPI_ORDER_C, MPI_DOUBLE, &topSendSubArray);
+  MPI_Type_create_subarray(4, bigsizes, ysubsizes, topSendStarts, order, MPI_DOUBLE, &topSendSubArray);
   MPI_Type_commit(&topSendSubArray);
 
   if (cf.ndim == 3) {
     int zsubsizes[4] = {cf.ngi, cf.ngj, cf.ng, cf.nvt};
     
     int backRecvStarts[4] = {0, 0, 0, 0};
-    MPI_Type_create_subarray(4, bigsizes, zsubsizes, backRecvStarts, MPI_ORDER_C, MPI_DOUBLE, &backRecvSubArray);
+    MPI_Type_create_subarray(4, bigsizes, zsubsizes, backRecvStarts, order, MPI_DOUBLE, &backRecvSubArray);
     MPI_Type_commit(&backRecvSubArray);
 
     int backSendStarts[4] = {0, 0, cf.ng, 0};
-    MPI_Type_create_subarray(4, bigsizes, zsubsizes, backSendStarts, MPI_ORDER_C, MPI_DOUBLE, &backSendSubArray);
+    MPI_Type_create_subarray(4, bigsizes, zsubsizes, backSendStarts, order, MPI_DOUBLE, &backSendSubArray);
     MPI_Type_commit(&backSendSubArray);
 
     int frontRecvStarts[4] = {0, 0, cf.ngk - cf.ng, 0};
-    MPI_Type_create_subarray(4, bigsizes, zsubsizes, frontRecvStarts, MPI_ORDER_C, MPI_DOUBLE, &frontRecvSubArray);
+    MPI_Type_create_subarray(4, bigsizes, zsubsizes, frontRecvStarts, order, MPI_DOUBLE, &frontRecvSubArray);
     MPI_Type_commit(&frontRecvSubArray);
 
     int frontSendStarts[4] = {0, 0, cf.nck, 0};
-    MPI_Type_create_subarray(4, bigsizes, ysubsizes, frontSendStarts, MPI_ORDER_C, MPI_DOUBLE, &frontSendSubArray);
+    MPI_Type_create_subarray(4, bigsizes, zsubsizes, frontSendStarts, order, MPI_DOUBLE, &frontSendSubArray);
     MPI_Type_commit(&frontSendSubArray);
   }
 }
@@ -186,22 +195,22 @@ void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m) {
   MPI_Request reqs[12];
 
   // GPU -> CPU
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::deepcopy1");
-  Kokkos::deep_copy(deviceV, m.all); // Remove for CUDA-Aware
-  Kokkos::Profiling::popRegion(); // mpi::haloExchange::deepcopy1
+  //Kokkos::Profiling::pushRegion("mpi::haloExchange::deepcopy1");
+  //Kokkos::deep_copy(deviceV, m.all); // Remove for CUDA-Aware
+  //Kokkos::Profiling::popRegion(); // mpi::haloExchange::deepcopy1
  
 ///////////////////////////////////////////////
 // Post all halo exchange receives
 /////////////////////////////////////////////// 
   Kokkos::Profiling::pushRegion("mpi::haloExchange::postRecv");
-  MPI_Irecv(m.all.data(), 1, m.leftRecvSubArray, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Irecv(m.all.data(), 1, m.rightRecvSubArray, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Irecv(m.all.data(), 1, m.bottomRecvSubArray, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Irecv(m.all.data(), 1, m.topRecvSubArray, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Irecv(deviceV.data(), 1, m.leftRecvSubArray, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Irecv(deviceV.data(), 1, m.rightRecvSubArray, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Irecv(deviceV.data(), 1, m.bottomRecvSubArray, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Irecv(deviceV.data(), 1, m.topRecvSubArray, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
   
   if (cf.ndim == 3) {
-    MPI_Irecv(m.all.data(), 1, m.backRecvSubArray, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-    MPI_Irecv(m.all.data(), 1, m.frontRecvSubArray, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]); 
+    MPI_Irecv(deviceV.data(), 1, m.backRecvSubArray, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+    MPI_Irecv(deviceV.data(), 1, m.frontRecvSubArray, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]); 
   }
   Kokkos::Profiling::popRegion(); // mpi::haloExchange::postRecv
 
@@ -209,13 +218,13 @@ void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m) {
 // Post all halo exchange sends
 /////////////////////////////////////////////// 
   Kokkos::Profiling::pushRegion("mpi::haloExchange::postSend");
-  MPI_Isend(m.all.data(), 1, m.leftSendSubArray, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Isend(m.all.data(), 1, m.rightSendSubArray, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Isend(m.all.data(), 1, m.bottomSendSubArray, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Isend(m.all.data(), 1, m.topSendSubArray, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Isend(deviceV.data(), 1, m.leftSendSubArray, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Isend(deviceV.data(), 1, m.rightSendSubArray, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Isend(deviceV.data(), 1, m.bottomSendSubArray, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Isend(deviceV.data(), 1, m.topSendSubArray, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
   if (cf.ndim == 3) {
-    MPI_Isend(m.all.data(), 1, m.backSendSubArray, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-    MPI_Isend(m.all.data(), 1, m.frontSendSubArray, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+    MPI_Isend(deviceV.data(), 1, m.backSendSubArray, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+    MPI_Isend(deviceV.data(), 1, m.frontSendSubArray, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
   }
   Kokkos::Profiling::popRegion(); // mpi::haloExchange::postSend
 
@@ -225,9 +234,9 @@ void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m) {
   Kokkos::Profiling::popRegion(); // mpi::haloExchange::waitall
 
   // CPU -> GPU
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::deepcopy2");
-  Kokkos::deep_copy(m.all, deviceV); // Remove for CUDA-Aware
-  Kokkos::Profiling::popRegion(); // mpi::haloExchange::deepcopy2
+  //Kokkos::Profiling::pushRegion("mpi::haloExchange::deepcopy2");
+  //Kokkos::deep_copy(m.all, deviceV); // Remove for CUDA-Aware
+  //Kokkos::Profiling::popRegion(); // mpi::haloExchange::deepcopy2
 
   Kokkos::Profiling::popRegion(); // mpi::haloExchange
 }
