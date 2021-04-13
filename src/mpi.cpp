@@ -22,9 +22,7 @@
 #include <type_traits>
 // #include "mpipcl.h"
 
-
-void mpi_init(struct inputConfig &cf)
-{
+void mpi_init(struct inputConfig &cf) {
   int rem;
 
   int dims[3] = {cf.xProcs, cf.yProcs, cf.zProcs};
