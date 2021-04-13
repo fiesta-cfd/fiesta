@@ -128,46 +128,21 @@ add_subdirectory(kokkos)
 include_directories(lua/src)
 add_subdirectory(lua)
 
+include_directories(src)
+
 ## enforce static build
 #SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 #SET(BUILD_SHARED_LIBS OFF)
 #SET(CMAKE_EXE_LINKER_FLAGS "-static")
 
 # If doing a full build, find mpi
-if (NOT LITE)
-    # MPI
-    find_package(MPI REQUIRED)
-    include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-endif()
+find_package(MPI REQUIRED)
+include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+find_package(HDF5)
+include_directories(SYSTEM ${HDF5_C_INCLUDE_DIRS})
 
 # set install directory for third party components
 set(installDir ${CMAKE_CURRENT_BINARY_DIR}/install)
-
-# If doing a full build, find or build hdf5
-if (NOT LITE)
-    if (NOT BUILD_HDF5)
-        find_package(HDF5)
-    endif()
-
-    if (HDF5_FOUND AND HDF5_IS_PARALLEL)
-        include_directories(SYSTEM ${HDF5_C_INCLUDE_DIRS})
-    else()
-        ExternalProject_Add(hdf5Parallel
-          SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/hdf5
-          INSTALL_DIR ${installDir}
-          BUILD_BYPRODUCTS ${installDir}/lib/libhdf5.a
-                           ${installDir}/lib/libhdf5_hl.a
-                           ${installDir}/lib/libhdf5_tools.a
-          CMAKE_ARGS -D BUILD_SHARED_LIBS:BOOL=OFF
-                     -D BUILD_TESTING:BOOL=OFF
-                     -D HDF5_BUILD_EXAMPLES:BOOL=OFF
-                     -D HDF5_DISABLE_COMPILER_WARNINGS:BOOL=ON
-                     -D HDF5_ENABLE_PARALLEL:BOOL=ON
-                     -D HDF5_BUILD_CPP_LIB:BOOL=OFF
-                     -D CMAKE_INSTALL_PREFIX:PATH=${installDir}
-        )
-    endif()
-endif()
 
 # include third party headers (might be empty if third party components are provided elsewhere)
 include_directories(${installDir}/include)
@@ -175,43 +150,36 @@ include_directories(${installDir}/include)
 # set base source files
 set(FIESTA_SRCS src/rk.cpp src/fiesta.cpp src/luaReader.cpp src/bc.cpp
      src/status.cpp src/timer.cpp src/input.cpp src/output.cpp
-     src/main.cpp src/rkfunction.cpp src/writer.cpp
-     src/cart2d.cpp src/cart3d.cpp src/gen2d.cpp src/gen3d.cpp)
+     src/rkfunction.cpp src/writer.cpp src/mpi.cpp src/hdf.cpp)
+     
 
-add_executable(fiesta ${FIESTA_SRCS})
-target_link_libraries(fiesta PRIVATE
+add_library(fiestaLib ${FIESTA_SRCS})
+
+add_executable(fiesta src/main.cpp src/cart2d.cpp src/cart3d.cpp src/gen2d.cpp src/gen3d.cpp)
+
+target_link_libraries(fiestaLib
                       kokkos
-                      lua)
+                      ${MPI_CXX_LIBRARIES}
+                      ${HDF5_C_LIBRARIES}
+                      lua
+)
 
+target_link_libraries(fiesta
+                      fiestaLib
+)
+
+# add built strings to source code
+if(CUDA)
+    target_compile_definitions(fiestaLib PRIVATE HAVE_CUDA)
+elseif(OPENMP)
+    target_compile_definitions(fiestaLib PRIVATE HAVE_OPENMP)
+endif()
+target_compile_definitions(fiestaLib PRIVATE FIESTA_VERSION="${FIESTA_VER}")
+target_compile_definitions(fiestaLib PRIVATE FIESTA_OPTIONS="${FIESTA_OPTS}")
+target_compile_definitions(fiestaLib PRIVATE FIESTA_BTIME="${BUILD_TIME}")
 if (LITE)
-    # add LITE only build files and link
-    target_sources(fiesta PRIVATE src/vtk.cpp)
-else(LITE)
-    # add additional build files for non-lite builds
-    target_sources(fiesta PRIVATE src/mpi.cpp src/hdf.cpp)
-    target_link_libraries(fiesta PRIVATE kokkos)
-  
-    if (HDF5_FOUND AND HDF5_IS_PARALLEL)
-        message("### Using System HDF5")
-        # link to built hdf5 library
-        target_link_libraries(fiesta PRIVATE ${HDF5_C_LIBRARIES})
-    else()
-        # link to found hdf5 library
-        message("### Building HDF5")
-        add_dependencies(fiesta hdf5Parallel)
-        target_link_libraries(fiesta PRIVATE 
-                              ${installDir}/lib/libhdf5.a
-                              ${installDir}/lib/libhdf5_hl.a
-                              ${installDir}/lib/libhdf5_tools.a
-        )
-    endif(HDF5_FOUND AND HDF5_IS_PARALLEL)
-
-    if (TEMPI)
-        target_link_libraries(fiesta PRIVATE tempi)
-    endif (TEMPI)
-
-    target_link_libraries(fiesta PRIVATE ${MPI_CXX_LIBRARIES})
-endif(LITE)
+    target_compile_definitions(fiestaLib PRIVATE NOMPI)
+endif()
 
 # add built strings to source code
 if(CUDA)
@@ -237,3 +205,12 @@ install(TARGETS fiesta
 message("Fiesta Version ${FIESTA_VER}")
 message("Fiesta Build Options ${FIESTA_OPTS}")
 message("Fiesta Build Time ${BUILD_TIME}")
+message("MPI Version: ${MPI_CXX_VERSION}")
+
+add_subdirectory(catch2)
+add_executable(tests tests/test.cpp)
+target_link_libraries(tests PRIVATE Catch2::Catch2WithMain kokkos fiestaLib)
+
+include(CTest)
+include(catch2/extras/Catch.cmake)
+catch_discover_tests(tests)

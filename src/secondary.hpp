@@ -20,6 +20,17 @@
 #ifndef SECONDARY_H
 #define SECONDARY_H
 
+struct testFunctor {
+  FS2D rho;
+
+  testFunctor(FS2D r_) : rho(r_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j) const {
+    
+  }
+};
+
 struct copyExtraVars2D {
   FS4D varx;
   FS3D vel;
