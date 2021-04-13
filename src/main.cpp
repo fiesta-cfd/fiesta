@@ -24,6 +24,7 @@
 #include "rk.hpp"
 #include "debug.hpp"
 #include "log.hpp"
+#include <csignal>
 
 // Compute Objects
 #include "cart2d.hpp"
@@ -31,10 +32,59 @@
 #include "gen2d.hpp"
 #include "gen3d.hpp"
 
+class fiestaSignalHandler{
+    static fiestaSignalHandler *instance;
+    struct inputConfig &cf;
+
+    fiestaSignalHandler(struct inputConfig &cf_):cf(cf_){};
+
+  public:
+    static fiestaSignalHandler *getInstance(struct inputConfig &cf){
+      if (!instance)
+        instance = new fiestaSignalHandler(cf);
+      return instance;
+    }
+
+    void registerSignals(){
+      signal(SIGINT,fiestaSignalHandler::sigintHandler);
+      signal(SIGUSR1,fiestaSignalHandler::sigusr1Handler);
+      signal(SIGTERM,fiestaSignalHandler::sigtermHandler);
+    }
+
+    void sigintFunction(int signum){
+      if (cf.rank ==0) cout << "Recieved SIGINT:  Writing restart and exiting after timestep " << cf.t << "." << endl;
+      cf.exitFlag=1;
+      cf.restartFlag=1;
+    }
+    void sigusr1Function(int signum){
+      if (cf.rank==0) cout << "Recieved SIGUSR1:  Writing restart after timestep " << cf.t << "." << endl;
+      cf.restartFlag=1;
+    }
+    void sigtermFunction(int signum){
+      if (cf.rank==0) cout << "Recieved SIGTERM:  Exiting after timestep " << cf.t << "." << endl;
+      cf.exitFlag=1;
+    }
+
+    static void sigintHandler(int signum){
+      instance->sigintFunction(signum);
+    }
+    static void sigusr1Handler(int signum){
+      instance->sigusr1Function(signum);
+    }
+    static void sigtermHandler(int signum){
+      instance->sigtermFunction(signum);
+    }
+};
+
+fiestaSignalHandler *fiestaSignalHandler::instance=0;
+
 int main(int argc, char *argv[]) {
   
   struct inputConfig cf;
   Fiesta::initialize(cf,argc,argv);
+
+  class fiestaSignalHandler *signalHandler = signalHandler->getInstance(cf);
+  signalHandler->registerSignals();
 
   cf.totalTimer.start();
   cf.initTimer.start();
@@ -74,7 +124,11 @@ int main(int argc, char *argv[]) {
     rkAdvance(cf,f);
     f->postStep();
  
+    Fiesta::collectSignals(cf);
     Fiesta::checkIO(cf,f,t,cf.time);
+
+    if (cf.exitFlag==1)
+      break;
   }
  
   // Post Simulation

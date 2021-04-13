@@ -29,8 +29,13 @@
 #include <iostream>
 #include <set>
 #include "log.hpp"
+//#include <csignal>
 
 using namespace std;
+
+int Fiesta::fiestaTest(int a, int b){
+    return a + b;
+}
 
 //
 // Initialize Fiesta and fill configuration structure with input file variables
@@ -182,14 +187,21 @@ void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time){
       f->timers["solWrite"].accumulate();
     }
   }
-  // Write restart file if necessary
+
+  // Check Restart Frequency
   if (cf.restart_freq > 0) {
     if ((t + 1) % cf.restart_freq == 0) {
-      f->timers["resWrite"].reset();
-      cf.w->writeRestart(cf, f, t + 1, time);
-      Kokkos::fence();
-      f->timers["resWrite"].accumulate();
+      cf.restartFlag=1;
     }
+  }
+
+  // Write restart file if necessary
+  if (cf.restartFlag==1){
+    f->timers["resWrite"].reset();
+    cf.w->writeRestart(cf, f, t + 1, time);
+    Kokkos::fence();
+    f->timers["resWrite"].accumulate();
+    cf.restartFlag=0;
   }
   // Print status check if necessary
   if (cf.stat_freq > 0) {
@@ -199,6 +211,15 @@ void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time){
       f->timers["statCheck"].accumulate();
     }
   }
+}
+void Fiesta::collectSignals(struct inputConfig &cf){
+  int glblRestartFlag=0;
+  MPI_Allreduce(&cf.restartFlag,&glblRestartFlag,1,MPI_INT,MPI_MAX,cf.comm);
+  cf.restartFlag=glblRestartFlag;
+
+  int glblExitFlag=0;
+  MPI_Allreduce(&cf.exitFlag,&glblExitFlag,1,MPI_INT,MPI_MAX,cf.comm);
+  cf.exitFlag=glblExitFlag;
 }
 
 void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){

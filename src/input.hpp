@@ -113,6 +113,9 @@ struct inputConfig {
   double h, tdx, tdy;
   int verbosity;
   std::string logFilename;
+  int sigintFlag;
+  int restartFlag;
+  int exitFlag;
 
   int globalGridDims[3];
   int globalCellDims[3];

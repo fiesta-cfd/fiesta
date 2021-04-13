@@ -36,6 +36,9 @@ namespace Fiesta {
     void reportTimers(struct inputConfig&, rk_func*);
     void checkIO(struct inputConfig&, rk_func*, int, double);
     void finalize(struct inputConfig &);
-}
+    void collectSignals(struct inputConfig &cf);
+    void finalize();
+    int fiestaTest(int,int);
+};
 
 #endif

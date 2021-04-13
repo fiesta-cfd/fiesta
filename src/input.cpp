@@ -347,6 +347,13 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   cf.yPlus = -1 + cf.yPer;
   cf.zMinus = -1 + cf.zPer;
   cf.zPlus = -1 + cf.zPer;
+
+  // initialize signal flags to inactive
+  cf.sigintFlag=0;
+  cf.restartFlag=0;
+  cf.exitFlag=0;
+
+  //return cf;
 }
 
 int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
