@@ -1,6 +1,5 @@
-******
 Logger
-******
+======
 
 Prints timestamped log messages to a file.  A program logger is created near the
 beginning of execution and is stored in the configuration object ``cf.log``.
@@ -13,7 +12,7 @@ Colorized logs can be viewed with the command ``less -R fiesta.log``.
 Sufficiently modern versions of ``cat`` will also interpret color.
 
 Command Line Options
-####################
+--------------------
 
 * ``-v [level]`` (lower case v) Verbosity Level
 
@@ -28,7 +27,7 @@ Command Line Options
   Default: ``fiesta.log``
 
 Usage
-#####
+-----
 
 Example (in code):
 ::
@@ -59,11 +58,13 @@ The actual colors used will depend on your terminal configuration.
 * Error: red
   
 Logger Constructor
-##################
+------------------
+
 Additional logger objects can be created if necessary.  They will not obey the
 command line options above unless the appropriate values of ``cArgs`` are used
 in the constructor.
 ::
+
   Logger myLogger = Logger(int verbosity, int colorMode, int colorLogs, int mpiRank, string logName);
 
 * ``verbosity`` Verbosity level, see level descriptions above.  Use ``cArgs.verbosity`` to retrieve
@@ -73,10 +74,11 @@ in the constructor.
   * ``1`` Force Color
   * ``2`` Use Color only if output it to a tty(e.g. /dev/s
   * Use ``cArgs.colorFlag`` to
-  retrieve the colormode requested on the command line.tdout).
+    retrieve the colormode requested on the command line.tdout).
+
 * ``colorLogs`` Whether or not to colorize logs.  Use ``cArgs.colorLogs`` to
   retrieve the logger color flag requested on the command line.
-
-*  ``mpiRank`` Rank of current process.  Only rank ``0`` will actually write to
+* ``mpiRank`` Rank of current process.  Only rank ``0`` will actually write to
   log files.
 * ``logName`` Name of file where logs will be written.
+
