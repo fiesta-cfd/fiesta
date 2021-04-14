@@ -30,6 +30,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include "xdmf.hpp"
 //#ifndef NOMPI
 #include "mpi.h"
 #include <vector>
@@ -54,7 +55,8 @@ void writeDataItem(FILE* xmf, string path, int ndim, int* dims){
   fprintf(xmf, "        %s\n", path.c_str());
   fprintf(xmf, "       </DataItem>\n");
 }
-void write_xmf(string fname, string hname, double time, struct inputConfig &cf, vector<string> vNames, vector<string> vxNames ){
+void write_xmf(string fname, string hname, double time,
+               struct inputConfig &cf, vector<string> vNames, vector<string> vxNames ){
 
     int dims[cf.ndim];
     invertArray(cf.ndim,dims,cf.globalCellDims);
@@ -271,13 +273,13 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
 
   // ############################################################## \\
 
-  int ist=45;
-  int jst=37;
-  int kst=45;
+  int ist=40;
+  int jst=40;
+  int kst=0;
 
-  int ind=45;
-  int jnd=45;
-  int knd=65;
+  int ind=50;
+  int jnd=60;
+  int knd=cf.glbl_nck-1;
 
   int isz=ind-ist+1;
   int jsz=jnd-jst+1;
@@ -302,9 +304,13 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
 
   vector<int> actDims;
   string actDimNames;
-  if (ksz>1){ actDims.push_back(2); actDimNames.append(to_string(2));}
-  if (jsz>1){ actDims.push_back(1); actDimNames.append(to_string(1));}
-  if (isz>1){ actDims.push_back(0); actDimNames.append(to_string(0));}
+  //if (ksz>1){ actDims.push_back(2); actDimNames.append(to_string(2));}
+  //if (jsz>1){ actDims.push_back(1); actDimNames.append(to_string(1));}
+  //if (isz>1){ actDims.push_back(0); actDimNames.append(to_string(0));}
+
+  actDims.push_back(2); actDimNames.append(to_string(2));
+  actDims.push_back(1); actDimNames.append(to_string(1));
+  actDims.push_back(0); actDimNames.append(to_string(0));
 
 
   cf.log->debug("Active Dimensions: ",actDims.size(),"(",actDimNames,")");
@@ -350,6 +356,9 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   MPI_Comm sliceComm;
   MPI_Comm_split(cf.comm,myColor,cf.rank,&sliceComm);
   if (myColor==1){
+    hsize_t slcgDims[actDims.size()];
+    hsize_t slcgCount[actDims.size()];
+
     hsize_t slcDims[actDims.size()];
     hsize_t slcCount[actDims.size()];
     hsize_t slcOffset[actDims.size()];
@@ -362,7 +371,12 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
     for (int d : actDims){
       slcCount[hdx]=hi[d]-lo[d]+1;
       slcDims[hdx]=dms[d];
+
+      slcgCount[hdx]=hi[d]-lo[d]+2;
+      slcgDims[hdx]=dms[d]+1;
+
       slcOffset[hdx]=ofs[d];
+
       countStr.append(to_string(slcCount[hdx]));
       countStr.append(",");
       countStr.append(to_string(slcDims[hdx]));
@@ -378,19 +392,44 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
     slcLen = (ihi-ilo+2)*(jhi-jlo+2)*(khi-klo+2);
     T* slcGrid = (T*)malloc(slcLen*sizeof(T*));
 
-    stringstream lineName;
-    lineName << cf.pathName << "/line/" << "line-" << setw(pad) << setfill('0') << tdx << ".h5";
+    int ii,jj,kk;
+    int koffset;
+
+    stringstream lineName,lineBase,lineHDF,lineXMF;
+    lineBase << "line-" << setw(pad) << setfill('0') << tdx;
+    lineName << cf.pathName << "/line/" << lineBase.str() << ".h5";
+    lineXMF << cf.pathName << "/line/" << lineBase.str() << ".xmf";
+    lineHDF << lineBase.str() << ".h5";
+
     cf.log->debug("[",cf.t,"] ","Writing ",lineName.str());
+
     hid_t linefile_id = openHDF5ForWrite(sliceComm, MPI_INFO_NULL, lineName.str());
 
     hid_t linegroup_id = H5Gcreate(linefile_id, "/Grid", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    
+    for (int vn=0; vn<cf.ndim; ++vn){
+      for (int i = ilo; i < ihi+2; ++i) {
+        for (int j = jlo; j < jhi+2; ++j) {
+          for (int k = klo; k < khi+2; ++k) {
+            ii=i-ilo;
+            jj=j-jlo;
+            kk=k-klo;
+            idx = ((iex+1) * (jex+1)) * kk + (iex+1) * jj + ii;
+            slcGrid[idx] = gridH(i, j, k, vn);
+          }
+        }
+      }
+      stringstream lineStr;
+      lineStr << "Dimension" << vn;
+      int slcDim = actDims.size();
+      cf.log->debug("Dataset name: ",lineStr.str());
+      write_h5<T>(linegroup_id, lineStr.str(), slcDim, slcgDims, slcgCount, slcOffset, slcGrid); 
+    }
+
     H5Gclose(linegroup_id);
     linegroup_id = H5Gcreate(linefile_id, "/Solution", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    
-    int ii,jj,kk;
-    int koffset;
-    if (cf.ndim == 3) koffset = cf.ng;
 
+    if (cf.ndim == 3) koffset = cf.ng;
     else koffset = 0;
     for (int vn=0; vn<cf.nvt; ++vn){
       for (int i = ilo; i < ihi+1; ++i) {
@@ -405,11 +444,42 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
         }
       }
       stringstream lineStr;
-      lineStr << "Variable" << vn;
+      lineStr << "Variable" << setw(2) << setfill('0') << vn;
       int slcDim = actDims.size();
       cf.log->debug("Dataset name: ",lineStr.str());
       write_h5<T>(linegroup_id, lineStr.str(), slcDim, slcDims, slcCount, slcOffset, slcData); 
     }
+
+    if (cf.ndim == 3) koffset = cf.ng;
+    else koffset = 0;
+    for (size_t vn = 0; vn < f->varxNames.size(); ++vn) {
+      for (int i = ilo; i < ihi+1; ++i) {
+        for (int j = jlo; j < jhi+1; ++j) {
+          for (int k = klo; k < khi+1; ++k) {
+            ii=i-ilo;
+            jj=j-jlo;
+            kk=k-klo;
+            idx = (iex * jex) * kk + iex * jj + ii;
+            slcData[idx] = varxH(i+cf.ng, j+cf.ng, k+koffset, vn);
+          }
+        }
+      }
+      stringstream lineStr;
+      lineStr << "Variable" << setw(2) << setfill('0') << vn+cf.nvt;
+      int slcDim = actDims.size();
+      cf.log->debug("Dataset name: ",lineStr.str());
+      write_h5<T>(linegroup_id, lineStr.str(), slcDim, slcDims, slcCount, slcOffset, slcData); 
+    }
+
+    cf.log->debug("[",cf.t,"] ","Writing ",lineXMF.str());
+    vector<int> xmfDims;
+    for (auto d : slcDims) xmfDims.push_back(d);
+    //xmfDims.push_back(iex);
+    //xmfDims.push_back(jiex);
+    //xmfDims.push_back(kex);
+
+    writeXMF(lineXMF.str(), lineHDF.str(), time, actDims.size(), actDims, xmfDims, cf.nvt, f->varNames,f->varxNames);
+    //writeXMF(xmfName.str(), hdfBaseName.str(), time, cf, f->varNames,f->varxNames);
 
     //int test;
     int sliceRank;
