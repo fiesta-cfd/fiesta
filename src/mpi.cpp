@@ -22,7 +22,12 @@
 #include <type_traits>
 // #include "mpipcl.h"
 
-void mpi_init(struct inputConfig &cf) {
+
+// XXX This should be split into explicit subclasses for the different halo exchange
+// strategies. XXX
+
+mpiHaloExchange::mpiHaloExchange(struct inputConfig &c) 
+  : cf(c) {
 
   int rem;
 
@@ -106,11 +111,39 @@ void mpi_init(struct inputConfig &cf) {
   cf.subdomainOffset[2] = cf.kStart;
 }
 
-mpiBuffers::mpiBuffers(struct inputConfig cf) {
-  //all = Kokkos::View<double****, FS_LAYOUT>("all", cf.ngi, cf.ngj, cf.ngk, cf.nvt);
-  //all_H = Kokkos::create_mirror_view(all);
+void mpiHaloExchange::haloExchange(FS4D &deviceV) {
 
-  // MPI Datatypes implementation
+  Kokkos::Profiling::pushRegion("mpi::haloExchange");
+  
+  int wait_count = 0;
+  MPI_Request reqs[12];
+
+  for (int i = 0; i < 12; i++) reqs[i] = MPI_REQUEST_NULL;
+
+  Kokkos::Profiling::pushRegion("mpi::haloExchange::receiveHalo");
+  receiveHalo(deviceV, reqs);
+  Kokkos::Profiling::popRegion(); // receiveHalo
+  Kokkos::Profiling::pushRegion("mpi::haloExchange::SendHalo");
+  sendHalo(deviceV, reqs + 6);
+  Kokkos::Profiling::popRegion(); // sendHalo
+
+  // Wait for the sends and receives to finish
+  Kokkos::Profiling::pushRegion("mpi::haloExchange::waitall");
+  MPI_Waitall(wait_count, reqs, MPI_STATUSES_IGNORE);
+  Kokkos::Profiling::popRegion(); // mpi::haloExchange::waitall
+
+  Kokkos::Profiling::pushRegion("mpi::haloExchange::unpackHalo");
+  unpackHalo(deviceV);
+  Kokkos::Profiling::popRegion(); // unpackHalo
+
+  Kokkos::Profiling::popRegion(); // mpi::haloExchange
+}
+
+// Create MPI datatypes for the subarray borders that can be used by 
+// MPI routines to send/receive in place. Note that many MPIs have 
+// really bad performance doing this!
+directHaloExchange::directHaloExchange(struct inputConfig &c)
+  : mpiHaloExchange(c) {
   int order;
   if (std::is_same<FS_LAYOUT, Kokkos::LayoutLeft>::value) {
     order = MPI_ORDER_FORTRAN;
@@ -181,62 +214,127 @@ mpiBuffers::mpiBuffers(struct inputConfig cf) {
 }
 
 #define FIESTA_HALO_TAG 7223
+ 
+void directHaloExchange::receiveHalo(FS4D &deviceV, MPI_Request reqs[6]) {
 
-void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m) {
+  int wait_count = 0;
+///////////////////////////////////////////////
+// Post all halo exchange receives
+/////////////////////////////////////////////// 
+  MPI_Irecv(deviceV.data(), 1, leftRecvSubArray, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Irecv(deviceV.data(), 1, rightRecvSubArray, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
 
-  Kokkos::Profiling::pushRegion("mpi::haloExchange");
+  MPI_Irecv(deviceV.data(), 1, bottomRecvSubArray, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Irecv(deviceV.data(), 1, topRecvSubArray, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  
+  if (cf.ndim == 3) {
+    MPI_Irecv(deviceV.data(), 1, backRecvSubArray, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+    MPI_Irecv(deviceV.data(), 1, frontRecvSubArray, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]); 
+  }
+}
 
+void directHaloExchange::sendHalo(FS4D &deviceV, MPI_Request reqs[6]) {
+///////////////////////////////////////////////
+// Post all halo exchange sends
+/////////////////////////////////////////////// 
+  int wait_count = 0;
+  MPI_Isend(deviceV.data(), 1, leftSendSubArray, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Isend(deviceV.data(), 1, rightSendSubArray, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Isend(deviceV.data(), 1, bottomSendSubArray, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Isend(deviceV.data(), 1, topSendSubArray, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  if (cf.ndim == 3) {
+    MPI_Isend(deviceV.data(), 1, backSendSubArray, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+    MPI_Isend(deviceV.data(), 1, frontSendSubArray, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  }
+}
+
+packedHaloExchange::packedHaloExchange(struct inputConfig &cf) 
+  : mpiHaloExchange(cf) {
+
+  leftSend   = Kokkos::View<double****,FS_LAYOUT>("leftSend",cf.ng,cf.ngj,cf.ngk,cf.nvt);
+  leftRecv   = Kokkos::View<double****,FS_LAYOUT>("leftRecv",cf.ng,cf.ngj,cf.ngk,cf.nvt);
+  rightSend  = Kokkos::View<double****,FS_LAYOUT>("rightSend",cf.ng,cf.ngj,cf.ngk,cf.nvt);
+  rightRecv  = Kokkos::View<double****,FS_LAYOUT>("rightRecv",cf.ng,cf.ngj,cf.ngk,cf.nvt);
+  bottomSend = Kokkos::View<double****,FS_LAYOUT>("bottomSend",cf.ngi,cf.ng,cf.ngk,cf.nvt);
+  bottomRecv = Kokkos::View<double****,FS_LAYOUT>("bottomRecv",cf.ngi,cf.ng,cf.ngk,cf.nvt);
+  topSend    = Kokkos::View<double****,FS_LAYOUT>("topSend",cf.ngi,cf.ng,cf.ngk,cf.nvt);
+  topRecv    = Kokkos::View<double****,FS_LAYOUT>("topRecv",cf.ngi,cf.ng,cf.ngk,cf.nvt);
+  backSend   = Kokkos::View<double****,FS_LAYOUT>("backSend",cf.ngi,cf.ngj,cf.ng,cf.nvt);
+  backRecv   = Kokkos::View<double****,FS_LAYOUT>("backRecv",cf.ngi,cf.ngj,cf.ng,cf.nvt);
+  frontSend  = Kokkos::View<double****,FS_LAYOUT>("frontSend",cf.ngi,cf.ngj,cf.ng,cf.nvt);
+  frontRecv  = Kokkos::View<double****,FS_LAYOUT>("frontRecv",cf.ngi,cf.ngj,cf.ng,cf.nvt);
+}
+
+
+void packedHaloExchange::sendHalo(FS4D &deviceV, MPI_Request reqs[6]) {
   typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_rind;
   policy_rind xPol = policy_rind({0, 0, 0, 0}, {cf.ng, cf.ngj, cf.ngk, cf.nvt});
   policy_rind yPol = policy_rind({0, 0, 0, 0}, {cf.ngi, cf.ng, cf.ngk, cf.nvt});
   policy_rind zPol = policy_rind({0, 0, 0, 0}, {cf.ngi, cf.ngj, cf.ng, cf.nvt});
 
-  int wait_count = 0;
-  MPI_Request reqs[12];
+  Kokkos::parallel_for( xPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
+        leftSend(i,j,k,v) = deviceV(cf.ng+i,j,k,v);
+        rightSend(i,j,k,v) = deviceV(i+cf.nci,j,k,v);
+        });
+  MPI_Isend(leftSend.data(), cf.ng*cf.ngj*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[0]);
+  MPI_Isend(rightSend.data(), cf.ng*cf.ngj*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[1]);
 
-  // GPU -> CPU
-  //Kokkos::Profiling::pushRegion("mpi::haloExchange::deepcopy1");
-  //Kokkos::deep_copy(deviceV, m.all); // Remove for CUDA-Aware
-  //Kokkos::Profiling::popRegion(); // mpi::haloExchange::deepcopy1
- 
-///////////////////////////////////////////////
-// Post all halo exchange receives
-/////////////////////////////////////////////// 
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::postRecv");
-  MPI_Irecv(deviceV.data(), 1, m.leftRecvSubArray, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Irecv(deviceV.data(), 1, m.rightRecvSubArray, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Irecv(deviceV.data(), 1, m.bottomRecvSubArray, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Irecv(deviceV.data(), 1, m.topRecvSubArray, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  
-  if (cf.ndim == 3) {
-    MPI_Irecv(deviceV.data(), 1, m.backRecvSubArray, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-    MPI_Irecv(deviceV.data(), 1, m.frontRecvSubArray, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]); 
+  Kokkos::parallel_for( yPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
+        bottomSend(i,j,k,v) = deviceV(i,cf.ng+j,k,v);
+        topSend(i,j,k,v) = deviceV(i,j+cf.ncj,k,v);
+        });
+  MPI_Isend(bottomSend.data(), cf.ngi*cf.ng*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[2]);
+  MPI_Isend(topSend.data(), cf.ngi*cf.ng*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[3]);
+    //
+  if (cf.ndim == 3){
+    Kokkos::parallel_for( zPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
+          backSend(i,j,k,v) = deviceV(i,j,cf.ng+k,v);
+          frontSend(i,j,k,v) = deviceV(i,j,k+cf.nck,v);
+          });
+    MPI_Isend(backSend.data(), cf.ngi*cf.ngj*cf.ng*(cf.nvt), MPI_DOUBLE, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[4]);
+    MPI_Isend(frontSend.data(), cf.ngi*cf.ngj*cf.ng*(cf.nvt), MPI_DOUBLE, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[5]);
   }
-  Kokkos::Profiling::popRegion(); // mpi::haloExchange::postRecv
-
-///////////////////////////////////////////////
-// Post all halo exchange sends
-/////////////////////////////////////////////// 
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::postSend");
-  MPI_Isend(deviceV.data(), 1, m.leftSendSubArray, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Isend(deviceV.data(), 1, m.rightSendSubArray, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Isend(deviceV.data(), 1, m.bottomSendSubArray, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  MPI_Isend(deviceV.data(), 1, m.topSendSubArray, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  if (cf.ndim == 3) {
-    MPI_Isend(deviceV.data(), 1, m.backSendSubArray, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-    MPI_Isend(deviceV.data(), 1, m.frontSendSubArray, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
-  }
-  Kokkos::Profiling::popRegion(); // mpi::haloExchange::postSend
-
-  // Wait for the sends and receives to finish
-  Kokkos::Profiling::pushRegion("mpi::haloExchange::waitall");
-  MPI_Waitall(wait_count, reqs, MPI_STATUSES_IGNORE);
-  Kokkos::Profiling::popRegion(); // mpi::haloExchange::waitall
-
-  // CPU -> GPU
-  //Kokkos::Profiling::pushRegion("mpi::haloExchange::deepcopy2");
-  //Kokkos::deep_copy(m.all, deviceV); // Remove for CUDA-Aware
-  //Kokkos::Profiling::popRegion(); // mpi::haloExchange::deepcopy2
-
-  Kokkos::Profiling::popRegion(); // mpi::haloExchange
 }
+
+void packedHaloExchange::receiveHalo(FS4D &deviceV, MPI_Request reqs[6]) {
+  int wait_count = 0;
+
+  MPI_Irecv(leftRecv.data(), cf.ng * cf.ngj * cf.ngk * (cf.nvt),
+            MPI_DOUBLE, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Irecv(rightRecv.data(), cf.ng * cf.ngj * cf.ngk * (cf.nvt),
+            MPI_DOUBLE, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Irecv(bottomRecv.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt),
+            MPI_DOUBLE, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  MPI_Irecv(topRecv.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt),
+            MPI_DOUBLE, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  if (cf.ndim == 3) {
+    MPI_Irecv(backRecv.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
+              MPI_DOUBLE, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+    MPI_Irecv(frontRecv.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
+              MPI_DOUBLE, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+  }
+
+}
+
+void packedHaloExchange::unpackHalo(FS4D &deviceV)
+{
+  typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_rind;
+  policy_rind xPol = policy_rind({0, 0, 0, 0}, {cf.ng, cf.ngj, cf.ngk, cf.nvt});
+  policy_rind yPol = policy_rind({0, 0, 0, 0}, {cf.ngi, cf.ng, cf.ngk, cf.nvt});
+  policy_rind zPol = policy_rind({0, 0, 0, 0}, {cf.ngi, cf.ngj, cf.ng, cf.nvt});
+  Kokkos::parallel_for( xPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
+    deviceV(i,j,k,v) = leftRecv(i,j,k,v);
+    deviceV(cf.ngi-cf.ng+i,j,k,v) = rightRecv(i,j,k,v);
+  });
+  Kokkos::parallel_for( yPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
+    deviceV(i,j,k,v) = bottomRecv(i,j,k,v);
+    deviceV(i,cf.ngj-cf.ng+j,k,v) = topRecv(i,j,k,v);
+  });
+  if (cf.ndim == 3){
+    Kokkos::parallel_for( zPol, KOKKOS_LAMBDA  (const int i, const int j, const int k, const int v){
+      deviceV(i,j,k,v) = backRecv(i,j,k,v);
+      deviceV(i,j,cf.ngk-cf.ng+k,v) = frontRecv(i,j,k,v);
+    });
+  }
+}
+

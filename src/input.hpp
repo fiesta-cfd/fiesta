@@ -60,7 +60,7 @@ struct inputConfig {
   fiestaTimer writeTimer;
 
   class writer *w;
-  class mpiBuffers *m;
+  class mpiHaloExchange *m;
 
   int colorFlag,timeFormat;
   std::string inputFname;
