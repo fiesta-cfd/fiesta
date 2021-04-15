@@ -62,8 +62,7 @@ struct inputConfig Fiesta::initialize(int argc, char **argv){
 
 #ifndef NOMPI
   // perform domain decomposition and MPI initialization.
-  // Should switch based on how we do MPI in the future XXX
-  cf.m = new directHaloExchange(cf);
+  mpi_init(cf);
 #endif
   printConfig(cf);
 
@@ -79,6 +78,12 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
   cf.w = new serialVTKWriter(cf, f->grid, f->var);
 #else
   cf.w = new hdfWriter(cf, f);
+  if (cf.mpiScheme == 1)
+    cf.m = new copyHaloExchange(cf, f->var);
+  else if (cf.mpiScheme == 2)
+    cf.m = new packedHaloExchange(cf, f->var);
+  else if (cf.mpiScheme == 3)
+    cf.m = new directHaloExchange(cf, f->var);
 #endif
 
   // If not restarting, generate initial conditions and grid

@@ -17,8 +17,8 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef INPUT_H
-#define INPUT_H
+#ifndef FIESTA_INPUT_H
+#define FIESTA_INPUT_H
 
 #include "writer.hpp"
 #include "Kokkos_Core.hpp"
@@ -48,7 +48,6 @@ int getglobint(lua_State *L, const char *var);
 
 // Lua get double value
 double getglobdbl(lua_State *L, const char *var);
-
 
 // configuration structure
 struct inputConfig {
@@ -90,6 +89,7 @@ struct inputConfig {
   int iStart, jStart, kStart;
   int iEnd, jEnd, kEnd;
 #ifndef NOMPI
+  int mpiScheme;
   MPI_Comm comm;
 #endif
   int cF, cB, cZ;
@@ -133,4 +133,4 @@ struct inputConfig executeConfiguration(struct commandArgs cargs);
 int loadInitialConditions(struct inputConfig cf,  FS4D &v, FS4D &g);
 int loadGrid(struct inputConfig cf, FS4D &v);
 
-#endif
+#endif // FIESTA_INPUT_HPP

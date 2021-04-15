@@ -25,21 +25,24 @@
 #include "input.hpp"
 #include "mpi.h"
 
+void mpi_init(struct inputConfig &c);
+
 class mpiHaloExchange {
-    virtual void sendHalo(FS4D &deviceV, MPI_Request reqs[]) = 0;
-    virtual void receiveHalo(FS4D &deviceV, MPI_Request reqs[]) = 0;
-    virtual void unpackHalo(FS4D &deviceV) { };
-
-  protected:
-    struct inputConfig &cf;
-
   public:
-    void haloExchange(FS4D &deviceV);
-    mpiHaloExchange(struct inputConfig &c); 
+    virtual void sendHalo(MPI_Request reqs[]) = 0;
+    virtual void receiveHalo(MPI_Request reqs[]) = 0;
+    virtual void unpackHalo() { };
+
+    FS4D &deviceV;
+    struct inputConfig &cf;
+    void haloExchange();
+
+    mpiHaloExchange(struct inputConfig &c, FS4D &v) : cf(c), deviceV(v) { }; 
 };
 
 class directHaloExchange : public mpiHaloExchange 
 {
+  public:
     MPI_Datatype leftRecvSubArray, rightRecvSubArray;
     MPI_Datatype bottomRecvSubArray, topRecvSubArray;
     MPI_Datatype backRecvSubArray, frontRecvSubArray;
@@ -48,15 +51,15 @@ class directHaloExchange : public mpiHaloExchange
     MPI_Datatype bottomSendSubArray, topSendSubArray;
     MPI_Datatype backSendSubArray, frontSendSubArray;
 
-    virtual void sendHalo(FS4D &deviceV, MPI_Request reqs[]);
-    virtual void receiveHalo(FS4D &deviceV, MPI_Request reqs[]);
-  public:
-    directHaloExchange(inputConfig &c);
+    virtual void sendHalo(MPI_Request reqs[]);
+    virtual void receiveHalo(MPI_Request reqs[]);
+    directHaloExchange(inputConfig &c, FS4D &v);
 };
 
 class packedHaloExchange : public mpiHaloExchange 
 {
 
+  public:
     FS4D leftSend, leftRecv;
     FS4D rightSend, rightRecv;
     FS4D bottomSend, bottomRecv;
@@ -64,15 +67,38 @@ class packedHaloExchange : public mpiHaloExchange
     FS4D backSend, backRecv;
     FS4D frontSend, frontRecv;
 
-    virtual void sendHalo(FS4D &deviceV, MPI_Request reqs[]);
-    virtual void receiveHalo(FS4D &deviceV, MPI_Request reqs[]);
-    virtual void unpackHalo(FS4D &deviceV);
-  public:
-    packedHaloExchange(inputConfig &c);
+    // Tags and tag-dispatched operators to get around nvcc lambda capture problems
+    struct xPack {}; 
+    struct yPack {};
+    struct zPack {};
+    struct xUnpack {};
+    struct yUnpack {};
+    struct zUnpack {};
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()( const xPack&, const int i, const int j, const int k, const int v ) const;
+    KOKKOS_INLINE_FUNCTION
+    void operator()( const yPack&, const int i, const int j, const int k, const int v ) const;
+    KOKKOS_INLINE_FUNCTION
+    void operator()( const zPack&, const int i, const int j, const int k, const int v ) const;
+
+    KOKKOS_INLINE_FUNCTION
+    void operator()( const xUnpack&, const int i, const int j, const int k, const int v ) const;
+    KOKKOS_INLINE_FUNCTION
+    void operator()( const yUnpack&, const int i, const int j, const int k, const int v ) const;    
+    KOKKOS_INLINE_FUNCTION
+    void operator()( const zUnpack&, const int i, const int j, const int k, const int v ) const;
+
+    virtual void sendHalo(MPI_Request reqs[]);
+    virtual void receiveHalo(MPI_Request reqs[]);
+    virtual void unpackHalo();
+
+    packedHaloExchange(inputConfig &c, FS4D &v);
 };
 
 class copyHaloExchange : public packedHaloExchange 
 {
+  public:
     FS4DH leftSend_H, leftRecv_H;
     FS4DH rightSend_H, rightRecv_H;
     FS4DH bottomSend_H, bottomRecv_H;
@@ -80,8 +106,11 @@ class copyHaloExchange : public packedHaloExchange
     FS4DH backSend_H, backRecv_H;
     FS4DH frontSend_H, frontRecv_H;
 
-  public:
-    copyHaloExchange(inputConfig &c);
+    virtual void sendHalo(MPI_Request reqs[]);
+    virtual void receiveHalo(MPI_Request reqs[]);
+    virtual void unpackHalo();
+
+    copyHaloExchange(inputConfig &c, FS4D &v);
 };
 #endif
 
