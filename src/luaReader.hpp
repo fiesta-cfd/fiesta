@@ -42,6 +42,8 @@ public:
   template <class T>
   void getArray(std::string,std::vector<T>&,int);
 
+  void getIOBlock(int,std::string&, std::string&,size_t*,size_t*);
+
   double call(std::string, int ,...);
 
 private:

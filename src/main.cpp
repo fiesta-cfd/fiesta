@@ -24,6 +24,7 @@
 #include "rk.hpp"
 #include "debug.hpp"
 #include "log.hpp"
+#include "block.hpp"
 #include <csignal>
 
 // Compute Objects
@@ -82,64 +83,69 @@ int main(int argc, char *argv[]) {
   
   struct inputConfig cf;
   Fiesta::initialize(cf,argc,argv);
+  {
 
-  class fiestaSignalHandler *signalHandler = signalHandler->getInstance(cf);
-  signalHandler->registerSignals();
+    class fiestaSignalHandler *signalHandler = signalHandler->getInstance(cf);
+    signalHandler->registerSignals();
 
-  cf.totalTimer.start();
-  cf.initTimer.start();
+    cf.totalTimer.start();
+    cf.initTimer.start();
 
-  // Choose Scheme
-  rk_func *f;
-  if (cf.ndim == 3){
-    if (cf.grid > 0){
-      f = new gen3d_func(cf);
+    // Choose Scheme
+    rk_func *f;
+    if (cf.ndim == 3){
+      if (cf.grid > 0){
+        f = new gen3d_func(cf);
+      }else{
+        f = new cart3d_func(cf);
+      }
     }else{
-      f = new cart3d_func(cf);
+      if (cf.grid > 0){
+        f = new gen2d_func(cf);
+      }else{
+        f = new cart2d_func(cf);
+      }
     }
-  }else{
-    if (cf.grid > 0){
-      f = new gen2d_func(cf);
-    }else{
-      f = new cart2d_func(cf);
+ 
+    // Initialize Simulation
+    Fiesta::initializeSimulation(cf,f);
+ 
+    // Pre Simulation
+    cf.log->message("Executing pre-simulation hook");
+    f->preSim();
+    cf.initTimer.stop();
+    cf.simTimer.reset();
+
+    blockWriter slicer=blockWriter(cf,f);
+ 
+    // Main time loop
+    cf.log->message("Beginning Main Time Loop");
+    for (int t = cf.tstart; t < cf.tend; ++t) {
+      cf.time += cf.dt;
+      cf.t = t + 1;
+ 
+      f->preStep();
+      rkAdvance(cf,f);
+      f->postStep();
+ 
+      Fiesta::collectSignals(cf);
+      Fiesta::checkIO(cf,f,t,cf.time);
+      if (t==10) slicer.write(cf, f, t, cf.time);
+
+      if (cf.exitFlag==1)
+        break;
     }
+ 
+    // Post Simulation
+    cf.log->message("Executing post-simulation hook");
+    f->postSim();
+
+    // Stop Timers and Report
+    cf.simTimer.stop();
+    cf.totalTimer.stop();
+    Fiesta::reportTimers(cf,f);
+
   }
- 
-  // Initialize Simulation
-  Fiesta::initializeSimulation(cf,f);
- 
-  // Pre Simulation
-  cf.log->message("Executing pre-simulation hook");
-  f->preSim();
-  cf.initTimer.stop();
-  cf.simTimer.reset();
- 
-  // Main time loop
-  cf.log->message("Beginning Main Time Loop");
-  for (int t = cf.tstart; t < cf.tend; ++t) {
-    cf.time += cf.dt;
-    cf.t = t + 1;
- 
-    f->preStep();
-    rkAdvance(cf,f);
-    f->postStep();
- 
-    Fiesta::collectSignals(cf);
-    Fiesta::checkIO(cf,f,t,cf.time);
-
-    if (cf.exitFlag==1)
-      break;
-  }
- 
-  // Post Simulation
-  cf.log->message("Executing post-simulation hook");
-  f->postSim();
-
-  // Stop Timers and Report
-  cf.simTimer.stop();
-  cf.totalTimer.stop();
-  Fiesta::reportTimers(cf,f);
-
   Fiesta::finalize(cf);
   return 0;
 }

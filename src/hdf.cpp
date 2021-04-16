@@ -37,6 +37,8 @@
 //#endif
 
 using namespace std;
+using Kokkos::ALL;
+using Kokkos::subview;
 
 template <typename T, typename C>
 void invertArray(int ndim, T* out, C* in){
@@ -305,11 +307,9 @@ hdfWriter::hdfWriter(struct inputConfig cf, rk_func *f) {
 template<typename T>
 void dataPack(int ndim, int ng, size_t* start, size_t* end, size_t* extent, T* dest, FS4DH& source,int vn){
   int ii,jj,kk;
-  int koffset=0;
   int idx;
 
   if (ndim==3){
-    koffset=ng;
     for (int i = start[0]; i < end[0]+1; ++i) {
       for (int j = start[1]; j < end[1]+1; ++j) {
         for (int k = start[2]; k < end[2]+1; ++k) {
@@ -317,7 +317,7 @@ void dataPack(int ndim, int ng, size_t* start, size_t* end, size_t* extent, T* d
           jj=j-start[1];
           kk=k-start[2];
           idx = (extent[0] * extent[1]) * kk + extent[0] * jj + ii;
-          dest[idx] = source(i+ng, j+ng, k+ng, vn);
+          dest[idx] = source(i+ng, j+ng, k+ng,vn);
         }
       }
     }
@@ -327,7 +327,7 @@ void dataPack(int ndim, int ng, size_t* start, size_t* end, size_t* extent, T* d
         ii=i-start[0];
         jj=j-start[1];
         idx = extent[0] * jj + ii;
-        dest[idx] = source(i+ng, j+ng, 0, vn);
+        dest[idx] = source(i+ng, j+ng, 0,vn);
       }
     }
   }
@@ -358,205 +358,151 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   xmfName << cf.pathName << "/" << baseName.str() << ".xmf";
 
 
-  // ############################################################## \\
+  //  // ############################################################## \\
 
-  stringstream lineName,lineBase,lineHDF,lineXMF;
-  lineBase << "line-" << setw(pad) << setfill('0') << tdx;
-  lineName << cf.pathName << "/line/" << lineBase.str() << ".h5";
-  lineXMF << cf.pathName << "/line/" << lineBase.str() << ".xmf";
-  lineHDF << lineBase.str() << ".h5";
-  cf.log->debug("[",cf.t,"] ","Writing ",lineName.str());
+  //  stringstream lineName,lineBase,lineHDF,lineXMF,lineStr;
+  //  lineBase << "line-" << setw(pad) << setfill('0') << tdx;
+  //  lineName << cf.pathName << "/line/" << lineBase.str() << ".h5";
+  //  lineXMF << cf.pathName << "/line/" << lineBase.str() << ".xmf";
+  //  lineHDF << lineBase.str() << ".h5";
+  //  cf.log->debug("[",cf.t,"] ","Writing ",lineName.str());
 
-  size_t lStart[cf.ndim];  // local starting index
-  size_t lEnd[cf.ndim];    // local ending index
-  size_t lEndG[cf.ndim];    // local ending index
-  size_t lExt[cf.ndim];    // local extent
-  size_t lExtG[cf.ndim];    // local extent
-  size_t lOffset[cf.ndim];    // local extent
-  size_t gStart[cf.ndim];  // local starting index
-  size_t gEnd[cf.ndim];    // local ending index
-  size_t gExt[cf.ndim];    // global extent
-  size_t gExtG[cf.ndim];    // global extent
-  //hsize_t stride[cf.ndim];  // slice stride
-  size_t lElems=1;
-  size_t lElemsG=1;
+  //  size_t lStart[cf.ndim];  // local starting index
+  //  size_t lEnd[cf.ndim];    // local ending index
+  //  size_t lEndG[cf.ndim];    // local ending index
+  //  size_t lExt[cf.ndim];    // local extent
+  //  size_t lExtG[cf.ndim];    // local extent
+  //  size_t lOffset[cf.ndim];    // local extent
+  //  size_t gStart[cf.ndim];  // local starting index
+  //  size_t gEnd[cf.ndim];    // local ending index
+  //  size_t gExt[cf.ndim];    // global extent
+  //  size_t gExtG[cf.ndim];    // global extent
+  //  //hsize_t stride[cf.ndim];  // slice stride
+  //  size_t lElems=1;
+  //  size_t lElemsG=1;
 
-  int myColor=MPI_UNDEFINED;
-  bool slicePresent=true;
-  int offsetDelta;
+  //  int myColor=MPI_UNDEFINED;
+  //  bool slicePresent=true;
+  //  int offsetDelta;
 
-  gStart[0]=49;
-  gStart[1]=49;
-  gStart[2]=45;
+  //  gStart[0]=49;
+  //  gStart[1]=49;
+  //  gStart[2]=45;
 
-  gEnd[0]=50;
-  gEnd[1]=50;
-  gEnd[2]=54;
-  //gEnd[2]=cf.glbl_nck-1;
+  //  gEnd[0]=50;
+  //  gEnd[1]=50;
+  //  gEnd[2]=54;
+  //  //gEnd[2]=cf.glbl_nck-1;
 
-  for (int i=0; i<cf.ndim; ++i){
-    gExt[i]=gEnd[i]-gStart[i]+1;
-    gExtG[i]=gEnd[i]-gStart[i]+2;
-  }
+  //  for (int i=0; i<cf.ndim; ++i){
+  //    gExt[i]=gEnd[i]-gStart[i]+1;
+  //    gExtG[i]=gEnd[i]-gStart[i]+2;
+  //  }
 
-  for (int i=0; i<cf.ndim; ++i){
-    lStart[i]=0;
-    lEnd[i]=cf.localCellDims[i]-1;
-    lEndG[i]=cf.localCellDims[i];
-    lOffset[i]=0;
-  }
+  //  for (int i=0; i<cf.ndim; ++i){
+  //    lStart[i]=0;
+  //    lEnd[i]=cf.localCellDims[i]-1;
+  //    lEndG[i]=cf.localCellDims[i];
+  //    lOffset[i]=0;
+  //  }
 
-  for (int i=0; i<cf.ndim; ++i){
-    lExt[i]=lEnd[i]-lStart[i]+1;
-    lExtG[i]=lEnd[i]-lStart[i]+2;
-  }
+  //  for (int i=0; i<cf.ndim; ++i){
+  //    lExt[i]=lEnd[i]-lStart[i]+1;
+  //    lExtG[i]=lEnd[i]-lStart[i]+2;
+  //  }
 
-  for (int i=0; i<cf.ndim; ++i){
-    slicePresent = slicePresent && ((cf.subdomainOffset[i]+cf.localCellDims[i]) >= gStart[i] && cf.subdomainOffset[i] <= gEnd[i]);
-  }
+  //  for (int i=0; i<cf.ndim; ++i){
+  //    slicePresent = slicePresent && ((cf.subdomainOffset[i]+cf.localCellDims[i]) >= gStart[i] && cf.subdomainOffset[i] <= gEnd[i]);
+  //  }
 
-  if (slicePresent){
-    myColor=1;
-    cout << cf.rank << ": Slice present!!\n";
-
-
-    for (int i=0; i<cf.ndim; ++i){
-
-      offsetDelta=gStart[i]-cf.subdomainOffset[i]; //location of left edge of slice wrt left edge of subdomain
-      if(offsetDelta > 0) lStart[i]=offsetDelta;   //if slice starts inside subdomain, set local start to slice edge
-      else lOffset[i] = -(offsetDelta);                //if subdomain is within slice, adjust offset
-      cout << "OD Start: " << offsetDelta << endl;
-
-      offsetDelta=(cf.subdomainOffset[i]+cf.localCellDims[i])-gEnd[i]; //location of right edge of slice wrt right edge of domain
-      if(offsetDelta > 0) lEnd[i]=cf.localCellDims[i]-offsetDelta;     // if slice ends in subdomain, set local end to slide edge
-      cout << "OD End: " << offsetDelta << endl;
-
-      lEndG[i]=lEnd[i]+1;
-      lExt[i]=lEnd[i]-lStart[i]+1;
-      lExtG[i]=lExt[i]+1;
-      lElems*=lExt[i];
-      lElemsG*=lExtG[i];
-    }
-  }
-  
-  // create slice communicator
-  MPI_Comm sliceComm;
-  MPI_Comm_split(cf.comm,myColor,cf.rank,&sliceComm);
-
-  cf.log->debug("writing slice data");
-  if (myColor==1){
-    Kokkos::deep_copy(gridH,f->grid);
-    Kokkos::deep_copy(varH,f->var);
-
-    int sliceRank;
-    int sliceWorld;
-    MPI_Comm_rank(sliceComm,&sliceRank);
-    MPI_Comm_size(sliceComm,&sliceWorld);
-
-    cout << sliceRank << " : lStart("  << lStart[0]  << "," << lStart[1]  << "," << lStart[2]  << ")"
-                      << " : lEnd("    << lEnd[0]    << "," << lEnd[1]    << "," << lEnd[2]    << ")"
-                      << " : lExt("    << lExt[0]    << "," << lExt[1]    << "," << lExt[2]    << ")"
-                      << " : lOffset(" << lOffset[0] << "," << lOffset[1] << "," << lOffset[2] << ")" << endl;
-
-    cout << sliceRank << " : lExtG("    << lExtG[0]    << "," << lExtG[1]    << "," << lExtG[2]    << ")"
-                      << " : lEndG("    << lEnd[0]    << "," << lEnd[1]    << "," << lEnd[2]    << ")" << endl;
-
-    cout << sliceRank << " : gStart(" << gStart[0] << "," << gStart[1] << "," << gStart[2] << ")"
-                      << " : gEnd("   << gEnd[0]   << "," << gEnd[1]   << "," << gEnd[2]   << ")"
-                      << " : gExt("   << gExt[0]   << "," << gExt[1]   << "," << gExt[2]   << ")" << endl;
-
-    T* slcData = (T*)malloc(lElems*sizeof(T*));
-    T* slcGrid = (T*)malloc(lElemsG*sizeof(T*));
-
-    int ii,jj,kk;
-    int koffset;
-
-    hid_t linefile_id = openHDF5ForWrite(sliceComm, MPI_INFO_NULL, lineName.str());
-
-    hid_t linegroup_id = H5Gcreate(linefile_id, "/Grid", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    
-    cout << sliceRank << ": Starting pack\n";
-    for (int vn=0; vn<cf.ndim; ++vn){
-      dataPack(cf.ndim, 0, lStart, lEndG, lExtG, slcGrid, gridH, vn);
-      // for (int i = lStart[0]; i < lEnd[0]+2; ++i) {
-      //   for (int j = lStart[1]; j < lEnd[1]+2; ++j) {
-      //     for (int k = lStart[2]; k < lEnd[2]+2; ++k) {
-      //       ii=i-lStart[0];
-      //       jj=j-lStart[1];
-      //       kk=k-lStart[2];
-      //       idx = (lExtG[0] * lExtG[1]) * kk + lExtG[0] * jj + ii;
-      //       slcGrid[idx] = gridH(i, j, k, vn);
-      //     }
-      //   }
-      // }
-      stringstream lineStr;
-      lineStr << "Dimension" << vn;
-      cf.log->debug("Dataset name: ",lineStr.str());
-      cout << sliceRank << ": Writing Data (" << lineStr.str() << ")\n";
-      write_h52<T>(linegroup_id, lineStr.str(), cf.ndim, gExtG, lExtG, lOffset, slcGrid); 
-    }
-
-    cout << sliceRank << ": Done with Grid.  Writing Vars\n";
-
-    H5Gclose(linegroup_id);
-    linegroup_id = H5Gcreate(linefile_id, "/Solution", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    cout << sliceRank << ": Starting pack\n";
-    if (cf.ndim == 3) koffset = cf.ng;
-    else koffset = 0;
-    for (int vn=0; vn<cf.nvt; ++vn){
-      for (int i = lStart[0]; i < lEnd[0]+1; ++i) {
-        for (int j = lStart[1]; j < lEnd[1]+1; ++j) {
-          for (int k = lStart[2]; k < lEnd[2]+1; ++k) {
-            ii=i-lStart[0];
-            jj=j-lStart[1];
-            kk=k-lStart[2];
-            idx = (lExt[0]*lExt[1]) * kk + lExt[0] * jj + ii;
-            slcData[idx] = varH(i+cf.ng, j+cf.ng, k+koffset, vn);
-          }
-        }
-      }
-      stringstream lineStr;
-      lineStr << "Variable" << setw(2) << setfill('0') << vn;
-      cf.log->debug("Dataset name: ",lineStr.str());
-      cout << sliceRank << ": Writing Data (" << lineStr.str() << ")\n";
-      write_h52<T>(linegroup_id, lineStr.str(), cf.ndim, gExt, lExt, lOffset, slcData); 
-    }
-
-    cout << sliceRank << ": Done with Vars.  Writing Extra Vars\n";
-
-    cout << sliceRank << ": Starting pack\n";
-    if (cf.ndim == 3) koffset = cf.ng;
-    else koffset = 0;
-    for (size_t vn = 0; vn < f->varxNames.size(); ++vn) {
-      for (int i = lStart[0]; i < lEnd[0]+1; ++i) {
-        for (int j = lStart[1]; j < lEnd[1]+1; ++j) {
-          for (int k = lStart[2]; k < lEnd[2]+1; ++k) {
-            ii=i-lStart[0];
-            jj=j-lStart[1];
-            kk=k-lStart[2];
-            idx = (lExt[0]*lExt[1]) * kk + lExt[0] * jj + ii;
-            slcData[idx] = varxH(i+cf.ng, j+cf.ng, k+koffset, vn);
-          }
-        }
-      }
-      stringstream lineStr;
-      lineStr << "Variable" << setw(2) << setfill('0') << vn+cf.nvt;
-      cf.log->debug("Dataset name: ",lineStr.str());
-      write_h52<T>(linegroup_id, lineStr.str(), cf.ndim, gExt, lExt, lOffset, slcData); 
-    }
-
-    cf.log->debug("[",cf.t,"] ","Writing ",lineXMF.str());
-
-    //int actDims[3]={2,1,0};
-    //int xmfDims[3]={2,1,0};
-
-    writeXMF(lineXMF.str(), lineHDF.str(), time, cf.ndim, gExt, cf.nvt, f->varNames,f->varxNames);
-
-  }
+  //  if (slicePresent){
+  //    myColor=1;
+  //    cout << cf.rank << ": Slice present!!\n";
 
 
-  // ############################################################## \\
+  //    for (int i=0; i<cf.ndim; ++i){
+
+  //      offsetDelta=gStart[i]-cf.subdomainOffset[i]; //location of left edge of slice wrt left edge of subdomain
+  //      if(offsetDelta > 0) lStart[i]=offsetDelta;   //if slice starts inside subdomain, set local start to slice edge
+  //      else lOffset[i] = -(offsetDelta);                //if subdomain is within slice, adjust offset
+  //      cout << "OD Start: " << offsetDelta << endl;
+
+  //      offsetDelta=(cf.subdomainOffset[i]+cf.localCellDims[i])-gEnd[i]; //location of right edge of slice wrt right edge of domain
+  //      if(offsetDelta > 0) lEnd[i]=cf.localCellDims[i]-offsetDelta;     // if slice ends in subdomain, set local end to slide edge
+  //      cout << "OD End: " << offsetDelta << endl;
+
+  //      lEndG[i]=lEnd[i]+1;
+  //      lExt[i]=lEnd[i]-lStart[i]+1;
+  //      lExtG[i]=lExt[i]+1;
+  //      lElems*=lExt[i];
+  //      lElemsG*=lExtG[i];
+  //    }
+  //  }
+  //  
+  //  // create slice communicator
+  //  MPI_Comm sliceComm;
+  //  MPI_Comm_split(cf.comm,myColor,cf.rank,&sliceComm);
+
+  //  cf.log->debug("writing slice data");
+  //  if (myColor==1){
+  //    Kokkos::deep_copy(gridH,f->grid);
+  //    Kokkos::deep_copy(varH,f->var);
+
+  //    int sliceRank;
+  //    int sliceWorld;
+  //    MPI_Comm_rank(sliceComm,&sliceRank);
+  //    MPI_Comm_size(sliceComm,&sliceWorld);
+
+  //    cout << sliceRank << " : lStart("  << lStart[0]  << "," << lStart[1]  << "," << lStart[2]  << ")"
+  //                      << " : lEnd("    << lEnd[0]    << "," << lEnd[1]    << "," << lEnd[2]    << ")"
+  //                      << " : lExt("    << lExt[0]    << "," << lExt[1]    << "," << lExt[2]    << ")"
+  //                      << " : lOffset(" << lOffset[0] << "," << lOffset[1] << "," << lOffset[2] << ")" << endl;
+
+  //    cout << sliceRank << " : lExtG("    << lExtG[0]    << "," << lExtG[1]    << "," << lExtG[2]    << ")"
+  //                      << " : lEndG("    << lEnd[0]    << "," << lEnd[1]    << "," << lEnd[2]    << ")" << endl;
+
+  //    cout << sliceRank << " : gStart(" << gStart[0] << "," << gStart[1] << "," << gStart[2] << ")"
+  //                      << " : gEnd("   << gEnd[0]   << "," << gEnd[1]   << "," << gEnd[2]   << ")"
+  //                      << " : gExt("   << gExt[0]   << "," << gExt[1]   << "," << gExt[2]   << ")" << endl;
+
+  //    T* slcData = (T*)malloc(lElems*sizeof(T*));
+  //    T* slcGrid = (T*)malloc(lElemsG*sizeof(T*));
+
+  //    hid_t linefile_id = openHDF5ForWrite(sliceComm, MPI_INFO_NULL, lineName.str());
+
+  //    hid_t linegroup_id = H5Gcreate(linefile_id, "/Grid", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  //    for (int vn=0; vn<cf.ndim; ++vn){
+  //      dataPack(cf.ndim, 0, lStart, lEndG, lExtG, slcGrid, gridH,vn);
+
+  //      lineStr << "Dimension" << vn;
+  //      cout << sliceRank << ": Writing Data (" << lineStr.str() << ")\n";
+  //      write_h52<T>(linegroup_id, lineStr.str(), cf.ndim, gExtG, lExtG, lOffset, slcGrid); 
+  //    }
+  //    H5Gclose(linegroup_id);
+
+  //    linegroup_id = H5Gcreate(linefile_id, "/Solution", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  //    for (int vn=0; vn<cf.nvt; ++vn){
+  //      dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, slcData, varH,vn);
+  //       
+  //      lineStr << "Variable" << setw(2) << setfill('0') << vn;
+  //      write_h52<T>(linegroup_id, lineStr.str(), cf.ndim, gExt, lExt, lOffset, slcData); 
+  //    }
+  //    for (size_t vn = 0; vn < f->varxNames.size(); ++vn) {
+  //      dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, slcData, varH,vn);
+  //       
+  //      lineStr << "Variable" << setw(2) << setfill('0') << vn+cf.nvt;
+  //      write_h52<T>(linegroup_id, lineStr.str(), cf.ndim, gExt, lExt, lOffset, slcData); 
+  //    }
+
+  //    close_h5(linefile_id);
+
+  //    cf.log->debug("[",cf.t,"] ","Writing ",lineXMF.str());
+  //    writeXMF(lineXMF.str(), lineHDF.str(), time, cf.ndim, gExt, cf.nvt, f->varNames,f->varxNames);
+
+  //  }
+
+
+  //  // ############################################################## \\
 
   // identifiers
   hid_t file_id, group_id;

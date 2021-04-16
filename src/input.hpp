@@ -38,6 +38,8 @@
 #include <vector>
 #include "log.hpp"
 
+typedef struct inputConfig FSCONF;
+
 // Lua error function
 void error(lua_State *L, const char *fmt, ...);
 
@@ -116,6 +118,11 @@ struct inputConfig {
   int sigintFlag;
   int restartFlag;
   int exitFlag;
+
+  string blockName;
+  string blockPath;
+  size_t blockStart[3];
+  size_t blockEnd[3];
 
   int globalGridDims[3];
   int globalCellDims[3];

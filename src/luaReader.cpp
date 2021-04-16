@@ -132,6 +132,67 @@ void luaReader::getArray(string key, vector<string>& out, int n){
     error(L, "Error Reading Input File: A string array was expected at '%s'\n", key.c_str());
 }
 
+void luaReader::getIOBlock(int ndim, string& name, string& path, size_t* start, size_t* end){
+  int isnum;
+  lua_getglobal(L, "ioblock");
+  if (lua_istable(L,-1)){
+    const char *name_c;
+
+    // get name 
+    lua_pushnumber(L, 1);
+    lua_gettable(L, -2);
+    if (lua_isstring(L,-1)){
+      name_c = lua_tostring(L, -1);
+      name.assign(name_c);
+      lua_pop(L, 1);
+    }else{
+      error(L, "Error Reading Input File: Could not read first value in ioblock, a string was expected.\n");
+    }
+
+    // get path
+    lua_pushnumber(L, 2);
+    lua_gettable(L, -2);
+    if (lua_isstring(L,-1)){
+      name_c = lua_tostring(L, -1);
+      path.assign(name_c);
+      lua_pop(L, 1);
+    }else{
+      error(L, "Error Reading Input File: Could not read first value in ioblock, a string was expected.\n");
+    }
+    for (int i=0; i < ndim; ++i) {
+      lua_pushnumber(L, i + 3);
+      lua_gettable(L, -2);
+      start[i] = (size_t)lua_tointegerx(L, -1, &isnum);
+      lua_pop(L, 1);
+    }
+    for (int i=0; i < ndim; ++i) {
+      lua_pushnumber(L, i + ndim + 3);
+      lua_gettable(L, -2);
+      end[i] = (size_t)lua_tointegerx(L, -1, &isnum);
+      lua_pop(L, 1);
+    }
+  }else{
+      error(L, "Error Reading Input File: Could not read ioblock.\n");
+  }
+  //if (lua_istable(L,-1))
+  //    for (int i=0; i<n; ++i) {
+  //      lua_pushnumber(L, i + 1);
+  //      lua_gettable(L, -2);
+  //   
+  //      const char *name_c;
+  //   
+  //      if (lua_isstring(L,-1)){
+  //        name_c = lua_tostring(L, -1);
+  //        out.push_back(std::string(name_c));
+  //        lua_pop(L, 1);
+  //      }else{
+  //        error(L, "Error Reading Input File: Could not read value in array '%s', a string was expected.\n", key.c_str());
+  //      }
+  //    }
+  //else
+  //  error(L, "Error Reading Input File: A string array was expected at '%s'\n", key.c_str());
+}
+
 // Call lua function from c (takes integer arguments and returns a double)
 double luaReader::call(string f, int n, ...){
   lua_getglobal(L, f.c_str());

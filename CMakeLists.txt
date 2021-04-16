@@ -150,7 +150,7 @@ include_directories(${installDir}/include)
 # set base source files
 set(FIESTA_SRCS src/rk.cpp src/fiesta.cpp src/luaReader.cpp src/bc.cpp
      src/status.cpp src/timer.cpp src/input.cpp src/output.cpp
-     src/rkfunction.cpp src/writer.cpp src/mpi.cpp src/hdf.cpp src/xdmf.cpp)
+     src/rkfunction.cpp src/writer.cpp src/mpi.cpp src/hdf.cpp src/xdmf.cpp src/block.cpp)
      
 
 add_library(fiestaLib ${FIESTA_SRCS})
