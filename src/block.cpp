@@ -64,6 +64,8 @@ void blockWriter::close_h5(hid_t fid){
   H5Fclose(fid);
 }
 
+size_t blockWriter::frq() { return freq; }
+
 // function to return hdf5 type id given c++ type
 //template <typename H> blockWriter::getH5Type();
 template <> hid_t blockWriter::getH5Type<float>(){ return H5T_NATIVE_FLOAT; }
@@ -92,9 +94,9 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func *f){
   slicePresent=true;
 
   luaReader L(cf.inputFname);
-  L.getIOBlock(cf.ndim,name,path,gStart,gEnd);
+  L.getIOBlock(cf.ndim,name,path,freq,gStart,gEnd);
   L.close();
-  cf.log->debug("ioblock: ",name,", ",path,"(",gStart[0],",",gStart[1],",",gStart[2],")","(",gEnd[0],",",gEnd[1],",",gEnd[2],")");
+  cf.log->debug("ioblock: ",name,", ",path,",",freq,", (",gStart[0],",",gStart[1],",",gStart[2],")","(",gEnd[0],",",gEnd[1],",",gEnd[2],")");
 
   //name.assign("block");
   //path.assign("./blockpath");

@@ -132,7 +132,7 @@ void luaReader::getArray(string key, vector<string>& out, int n){
     error(L, "Error Reading Input File: A string array was expected at '%s'\n", key.c_str());
 }
 
-void luaReader::getIOBlock(int ndim, string& name, string& path, size_t* start, size_t* end){
+void luaReader::getIOBlock(int ndim, string& name, string& path, size_t& freq, size_t* start, size_t* end){
   int isnum;
   lua_getglobal(L, "ioblock");
   if (lua_istable(L,-1)){
@@ -159,14 +159,18 @@ void luaReader::getIOBlock(int ndim, string& name, string& path, size_t* start, 
     }else{
       error(L, "Error Reading Input File: Could not read first value in ioblock, a string was expected.\n");
     }
+    lua_pushnumber(L, 3);
+    lua_gettable(L, -2);
+    freq = (size_t)lua_tointegerx(L, -1, &isnum);
+    lua_pop(L, 1);
     for (int i=0; i < ndim; ++i) {
-      lua_pushnumber(L, i + 3);
+      lua_pushnumber(L, i + 4);
       lua_gettable(L, -2);
       start[i] = (size_t)lua_tointegerx(L, -1, &isnum);
       lua_pop(L, 1);
     }
     for (int i=0; i < ndim; ++i) {
-      lua_pushnumber(L, i + ndim + 3);
+      lua_pushnumber(L, i + ndim + 4);
       lua_gettable(L, -2);
       end[i] = (size_t)lua_tointegerx(L, -1, &isnum);
       lua_pop(L, 1);

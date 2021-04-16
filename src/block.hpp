@@ -16,6 +16,8 @@
   You should have received a copy of the GNU Lesser General Public License
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
+#ifndef BLOCK_H
+#define BLOCK_H
 
 #include <string>
 #include "rkfunction.hpp"
@@ -32,6 +34,7 @@ class blockWriter {
     //void writeHDF(struct inputConfig&, rk_func*, int, double, double*, double*, string);
     void write(struct inputConfig cf, rk_func *f, int tdx, double time);
     ~blockWriter();
+    size_t frq();
 
   private:
     //struct inputConfig& cf;
@@ -47,6 +50,7 @@ class blockWriter {
     size_t* gEnd;    // local ending index
     size_t* gExt;    // global extent
     size_t* gExtG;   // global grid extent
+    size_t freq;    // block write frequency
     //size_t *stride; // slice stride
     
     size_t lElems;
@@ -85,3 +89,5 @@ class blockWriter {
     hid_t openHDF5ForWrite(MPI_Comm, MPI_Info, string);
     void close_h5(hid_t);
 };
+
+#endif

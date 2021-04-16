@@ -116,8 +116,6 @@ int main(int argc, char *argv[]) {
     cf.initTimer.stop();
     cf.simTimer.reset();
 
-    blockWriter slicer=blockWriter(cf,f);
- 
     // Main time loop
     cf.log->message("Beginning Main Time Loop");
     for (int t = cf.tstart; t < cf.tend; ++t) {
@@ -130,7 +128,6 @@ int main(int argc, char *argv[]) {
  
       Fiesta::collectSignals(cf);
       Fiesta::checkIO(cf,f,t,cf.time);
-      if (t==10) slicer.write(cf, f, t, cf.time);
 
       if (cf.exitFlag==1)
         break;

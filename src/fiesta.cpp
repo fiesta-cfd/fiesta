@@ -29,6 +29,7 @@
 #include <iostream>
 #include <set>
 #include "log.hpp"
+#include "block.hpp"
 //#include <csignal>
 
 using namespace std;
@@ -95,6 +96,7 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
     cf.m = new packedHaloExchange(cf, f->var);
   else if (cf.mpiScheme == 3)
     cf.m = new directHaloExchange(cf, f->var);
+  cf.ioblock = new blockWriter(cf,f);
 #endif
 
   // If not restarting, generate initial conditions and grid
@@ -209,6 +211,14 @@ void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time){
       f->timers["statCheck"].reset();
       statusCheck(cf.colorFlag, cf, f, time, cf.totalTimer, cf.simTimer);
       f->timers["statCheck"].accumulate();
+    }
+  }
+
+  if(cf.ioblock->frq() > 0){
+    if ((t + 1) % cf.ioblock->frq() == 0) {
+      f->timers["solWrite"].reset();
+      cf.ioblock->write(cf,f,t+1,time);
+      f->timers["solWrite"].accumulate();
     }
   }
 }

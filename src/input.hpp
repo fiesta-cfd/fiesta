@@ -37,6 +37,7 @@
 #include <map>
 #include <vector>
 #include "log.hpp"
+#include "block.hpp"
 
 typedef struct inputConfig FSCONF;
 
@@ -65,6 +66,7 @@ struct inputConfig {
   class writer *w;
   class mpiHaloExchange *m;
   class Logger *log;
+  class blockWriter *ioblock;
 
   int colorFlag,timeFormat;
   std::string inputFname;
@@ -119,10 +121,10 @@ struct inputConfig {
   int restartFlag;
   int exitFlag;
 
-  string blockName;
-  string blockPath;
-  size_t blockStart[3];
-  size_t blockEnd[3];
+  //string blockName;
+  //string blockPath;
+  //size_t blockStart[3];
+  //size_t blockEnd[3];
 
   int globalGridDims[3];
   int globalCellDims[3];
