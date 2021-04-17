@@ -76,6 +76,10 @@ template <> hid_t blockWriter::getH5Type<int>(){ return H5T_NATIVE_INT; }
 //blockWriter::blockWriter(struct inputConfig& cf_, rk_func *f_) : cf(cf_),f(f_) {
 blockWriter::blockWriter(){}
 blockWriter::blockWriter(struct inputConfig& cf, rk_func *f){
+  int strideDelta;
+  size_t gMin;
+
+  // size arrays by problem dimension
   lStart  = new size_t[cf.ndim];
   lEnd    = new size_t[cf.ndim];
   lEndG   = new size_t[cf.ndim];
@@ -87,68 +91,61 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func *f){
   gExt    = new size_t[cf.ndim];
   gExtG   = new size_t[cf.ndim];
   stride  = new size_t[cf.ndim];
+
+  // initialize parameters
   lElems=1;
   lElemsG=1;
-
   myColor=MPI_UNDEFINED;
   slicePresent=true;
 
-  int strideDelta;
-
+  string iokey("ioblock");
+  // get block info from luaReader
   luaReader L(cf.inputFname);
-  L.getIOBlock(cf.ndim,name,path,freq,gStart,gEnd);
+  L.getIOBlock(iokey,cf.ndim,name,path,freq,gStart,gEnd,stride);
   L.close();
-  cf.log->debug("ioblock: ",name,", ",path,",",freq,", (",gStart[0],",",gStart[1],",",gStart[2],")","(",gEnd[0],",",gEnd[1],",",gEnd[2],")");
-  stride[0]=3;
-  stride[1]=3;
-  stride[2]=3;
+
+  cf.log->debug(iokey,": ",name,", ",path,", ",freq);
+  cf.log->debug(iokey,":  start (",gStart[0],",",gStart[1],",",gStart[2],")");
+  cf.log->debug(iokey,":    end (",gEnd[0],",",gEnd[1],",",gEnd[2],")");
+  cf.log->debug(iokey,": stride (",stride[0],",",stride[1],",",stride[2],")");
 
   for (int i=0; i<cf.ndim; ++i){
     //adjust block global size if it does not line up with strides
     strideDelta=(gEnd[i]-gStart[i])%stride[i];
     gEnd[i]-=strideDelta;
-
     gExt[i]=(gEnd[i]-gStart[i])/stride[i]+1;
     gExtG[i]=gExt[i]+1;
-    //if (i==2) cout << cf.rank << " A : " << strideDelta << ", " << gStart[i] << "," << gEnd[i] << ", " << gExt[i] << ", " << gExtG[i] << endl;
   }
 
   for (int i=0; i<cf.ndim; ++i){
     lStart[i]=0;
     lEnd[i]=cf.localCellDims[i]-1;
-    lEndG[i]=cf.localCellDims[i]-1; //none
+    lEndG[i]=cf.localCellDims[i]-1;
     lOffset[i]=0;
   }
 
   for (int i=0; i<cf.ndim; ++i){
     lExt[i]=lEnd[i]-lStart[i]+1;
-    lExtG[i]=lEnd[i]-lStart[i]+1; //+2
+    lExtG[i]=lEnd[i]-lStart[i]+1;
   }
 
+  // check if any part of the block slice is in this subdomain
   for (int i=0; i<cf.ndim; ++i){
-    slicePresent = slicePresent && ((cf.subdomainOffset[i]+cf.localCellDims[i]) >= gStart[i] && cf.subdomainOffset[i] <= gEnd[i]);
+    slicePresent = slicePresent 
+                  && ( (cf.subdomainOffset[i]+cf.localCellDims[i]) >= gStart[i]
+                  &&    cf.subdomainOffset[i] <= gEnd[i]);
   }
 
+  // set color and create subcommunicator
   if (slicePresent){
     myColor=1;
   }
-
-
   // create slice communicator
   MPI_Comm_split(cf.comm,myColor,cf.rank,&sliceComm);
-  if (slicePresent){
-    int sliceRank;
-    int sliceWorld;
-    MPI_Comm_rank(sliceComm,&sliceRank);
-    MPI_Comm_size(sliceComm,&sliceWorld);
-    //size_t gSize[cf.numProcs];
-    size_t gMin;
 
+  if (slicePresent){
 
     for (int i=0; i<cf.ndim; ++i){
-
-      //lEndG[i]=lEnd[i];//+1
-
       offsetDelta=gStart[i]-cf.subdomainOffset[i]; //location of left edge of slice wrt left edge of subdomain
       if(offsetDelta > 0) lStart[i]=offsetDelta;   //if slice starts inside subdomain, set local start to slice edge
       else lOffset[i] = -(offsetDelta);            //if subdomain is within slice, adjust offset
@@ -156,12 +153,7 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func *f){
       offsetDelta=(cf.subdomainOffset[i]+cf.localCellDims[i])-gEnd[i]; //location of right edge of slice wrt right edge of domain
       if(offsetDelta > 0){
         lEnd[i]=cf.localCellDims[i]-offsetDelta;   // if slice ends in subdomain, set local end to slide edge
-        //lEndG[i]=lEnd[i]+1;
       }
-
-
-      //if (i==2) cout << cf.rank << " B : " << lOffset[i] << ", " << lStart[i] << endl;
-      //if (i==2) cout << cf.rank << " B.2 : " << lStart[i] << ", " << gStart[i] << "," << stride[i] << endl;
 
       //adjust start and offset if it does not land on a stride
       strideDelta = (lOffset[i]-gStart[i])%stride[i];
@@ -169,45 +161,34 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func *f){
       lOffset[i]+=(stride[i]-strideDelta)%stride[i];
       lOffset[i]/=stride[i];
 
-      //if (i==2) cout << cf.rank << " C : " << lOffset[i] << ", " << lStart[i] << ", " << strideDelta << endl;
-      //if (i==2) cout << cf.rank << " A : " << strideDelta << ", " << gEnd[i] << ", " << gExt[i] << ", " << gExtG[i] << endl;
-
       //adjust local end index if it does not align with a stride
-      //if (i==2) cout << cf.rank << " D : " << lEnd[i] << ", " << lEndG[i] << endl;
       strideDelta=(lEnd[i]-lStart[i])%stride[i];
       lEnd[i]-=strideDelta;
-      //lEndG[i]=lEnd[i];
-      //if (i==2) cout << cf.rank << " E : " << lEnd[i] << ", " << lEndG[i] << endl;
 
-      //cf.log->debugAll(sliceRank,"A ",i,": ",cf.localCellDims[i],", ",lEnd[i],", ",stride[i]);
+      // reduce global dimensions if stride falls off the end of the domain
       if ((cf.subdomainOffset[i]+cf.localCellDims[i]) > gEnd[i]){
         if (((cf.localCellDims[i]-1)-lEnd[i]) < (stride[i]-1)){
           lEnd[i]-=stride[i];
           gEnd[i]-=stride[i];
           gExt[i]-=1;
           gExtG[i]-=1;
-          //cout << sliceRank << ", " << i << ": " << gEnd[i] << ", " << gExt[i] << "\n";
-          //cf.log->debugAll(sliceRank," ",i,": ",gEnd[i],", ",gExt[i]);
         }
         lEndG[i]=lEnd[i]+stride[i];
       }
-      //if (i==2) cout << cf.rank << " F : " << gEnd[i] << ", " << gExt[i] << ", " << gExtG[i] << ", " << lEnd[i] << ", " << lEndG[i] << "\n";
-      //processes must come to agreement about gEnd, gExt and gExtG
-      //MPI_Allgather(&gEnd[i],1,MPI_INT,gSize,1,MPI_INT,sliceComm);
-      
-      //lEndG[i]=lEnd[i]+stride[i];
+
+      // compute local data and grid extend based on computed start and end indexex
       lExt[i]=(lEnd[i]-lStart[i])/stride[i]+1;
       lExtG[i]=(lEndG[i]-lStart[i])/stride[i]+1;
-      //if (i==2) cout << cf.rank << " G : " << lExt[i] << ", " << lExtG[i] << endl;
 
+      // compute length of 1d buffer
       lElems*=lExt[i];
       lElemsG*=lExtG[i];
-
-
     }
-    //cout << cf.rank << ": (" << lExt[0]   << "," << lExt[1]  << "," << lExt[2]  << "), "
-    //                <<   "(" << lExtG[0]  << "," << lExtG[1] << "," << lExtG[2] << ")" << endl;
-    //cout << cf.rank << ": (" << lElems << ", " << lElemsG << ")\n";
+
+    // processes must agree on global dimensions
+    // last "righ-most" process may have had to reduce
+    // global dimensions to accomadate the stride
+    // so the minimum extent and end index are used
     for (int i=0; i<cf.ndim; ++i){
       MPI_Allreduce(&gEnd[i],&gMin,1,MPI_INT,MPI_MIN,sliceComm);
       gEnd[i]=gMin;
@@ -217,19 +198,15 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func *f){
 
       MPI_Allreduce(&gExtG[i],&gMin,1,MPI_INT,MPI_MIN,sliceComm);
       gExtG[i]=gMin;
-
-      if(slicePresent){
-        //if (i==2) cout << cf.rank << " H : (" << i << ") " << lOffset[i] << ", " << lStart[i] << ", " << lEnd[i] << ", "  << lExt[i] << ", " << lEndG[i] << ", " << lExtG[i] << "\n";
-        //if (i==2) cout << cf.rank << " H : (" << i << ") " << gStart[i] << ", " << gEnd[i] << ", "  << gExt[i] << ", " << gExtG[i] << "\n";
-      }
-      //MPI_Barrier(sliceComm);
     }
   }
   
 
+  // allocate pack buffers
   varData = (float*)malloc(lElems*sizeof(float*));
   gridData = (float*)malloc(lElemsG*sizeof(float*));
 
+  // create kokkos host mirrors
   gridH = Kokkos::create_mirror_view(f->grid);
   varH = Kokkos::create_mirror_view(f->var);
   varxH = Kokkos::create_mirror_view(f->varx);
@@ -306,19 +283,13 @@ void blockWriter::write_h5(hid_t group_id, string dname, int ndim,
   hsize_t dims_local[ndim];
   hsize_t offset[ndim];
 
-  for (int i=0; i<ndim; ++i){
-    dims_global[i]=in_dims_global[ndim-1-i];
-    dims_local[i] =in_dims_local[ndim-1-i];
-    offset[i]     =in_offset[ndim-1-i];
-  }
-
-  //invertArray(ndim,dims_global,in_dims_global);
-  //invertArray(ndim,dims_local,in_dims_local);
-  //invertArray(ndim,offset,in_offset);
+  // reverse order of array indexes to "c"
+  reverseArray(ndim,dims_global,in_dims_global);
+  reverseArray(ndim,dims_local,in_dims_local);
+  reverseArray(ndim,offset,in_offset);
 
   // identifiers
   hid_t filespace, memspace, dset_id, plist_id, dtype_id;
-  //herr_t status;
 
   // get type id
   dtype_id = getH5Type<S>();

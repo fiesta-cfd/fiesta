@@ -132,9 +132,9 @@ void luaReader::getArray(string key, vector<string>& out, int n){
     error(L, "Error Reading Input File: A string array was expected at '%s'\n", key.c_str());
 }
 
-void luaReader::getIOBlock(int ndim, string& name, string& path, size_t& freq, size_t* start, size_t* end){
+void luaReader::getIOBlock(string key, int ndim, string& name, string& path, size_t& freq, size_t* start, size_t* end, size_t* stride){
   int isnum;
-  lua_getglobal(L, "ioblock");
+  lua_getglobal(L, key.c_str());
   if (lua_istable(L,-1)){
     const char *name_c;
 
@@ -159,6 +159,8 @@ void luaReader::getIOBlock(int ndim, string& name, string& path, size_t& freq, s
     }else{
       error(L, "Error Reading Input File: Could not read first value in ioblock, a string was expected.\n");
     }
+
+    // get start
     lua_pushnumber(L, 3);
     lua_gettable(L, -2);
     freq = (size_t)lua_tointegerx(L, -1, &isnum);
@@ -169,10 +171,20 @@ void luaReader::getIOBlock(int ndim, string& name, string& path, size_t& freq, s
       start[i] = (size_t)lua_tointegerx(L, -1, &isnum);
       lua_pop(L, 1);
     }
+
+    // get end
     for (int i=0; i < ndim; ++i) {
       lua_pushnumber(L, i + ndim + 4);
       lua_gettable(L, -2);
       end[i] = (size_t)lua_tointegerx(L, -1, &isnum);
+      lua_pop(L, 1);
+    }
+
+    // get stride
+    for (int i=0; i < ndim; ++i) {
+      lua_pushnumber(L, i + 2*ndim + 4);
+      lua_gettable(L, -2);
+      stride[i] = (size_t)lua_tointegerx(L, -1, &isnum);
       lua_pop(L, 1);
     }
   }else{
