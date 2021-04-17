@@ -86,44 +86,43 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func *f){
   gEnd    = new size_t[cf.ndim];
   gExt    = new size_t[cf.ndim];
   gExtG   = new size_t[cf.ndim];
-  //stride  = new size_t[cf.ndim];
+  stride  = new size_t[cf.ndim];
   lElems=1;
   lElemsG=1;
 
   myColor=MPI_UNDEFINED;
   slicePresent=true;
 
+  int strideDelta;
+
   luaReader L(cf.inputFname);
   L.getIOBlock(cf.ndim,name,path,freq,gStart,gEnd);
   L.close();
   cf.log->debug("ioblock: ",name,", ",path,",",freq,", (",gStart[0],",",gStart[1],",",gStart[2],")","(",gEnd[0],",",gEnd[1],",",gEnd[2],")");
-
-  //name.assign("block");
-  //path.assign("./blockpath");
-
-  //gStart[0]=49;
-  //gStart[1]=49;
-  //gStart[2]=45;
-
-  //gEnd[0]=50;
-  //gEnd[1]=50;
-  //gEnd[2]=54;
+  stride[0]=3;
+  stride[1]=3;
+  stride[2]=3;
 
   for (int i=0; i<cf.ndim; ++i){
-    gExt[i]=gEnd[i]-gStart[i]+1;
-    gExtG[i]=gEnd[i]-gStart[i]+2;
+    //adjust block global size if it does not line up with strides
+    strideDelta=(gEnd[i]-gStart[i])%stride[i];
+    gEnd[i]-=strideDelta;
+
+    gExt[i]=(gEnd[i]-gStart[i])/stride[i]+1;
+    gExtG[i]=gExt[i]+1;
+    //if (i==2) cout << cf.rank << " A : " << strideDelta << ", " << gStart[i] << "," << gEnd[i] << ", " << gExt[i] << ", " << gExtG[i] << endl;
   }
 
   for (int i=0; i<cf.ndim; ++i){
     lStart[i]=0;
     lEnd[i]=cf.localCellDims[i]-1;
-    lEndG[i]=cf.localCellDims[i];
+    lEndG[i]=cf.localCellDims[i]-1; //none
     lOffset[i]=0;
   }
 
   for (int i=0; i<cf.ndim; ++i){
     lExt[i]=lEnd[i]-lStart[i]+1;
-    lExtG[i]=lEnd[i]-lStart[i]+2;
+    lExtG[i]=lEnd[i]-lStart[i]+1; //+2
   }
 
   for (int i=0; i<cf.ndim; ++i){
@@ -132,27 +131,101 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func *f){
 
   if (slicePresent){
     myColor=1;
+  }
+
+
+  // create slice communicator
+  MPI_Comm_split(cf.comm,myColor,cf.rank,&sliceComm);
+  if (slicePresent){
+    int sliceRank;
+    int sliceWorld;
+    MPI_Comm_rank(sliceComm,&sliceRank);
+    MPI_Comm_size(sliceComm,&sliceWorld);
+    //size_t gSize[cf.numProcs];
+    size_t gMin;
 
 
     for (int i=0; i<cf.ndim; ++i){
 
+      //lEndG[i]=lEnd[i];//+1
+
       offsetDelta=gStart[i]-cf.subdomainOffset[i]; //location of left edge of slice wrt left edge of subdomain
       if(offsetDelta > 0) lStart[i]=offsetDelta;   //if slice starts inside subdomain, set local start to slice edge
-      else lOffset[i] = -(offsetDelta);                //if subdomain is within slice, adjust offset
+      else lOffset[i] = -(offsetDelta);            //if subdomain is within slice, adjust offset
 
       offsetDelta=(cf.subdomainOffset[i]+cf.localCellDims[i])-gEnd[i]; //location of right edge of slice wrt right edge of domain
-      if(offsetDelta > 0) lEnd[i]=cf.localCellDims[i]-offsetDelta;     // if slice ends in subdomain, set local end to slide edge
+      if(offsetDelta > 0){
+        lEnd[i]=cf.localCellDims[i]-offsetDelta;   // if slice ends in subdomain, set local end to slide edge
+        //lEndG[i]=lEnd[i]+1;
+      }
 
-      lEndG[i]=lEnd[i]+1;
-      lExt[i]=lEnd[i]-lStart[i]+1;
-      lExtG[i]=lExt[i]+1;
+
+      //if (i==2) cout << cf.rank << " B : " << lOffset[i] << ", " << lStart[i] << endl;
+      //if (i==2) cout << cf.rank << " B.2 : " << lStart[i] << ", " << gStart[i] << "," << stride[i] << endl;
+
+      //adjust start and offset if it does not land on a stride
+      strideDelta = (lOffset[i]-gStart[i])%stride[i];
+      lStart[i]+=(stride[i]-strideDelta)%stride[i];
+      lOffset[i]+=(stride[i]-strideDelta)%stride[i];
+      lOffset[i]/=stride[i];
+
+      //if (i==2) cout << cf.rank << " C : " << lOffset[i] << ", " << lStart[i] << ", " << strideDelta << endl;
+      //if (i==2) cout << cf.rank << " A : " << strideDelta << ", " << gEnd[i] << ", " << gExt[i] << ", " << gExtG[i] << endl;
+
+      //adjust local end index if it does not align with a stride
+      //if (i==2) cout << cf.rank << " D : " << lEnd[i] << ", " << lEndG[i] << endl;
+      strideDelta=(lEnd[i]-lStart[i])%stride[i];
+      lEnd[i]-=strideDelta;
+      //lEndG[i]=lEnd[i];
+      //if (i==2) cout << cf.rank << " E : " << lEnd[i] << ", " << lEndG[i] << endl;
+
+      //cf.log->debugAll(sliceRank,"A ",i,": ",cf.localCellDims[i],", ",lEnd[i],", ",stride[i]);
+      if ((cf.subdomainOffset[i]+cf.localCellDims[i]) > gEnd[i]){
+        if (((cf.localCellDims[i]-1)-lEnd[i]) < (stride[i]-1)){
+          lEnd[i]-=stride[i];
+          gEnd[i]-=stride[i];
+          gExt[i]-=1;
+          gExtG[i]-=1;
+          //cout << sliceRank << ", " << i << ": " << gEnd[i] << ", " << gExt[i] << "\n";
+          //cf.log->debugAll(sliceRank," ",i,": ",gEnd[i],", ",gExt[i]);
+        }
+        lEndG[i]=lEnd[i]+stride[i];
+      }
+      //if (i==2) cout << cf.rank << " F : " << gEnd[i] << ", " << gExt[i] << ", " << gExtG[i] << ", " << lEnd[i] << ", " << lEndG[i] << "\n";
+      //processes must come to agreement about gEnd, gExt and gExtG
+      //MPI_Allgather(&gEnd[i],1,MPI_INT,gSize,1,MPI_INT,sliceComm);
+      
+      //lEndG[i]=lEnd[i]+stride[i];
+      lExt[i]=(lEnd[i]-lStart[i])/stride[i]+1;
+      lExtG[i]=(lEndG[i]-lStart[i])/stride[i]+1;
+      //if (i==2) cout << cf.rank << " G : " << lExt[i] << ", " << lExtG[i] << endl;
+
       lElems*=lExt[i];
       lElemsG*=lExtG[i];
+
+
+    }
+    //cout << cf.rank << ": (" << lExt[0]   << "," << lExt[1]  << "," << lExt[2]  << "), "
+    //                <<   "(" << lExtG[0]  << "," << lExtG[1] << "," << lExtG[2] << ")" << endl;
+    //cout << cf.rank << ": (" << lElems << ", " << lElemsG << ")\n";
+    for (int i=0; i<cf.ndim; ++i){
+      MPI_Allreduce(&gEnd[i],&gMin,1,MPI_INT,MPI_MIN,sliceComm);
+      gEnd[i]=gMin;
+
+      MPI_Allreduce(&gExt[i],&gMin,1,MPI_INT,MPI_MIN,sliceComm);
+      gExt[i]=gMin;
+
+      MPI_Allreduce(&gExtG[i],&gMin,1,MPI_INT,MPI_MIN,sliceComm);
+      gExtG[i]=gMin;
+
+      if(slicePresent){
+        //if (i==2) cout << cf.rank << " H : (" << i << ") " << lOffset[i] << ", " << lStart[i] << ", " << lEnd[i] << ", "  << lExt[i] << ", " << lEndG[i] << ", " << lExtG[i] << "\n";
+        //if (i==2) cout << cf.rank << " H : (" << i << ") " << gStart[i] << ", " << gEnd[i] << ", "  << gExt[i] << ", " << gExtG[i] << "\n";
+      }
+      //MPI_Barrier(sliceComm);
     }
   }
   
-  // create slice communicator
-  MPI_Comm_split(cf.comm,myColor,cf.rank,&sliceComm);
 
   varData = (float*)malloc(lElems*sizeof(float*));
   gridData = (float*)malloc(lElemsG*sizeof(float*));
@@ -180,16 +253,16 @@ void blockWriter::write(struct inputConfig cf, rk_func *f, int tdx, double time)
     Kokkos::deep_copy(gridH,f->grid);
     Kokkos::deep_copy(varH,f->var);
 
-    int sliceRank;
-    int sliceWorld;
-    MPI_Comm_rank(sliceComm,&sliceRank);
-    MPI_Comm_size(sliceComm,&sliceWorld);
+    //int sliceRank;
+    //int sliceWorld;
+    //MPI_Comm_rank(sliceComm,&sliceRank);
+    //MPI_Comm_size(sliceComm,&sliceWorld);
 
     hid_t linefile_id = openHDF5ForWrite(sliceComm, MPI_INFO_NULL, lineName.str());
 
     hid_t linegroup_id = H5Gcreate(linefile_id, "/Grid", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     for (int vn=0; vn<cf.ndim; ++vn){
-      dataPack(cf.ndim, 0, lStart, lEndG, lExtG, gridData, gridH,vn);
+      dataPack(cf.ndim, 0, lStart, lEndG, lExtG, stride, gridData, gridH,vn);
 
       stringstream lineStr;
       lineStr << "Dimension" << vn;
@@ -199,14 +272,14 @@ void blockWriter::write(struct inputConfig cf, rk_func *f, int tdx, double time)
 
     linegroup_id = H5Gcreate(linefile_id, "/Solution", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     for (int vn=0; vn<cf.nvt; ++vn){
-      dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, varData, varH,vn);
+      dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varH,vn);
        
       stringstream lineStr;
       lineStr << "Variable" << setw(2) << setfill('0') << vn;
       write_h5<float>(linegroup_id, lineStr.str(), cf.ndim, gExt, lExt, lOffset, varData); 
     }
     for (size_t vn = 0; vn < f->varxNames.size(); ++vn) {
-      dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, varData, varxH,vn);
+      dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varxH,vn);
        
       stringstream lineStr;
       lineStr << "Variable" << setw(2) << setfill('0') << vn+cf.nvt;
@@ -281,27 +354,29 @@ void blockWriter::write_h5(hid_t group_id, string dname, int ndim,
 }
 
 template<typename T>
-void blockWriter::dataPack(int ndim, int ng, size_t* start, size_t* end, size_t* extent, T* dest, FS4DH& source,int vn){
+void blockWriter::dataPack(int ndim, int ng, size_t* start, size_t* end, size_t* extent, size_t* stride, T* dest, FS4DH& source,int vn){
   int ii,jj,kk;
   int idx;
 
+
   if (ndim==3){
-    for (int i = start[0]; i < end[0]+1; ++i) {
-      for (int j = start[1]; j < end[1]+1; ++j) {
-        for (int k = start[2]; k < end[2]+1; ++k) {
-          ii=i-start[0];
-          jj=j-start[1];
-          kk=k-start[2];
+    for (int i = start[0]; i < end[0]+1; i+=stride[0]) {
+      for (int j = start[1]; j < end[1]+1; j+=stride[1]) {
+        for (int k = start[2]; k < end[2]+1; k+=stride[2]) {
+          ii=(i-start[0])/stride[0];
+          jj=(j-start[1])/stride[1];
+          kk=(k-start[2])/stride[2];
           idx = (extent[0] * extent[1]) * kk + extent[0] * jj + ii;
+          //cout << "######## (" << i << ", " << j << ", " << k << ") " << idx << endl;
           dest[idx] = source(i+ng, j+ng, k+ng,vn);
         }
       }
     }
   }else{
-    for (int i = start[0]; i < end[0]+1; ++i) {
-      for (int j = start[1]; j < end[1]+1; ++j) {
-        ii=i-start[0];
-        jj=j-start[1];
+    for (int i = start[0]; i < end[0]+1; i+=stride[0]) {
+      for (int j = start[1]; j < end[1]+1; j+=stride[1]) {
+        ii=(i-start[0])/stride[0];
+        jj=(j-start[1])/stride[1];
         idx = extent[0] * jj + ii;
         dest[idx] = source(i+ng, j+ng, 0,vn);
       }

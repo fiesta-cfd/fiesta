@@ -51,7 +51,7 @@ class blockWriter {
     size_t* gExt;    // global extent
     size_t* gExtG;   // global grid extent
     size_t freq;    // block write frequency
-    //size_t *stride; // slice stride
+    size_t *stride; // slice stride
     
     size_t lElems;
     size_t lElemsG;
@@ -77,7 +77,7 @@ class blockWriter {
     void write_h5(hid_t, string, int, size_t*, size_t*, size_t*, S*);
 
     template <typename T>
-    void dataPack(int, int, size_t*, size_t*, size_t*, T*, FS4DH&, int);
+    void dataPack(int, int, size_t*, size_t*, size_t*, size_t*, T*, FS4DH&, int);
     template <typename H> hid_t getH5Type();
     //template <> hid_t getH5Type<float>();
     //template <> hid_t getH5Type<double>();
