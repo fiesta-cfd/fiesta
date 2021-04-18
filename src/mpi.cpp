@@ -233,6 +233,12 @@ void directHaloExchange::sendHalo(MPI_Request reqs[6]) {
 // Post all halo exchange sends
 /////////////////////////////////////////////// 
   int wait_count = 0;
+  // We fence here to make sure any computation on the host is finished.
+  Kokkos::fence();
+
+  // Now that we know the data on the host is sane, we queue up all the sends. MPI *should* be able to 
+  // pipeline these, though it doesn't know they're all coming. A neighbor collective might give it
+  // more flexibility here.
   MPI_Isend(deviceV.data(), 1, leftSendSubArray, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
   MPI_Isend(deviceV.data(), 1, rightSendSubArray, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
   MPI_Isend(deviceV.data(), 1, bottomSendSubArray, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
@@ -300,21 +306,32 @@ void packedHaloExchange::operator()( const zUnpack&, const int i, const int j, c
   deviceV(i,j,cf.ngk-cf.ng+k,v) = frontRecv(i,j,k,v);
 }
 
+// This code requires potentially fences to handle parallelism between MPI and the GPU. MPI
+// may implicilty fence if it uses the GPU for the copy to the host, but we have no wauy of
+// knowing that, so according to the spec we have to fence pessimisticly here.
 void packedHaloExchange::sendHalo(MPI_Request reqs[6]) {
   auto xPol = Kokkos::MDRangePolicy<xPack,Kokkos::Rank<4>>({0, 0, 0, 0}, {cf.ng, cf.ngj, cf.ngk, cf.nvt});
   auto yPol = Kokkos::MDRangePolicy<yPack,Kokkos::Rank<4>>({0, 0, 0, 0}, {cf.ngi, cf.ng, cf.ngk, cf.nvt});
   auto zPol = Kokkos::MDRangePolicy<zPack,Kokkos::Rank<4>>({0, 0, 0, 0}, {cf.ngi, cf.ngj, cf.ng, cf.nvt});
 
+  // XXX Should we do all packs, then fence one, then all sends, or do repeated 
+  // pack/fence/send/pack/fence/send? The tradeoff here concurrency between the sends and packs 
+  // versus the overheads of the fences, as well as potential memoruy bandwidth limits
+  // on the card. For now we do the later, but need to model this to be able to choose
+  // appropiately.
   Kokkos::parallel_for( xPol, *this); 
+  Kokkos::fence();
   MPI_Isend(leftSend.data(), cf.ng*cf.ngj*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[0]);
   MPI_Isend(rightSend.data(), cf.ng*cf.ngj*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[1]);
 
   Kokkos::parallel_for( yPol, *this);
+  Kokkos::fence();
   MPI_Isend(bottomSend.data(), cf.ngi*cf.ng*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[2]);
   MPI_Isend(topSend.data(), cf.ngi*cf.ng*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[3]);
 
   if (cf.ndim == 3){
     Kokkos::parallel_for( zPol, *this);
+    Kokkos::fence();
     MPI_Isend(backSend.data(), cf.ngi*cf.ngj*cf.ng*(cf.nvt), MPI_DOUBLE, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[4]);
     MPI_Isend(frontSend.data(), cf.ngi*cf.ngj*cf.ng*(cf.nvt), MPI_DOUBLE, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[5]);
   }
