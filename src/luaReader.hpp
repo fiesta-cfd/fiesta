@@ -20,6 +20,9 @@
 #include <string>
 #include "lua.hpp"
 #include <vector>
+#include "block.hpp"
+#include "input.hpp"
+#include "rkfunction.hpp"
 
 class luaReader {
 
@@ -42,7 +45,8 @@ public:
   template <class T>
   void getArray(std::string,std::vector<T>&,int);
 
-  void getIOBlock(std::string key,int,std::string&, std::string&,size_t&,size_t*,size_t*,size_t*);
+  //void getIOBlock(std::string key,int,std::string&, std::string&,size_t&,size_t*,size_t*,size_t*);
+  void getIOBlock(struct inputConfig&, rk_func*, int, vector<blockWriter>&);
 
   double call(std::string, int ,...);
 

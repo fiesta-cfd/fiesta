@@ -27,6 +27,7 @@
 #include <iostream>
 #include <string>
 #include <regex>
+#include "block.hpp"
 
 using namespace std;
 
@@ -132,81 +133,81 @@ void luaReader::getArray(string key, vector<string>& out, int n){
     error(L, "Error Reading Input File: A string array was expected at '%s'\n", key.c_str());
 }
 
-void luaReader::getIOBlock(string key, int ndim, string& name, string& path, size_t& freq, size_t* start, size_t* end, size_t* stride){
+//void luaReader::getIOBlock(int ndim, string& name, string& path, size_t& freq, size_t* start, size_t* end, size_t* stride){
+void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<blockWriter>& blocks){
   int isnum;
-  lua_getglobal(L, key.c_str());
+  size_t numElems;
+  size_t numBlocks;
+  size_t frq,avg;
+
+  lua_getglobal(L, "blocks");
   if (lua_istable(L,-1)){
-    const char *name_c;
+    numBlocks=lua_rawlen(L,-1);
+    for (int i=0; i<numBlocks; ++i){
+      string myname,mypath;
+      vector<size_t> start,size,stride;
+      lua_pushnumber(L,i+1);
+      lua_gettable(L,-2);
+      
+      lua_pushstring(L,"name");
+      lua_gettable(L,-2);
+      myname.assign(lua_tostring(L,-1));
+      lua_pop(L,1);
 
-    // get name 
-    lua_pushnumber(L, 1);
-    lua_gettable(L, -2);
-    if (lua_isstring(L,-1)){
-      name_c = lua_tostring(L, -1);
-      name.assign(name_c);
-      lua_pop(L, 1);
-    }else{
-      error(L, "Error Reading Input File: Could not read first value in ioblock, a string was expected.\n");
-    }
+      lua_pushstring(L,"path");
+      lua_gettable(L,-2);
+      mypath.assign(lua_tostring(L,-1));
+      lua_pop(L,1);
 
-    // get path
-    lua_pushnumber(L, 2);
-    lua_gettable(L, -2);
-    if (lua_isstring(L,-1)){
-      name_c = lua_tostring(L, -1);
-      path.assign(name_c);
-      lua_pop(L, 1);
-    }else{
-      error(L, "Error Reading Input File: Could not read first value in ioblock, a string was expected.\n");
-    }
+      lua_pushstring(L,"frequency");
+      lua_gettable(L,-2);
+      frq = lua_tointegerx(L,-1,&isnum);
+      lua_pop(L,1);
 
-    // get start
-    lua_pushnumber(L, 3);
-    lua_gettable(L, -2);
-    freq = (size_t)lua_tointegerx(L, -1, &isnum);
-    lua_pop(L, 1);
-    for (int i=0; i < ndim; ++i) {
-      lua_pushnumber(L, i + 4);
-      lua_gettable(L, -2);
-      start[i] = (size_t)lua_tointegerx(L, -1, &isnum);
-      lua_pop(L, 1);
-    }
+      lua_pushstring(L,"average");
+      lua_gettable(L,-2);
+      avg = lua_tointegerx(L,-1,&isnum);
+      lua_pop(L,1);
 
-    // get end
-    for (int i=0; i < ndim; ++i) {
-      lua_pushnumber(L, i + ndim + 4);
-      lua_gettable(L, -2);
-      end[i] = (size_t)lua_tointegerx(L, -1, &isnum);
-      lua_pop(L, 1);
-    }
+      lua_pushstring(L,"location");
+      lua_gettable(L,-2);
+      numElems = lua_rawlen(L,-1);
+      for(int j=0;j<numElems; ++j){
+        lua_pushnumber(L,j+1);
+        lua_gettable(L,-2);
+        start.push_back((size_t)lua_tointegerx(L, -1, &isnum));
+        lua_pop(L,1);
+      }
+      lua_pop(L,1);
 
-    // get stride
-    for (int i=0; i < ndim; ++i) {
-      lua_pushnumber(L, i + 2*ndim + 4);
-      lua_gettable(L, -2);
-      stride[i] = (size_t)lua_tointegerx(L, -1, &isnum);
-      lua_pop(L, 1);
+      lua_pushstring(L,"size");
+      lua_gettable(L,-2);
+      numElems = lua_rawlen(L,-1);
+      for(int j=0;j<numElems; ++j){
+        lua_pushnumber(L,j+1);
+        lua_gettable(L,-2);
+        size.push_back((size_t)lua_tointegerx(L, -1, &isnum));
+        lua_pop(L,1);
+      }
+      lua_pop(L,1);
+
+      lua_pushstring(L,"stride");
+      lua_gettable(L,-2);
+      numElems = lua_rawlen(L,-1);
+      for(int j=0;j<numElems; ++j){
+        lua_pushnumber(L,j+1);
+        lua_gettable(L,-2);
+        stride.push_back((size_t)lua_tointegerx(L, -1, &isnum));
+        lua_pop(L,1);
+      }
+      lua_pop(L,1);
+
+      blocks.push_back(blockWriter(cf,f,myname,mypath,avg,frq,start,size,stride));
+      lua_pop(L,1);
     }
   }else{
-      error(L, "Error Reading Input File: Could not read ioblock.\n");
+      error(L, "Error Reading Input File: Could not read blocks.\n");
   }
-  //if (lua_istable(L,-1))
-  //    for (int i=0; i<n; ++i) {
-  //      lua_pushnumber(L, i + 1);
-  //      lua_gettable(L, -2);
-  //   
-  //      const char *name_c;
-  //   
-  //      if (lua_isstring(L,-1)){
-  //        name_c = lua_tostring(L, -1);
-  //        out.push_back(std::string(name_c));
-  //        lua_pop(L, 1);
-  //      }else{
-  //        error(L, "Error Reading Input File: Could not read value in array '%s', a string was expected.\n", key.c_str());
-  //      }
-  //    }
-  //else
-  //  error(L, "Error Reading Input File: A string array was expected at '%s'\n", key.c_str());
 }
 
 // Call lua function from c (takes integer arguments and returns a double)

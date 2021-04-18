@@ -81,9 +81,9 @@ fiestaSignalHandler *fiestaSignalHandler::instance=0;
 
 int main(int argc, char *argv[]) {
   
-  struct inputConfig cf;
-  Fiesta::initialize(cf,argc,argv);
   {
+    struct inputConfig cf;
+    Fiesta::initialize(cf,argc,argv);
 
     class fiestaSignalHandler *signalHandler = signalHandler->getInstance(cf);
     signalHandler->registerSignals();
@@ -141,8 +141,7 @@ int main(int argc, char *argv[]) {
     cf.simTimer.stop();
     cf.totalTimer.stop();
     Fiesta::reportTimers(cf,f);
-
   }
-  Fiesta::finalize(cf);
+  Fiesta::finalize();
   return 0;
 }

@@ -30,7 +30,9 @@ using namespace std;
 class blockWriter {
   public:
     blockWriter();
-    blockWriter(struct inputConfig&, rk_func*);
+    //blockWriter(struct inputConfig&, rk_func*);
+    //cf.ioblock = new blockWriter(cf,f,"bslice","./bslice",true,20,start,size,stride);
+    blockWriter(struct inputConfig&,rk_func*,string,string,bool,size_t,vector<size_t>,vector<size_t>,vector<size_t>);
     //void writeHDF(struct inputConfig&, rk_func*, int, double, double*, double*, string);
     void write(struct inputConfig cf, rk_func *f, int tdx, double time);
     ~blockWriter();
@@ -72,12 +74,13 @@ class blockWriter {
     string path;
     string name;
     int pad;
+    bool avg;
 
     template <typename S>
     void write_h5(hid_t, string, int, size_t*, size_t*, size_t*, S*);
 
     template <typename T>
-    void dataPack(int, int, size_t*, size_t*, size_t*, size_t*, T*, FS4DH&, int);
+    void dataPack(int, int, size_t*, size_t*, size_t*, size_t*, T*, FS4DH&, int, bool);
     template <typename H> hid_t getH5Type();
     //template <> hid_t getH5Type<float>();
     //template <> hid_t getH5Type<double>();

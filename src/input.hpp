@@ -67,6 +67,7 @@ struct inputConfig {
   class mpiHaloExchange *m;
   class Logger *log;
   class blockWriter *ioblock;
+  std::vector<blockWriter> ioblocks;
 
   int colorFlag,timeFormat;
   std::string inputFname;

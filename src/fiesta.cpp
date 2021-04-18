@@ -31,6 +31,9 @@
 #include "log.hpp"
 #include "block.hpp"
 //#include <csignal>
+#include <string>
+#include <vector>
+#include "luaReader.hpp"
 
 using namespace std;
 
@@ -97,6 +100,11 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
   else if (cf.mpiScheme == 3)
     cf.m = new directHaloExchange(cf, f->var);
   cf.ioblock = new blockWriter(cf,f);
+
+  luaReader L(cf.inputFname);
+  L.getIOBlock(cf,f,cf.ndim,cf.ioblocks);
+  L.close();
+
 #endif
 
   // If not restarting, generate initial conditions and grid
@@ -214,11 +222,13 @@ void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time){
     }
   }
 
-  if(cf.ioblock->frq() > 0){
-    if ((t + 1) % cf.ioblock->frq() == 0) {
-      f->timers["solWrite"].reset();
-      cf.ioblock->write(cf,f,t+1,time);
-      f->timers["solWrite"].accumulate();
+  for (auto& block : cf.ioblocks){
+    if(block.frq() > 0){
+      if ((t + 1) % block.frq() == 0) {
+        f->timers["solWrite"].reset();
+        block.write(cf,f,t+1,time);
+        f->timers["solWrite"].accumulate();
+      }
     }
   }
 }
@@ -294,10 +304,12 @@ void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
 }
  
 // clean up kokkos and mpi
-void Fiesta::finalize(struct inputConfig &cf){
+//void Fiesta::finalize(struct inputConfig &cf){
+void Fiesta::finalize(){
   Kokkos::finalize();
 #ifndef NOMPI
   MPI_Finalize();
 #endif
-  delete cf.log;
+  //delete &cf;
+  //delete cf.log;
 }
