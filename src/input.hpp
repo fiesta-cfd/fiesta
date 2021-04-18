@@ -39,7 +39,7 @@
 #include "log.hpp"
 #include "block.hpp"
 
-typedef struct inputConfig FSCONF;
+typedef struct inputConfig fsconf;
 
 // Lua error function
 void error(lua_State *L, const char *fmt, ...);

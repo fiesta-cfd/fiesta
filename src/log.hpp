@@ -100,7 +100,7 @@ class Logger {
       if (verbosity >= 2){
         stringstream message;
         (message << ... << args) << "";
-        print("Warning",message.str(),yellow);
+        print("WARNING",message.str(),yellow);
       }
     }
     
@@ -109,7 +109,7 @@ class Logger {
       if (verbosity >= 1){
         stringstream message;
         (message << ... << args) << "";
-        print("Error",message.str(),red);
+        print("ERROR",message.str(),red);
       }
     }
     
