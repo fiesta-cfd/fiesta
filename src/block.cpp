@@ -74,24 +74,12 @@ template <> hid_t blockWriter::getH5Type<int>(){ return H5T_NATIVE_INT; }
 
 
 blockWriter::blockWriter(){}
-blockWriter::blockWriter(struct inputConfig& cf, rk_func* f, string mname, string mpath, bool maverage, size_t mfrequency,
-  vector<size_t> start, vector<size_t> size, vector<size_t> mstride){
+blockWriter::blockWriter(struct inputConfig& cf, rk_func* f, string name_, string path_, bool avg_, size_t frq_,
+  vector<size_t> start_, vector<size_t> end_, vector<size_t> stride_):
+  name(name_),path(path_),avg(avg_),freq(frq_),gStart(start_),gEnd(end_),stride(stride_){
 
   int strideDelta;
   size_t gMin;
-
-  // size arrays by problem dimension
-  lStart  = new size_t[cf.ndim];
-  lEnd    = new size_t[cf.ndim];
-  lEndG   = new size_t[cf.ndim];
-  lExt    = new size_t[cf.ndim];
-  lExtG   = new size_t[cf.ndim];
-  lOffset = new size_t[cf.ndim];
-  gStart  = new size_t[cf.ndim];
-  gEnd    = new size_t[cf.ndim];
-  gExt    = new size_t[cf.ndim];
-  gExtG   = new size_t[cf.ndim];
-  stride  = new size_t[cf.ndim];
 
   // initialize parameters
   lElems=1;
@@ -99,45 +87,29 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func* f, string mname, strin
   myColor=MPI_UNDEFINED;
   slicePresent=true;
 
-  name=mname;
-  path=mpath;
-  freq=mfrequency;
-  avg=maverage;
-  for (int i=0; i<cf.ndim; ++i){
-    gStart[i]=start[i];
-    gEnd[i]=start[i]+size[i]-1;
-    stride[i]=mstride[i];
-  }
-
-  string iokey("ioblock");
-  // get block info from luaReader
-  //luaReader L(cf.inputFname);
-  //L.getIOBlock(iokey,cf.ndim,name,path,freq,gStart,gEnd,stride);
-  //L.close();
-
-  cf.log->debug(iokey,": ",name,", ",path,", ",freq);
-  cf.log->debug(iokey,":  start (",gStart[0],",",gStart[1],",",gStart[2],")");
-  cf.log->debug(iokey,":    end (",gEnd[0],",",gEnd[1],",",gEnd[2],")");
-  cf.log->debug(iokey,": stride (",stride[0],",",stride[1],",",stride[2],")");
+  cf.log->debug(": ",name,", ",path,", ",freq);
+  cf.log->debug(":  start (",gStart[0],",",gStart[1],",",gStart[2],")");
+  cf.log->debug(":    end (",gEnd[0],",",gEnd[1],",",gEnd[2],")");
+  cf.log->debug(": stride (",stride[0],",",stride[1],",",stride[2],")");
 
   for (int i=0; i<cf.ndim; ++i){
     //adjust block global size if it does not line up with strides
     strideDelta=(gEnd[i]-gStart[i])%stride[i];
     gEnd[i]-=strideDelta;
-    gExt[i]=(gEnd[i]-gStart[i])/stride[i]+1;
-    gExtG[i]=gExt[i]+1;
+    gExt.push_back((gEnd[i]-gStart[i])/stride[i]+1);
+    gExtG.push_back(gExt[i]+1);
   }
 
   for (int i=0; i<cf.ndim; ++i){
-    lStart[i]=0;
-    lEnd[i]=cf.localCellDims[i]-1;
-    lEndG[i]=cf.localCellDims[i]-1;
-    lOffset[i]=0;
+    lStart.push_back(0);
+    lEnd.push_back(cf.localCellDims[i]-1);
+    lEndG.push_back(cf.localCellDims[i]-1);
+    lOffset.push_back(0);
   }
 
   for (int i=0; i<cf.ndim; ++i){
-    lExt[i]=lEnd[i]-lStart[i]+1;
-    lExtG[i]=lEnd[i]-lStart[i]+1;
+    lExt.push_back(lEnd[i]-lStart[i]+1);
+    lExtG.push_back(lEnd[i]-lStart[i]+1);
   }
 
   // check if any part of the block slice is in this subdomain
@@ -213,9 +185,14 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func* f, string mname, strin
     }
   }
   
+  
   // allocate pack buffers
-  varData = (float*)malloc(lElems*sizeof(float*));
-  gridData = (float*)malloc(lElemsG*sizeof(float*));
+  //varData = (float*)malloc(lElems*sizeof(float*));
+  //gridData = (float*)malloc(lElemsG*sizeof(float*));
+  //varData(lElems,0);
+  //gridData(lElemsG,0);
+  fill_n(back_inserter(varData),lElems,0.0);
+  fill_n(back_inserter(gridData),lElemsG,0.0);
 
   // create kokkos host mirrors
   gridH = Kokkos::create_mirror_view(f->grid);
@@ -280,23 +257,23 @@ void blockWriter::write(struct inputConfig cf, rk_func *f, int tdx, double time)
 
   cf.log->message("[",cf.t,"] ","Writing ",lineXMF.str());
   if (myColor==1){
-    writeXMF(lineXMF.str(), lineHDF.str(), time, cf.ndim, gExt, cf.nvt, f->varNames,f->varxNames);
+    writeXMF(lineXMF.str(), lineHDF.str(), time, cf.ndim, gExt.data(), cf.nvt, f->varNames,f->varxNames);
   }
 }
 
 // writer function for hdf5
 template <typename S>
 void blockWriter::write_h5(hid_t group_id, string dname, int ndim,
-                   size_t* in_dims_global, size_t* in_dims_local, size_t* in_offset, S* data){
+                   vector<size_t> in_dims_global, vector<size_t> in_dims_local, vector<size_t> in_offset, vector<S>& data){
 
-  hsize_t dims_global[ndim];
-  hsize_t dims_local[ndim];
-  hsize_t offset[ndim];
+  vector<hsize_t> gdims(ndim,0);
+  vector<hsize_t> ldims(ndim,0);
+  vector<hsize_t> offset(ndim,0);
 
   // reverse order of array indexes to "c"
-  reverseArray(ndim,dims_global,in_dims_global);
-  reverseArray(ndim,dims_local,in_dims_local);
-  reverseArray(ndim,offset,in_offset);
+  std::reverse_copy(in_dims_global.begin(),in_dims_global.end(),gdims.begin());
+  std::reverse_copy(in_dims_local.begin(),in_dims_local.end(),ldims.begin());
+  std::reverse_copy(in_offset.begin(),in_offset.end(),offset.begin());
 
   // identifiers
   hid_t filespace, memspace, dset_id, plist_id, dtype_id;
@@ -305,8 +282,8 @@ void blockWriter::write_h5(hid_t group_id, string dname, int ndim,
   dtype_id = getH5Type<S>();
 
   // create global filespace and local memoryspace
-  filespace = H5Screate_simple(ndim, dims_global, NULL);
-  memspace  = H5Screate_simple(ndim, dims_local, NULL);
+  filespace = H5Screate_simple(ndim, gdims.data(), NULL);
+  memspace  = H5Screate_simple(ndim, ldims.data(), NULL);
 
   // create dataset
   dset_id = H5Dcreate(group_id, dname.c_str(), dtype_id, filespace,
@@ -316,7 +293,7 @@ void blockWriter::write_h5(hid_t group_id, string dname, int ndim,
 
   // select hyperslab in global filespace
   filespace = H5Dget_space(dset_id);
-  H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, dims_local, NULL);
+  H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset.data(), NULL, ldims.data(), NULL);
   //status = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, dims_local, NULL);
 
   // create property list for collective dataset write
@@ -324,7 +301,7 @@ void blockWriter::write_h5(hid_t group_id, string dname, int ndim,
   H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
 
   // write data
-  H5Dwrite(dset_id, dtype_id, memspace, filespace, plist_id, data);
+  H5Dwrite(dset_id, dtype_id, memspace, filespace, plist_id, data.data());
   //status = H5Dwrite(dset_id, dtype_id, memspace, filespace, plist_id, data);
 
   // close sets, spaces and lists
@@ -335,7 +312,7 @@ void blockWriter::write_h5(hid_t group_id, string dname, int ndim,
 }
 
 template<typename T>
-void blockWriter::dataPack(int ndim, int ng, size_t* start, size_t* end, size_t* extent, size_t* stride, T* dest, FS4DH& source,int vn,bool average){
+void blockWriter::dataPack(int ndim, int ng, const vector<size_t>& start, const vector<size_t>& end, const vector<size_t>& extent, const vector<size_t>& stride, vector<T>& dest, const FS4DH& source, const int vn, const bool average){
   int ii,jj,kk;
   int idx;
   double mean;

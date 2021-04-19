@@ -145,7 +145,7 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
     numBlocks=lua_rawlen(L,-1);
     for (int i=0; i<numBlocks; ++i){
       string myname,mypath;
-      vector<size_t> start,size,stride;
+      vector<size_t> start,limit,stride;
       lua_pushnumber(L,i+1);
       lua_gettable(L,-2);
       
@@ -169,7 +169,7 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
       avg = lua_tointegerx(L,-1,&isnum);
       lua_pop(L,1);
 
-      lua_pushstring(L,"location");
+      lua_pushstring(L,"start");
       lua_gettable(L,-2);
       numElems = lua_rawlen(L,-1);
       for(int j=0;j<numElems; ++j){
@@ -180,13 +180,13 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
       }
       lua_pop(L,1);
 
-      lua_pushstring(L,"size");
+      lua_pushstring(L,"limit");
       lua_gettable(L,-2);
       numElems = lua_rawlen(L,-1);
       for(int j=0;j<numElems; ++j){
         lua_pushnumber(L,j+1);
         lua_gettable(L,-2);
-        size.push_back((size_t)lua_tointegerx(L, -1, &isnum));
+        limit.push_back((size_t)lua_tointegerx(L, -1, &isnum));
         lua_pop(L,1);
       }
       lua_pop(L,1);
@@ -202,7 +202,7 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
       }
       lua_pop(L,1);
 
-      blocks.push_back(blockWriter(cf,f,myname,mypath,avg,frq,start,size,stride));
+      blocks.push_back(blockWriter(cf,f,myname,mypath,avg,frq,start,limit,stride));
       lua_pop(L,1);
     }
   }else{
