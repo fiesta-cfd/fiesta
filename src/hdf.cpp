@@ -761,19 +761,21 @@ void hdfWriter::readTerrain(struct inputConfig cf, FS4D &gridD) {
   Kokkos::deep_copy(gridD,gridH);
 }
 
-hdfWriter::~hdfWriter(){
-  free(xdp);
-  free(xsp);
-  free(vsp);
-  free(vdp);
-  free(psp);
-  free(pdp);
-  free(pi );
-  free(readV);
-       
-  //delete gridH;
-  //delete varH;
-}
+//hdfWriter::~hdfWriter(){
+//  cout << "hdfWriter dying\n";
+//  free(xdp);
+//  free(xsp);
+//  free(vsp);
+//  free(vdp);
+//  free(psp);
+//  free(pdp);
+//  free(pi );
+//  free(readV);
+//  cout << "hdfWriter dead\n";
+//       
+//  //delete gridH;
+//  //delete varH;
+//}
 
 // write solution file
 void hdfWriter::writeSolution(struct inputConfig cf, rk_func *f, int tdx,

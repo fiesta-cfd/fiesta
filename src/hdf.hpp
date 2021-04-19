@@ -28,7 +28,7 @@ class hdfWriter : public writer {
 
 public:
   hdfWriter(struct inputConfig, rk_func *f);
-  ~hdfWriter();
+  //~hdfWriter();
   //void writeGrid(struct inputConfig cf, const FS4D gridD, const char *fname);
   //void writeSPGrid(struct inputConfig cf, const FS4D gridD, const char *fname);
 

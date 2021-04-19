@@ -35,9 +35,10 @@
 #include "timer.hpp"
 //#include "rkfunction.hpp"
 #include <map>
-#include <vector>
 #include "log.hpp"
 #include "block.hpp"
+#include <vector>
+#include <memory>
 
 typedef struct inputConfig fsconf;
 
@@ -63,11 +64,12 @@ struct inputConfig {
   fiestaTimer gridTimer;
   fiestaTimer writeTimer;
 
-  class writer *w;
-  class mpiHaloExchange *m;
-  class Logger *log;
-  class blockWriter *ioblock;
-  std::vector<blockWriter> ioblocks;
+  //class writer *w;
+  //class mpiBuffers *m;
+  std::shared_ptr<class writer> w;
+  std::shared_ptr<class mpiBuffers> m;
+  std::shared_ptr<class Logger> log;
+  std::vector<class blockWriter> ioblocks;
 
   int colorFlag,timeFormat;
   std::string inputFname;

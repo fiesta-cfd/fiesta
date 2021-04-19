@@ -17,6 +17,7 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <memory>
 #include "fiesta.hpp"
 #include "input.hpp"
 #include "debug.hpp"
@@ -54,7 +55,7 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
   MPI_Comm_rank(MPI_COMM_WORLD, &temp_rank);
 #endif
 
-  cf.log = new Logger(cArgs.verbosity, cArgs.colorFlag, cArgs.colorLogs, temp_rank, cArgs.logName);
+  cf.log = std::make_shared<Logger>(cArgs.verbosity, cArgs.colorFlag, cArgs.colorLogs, temp_rank, cArgs.logName);
    
   cf.log->message("Printing Splash");
   if (temp_rank == 0) printSplash(cArgs.colorFlag);
@@ -92,14 +93,16 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
 #ifdef NOMPI
   cf.w = new serialVTKWriter(cf, f->grid, f->var);
 #else
-  cf.w = new hdfWriter(cf, f);
   if (cf.mpiScheme == 1)
     cf.m = new copyHaloExchange(cf, f->var);
   else if (cf.mpiScheme == 2)
     cf.m = new packedHaloExchange(cf, f->var);
   else if (cf.mpiScheme == 3)
     cf.m = new directHaloExchange(cf, f->var);
-  cf.ioblock = new blockWriter(cf,f);
+  //cf.w = new hdfWriter(cf, f);
+  //cf.m = new mpiBuffers(cf);
+  cf.w = std::make_shared<hdfWriter>(cf,f);
+  cf.m = std::make_shared<mpiBuffers>(cf);
 
   luaReader L(cf.inputFname);
   L.getIOBlock(cf,f,cf.ndim,cf.ioblocks);
