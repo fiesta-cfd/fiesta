@@ -128,6 +128,8 @@ add_subdirectory(kokkos)
 include_directories(lua/src)
 add_subdirectory(lua)
 
+add_subdirectory(fmt)
+
 include_directories(src)
 
 ## enforce static build
@@ -162,6 +164,7 @@ target_link_libraries(fiestaLib
                       ${MPI_CXX_LIBRARIES}
                       ${HDF5_C_LIBRARIES}
                       lua
+                      fmt::fmt
 )
 
 target_link_libraries(fiesta

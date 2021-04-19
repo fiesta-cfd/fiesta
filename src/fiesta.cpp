@@ -28,6 +28,7 @@
 #include "rkfunction.hpp"
 #include "status.hpp"
 #include <iostream>
+#include <fstream>
 #include <set>
 #include "log.hpp"
 #include "block.hpp"
@@ -35,6 +36,7 @@
 #include <string>
 #include <vector>
 #include "luaReader.hpp"
+#include "fmt/core.h"
 
 using namespace std;
 
@@ -73,6 +75,7 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
   // Execute lua script and get input parameters
   cf.log->message("Executing Lua Input Script");
   executeConfiguration(cf,cArgs);
+  cf.log->message("Title: ",cf.title);
 
 #ifndef NOMPI
   // perform domain decomposition
@@ -303,6 +306,35 @@ void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
            << c(cf.colorFlag, NON) << endl;
     }
     cout << " " << endl;
+
+    if (cf.rank==0){
+      using fmt::format;
+      ofstream f;
+      string titleFormat = format("{{:=^{}}}\n",48);              //"{:*^48}\n"
+      string timerFormat = format("{{: <{}}}{{:{}.3e}}\n",32,16); //"{: <32}{:16.4e}\n"
+      f.open("timers.out");
+      f << format(titleFormat,cf.title);
+      f << format(timerFormat,"Total Execution Time",cf.totalTimer.get());
+      f << "\n";
+
+      f << format(titleFormat,"Startup Timers");
+      f << format(timerFormat,"Total Startup Time",cf.initTimer.get());
+      if (cf.restart==1)
+        f << format(timerFormat,"Restart Read",cf.loadTimer.get());
+      else{
+        f << format(timerFormat,"Initial Condition Generation",cf.loadTimer.get());
+        f << format(timerFormat,"Grid Generation",cf.gridTimer.get());
+        f << format(timerFormat,"Initial Condition Write Time",cf.writeTimer.get());
+      }
+
+      f << "\n";
+
+      f << format(titleFormat,"Simulation Timers");
+      f << format(timerFormat,"Total Simulation Time:",cf.simTimer.get());
+      for (auto tmr : stmr)
+        f << format(timerFormat,tmr.second.describe(),tmr.second.get());
+      f.close();
+    }
   }
 }
  

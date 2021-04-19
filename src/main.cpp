@@ -33,6 +33,8 @@
 #include "gen2d.hpp"
 #include "gen3d.hpp"
 
+#include "fmt/core.h"
+
 int main(int argc, char *argv[]) {
   
   {
@@ -98,6 +100,7 @@ int main(int argc, char *argv[]) {
     cf.simTimer.stop();
     cf.totalTimer.stop();
     Fiesta::reportTimers(cf,f);
+    cf.log->message("Simulation complete!");
   }
   Fiesta::finalize();
   return 0;
