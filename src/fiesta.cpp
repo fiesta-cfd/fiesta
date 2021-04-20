@@ -184,6 +184,7 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
 // Write solutions, restarts and status checks
 void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time){
   // Print current time step
+  cf.log->info(fmt::format("Completed timestep {} of {}. Simulation Time: {:.2e}s",t+1,cf.tend,time));
   if (cf.rank == 0) {
     if (cf.out_freq > 0)
       if ((t + 1) % cf.out_freq == 0)
@@ -313,11 +314,11 @@ void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
       string titleFormat = format("{{:=^{}}}\n",48);              //"{:*^48}\n"
       string timerFormat = format("{{: <{}}}{{:{}.3e}}\n",32,16); //"{: <32}{:16.4e}\n"
       f.open("timers.out");
-      f << format(titleFormat,cf.title);
-      f << format(timerFormat,"Total Execution Time",cf.totalTimer.get());
+      f << format(titleFormat,format(" {} ",cf.title));
+      f << format(timerFormat," Total Execution Time ",cf.totalTimer.get());
       f << "\n";
 
-      f << format(titleFormat,"Startup Timers");
+      f << format(titleFormat," Startup Timers ");
       f << format(timerFormat,"Total Startup Time",cf.initTimer.get());
       if (cf.restart==1)
         f << format(timerFormat,"Restart Read",cf.loadTimer.get());
@@ -329,7 +330,7 @@ void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
 
       f << "\n";
 
-      f << format(titleFormat,"Simulation Timers");
+      f << format(titleFormat," Simulation Timers ");
       f << format(timerFormat,"Total Simulation Time:",cf.simTimer.get());
       for (auto tmr : stmr)
         f << format(timerFormat,tmr.second.describe(),tmr.second.get());
