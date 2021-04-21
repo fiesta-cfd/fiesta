@@ -48,20 +48,24 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   T       = FS3D("T",         cf.ngi, cf.ngj, cf.ngk);         // Temperature
   rho     = FS3D("rho",       cf.ngi, cf.ngj, cf.ngk);         // Total Density
   vel     = FS4D("vel",       cf.ngi, cf.ngj, cf.ngk,3);         // Total Density
-  qx      = FS3D( "qx",       cf.ngi, cf.ngj, cf.ngk);         // Heat Flux X
-  qy      = FS3D( "qy",       cf.ngi, cf.ngj, cf.ngk);         // Heat Flux Y
-  qz      = FS3D( "qz",       cf.ngi, cf.ngj, cf.ngk);         // Heat Flux Z
 
   fluxx   = FS3D( "fluxx",    cf.ngi, cf.ngj, cf.ngk);    // Advective Fluxes X
   fluxy   = FS3D( "fluxy",    cf.ngi, cf.ngj, cf.ngk);    // Advective Fluxes Y
   fluxz   = FS3D( "fluxz",    cf.ngi, cf.ngj, cf.ngk);    // Advective Fluxes Z
 
-  stressx = FS5D( "stressx",  cf.ngi, cf.ngj, cf.ngk, 3, 3); // stress tensor X
-  stressy = FS5D( "stressy",  cf.ngi, cf.ngj, cf.ngk, 3, 3); // stress tensor Y
-  stressz = FS5D( "stressz",  cf.ngi, cf.ngj, cf.ngk, 3, 3); // stress tensor Z
-  gradRho = FS4D( "gradRho",  cf.ngi, cf.ngj, cf.ngk, 5);    // Density Gradien
-  cFlux   = FS4D("cFlux",     cf.ngi, cf.ngj, cf.ngk, 3);    // 
-  mFlux   = FS6D("mFlux", 3,3,cf.ngi, cf.ngj, cf.ngk, 3);    //
+  if (cf.visc == 1) {
+    qx      = FS3D( "qx",       cf.ngi, cf.ngj, cf.ngk);         // Heat Flux X
+    qy      = FS3D( "qy",       cf.ngi, cf.ngj, cf.ngk);         // Heat Flux Y
+    qz      = FS3D( "qz",       cf.ngi, cf.ngj, cf.ngk);         // Heat Flux Z
+    stressx = FS5D( "stressx",  cf.ngi, cf.ngj, cf.ngk, 3, 3); // stress tensor X
+    stressy = FS5D( "stressy",  cf.ngi, cf.ngj, cf.ngk, 3, 3); // stress tensor Y
+    stressz = FS5D( "stressz",  cf.ngi, cf.ngj, cf.ngk, 3, 3); // stress tensor Z
+  }
+  if (cf.ceq == 1) {
+    gradRho = FS4D( "gradRho",  cf.ngi, cf.ngj, cf.ngk, 5);    // Density Gradien
+    cFlux   = FS4D("cFlux",     cf.ngi, cf.ngj, cf.ngk, 3);    // 
+    mFlux   = FS6D("mFlux", 3,3,cf.ngi, cf.ngj, cf.ngk, 3);    //
+  }
 
   // Primary Variable Names
   varNames.push_back("X-Momentum");
