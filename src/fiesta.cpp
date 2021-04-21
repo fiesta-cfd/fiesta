@@ -37,6 +37,7 @@
 #include <vector>
 #include "luaReader.hpp"
 #include "fmt/core.h"
+#include "pretty.hpp"
 
 using namespace std;
 
@@ -57,11 +58,10 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
   MPI_Comm_rank(MPI_COMM_WORLD, &temp_rank);
 #endif
 
-  cf.log = std::make_shared<Logger>(cArgs.verbosity, cArgs.colorFlag, cArgs.colorLogs, temp_rank, cArgs.logName);
    
-  cf.log->message("Printing Splash");
   if (temp_rank == 0) printSplash(cArgs.colorFlag);
 
+  cf.log = std::make_shared<Logger>(cArgs.verbosity, cArgs.colorFlag, temp_rank);
   // Initialize Kokkos
   cf.log->message("Initializing Kokkos");
   Kokkos::InitArguments kokkosArgs;
@@ -75,7 +75,7 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
   // Execute lua script and get input parameters
   cf.log->message("Executing Lua Input Script");
   executeConfiguration(cf,cArgs);
-  cf.log->message("Title: ",cf.title);
+  //cf.log->message("Title: ",cf.title);
 
 #ifndef NOMPI
   // perform domain decomposition
@@ -84,6 +84,10 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
 #endif
   cf.log->message("Printing Configuration");
   printConfig(cf);
+
+  ofstream fl;
+  fl.open("fiesta.out",std::ios_base::app);
+  fl.close();
 
   return cf;
 }
@@ -116,34 +120,38 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
   // If not restarting, generate initial conditions and grid
   if (cf.restart == 0) {
     // Generate Grid Coordinates
-    if (cf.rank == 0)
-      cout << c(cf.colorFlag, GRE) << "Generating Grid:" << c(cf.colorFlag, NON) << endl;
+    cf.log->message("Generating initial conditions");
+    //if (cf.rank == 0)
+    //  cout << c(cf.colorFlag, GRE) << "Generating Grid:" << c(cf.colorFlag, NON) << endl;
     cf.gridTimer.start();
     loadGrid(cf, f->grid);
     cf.gridTimer.stop();
-    if (cf.rank == 0)
-      cout << "    Generated in: " << c(cf.colorFlag, CYA) << cf.gridTimer.getf(cf.timeFormat)
-           << c(cf.colorFlag, NON) << endl
-           << endl;
+    cf.log->message("Grid generated in: ",cf.gridTimer.get());
+    //if (cf.rank == 0)
+    //  cout << "    Generated in: " << c(cf.colorFlag, CYA) << cf.gridTimer.getf(cf.timeFormat)
+    //       << c(cf.colorFlag, NON) << endl
+    //       << endl;
 
     // Generate Initial Conditions
-    if (cf.rank == 0)
-      cout << c(cf.colorFlag, GRE)
-           << "Generating Initial Conditions:" << c(cf.colorFlag, NON) << endl;
+    cf.log->message("Generating initial conditions");
+    //if (cf.rank == 0)
+    //  cout << c(cf.colorFlag, GRE)
+    //       << "Generating Initial Conditions:" << c(cf.colorFlag, NON) << endl;
     cf.loadTimer.start();
     loadInitialConditions(cf, f->var, f->grid);
     cf.loadTimer.stop();
-    if (cf.rank == 0)
-      cout << "    Generated in: " << c(cf.colorFlag, CYA) << cf.loadTimer.getf(cf.timeFormat)
-           << c(cf.colorFlag, NON) << endl
-           << endl;
+    cf.log->message("Initial conditions generated in: ",cf.loadTimer.get());
+    //if (cf.rank == 0)
+    //  cout << "    Generated in: " << c(cf.colorFlag, CYA) << cf.loadTimer.getf(cf.timeFormat)
+    //       << c(cf.colorFlag, NON) << endl
+    //       << endl;
 
     cf.writeTimer.start();
     // Write Initial Solution File
-    if (cf.rank == 0)
-      if (cf.write_freq > 0 || cf.restart_freq > 0)
-        cout << c(cf.colorFlag, GRE)
-             << "Writing Initial Conditions:" << c(cf.colorFlag, NON) << endl;
+    //if (cf.rank == 0)
+      //if (cf.write_freq > 0 || cf.restart_freq > 0)
+      //  cout << c(cf.colorFlag, GRE)
+      //       << "Writing Initial Conditions:" << c(cf.colorFlag, NON) << endl;
     if (cf.write_freq > 0) {
       f->timers["solWrite"].reset();
       cf.w->writeSolution(cf, f, 0, 0.00);
@@ -156,44 +164,46 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
       f->timers["resWrite"].accumulate();
     }
     cf.writeTimer.stop();
-    if (cf.rank == 0)
-      if (cf.write_freq > 0 || cf.restart_freq > 0)
-        cout << "    Wrote in: " << c(cf.colorFlag, CYA) << cf.writeTimer.getf(cf.timeFormat)
-             << c(cf.colorFlag, NON) << endl;
+    //if (cf.rank == 0)
+    //  if (cf.write_freq > 0 || cf.restart_freq > 0)
+    //    cout << "    Wrote in: " << c(cf.colorFlag, CYA) << cf.writeTimer.getf(cf.timeFormat)
+    //         << c(cf.colorFlag, NON) << endl;
 
   }else{ // If Restarting, Load Restart File
     cf.writeTimer.start();
-    if (cf.rank == 0)
-      cout << c(cf.colorFlag, GRE) << "Loading Restart File:" << c(cf.colorFlag, NON)
-           << endl;
+    cf.log->message("Loading restart file:");
+    //if (cf.rank == 0)
+      //cout << c(cf.colorFlag, GRE) << "Loading Restart File:" << c(cf.colorFlag, NON)
+      //     << endl;
     cf.loadTimer.reset();
     cf.w->readSolution(cf, f->grid, f->var);
     cf.loadTimer.stop();
-    if (cf.rank == 0)
-      cout << "    Loaded in: " << setprecision(2) << c(cf.colorFlag, CYA)
-           << cf.loadTimer.getf(cf.timeFormat) << "s" << c(cf.colorFlag, NON) << endl;
+    cf.log->message("Loaded restart data in: ",cf.loadTimer.get());
+    //if (cf.rank == 0)
+      //cout << "    Loaded in: " << setprecision(2) << c(cf.colorFlag, CYA)
+      //     << cf.loadTimer.getf(cf.timeFormat) << "s" << c(cf.colorFlag, NON) << endl;
 
   }
-  // notify simulation start
-  if (cf.rank == 0) {
-    cout << endl << "-----------------------" << endl << endl;
-   cout << c(cf.colorFlag, GRE) << "Starting Simulation:" << c(cf.colorFlag, NON) << endl;
-  }
+  // // notify simulation start
+  // if (cf.rank == 0) {
+  //   cout << endl << "-----------------------" << endl << endl;
+  //  cout << c(cf.colorFlag, GRE) << "Starting Simulation:" << c(cf.colorFlag, NON) << endl;
+  // }
 }
 
 // Write solutions, restarts and status checks
 void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time){
   // Print current time step
-  cf.log->info(fmt::format("Completed timestep {} of {}. Simulation Time: {:.2e}s",t+1,cf.tend,time));
   if (cf.rank == 0) {
     if (cf.out_freq > 0)
       if ((t + 1) % cf.out_freq == 0)
-        cout << c(cf.colorFlag, YEL) << left << setw(15)
-             << "    Iteration:" << c(cf.colorFlag, NON) << c(cf.colorFlag, CYA) << right
-             << setw(0) << t + 1 << c(cf.colorFlag, NON) << "/" << c(cf.colorFlag, CYA)
-             << left << setw(0) << cf.tend << c(cf.colorFlag, NON) << ", "
-             << c(cf.colorFlag, CYA) << right << setw(0) << setprecision(3)
-             << scientific << time << "s" << c(cf.colorFlag, NON) << endl;
+        cf.log->info(fmt::format("[{}] Completed timestep {} of {}. Simulation Time: {:.2e}s",t+1,t+1,cf.tend,time));
+        //cout << c(cf.colorFlag, YEL) << left << setw(15)
+        //     << "    Iteration:" << c(cf.colorFlag, NON) << c(cf.colorFlag, CYA) << right
+        //     << setw(0) << t + 1 << c(cf.colorFlag, NON) << "/" << c(cf.colorFlag, CYA)
+        //     << left << setw(0) << cf.tend << c(cf.colorFlag, NON) << ", "
+        //     << c(cf.colorFlag, CYA) << right << setw(0) << setprecision(3)
+        //     << scientific << time << "s" << c(cf.colorFlag, NON) << endl;
   }
   // Write solution file if necessary
   if (cf.write_freq > 0) {
@@ -251,8 +261,8 @@ void Fiesta::collectSignals(struct inputConfig &cf){
 
 void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
   // notify simulation complete
-  if (cf.rank == 0)
-    cout << c(cf.colorFlag, GRE) << "Simulation Complete!" << c(cf.colorFlag, NON) << endl;
+  // if (cf.rank == 0)
+  //  cout << c(cf.colorFlag, GRE) << "Simulation Complete!" << c(cf.colorFlag, NON) << endl;
 
   // Sort computer timers
   typedef std::function<bool(std::pair<std::string, fiestaTimer>,
@@ -265,77 +275,27 @@ void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
   std::set<std::pair<std::string, fiestaTimer>, Comparator> stmr(
       f->timers.begin(), f->timers.end(), compFunctor);
 
-  // print timer values
-  if (cf.rank == 0) {
-    cout << endl << "-----------------------" << endl << endl;
-    cout.precision(2);
-    cout << c(cf.colorFlag, GRE) << left << setw(36)
-         << "Total Time:" << c(cf.colorFlag, NON) << c(cf.colorFlag, CYA) << right
-         << setw(13) << cf.totalTimer.getf(cf.timeFormat) << c(cf.colorFlag, NON) << endl
-         << endl;
+  if (cf.rank==0){
+    using fmt::format;
+    ansiColors c(cf.colorFlag);
 
-    cout << c(cf.colorFlag, GRE) << left << setw(36)
-         << "  Setup Time:" << c(cf.colorFlag, NON) << c(cf.colorFlag, CYA) << right
-         << setw(13) << cf.initTimer.getf(cf.timeFormat) << c(cf.colorFlag, NON) << endl;
-    if (cf.restart == 1)
-      cout << c(cf.colorFlag, NON) << left << setw(36)
-           << "    Restart Read:" << c(cf.colorFlag, NON) << c(cf.colorFlag, CYA) << right
-           << setw(13) << cf.loadTimer.getf(cf.timeFormat) << c(cf.colorFlag, NON) << endl
-           << endl;
-    else {
-      cout << c(cf.colorFlag, NON) << left << setw(36)
-           << "    Initial Condition Generation:" << c(cf.colorFlag, NON)
-           << c(cf.colorFlag, CYA) << right << setw(13) << cf.loadTimer.getf(cf.timeFormat)
-           << c(cf.colorFlag, NON) << endl;
-      cout << c(cf.colorFlag, NON) << left << setw(36)
-           << "    Grid Generation:" << c(cf.colorFlag, NON) << c(cf.colorFlag, CYA)
-           << right << setw(13) << cf.gridTimer.getf(cf.timeFormat) << c(cf.colorFlag, NON) << endl;
-      cout << c(cf.colorFlag, NON) << left << setw(36)
-           << "    Initial Condition WriteTime:" << c(cf.colorFlag, NON)
-           << c(cf.colorFlag, CYA) << right << setw(13) << cf.writeTimer.getf(cf.timeFormat)
-           << c(cf.colorFlag, NON) << endl
-           << endl;
+    string timerFormat = format("{: >8}{{}}{{: <{}}}{{:{}.3e}}{}\n","",32,16,c(reset));
+    cout << format(timerFormat,c(green),"Total Execution Time",cf.totalTimer.get());
+    cout << "\n";
+
+    cout << format(timerFormat,c(green),"Total Startup Time",cf.initTimer.get());
+    if (cf.restart==1)
+      cout << format(timerFormat,c(reset),"Restart Read",cf.loadTimer.get());
+    else{
+      cout << format(timerFormat,c(reset),"Initial Condition Generation",cf.loadTimer.get());
+      cout << format(timerFormat,c(reset),"Grid Generation",cf.gridTimer.get());
+      cout << format(timerFormat,c(reset),"Initial Condition Write Time",cf.writeTimer.get());
     }
+    cout << "\n";
 
-    cout << c(cf.colorFlag, GRE) << left << setw(36)
-         << "  Simulation Time:" << c(cf.colorFlag, NON) << c(cf.colorFlag, CYA) << right
-         << setw(13) << cf.simTimer.getf(cf.timeFormat) << c(cf.colorFlag, NON) << endl;
-    for (auto tmr : stmr) {
-      cout << c(cf.colorFlag, NON) << left << setw(36)
-           << "    " + tmr.second.describe() + ":" << c(cf.colorFlag, NON)
-           << c(cf.colorFlag, CYA) << right << setw(13) << tmr.second.getf(cf.timeFormat)
-           << c(cf.colorFlag, NON) << endl;
-    }
-    cout << " " << endl;
-
-    if (cf.rank==0){
-      using fmt::format;
-      ofstream f;
-      string titleFormat = format("{{:=^{}}}\n",48);              //"{:*^48}\n"
-      string timerFormat = format("{{: <{}}}{{:{}.3e}}\n",32,16); //"{: <32}{:16.4e}\n"
-      f.open("timers.out");
-      f << format(titleFormat,format(" {} ",cf.title));
-      f << format(timerFormat," Total Execution Time ",cf.totalTimer.get());
-      f << "\n";
-
-      f << format(titleFormat," Startup Timers ");
-      f << format(timerFormat,"Total Startup Time",cf.initTimer.get());
-      if (cf.restart==1)
-        f << format(timerFormat,"Restart Read",cf.loadTimer.get());
-      else{
-        f << format(timerFormat,"Initial Condition Generation",cf.loadTimer.get());
-        f << format(timerFormat,"Grid Generation",cf.gridTimer.get());
-        f << format(timerFormat,"Initial Condition Write Time",cf.writeTimer.get());
-      }
-
-      f << "\n";
-
-      f << format(titleFormat," Simulation Timers ");
-      f << format(timerFormat,"Total Simulation Time:",cf.simTimer.get());
-      for (auto tmr : stmr)
-        f << format(timerFormat,tmr.second.describe(),tmr.second.get());
-      f.close();
-    }
+    cout << format(timerFormat,c(green),"Total Simulation Time",cf.simTimer.get());
+    for (auto tmr : stmr)
+      cout << format(timerFormat,c(reset),tmr.second.describe(),tmr.second.get());
   }
 }
  

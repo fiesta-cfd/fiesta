@@ -27,6 +27,8 @@
 #include "output.hpp"
 #include "rkfunction.hpp"
 #include <cmath>
+#include "fmt/core.h"
+#include "pretty.hpp"
 
 using namespace std;
 
@@ -103,39 +105,49 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
   double max[cf.nvt], max_recv[cf.nvt];
   double min[cf.nvt], min_recv[cf.nvt];
   string vname;
+  ansiColors c(cFlag);
 
   if (cf.rank == 0) {
-    cout << c(cFlag, YEL) << "    Status: " << c(cFlag, NON) << endl;
+    //cout << c(cFlag, YEL) << "    Status: " << c(cFlag, NON) << endl;
  
-    cout << "      Time Step:       " << c(cFlag, CYA) 
-                                      //<< setprecision(0) << scientific
-                                      //<< (float)cf.t
-                                      << cf.t
-                                      << c(cFlag, NON)
-         << "/" 
-                                      << c(cFlag, CYA)
-                                      //<< setprecision(0) << scientific
-                                      //<< (float)cf.tend
-                                      << cf.tend
-                                      << c(cFlag, NON)
-         << endl;
+    //cout << "      Time Step:       " << c(cFlag, CYA) 
+    //                                  //<< setprecision(0) << scientific
+    //                                  //<< (float)cf.t
+    //                                  << cf.t
+    //                                  << c(cFlag, NON)
+    //     << "/" 
+    //                                  << c(cFlag, CYA)
+    //                                  //<< setprecision(0) << scientific
+    //                                  //<< (float)cf.tend
+    //                                  << cf.tend
+    //                                  << c(cFlag, NON)
+    //     << endl;
 
-    cout << "      Simulation Time: " << c(cFlag, CYA) << setprecision(2)
-         << scientific << time << c(cFlag, NON) << endl;
-    cout << "      Wall Time:       " << c(cFlag, CYA) << wall.checkf()
-         << c(cFlag, NON) << endl;
-    cout << "      ETR:             " << c(cFlag, CYA)
-         << sim.formatTime((double)cf.nt*sim.check()/(cf.t-1-cf.tstart)-sim.check())
-         << c(cFlag, NON) << endl;
+    //cout << "      Simulation Time: " << c(cFlag, CYA) << setprecision(2)
+    //     << scientific << time << c(cFlag, NON) << endl;
+    //cout << "      Wall Time:       " << c(cFlag, CYA) << wall.checkf()
+    //     << c(cFlag, NON) << endl;
+    //cout << "      ETR:             " << c(cFlag, CYA)
+    //     << sim.formatTime((double)cf.nt*sim.check()/(cf.t-1-cf.tstart)-sim.check())
+    //     << c(cFlag, NON) << endl;
+
+    //fl.open("fiesta.out",std::ios_base::app);
+    cf.log->message(fmt::format("[{}] Reporting Status",cf.t));
+    cout << fmt::format("{: >8}Timestep:  {}/{}\n","",cf.t,cf.tend);
+    cout << fmt::format("{: >8}Wall Time: {}\n","",wall.checkf());
+    cout << fmt::format("{: >8}ETR:       {}\n","",sim.formatTime((double)cf.nt*sim.check()/(cf.t-1-cf.tstart)-sim.check()));
+
+    cout << fmt::format("{: <8}{: <16}{: >11}{: >11}\n","","","Min","Max");
+    //cout << fmt::format("{: >8}{:->38}\n","","-");
   }
 
   // Print Header
-  if (cf.rank == 0) {
-    cout << "      " << setw(13) << " " << setw(11) << right << "Min"
-         << setw(11) << right << "Max" << endl;
-    cout << "      "
-         << "-----------------------------------" << endl;
-  }
+  //if (cf.rank == 0) {
+  //  cout << "      " << setw(13) << " " << setw(11) << right << "Min"
+  //       << setw(11) << right << "Max" << endl;
+  //  cout << "      "
+  //       << "-----------------------------------" << endl;
+  //}
 
   // var
   if (cf.ndim == 2) {
@@ -180,29 +192,34 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
 
       if ((isnormal(min[v]) || min[v] == 0) &&
           (min[v] > -1.0e+200 && min[v] < 1.0e+200))
-        smin << c(cFlag, CYA) << setw(11) << right << setprecision(2)
-             << scientific << min[v] << c(cFlag, NON);
+        smin << c(magenta) << setw(11) << right << setprecision(2)
+             << scientific << min[v] << c(reset);
       else
-        smax << c(cFlag, RED) << setw(11) << right << setprecision(2)
-             << scientific << min[v] << c(cFlag, NON);
+        smax << c(red) << setw(11) << right << setprecision(2)
+             << scientific << min[v] << c(reset);
 
       if ((isnormal(max[v]) || max[v] == 0) &&
           (max[v] > -1.0e+200 && max[v] < 1.0e+200))
-        smax << c(cFlag, CYA) << setw(11) << right << setprecision(2)
-             << scientific << max[v] << c(cFlag, NON);
+        smax << c(magenta) << setw(11) << right << setprecision(2)
+             << scientific << max[v] << c(reset);
       else
-        smax << c(cFlag, RED) << setw(11) << right << setprecision(2)
-             << scientific << max[v] << c(cFlag, NON);
+        smax << c(red) << setw(11) << right << setprecision(2)
+             << scientific << max[v] << c(reset);
 
-      cout << "      " << setw(13) << left << vname << smin.str() << smax.str()
-           << endl;
+      //cout << "      " << setw(13) << left << vname << smin.str() << smax.str()
+      //     << endl;
+      //cout << fmt::format("{: <18}{: >10.2e}{: >10.2e}\n",vname,smin.str(),smax.str());
+      //cout << fmt::format("{: <18}{: >10}{: >10}\n",vname,smin.str(),smax.str());
+      cout << fmt::format("{: >8}{: <16}{: >11}{: >11}\n","",vname,smin.str(),smax.str());
     }
   }
 
-  if (cf.rank == 0) {
-    cout << "      "
-         << "-----------------------------------" << endl;
-  }
+  //if (cf.rank == 0) {
+  //  //cout << "      "
+  //  //     << "-----------------------------------" << endl;
+  //  cout << fmt::format("{: <26}{: >10}{: >10}\n"," ","Min","Max");
+  //cout << fmt::format("{: >8}{:->38}\n","","-");
+  //}
 
   // varx
   if (cf.ndim == 2) {
@@ -248,22 +265,26 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
 
       if ((isnormal(min[v]) || min[v] == 0) &&
           (min[v] > -1.0e+200 && min[v] < 1.0e+200))
-        smin << c(cFlag, CYA) << setw(11) << right << setprecision(2)
-             << scientific << min[v] << c(cFlag, NON);
+        smin << c(magenta) << setw(11) << right << setprecision(2)
+             << scientific << min[v] << c(reset);
       else
-        smax << c(cFlag, RED) << setw(11) << right << setprecision(2)
-             << scientific << min[v] << c(cFlag, NON);
+        smax << c(red) << setw(11) << right << setprecision(2)
+             << scientific << min[v] << c(reset);
 
       if ((isnormal(max[v]) || max[v] == 0) &&
           (max[v] > -1.0e+200 && max[v] < 1.0e+200))
-        smax << c(cFlag, CYA) << setw(11) << right << setprecision(2)
-             << scientific << max[v] << c(cFlag, NON);
+        smax << c(magenta) << setw(11) << right << setprecision(2)
+             << scientific << max[v] << c(reset);
       else
-        smax << c(cFlag, RED) << setw(11) << right << setprecision(2)
-             << scientific << max[v] << c(cFlag, NON);
+        smax << c(red) << setw(11) << right << setprecision(2)
+             << scientific << max[v] << c(reset);
 
-      cout << "      " << setw(13) << left << vname << smin.str() << smax.str()
-           << endl;
+      //cout << "      " << setw(13) << left << vname << smin.str() << smax.str()
+      //     << endl;
+      cout << fmt::format("{: >8}{: <16}{: >10}{: >10}\n","",vname,smin.str(),smax.str());
+      //cout << fmt::format("{: <19}{: >10.2e}{: >10.2e}\n",vname,min[v],max[v]);
     }
+    //fl << "\n";
+    //fl.close();
   }
 }

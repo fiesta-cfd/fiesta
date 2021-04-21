@@ -33,8 +33,6 @@
 #include "gen2d.hpp"
 #include "gen3d.hpp"
 
-#include "fmt/core.h"
-
 int main(int argc, char *argv[]) {
   
   {
@@ -91,16 +89,18 @@ int main(int argc, char *argv[]) {
       if (cf.exitFlag==1)
         break;
     }
+    cf.log->message("Simulation complete!");
  
     // Post Simulation
     cf.log->message("Executing post-simulation hook");
     f->postSim();
 
+
     // Stop Timers and Report
     cf.simTimer.stop();
     cf.totalTimer.stop();
+    cf.log->message("Reporting Timers:");
     Fiesta::reportTimers(cf,f);
-    cf.log->message("Simulation complete!");
   }
   Fiesta::finalize();
   return 0;

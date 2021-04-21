@@ -31,13 +31,15 @@
 #include <ctime>
 #include <chrono>
 #include <algorithm>
+#include "fmt/core.h"
+#include "pretty.hpp"
 
 using namespace std;
 class Logger {
   public:
-    Logger(int v_, int c_, int cl_, int r_, string f_) : verbosity(v_), colorFlag(c_), colorLogs(cl_), rank(r_), logFilename(f_) {
+    Logger(int v_, int c_, int r_) : verbosity(v_), colorMode(c_), rank(r_) {
       timer = new Kokkos::Timer();
-      logFile.open(logFilename,ios::trunc);
+      //logFile.open(logFilename,ios::trunc);
     
       stringstream message;
       message << "Log started " << getTime();
@@ -47,16 +49,10 @@ class Logger {
       info << "Log level: " << verbosity;
       print("Logger",info.str(),green);
 
-      if (colorFlag){
+      if (colorMode){
         stringstream cinfo;
         cinfo << "Color logs enabled";
         print("Logger",cinfo.str(),green);
-      }
-
-      if (colorLogs){
-        stringstream clinfo;
-        clinfo << "Color log file enabled";
-        print("Logger",clinfo.str(),green);
       }
     }
 
@@ -65,7 +61,7 @@ class Logger {
       message << "Log ended " << getTime();
       print("Logger",message.str(),green);
 
-      logFile.close();
+      //logFile.close();
     }
 
     template<typename... Args>
@@ -122,77 +118,74 @@ class Logger {
     }
     
   private:
-    enum logColor { red, green, yellow, blue, magenta, cyan, none };
+    //enum logColor { red, green, yellow, blue, magenta, cyan, none };
 
-    void print(std::string header, std::string message, logColor color){
+    void print(std::string header, std::string message, Colour color){
       using namespace std;
+      using namespace fmt;
+      ansiColors c(colorMode);
 
       if (rank==0){
-        stringstream logString;
-        logString
-            << "[" << setw(16) << setprecision(7) << fixed << right << timer->seconds() << "] "
-            << setw(8) << right << header << ": "
-            << message;
+        //stringstream logString;
+        //logString
+        //    << "[" << setw(16) << setprecision(7) << fixed << right << timer->seconds() << "] "
+        //    << setw(8) << right << header << ": "
+        //    << message;
+
+        cout << format("{}[{: >12.5f}] {: >7}: {}{}\n",c(color),timer->seconds(),header,message,c(reset));
 
         // cout << setColor(color)
         //     << logString.str()
         //     << setColor(none)
         //     << endl;
 
-        if (colorLogs){
-          logFile << setColor(color)
-                  << logString.str()
-                  << setColor(none)
-                  << endl;
-        }else{
-          logFile << logString.str() << endl;
-        }
+        //if (colorLogs){
+        //  logFile << setColor(color)
+        //          << logString.str()
+        //          << setColor(none)
+        //          << endl;
+        //}else{
+        //  logFile << logString.str() << endl;
+        //}
       }
     }
 
-    string setColor(logColor color) {
-      int use_color = 0;
+    //string setColor(logColor color) {
+    //  int use_color = 0;
 
-      if (colorFlag == 1)
-        use_color = 1;
-      if ((colorFlag == 2) && isatty(fileno(stdout)))
-        use_color = 1;
+    //  if (colorFlag == 1)
+    //    use_color = 1;
+    //  if ((colorFlag == 2) && isatty(fileno(stdout)))
+    //    use_color = 1;
 
-      if (use_color) {
-        switch (color) {
-        case red:
-          return "\033[0;31m";
-        case green:
-          return "\033[0;32m";
-        case yellow:
-          return "\033[0;33m";
-        case blue:
-          return "\033[0;34m";
-        case magenta:
-          return "\033[0;35m";
-        case cyan:
-          return "\033[0;36m";
-        case none:
-          return "\033[0m";
-        default:
-          return "\033[0m";
-        }
-      } else {
-        return "";
-      }
-    }
+    //  if (use_color) {
+    //    switch (color) {
+    //    case red:
+    //      return "\033[0;31m";
+    //    case green:
+    //      return "\033[0;32m";
+    //    case yellow:
+    //      return "\033[0;33m";
+    //    case blue:
+    //      return "\033[0;34m";
+    //    case magenta:
+    //      return "\033[0;35m";
+    //    case cyan:
+    //      return "\033[0;36m";
+    //    case none:
+    //      return "\033[0m";
+    //    default:
+    //      return "\033[0m";
+    //    }
+    //  } else {
+    //    return "";
+    //  }
+    //}
 
-    ofstream logFile;
     Kokkos::Timer *timer;
-    const int colorLogs;
     const int verbosity;
     const int rank;
-    const int colorFlag;
-    const std::string logFilename;
+    const int colorMode;
 };
 
 #endif
-
-
-
-

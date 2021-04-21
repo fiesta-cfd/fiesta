@@ -508,11 +508,11 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   hid_t file_id, group_id;
 
   // write a message
-  if (cf.rank == 0) {
-    cout << c(0, YEL) << left << setw(22)
-         << "    Writing File: " << c(0, NON) << c(0, CYA) << left
-         << "'" + hdfName.str() + "'" << c(0, NON) << endl;
-  }
+  //if (cf.rank == 0) {
+  //  cout << c(0, YEL) << left << setw(22)
+  //       << "    Writing File: " << c(0, NON) << c(0, CYA) << left
+  //       << "'" + hdfName.str() + "'" << c(0, NON) << endl;
+  //}
 
   //{
     //stringstream message;
