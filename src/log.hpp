@@ -132,7 +132,7 @@ class Logger {
         //    << setw(8) << right << header << ": "
         //    << message;
 
-        cout << format("{}[{: >12.5f}] {: >7}: {}{}\n",c(color),timer->seconds(),header,message,c(reset));
+        cout << format("{}[{: >12.5f}] {: >7}: {}{}",c(color),timer->seconds(),header,message,c(reset)) << endl;
 
         // cout << setColor(color)
         //     << logString.str()

@@ -85,9 +85,9 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
   cf.log->message("Printing Configuration");
   printConfig(cf);
 
-  ofstream fl;
-  fl.open("fiesta.out",std::ios_base::app);
-  fl.close();
+  //ofstream fl;
+  //fl.open("fiesta.out",std::ios_base::app);
+  //fl.close();
 
   return cf;
 }
@@ -249,14 +249,34 @@ void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time){
     }
   }
 }
+
 void Fiesta::collectSignals(struct inputConfig &cf){
+
+  int localRestartFlag = cf.restartFlag;
+  int localExitFlag    = cf.exitFlag;
   int glblRestartFlag=0;
+  int glblExitFlag=0;
+
+  cout << fmt::format("PRE: <{:03d}> [{}] localRestartFlag={} globalRestartFlag={} localExitFlag={} globalExitFlag={}\n",
+      cf.rank,cf.t+1,localRestartFlag,glblRestartFlag,localExitFlag,glblExitFlag);
+  
   MPI_Allreduce(&cf.restartFlag,&glblRestartFlag,1,MPI_INT,MPI_MAX,cf.comm);
   cf.restartFlag=glblRestartFlag;
 
-  int glblExitFlag=0;
   MPI_Allreduce(&cf.exitFlag,&glblExitFlag,1,MPI_INT,MPI_MAX,cf.comm);
   cf.exitFlag=glblExitFlag;
+
+
+  if (cf.restartFlag && cf.exitFlag)
+      cf.log->warning("Recieved SIGINT:  Writing restart and exiting after timestep ",cf.t,".");
+  else if (cf.restartFlag)
+      cf.log->message("Recieved SIGUSR1:  Writing restart after timestep ",cf.t,".");
+  else if (cf.exitFlag)
+      cf.log->error("Recieved SIGTERM:  Exiting after timestep ",cf.t,".");
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  cout << fmt::format("<{:03d}> [{}] localRestartFlag={} globalRestartFlag={} localExitFlag={} globalExitFlag={}\n",
+      cf.rank,cf.t+1,localRestartFlag,glblRestartFlag,localExitFlag,glblExitFlag);
 }
 
 void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
