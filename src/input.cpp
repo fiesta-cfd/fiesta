@@ -43,18 +43,13 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
   cArgs.colorFlag = 0;
   cArgs.numDevices = 1;
   cArgs.numThreads = 1;
-  cArgs.verbosity = 3;
-  cArgs.colorLogs = 0;
-  cArgs.logName = "fiesta.log";
+  cArgs.verbosity = 4;
 
   // create options
   static struct option long_options[] = {
       {"version", no_argument, NULL, 'V'},
       {"verbosity", optional_argument, NULL, 'v'},
       {"color", optional_argument, NULL, 'c'},
-      {"color-logs", no_argument, NULL, 'l'},
-      {"time-format", optional_argument, NULL, 't'},
-      {"log-file-name", optional_argument, NULL, 'g'},
       {"kokkos-ndevices", optional_argument, NULL, 'k'},
       {"kokkos-num-devices", optional_argument, NULL, 'k'},
       {"kokkos-threads", optional_argument, NULL, 'k'},
@@ -65,19 +60,13 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
   std::string copt;
   int c = 1;
   int opt_index;
-  while ((c = getopt_long(argc, argv, "lVv:ctn:", long_options, &opt_index)) != -1) {
+  while ((c = getopt_long(argc, argv, "Vv:ctn:", long_options, &opt_index)) != -1) {
     switch (c) {
-    case 'g':
-      if (optarg)
-        cArgs.logName = std::string(optarg);
-      else
-        cArgs.logName = "fiesta.log";
-      break;
     case 'c':
       if (optarg)
         copt = std::string(optarg);
       else
-        copt = "auto";
+        copt = "on";
       break;
     case 'n':
 #ifdef HAVE_CUDA
@@ -92,17 +81,8 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
       else
         cArgs.verbosity = 4;
       break;
-    case 'l':
-      cArgs.colorLogs = 1;
-      break;
     case 'V':
       cArgs.versionFlag = 1;
-      break;
-    case 't':
-      if (optarg)
-        cArgs.timeFormat = atoi(optarg);
-      else
-        cArgs.timeFormat = 0;
       break;
     }
   }
@@ -176,7 +156,6 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   L.get("restartName",  cf.restartName, "restart-0000000.h5");
   L.get("terrainName", cf.terrainName, "terrain.h5");
   L.get("pathName",     cf.pathName, ".");
-  L.get("logFilename", cf.logFilename, "fiesta.log");
 
   // Check if pathName is accessable
   struct stat st;
@@ -349,7 +328,6 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   cf.zPlus = -1 + cf.zPer;
 
   // initialize signal flags to inactive
-  cf.sigintFlag=0;
   cf.restartFlag=0;
   cf.exitFlag=0;
 

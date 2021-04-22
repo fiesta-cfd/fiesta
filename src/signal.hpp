@@ -24,16 +24,13 @@ class fiestaSignalHandler{
     }
 
     void sigintFunction(int signum){
-      //cf.log->warning("Recieved SIGINT:  Writing restart and exiting after timestep ",cf.t,".");
       cf.exitFlag=1;
       cf.restartFlag=1;
     }
     void sigusr1Function(int signum){
-      //cf.log->message("Recieved SIGUSR1:  Writing restart after timestep ",cf.t,".");
       cf.restartFlag=1;
     }
     void sigtermFunction(int signum){
-      //cf.log->error("Recieved SIGTERM:  Exiting after timestep ",cf.t,".");
       cf.exitFlag=1;
     }
 

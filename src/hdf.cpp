@@ -34,6 +34,9 @@
 //#ifndef NOMPI
 #include "mpi.h"
 #include <vector>
+#include "timer.hpp"
+#include <filesystem>
+#include "fmt/core.h"
 //#endif
 
 using namespace std;
@@ -336,6 +339,7 @@ void dataPack(int ndim, int ng, size_t* start, size_t* end, size_t* extent, T* d
 template<typename T>
 void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
                               double time, T* x, T* var, string name) {
+  fiestaTimer myTimer = fiestaTimer();
 
   // calcualte string width for time index
   int pad = (int)log10(cf.nt) + 1;
@@ -591,15 +595,20 @@ void hdfWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx,
   }
   H5Gclose(group_id);
 
-  //{
-  //  stringstream message;
-  //  message << "Writing " << xmfName.str();
-  //  cf.log->message(message.str());
-  //}
-  cf.log->message("[",cf.t,"] ","Writing ",xmfName.str());
-  write_xmf(xmfName.str(), hdfBaseName.str(), time, cf, f->varNames,f->varxNames);
-
   close_h5(file_id);
+
+  std::filesystem::path hdfFilePath{hdfName.str()};
+  auto fsize = std::filesystem::file_size(hdfFilePath);
+  double ftime = myTimer.check();
+  double frate = (fsize/1048576)/ftime;
+
+  if (fsize > 1073741824)
+    cf.log->message(fmt::format("[{}] '{}': {} GiB in {:.2f}s ({:.2f}MiB/s)",cf.t,hdfName.str(),fsize/=1073741824,ftime,frate));  //divide by bytes per GiB (1024*1024*1024)
+  else
+    cf.log->message(fmt::format("[{}] '{}': {} MiB in {:.2f}s ({:.2f}MiB/s)",cf.t,hdfName.str(),fsize/=1048576,ftime,frate));     //divide by bytes per MiB (1024*1024)
+
+  write_xmf(xmfName.str(), hdfBaseName.str(), time, cf, f->varNames,f->varxNames);
+  cf.log->message("[",cf.t,"] ","Wrote ",xmfName.str());
 }
 
 // check dimensions of restart file against expected values

@@ -97,68 +97,41 @@ struct maxVarFunctor3d {
   }
 };
 
-void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
-                 fiestaTimer &wall, fiestaTimer &sim) {
-  //policy_f cell_pol =
-  //    policy_f({cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
+bool isBad(double val){
+      if ((isnormal(val) || val == 0) && (val > -1.0e+200 && val < 1.0e+200))
+        return false;
+      else
+        return true;
+}
 
-  double max[cf.nvt], max_recv[cf.nvt];
-  double min[cf.nvt], min_recv[cf.nvt];
-  string vname;
+bool isConcern(double val){
+      if (val < -1.0e+16 || val > 1.0e+16)
+        return true;
+      else
+        return false;
+}
+
+void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, fiestaTimer &wall, fiestaTimer &sim) {
+  double max[cf.nvt];
+  double min[cf.nvt];
   ansiColors c(cFlag);
+  string smin,smax;
 
   if (cf.rank == 0) {
-    //cout << c(cFlag, YEL) << "    Status: " << c(cFlag, NON) << endl;
- 
-    //cout << "      Time Step:       " << c(cFlag, CYA) 
-    //                                  //<< setprecision(0) << scientific
-    //                                  //<< (float)cf.t
-    //                                  << cf.t
-    //                                  << c(cFlag, NON)
-    //     << "/" 
-    //                                  << c(cFlag, CYA)
-    //                                  //<< setprecision(0) << scientific
-    //                                  //<< (float)cf.tend
-    //                                  << cf.tend
-    //                                  << c(cFlag, NON)
-    //     << endl;
-
-    //cout << "      Simulation Time: " << c(cFlag, CYA) << setprecision(2)
-    //     << scientific << time << c(cFlag, NON) << endl;
-    //cout << "      Wall Time:       " << c(cFlag, CYA) << wall.checkf()
-    //     << c(cFlag, NON) << endl;
-    //cout << "      ETR:             " << c(cFlag, CYA)
-    //     << sim.formatTime((double)cf.nt*sim.check()/(cf.t-1-cf.tstart)-sim.check())
-    //     << c(cFlag, NON) << endl;
-
-    //fl.open("fiesta.out",std::ios_base::app);
     cf.log->message(fmt::format("[{}] Reporting Status",cf.t));
-    cout << fmt::format("{: >8}Timestep:  {}/{}\n","",cf.t,cf.tend);
-    cout << fmt::format("{: >8}Wall Time: {}\n","",wall.checkf());
-    cout << fmt::format("{: >8}ETR:       {}\n","",sim.formatTime((double)cf.nt*sim.check()/(cf.t-1-cf.tstart)-sim.check()));
+    cout << fmt::format("{: >8}Timestep:  {}{}{}/{}{}{}\n","",c(magenta),cf.t,c(reset),c(magenta),cf.tend,c(reset));
+    cout << fmt::format("{: >8}Wall Time: {}{:.0f}{}s\n","",c(magenta),wall.check(),c(reset));
+    cout << fmt::format("{: >8}ETR:       {}{:.0f}{}s\n","", c(magenta),cf.nt*sim.check()/(cf.t-1-cf.tstart)-sim.check(),c(reset));
 
     cout << fmt::format("{: <8}{: <16}{: >11}{: >11}\n","","","Min","Max");
-    //cout << fmt::format("{: >8}{:->38}\n","","-");
   }
-
-  // Print Header
-  //if (cf.rank == 0) {
-  //  cout << "      " << setw(13) << " " << setw(11) << right << "Min"
-  //       << setw(11) << right << "Max" << endl;
-  //  cout << "      "
-  //       << "-----------------------------------" << endl;
-  //}
 
   // var
   if (cf.ndim == 2) {
-    policy_f cell_pol =
-        policy_f({cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
+    policy_f cell_pol = policy_f({cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
     for (int v = 0; v < cf.nvt; ++v) {
-      Kokkos::parallel_reduce(cell_pol, maxVarFunctor2d(f->var, v),
-                              Kokkos::Max<double>(max[v]));
-      Kokkos::parallel_reduce(cell_pol, minVarFunctor2d(f->var, v),
-                              Kokkos::Min<double>(min[v]));
-
+      Kokkos::parallel_reduce(cell_pol, maxVarFunctor2d(f->var, v), Kokkos::Max<double>(max[v]));
+      Kokkos::parallel_reduce(cell_pol, minVarFunctor2d(f->var, v), Kokkos::Min<double>(min[v]));
       #ifndef NOMPI
         MPI_Allreduce(&max[v], &max_recv[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
         MPI_Allreduce(&min[v], &min_recv[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
@@ -167,13 +140,10 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
       #endif
     }
   } else {
-    policy_f3 cell_pol = policy_f3({cf.ng,      cf.ng,          cf.ng},
-                               {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk-cf.ng});
+    policy_f3 cell_pol = policy_f3({cf.ng, cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk-cf.ng});
     for (int v = 0; v < cf.nvt; ++v) {
-      Kokkos::parallel_reduce(cell_pol, maxVarFunctor3d(f->var, v),
-                              Kokkos::Max<double>(max[v]));
-      Kokkos::parallel_reduce(cell_pol, minVarFunctor3d(f->var, v),
-                              Kokkos::Min<double>(min[v]));
+      Kokkos::parallel_reduce(cell_pol, maxVarFunctor3d(f->var, v), Kokkos::Max<double>(max[v]));
+      Kokkos::parallel_reduce(cell_pol, minVarFunctor3d(f->var, v), Kokkos::Min<double>(min[v]));
       #ifndef NOMPI
         MPI_Allreduce(&max[v], &max_recv[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
         MPI_Allreduce(&min[v], &min_recv[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
@@ -184,53 +154,31 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
   }
 
   if (cf.rank == 0) {
-    // Check for nans and infs and print table
     for (int v = 0; v < cf.nvt; ++v) {
-      stringstream ss, smax, smin;
-
-      vname = f->varNames[v];
-
-      if ((isnormal(min[v]) || min[v] == 0) &&
-          (min[v] > -1.0e+200 && min[v] < 1.0e+200))
-        smin << c(magenta) << setw(11) << right << setprecision(2)
-             << scientific << min[v] << c(reset);
+      if (isBad(min[v]))
+        smin = format("{}{:>11.2e}{}",c(red),min[v],c(reset));
+      else if (isConcern(min[v]))
+        smin = format("{}{:>11.2e}{}",c(yellow),min[v],c(reset));
       else
-        smax << c(red) << setw(11) << right << setprecision(2)
-             << scientific << min[v] << c(reset);
+        smin = format("{}{:>11.2e}{}",c(magenta),min[v],c(reset));
 
-      if ((isnormal(max[v]) || max[v] == 0) &&
-          (max[v] > -1.0e+200 && max[v] < 1.0e+200))
-        smax << c(magenta) << setw(11) << right << setprecision(2)
-             << scientific << max[v] << c(reset);
+      if (isBad(max[v]))
+        smax = format("{}{:>11.2e}{}",c(red),max[v],c(reset));
+      else if (isConcern(max[v]))
+        smax = format("{}{:>11.2e}{}",c(yellow),max[v],c(reset));
       else
-        smax << c(red) << setw(11) << right << setprecision(2)
-             << scientific << max[v] << c(reset);
+        smax = format("{}{:>11.2e}{}",c(magenta),max[v],c(reset));
 
-      //cout << "      " << setw(13) << left << vname << smin.str() << smax.str()
-      //     << endl;
-      //cout << fmt::format("{: <18}{: >10.2e}{: >10.2e}\n",vname,smin.str(),smax.str());
-      //cout << fmt::format("{: <18}{: >10}{: >10}\n",vname,smin.str(),smax.str());
-      cout << fmt::format("{: >8}{: <16}{: >11}{: >11}\n","",vname,smin.str(),smax.str());
+      cout << fmt::format("{: >8}{: <16}{: >11}{: >11}\n","",f->varNames[v],smin,smax);
     }
   }
-
-  //if (cf.rank == 0) {
-  //  //cout << "      "
-  //  //     << "-----------------------------------" << endl;
-  //  cout << fmt::format("{: <26}{: >10}{: >10}\n"," ","Min","Max");
-  //cout << fmt::format("{: >8}{:->38}\n","","-");
-  //}
 
   // varx
   if (cf.ndim == 2) {
-    policy_f cell_pol =
-        policy_f({cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
+    policy_f cell_pol = policy_f({cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
     for (size_t v = 0; v < f->varxNames.size(); ++v) {
-      Kokkos::parallel_reduce(cell_pol, maxVarFunctor2d(f->varx, v),
-                              Kokkos::Max<double>(max[v]));
-      Kokkos::parallel_reduce(cell_pol, minVarFunctor2d(f->varx, v),
-                              Kokkos::Min<double>(min[v]));
-
+      Kokkos::parallel_reduce(cell_pol, maxVarFunctor2d(f->varx, v), Kokkos::Max<double>(max[v]));
+      Kokkos::parallel_reduce(cell_pol, minVarFunctor2d(f->varx, v), Kokkos::Min<double>(min[v]));
       #ifndef NOMPI
         MPI_Allreduce(&max[v], &max_recv[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
         MPI_Allreduce(&min[v], &min_recv[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
@@ -239,13 +187,10 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
       #endif
     }
   } else {
-    policy_f3 cell_pol = policy_f3({cf.ng,      cf.ng,          cf.ng},
-                               {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk-cf.ng});
+    policy_f3 cell_pol = policy_f3({cf.ng,cf.ng,cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk-cf.ng});
     for (size_t v = 0; v < f->varxNames.size(); ++v) {
-      Kokkos::parallel_reduce(cell_pol, maxVarFunctor3d(f->varx, v),
-                              Kokkos::Max<double>(max[v]));
-      Kokkos::parallel_reduce(cell_pol, minVarFunctor3d(f->varx, v),
-                              Kokkos::Min<double>(min[v]));
+      Kokkos::parallel_reduce(cell_pol, maxVarFunctor3d(f->varx, v), Kokkos::Max<double>(max[v]));
+      Kokkos::parallel_reduce(cell_pol, minVarFunctor3d(f->varx, v), Kokkos::Min<double>(min[v]));
       #ifndef NOMPI
         MPI_Allreduce(&max[v], &max_recv[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
         MPI_Allreduce(&min[v], &min_recv[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
@@ -256,35 +201,22 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
   }
 
   if (cf.rank == 0) {
-
-    // Check for nans and infs and print table
     for (size_t v = 0; v < f->varxNames.size(); ++v) {
-      stringstream ss, smax, smin;
-
-      vname = f->varxNames[v];
-
-      if ((isnormal(min[v]) || min[v] == 0) &&
-          (min[v] > -1.0e+200 && min[v] < 1.0e+200))
-        smin << c(magenta) << setw(11) << right << setprecision(2)
-             << scientific << min[v] << c(reset);
+      if (isBad(min[v]))
+        smin = format("{}{:>11.2e}{}",c(red),min[v],c(reset));
+      else if (isConcern(min[v]))
+        smin = format("{}{:>11.2e}{}",c(yellow),min[v],c(reset));
       else
-        smax << c(red) << setw(11) << right << setprecision(2)
-             << scientific << min[v] << c(reset);
+        smin = format("{}{:>11.2e}{}",c(magenta),min[v],c(reset));
 
-      if ((isnormal(max[v]) || max[v] == 0) &&
-          (max[v] > -1.0e+200 && max[v] < 1.0e+200))
-        smax << c(magenta) << setw(11) << right << setprecision(2)
-             << scientific << max[v] << c(reset);
+      if (isBad(max[v]))
+        smax = format("{}{:>11.2e}{}",c(red),max[v],c(reset));
+      else if (isConcern(max[v]))
+        smax = format("{}{:>11.2e}{}",c(yellow),max[v],c(reset));
       else
-        smax << c(red) << setw(11) << right << setprecision(2)
-             << scientific << max[v] << c(reset);
+        smax = format("{}{:>11.2e}{}",c(magenta),max[v],c(reset));
 
-      //cout << "      " << setw(13) << left << vname << smin.str() << smax.str()
-      //     << endl;
-      cout << fmt::format("{: >8}{: <16}{: >10}{: >10}\n","",vname,smin.str(),smax.str());
-      //cout << fmt::format("{: <19}{: >10.2e}{: >10.2e}\n",vname,min[v],max[v]);
+      cout << fmt::format("{: >8}{: <16}{: >11}{: >11}\n","",f->varxNames[v],smin,smax);
     }
-    //fl << "\n";
-    //fl.close();
   }
 }

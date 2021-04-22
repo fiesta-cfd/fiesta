@@ -27,18 +27,19 @@
 #include "luaReader.hpp"
 #include <cstdio>
 #include <cstdlib>
-#include <fstream>
 #include <iomanip>
-#include <iostream>
-#include <sstream>
 #include <string>
 #include <vector>
 #include "xdmf.hpp"
+#include "timer.hpp"
+#include "fmt/core.h"
+#include <filesystem>
 //#ifndef NOMPI
 #include "mpi.h"
 //#endif
 
 using namespace std;
+using fmt::format;
 
 template <typename T, typename C>
 void blockWriter::reverseArray(int ndim, T* out, C* in){
@@ -67,11 +68,9 @@ void blockWriter::close_h5(hid_t fid){
 size_t blockWriter::frq() { return freq; }
 
 // function to return hdf5 type id given c++ type
-//template <typename H> blockWriter::getH5Type();
 template <> hid_t blockWriter::getH5Type<float>(){ return H5T_NATIVE_FLOAT; }
 template <> hid_t blockWriter::getH5Type<double>(){ return H5T_NATIVE_DOUBLE; }
 template <> hid_t blockWriter::getH5Type<int>(){ return H5T_NATIVE_INT; }
-
 
 blockWriter::blockWriter(){}
 blockWriter::blockWriter(struct inputConfig& cf, rk_func* f, string name_, string path_, bool avg_, size_t frq_,
@@ -81,16 +80,13 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func* f, string name_, strin
   int strideDelta;
   size_t gMin;
 
+  pad = (int)log10(cf.tend) + 1;
+
   // initialize parameters
   lElems=1;
   lElemsG=1;
   myColor=MPI_UNDEFINED;
   slicePresent=true;
-
-  cf.log->debug(": ",name,", ",path,", ",freq);
-  cf.log->debug(":  start (",gStart[0],",",gStart[1],",",gStart[2],")");
-  cf.log->debug(":    end (",gEnd[0],",",gEnd[1],",",gEnd[2],")");
-  cf.log->debug(": stride (",stride[0],",",stride[1],",",stride[2],")");
 
   for (int i=0; i<cf.ndim; ++i){
     //adjust block global size if it does not line up with strides
@@ -173,7 +169,6 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func* f, string name_, strin
     // so the minimum extent and end index are used
     gMin=0;
     for (int i=0; i<cf.ndim; ++i){
-      //cout << cf.rank << " qqqqqqqqqq " << i << ": " << gEnd[i] << ", " << gExt[i] << ", " << gExtG[i] << "\n";
       MPI_Allreduce(&gEnd[i],&gMin,1,MPI_INT,MPI_MIN,sliceComm);
       gEnd[i]=gMin;
 
@@ -185,12 +180,7 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func* f, string name_, strin
     }
   }
   
-  
   // allocate pack buffers
-  //varData = (float*)malloc(lElems*sizeof(float*));
-  //gridData = (float*)malloc(lElemsG*sizeof(float*));
-  //varData(lElems,0);
-  //gridData(lElemsG,0);
   fill_n(back_inserter(varData),lElems,0.0);
   fill_n(back_inserter(gridData),lElemsG,0.0);
 
@@ -200,64 +190,57 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func* f, string name_, strin
   varxH = Kokkos::create_mirror_view(f->varx);
 }
 
-//template<typename T>
-//void blockWriter::writeHDF(struct inputConfig cf, rk_func *f, int tdx, double time, T* x, T* var, string name) {
 void blockWriter::write(struct inputConfig cf, rk_func *f, int tdx, double time) {
-  // calcualte string width for time index
-  pad = (int)log10(cf.nt) + 1;
-  stringstream lineName,lineBase,lineHDF,lineXMF;
-  lineBase << name << "-" << setw(pad) << setfill('0') << tdx;
-  lineName << path << "/" << lineBase.str() << ".h5";
-  lineXMF << path << "/" << lineBase.str() << ".xmf";
-  lineHDF << lineBase.str() << ".h5";
-  cf.log->message("[",cf.t,"] ","Writing ",lineName.str());
+  string baseFormat = format("{{}}-{{:0{}d}}",pad);
+  string blockBase = format(baseFormat,name,tdx);
+  string hdfName   = format("{}.h5",blockBase);
+  string hdfPath   = format("{}/{}",path,hdfName);
+  string xmfPath   = format("{}/{}.xmf",path,blockBase);
+  
+  cf.log->message(format("[{}] Writing '{}'",cf.t,hdfPath));
+  fiestaTimer writeTimer = fiestaTimer();
 
   if (myColor==1){
     Kokkos::deep_copy(gridH,f->grid);
     Kokkos::deep_copy(varH,f->var);
     Kokkos::deep_copy(varxH,f->varx);
 
-    //int sliceRank;
-    //int sliceWorld;
-    //MPI_Comm_rank(sliceComm,&sliceRank);
-    //MPI_Comm_size(sliceComm,&sliceWorld);
+    hid_t file_id = openHDF5ForWrite(sliceComm, MPI_INFO_NULL, hdfPath);
 
-    hid_t linefile_id = openHDF5ForWrite(sliceComm, MPI_INFO_NULL, lineName.str());
-
-    hid_t linegroup_id = H5Gcreate(linefile_id, "/Grid", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    hid_t group_id = H5Gcreate(file_id, "/Grid", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     for (int vn=0; vn<cf.ndim; ++vn){
       dataPack(cf.ndim, 0, lStart, lEndG, lExtG, stride, gridData, gridH,vn,false);
-
-      stringstream lineStr;
-      lineStr << "Dimension" << vn;
-      write_h5<float>(linegroup_id, lineStr.str(), cf.ndim, gExtG, lExtG, lOffset, gridData); 
+      write_h5<float>(group_id, format("Dimension{}",vn), cf.ndim, gExtG, lExtG, lOffset, gridData); 
     }
-    H5Gclose(linegroup_id);
+    H5Gclose(group_id);
 
-    linegroup_id = H5Gcreate(linefile_id, "/Solution", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    group_id = H5Gcreate(file_id, "/Solution", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     for (int vn=0; vn<cf.nvt; ++vn){
       dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varH,vn,true);
-       
-      stringstream lineStr;
-      lineStr << "Variable" << setw(2) << setfill('0') << vn;
-      write_h5<float>(linegroup_id, lineStr.str(), cf.ndim, gExt, lExt, lOffset, varData); 
+      write_h5<float>(group_id, format("Variable{:02d}",vn), cf.ndim, gExt, lExt, lOffset, varData); 
     }
     for (size_t vn = 0; vn < f->varxNames.size(); ++vn) {
       dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varxH,vn,true);
-       
-      stringstream lineStr;
-      lineStr << "Variable" << setw(2) << setfill('0') << vn+cf.nvt;
-      write_h5<float>(linegroup_id, lineStr.str(), cf.ndim, gExt, lExt, lOffset, varData); 
+      write_h5<float>(group_id, format("Variable{:02d}",vn+cf.nvt), cf.ndim, gExt, lExt, lOffset, varData); 
     }
-    H5Gclose(linegroup_id);
+    H5Gclose(group_id);
 
-    close_h5(linefile_id);
+    close_h5(file_id);
 
+    filesystem::path hdfFilePath{hdfPath};
+    auto fsize = filesystem::file_size(hdfFilePath);
+    double ftime = writeTimer.check();
+    double frate = (fsize/1048576.0)/ftime;
+
+    if (fsize > 1073741824)
+      cf.log->message(format("[{}] '{}': {:.2f} GiB in {:.2f}s ({:.2f} MiB/s)",cf.t,hdfPath,fsize/1073741824.0,ftime,frate));  //divide by bytes per GiB (1024*1024*1024)
+    else
+      cf.log->message(format("[{}] '{}': {:.2f} MiB in {:.2f}s ({:.2f} MiB/s)",cf.t,hdfPath,fsize/1048576.0,ftime,frate));     //divide by bytes per MiB (1024*1024)
   }
 
-  cf.log->message("[",cf.t,"] ","Writing ",lineXMF.str());
+  cf.log->message(format("[{}] Writing '{}'",cf.t,xmfPath));
   if (myColor==1){
-    writeXMF(lineXMF.str(), lineHDF.str(), time, cf.ndim, gExt.data(), cf.nvt, f->varNames,f->varxNames);
+    writeXMF(xmfPath, hdfName, time, cf.ndim, gExt.data(), cf.nvt, f->varNames,f->varxNames);
   }
 }
 

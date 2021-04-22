@@ -35,33 +35,19 @@
 #include "pretty.hpp"
 
 using namespace std;
+using fmt::format;
+
 class Logger {
   public:
     Logger(int v_, int c_, int r_) : verbosity(v_), colorMode(c_), rank(r_) {
       timer = new Kokkos::Timer();
-      //logFile.open(logFilename,ios::trunc);
-    
-      stringstream message;
-      message << "Log started " << getTime();
-      print("Logger",message.str(),green);
-
-      stringstream info;
-      info << "Log level: " << verbosity;
-      print("Logger",info.str(),green);
-
-      if (colorMode){
-        stringstream cinfo;
-        cinfo << "Color logs enabled";
-        print("Logger",cinfo.str(),green);
-      }
+      print("Logger",format("Log started {}",getTime()),green);
+      print("Logger",format("Log Level {}",verbosity),green);
+      if (colorMode) print("Logger","Color logs enabled",green);
     }
 
     ~Logger() {
-      stringstream message;
-      message << "Log ended " << getTime();
-      print("Logger",message.str(),green);
-
-      //logFile.close();
+      print("Logger",format("Log ended {}",getTime()),green);
     }
 
     template<typename... Args>
@@ -118,70 +104,15 @@ class Logger {
     }
     
   private:
-    //enum logColor { red, green, yellow, blue, magenta, cyan, none };
-
     void print(std::string header, std::string message, Colour color){
       using namespace std;
       using namespace fmt;
       ansiColors c(colorMode);
 
       if (rank==0){
-        //stringstream logString;
-        //logString
-        //    << "[" << setw(16) << setprecision(7) << fixed << right << timer->seconds() << "] "
-        //    << setw(8) << right << header << ": "
-        //    << message;
-
         cout << format("{}[{: >12.5f}] {: >7}: {}{}",c(color),timer->seconds(),header,message,c(reset)) << endl;
-
-        // cout << setColor(color)
-        //     << logString.str()
-        //     << setColor(none)
-        //     << endl;
-
-        //if (colorLogs){
-        //  logFile << setColor(color)
-        //          << logString.str()
-        //          << setColor(none)
-        //          << endl;
-        //}else{
-        //  logFile << logString.str() << endl;
-        //}
       }
     }
-
-    //string setColor(logColor color) {
-    //  int use_color = 0;
-
-    //  if (colorFlag == 1)
-    //    use_color = 1;
-    //  if ((colorFlag == 2) && isatty(fileno(stdout)))
-    //    use_color = 1;
-
-    //  if (use_color) {
-    //    switch (color) {
-    //    case red:
-    //      return "\033[0;31m";
-    //    case green:
-    //      return "\033[0;32m";
-    //    case yellow:
-    //      return "\033[0;33m";
-    //    case blue:
-    //      return "\033[0;34m";
-    //    case magenta:
-    //      return "\033[0;35m";
-    //    case cyan:
-    //      return "\033[0;36m";
-    //    case none:
-    //      return "\033[0m";
-    //    default:
-    //      return "\033[0m";
-    //    }
-    //  } else {
-    //    return "";
-    //  }
-    //}
-
     Kokkos::Timer *timer;
     const int verbosity;
     const int rank;

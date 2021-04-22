@@ -119,15 +119,8 @@ struct inputConfig {
   int grid;
   double h, tdx, tdy;
   int verbosity;
-  std::string logFilename;
-  int sigintFlag;
   int restartFlag;
   int exitFlag;
-
-  //string blockName;
-  //string blockPath;
-  //size_t blockStart[3];
-  //size_t blockEnd[3];
 
   int globalGridDims[3];
   int globalCellDims[3];
@@ -142,11 +135,9 @@ struct commandArgs {
   int versionFlag;
   int verbosity;
   int colorFlag;
-  int colorLogs;
   int timeFormat;
   int numThreads;
   int numDevices;
-  std::string logName;
   std::string fileName;
 };
 
