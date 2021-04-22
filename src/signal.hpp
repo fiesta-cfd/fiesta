@@ -18,12 +18,19 @@ class fiestaSignalHandler{
     }
 
     void registerSignals(){
-      signal(SIGINT,fiestaSignalHandler::sigintHandler);
+      // write restart
       signal(SIGUSR1,fiestaSignalHandler::sigusr1Handler);
+
+      // write restart and exit
+      signal(SIGURG,fiestaSignalHandler::sigurgHandler);
+      signal(SIGUSR2,fiestaSignalHandler::sigurgHandler);
+
+      //exit
       signal(SIGTERM,fiestaSignalHandler::sigtermHandler);
+      signal(SIGINT,fiestaSignalHandler::sigtermHandler);
     }
 
-    void sigintFunction(int signum){
+    void sigurgFunction(int signum){
       cf.exitFlag=1;
       cf.restartFlag=1;
     }
@@ -34,8 +41,8 @@ class fiestaSignalHandler{
       cf.exitFlag=1;
     }
 
-    static void sigintHandler(int signum){
-      instance->sigintFunction(signum);
+    static void sigurgHandler(int signum){
+      instance->sigurgFunction(signum);
     }
     static void sigusr1Handler(int signum){
       instance->sigusr1Function(signum);
