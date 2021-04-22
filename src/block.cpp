@@ -216,11 +216,11 @@ void blockWriter::write(struct inputConfig cf, rk_func *f, int tdx, double time)
 
     group_id = H5Gcreate(file_id, "/Solution", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     for (int vn=0; vn<cf.nvt; ++vn){
-      dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varH,vn,true);
+      dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varH,vn,avg);
       write_h5<float>(group_id, format("Variable{:02d}",vn), cf.ndim, gExt, lExt, lOffset, varData); 
     }
     for (size_t vn = 0; vn < f->varxNames.size(); ++vn) {
-      dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varxH,vn,true);
+      dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varxH,vn,avg);
       write_h5<float>(group_id, format("Variable{:02d}",vn+cf.nvt), cf.ndim, gExt, lExt, lOffset, varData); 
     }
     H5Gclose(group_id);

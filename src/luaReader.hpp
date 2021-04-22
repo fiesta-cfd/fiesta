@@ -45,7 +45,7 @@ public:
   template <class T>
   void getArray(std::string,std::vector<T>&,int);
 
-  //void getIOBlock(std::string key,int,std::string&, std::string&,size_t&,size_t*,size_t*,size_t*);
+  void getSpeciesData(struct inputConfig&);
   void getIOBlock(struct inputConfig&, rk_func*, int, vector<blockWriter>&);
 
   double call(std::string, int ,...);

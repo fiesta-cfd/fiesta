@@ -123,24 +123,18 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
 
   // Required Parameters
   L.get("nt",    cf.nt);
-  L.get("ni",    cf.glbl_nci);
-  L.get("nj",    cf.glbl_ncj);
-  L.get("ns",    cf.ns);
   L.get("dt",    cf.dt);
   L.get("R",     cf.R);
   L.get("title", cf.title);
-  L.getArray("species_names",cf.speciesName,cf.ns);
 
   // Defaultable Parameters
   L.get("tstart",   cf.tstart,  0);
   L.get("time",     cf.time,    0.0);
-  L.get("ceq",      cf.ceq,     0);
+  L.get("cequations",      cf.ceq,     0);
   L.get("noise",    cf.noise,   0);
   L.get("buoyancy", cf.gravity, 0);
   L.get("ndim",     cf.ndim,    2);
-  L.get("visc",     cf.visc,    0);
-  L.get("procsx",   cf.xProcs,  1);
-  L.get("procsy",   cf.yProcs,  1);
+  L.get("viscosity",     cf.visc,    0);
   L.get("ng",       cf.ng,      3);
   L.get("xPer",     cf.xPer,    0);
   L.get("yPer",     cf.yPer,    0);
@@ -149,13 +143,13 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   L.get("bcYmin",   cf.bcB,     0);
   L.get("bcYmax",   cf.bcT,     0);
   L.get("restart",  cf.restart, 0);
-  L.get("out_freq",     cf.out_freq,    0);
-  L.get("write_freq",   cf.write_freq,  0);
-  L.get("restart_freq", cf.restart_freq,0);
-  L.get("stat_freq",    cf.stat_freq,   0);
-  L.get("restartName",  cf.restartName, "restart-0000000.h5");
-  L.get("terrainName", cf.terrainName, "terrain.h5");
-  L.get("pathName",     cf.pathName, ".");
+  L.get("progress_frequency",     cf.out_freq,    0);
+  L.get("write_frequency",   cf.write_freq,  0);
+  L.get("restart_frequency", cf.restart_freq,0);
+  L.get("status_frequency",    cf.stat_freq,   0);
+  L.get("restart_name",  cf.restartName, "restart-0000000.h5");
+  L.get("terrain_name", cf.terrainName, "terrain.h5");
+  L.get("restart_path",     cf.pathName, ".");
 
   // Check if pathName is accessable
   struct stat st;
@@ -168,9 +162,30 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   }
 
   std::string scheme, grid, mpi;
-  L.get("scheme", scheme,"weno5");
-  L.get("grid",   grid,"cartesian");
+  L.get("advection_scheme", scheme,"weno5");
+  L.get("grid_type",   grid,"cartesian");
   L.get("mpi",    mpi, "host");
+
+  vector<double> dx;
+  L.getArray("dx",dx,cf.ndim);
+
+  vector<size_t> ni;
+  L.getArray("ni",ni,cf.ndim);
+  cf.glbl_nci = ni[0];
+  cf.glbl_ncj = ni[1];
+  if (cf.ndim == 3) 
+    cf.glbl_nck = ni[2];
+  else
+    cf.glbl_nck = 1.0;
+
+  vector<size_t> procs;
+  L.getArray("procs",procs,cf.ndim);
+  cf.xProcs=procs[0];
+  cf.yProcs=procs[1];
+  if (cf.ndim == 3) 
+    cf.zProcs=procs[2];
+  else
+    cf.zProcs=1;
 
   // Dependent Parameters
   if (cf.ceq == 1) {
@@ -188,18 +203,16 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
     L.get("n_nt",  cf.n_nt,1);
   }
   if (cf.ndim == 3) {
-    L.get("nk",     cf.glbl_nck);
-    L.get("procsz", cf.zProcs,1);
     L.get("zPer",   cf.zPer,0);
     L.get("bcZmin", cf.bcH,0);
     L.get("bcZmaz", cf.bcF,0);
   }
   if (grid.compare("cartesian") == 0) {
     cf.grid = 0;
-    L.get("dx",cf.dx);
-    L.get("dy",cf.dy);
+    cf.dx=dx[0];
+    cf.dy=dx[1];
     if (cf.ndim == 3)
-      L.get("dz",cf.dz);
+      cf.dz=dx[2];
   }
   if (grid.compare("terrain") == 0) {
     if (cf.ndim == 3){
@@ -215,6 +228,7 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
       exit(EXIT_FAILURE);
     }
   }
+<<<<<<< HEAD
   // Array Parameters
   cf.M = (double *)malloc(cf.ns * sizeof(double));
   cf.gamma = (double *)malloc(cf.ns * sizeof(double));
@@ -222,6 +236,10 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   L.getArray("gamma",cf.gamma,cf.ns);
   L.getArray("M",cf.M,cf.ns);
   L.getArray("mu",cf.mu,cf.ns);
+=======
+
+  L.getSpeciesData(cf);
+>>>>>>> feat(input): updated input param names and structs
 
   // Close Lua File
   L.close();
@@ -365,7 +383,7 @@ int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
             x = x/8.0;
             y = y/8.0;
             z = z/8.0;
-            hostV(i, j, k, v) = L.call("f",4,x,y,z,(double)v);
+            hostV(i, j, k, v) = L.call("initial_conditions",4,x,y,z,(double)v);
           }
         }
       }
@@ -382,7 +400,7 @@ int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
             }
             x = x/4.0;
             y = y/4.0;
-            hostV(i, j, 0, v) = L.call("f",4,x,y,0.0,(double)v);
+            hostV(i, j, 0, v) = L.call("initial_conditions",4,x,y,0.0,(double)v);
         }
       }
     }
@@ -420,7 +438,7 @@ int loadGrid(struct inputConfig cf, FS4D &deviceV) {
             ii = cf.iStart + i;
             jj = cf.jStart + j;
             kk = cf.kStart + k;
-            hostV(i, j, k, v) = L.call("g",4,(double)ii,(double)jj,(double)kk,(double)v);
+            hostV(i, j, k, v) = L.call("grid",4,(double)ii,(double)jj,(double)kk,(double)v);
           }
         }
       }

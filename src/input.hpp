@@ -64,8 +64,6 @@ struct inputConfig {
   fiestaTimer gridTimer;
   fiestaTimer writeTimer;
 
-  //class writer *w;
-  //class mpiBuffers *m;
   std::shared_ptr<class writer> w;
   std::shared_ptr<class mpiBuffers> m;
   std::shared_ptr<class Logger> log;
@@ -80,9 +78,10 @@ struct inputConfig {
   int glbl_ni, glbl_nj, glbl_nk;
   int glbl_nci, glbl_ncj, glbl_nck;
   std::vector<std::string> speciesName;
-  double *gamma;
-  double *M;
-  double *mu;
+  std::vector<double> gamma;
+  std::vector<double> M;
+  std::vector<double> mu;
+
   double R;
   int scheme;
   int visc;

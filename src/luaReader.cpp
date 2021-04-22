@@ -84,13 +84,13 @@ void luaReader::get<string>(string key, string &out, string val){
 
 // get array of doubles
 template<>
-void luaReader::getArray(string key, double *out, int n){
+void luaReader::getArray(string key, vector<double>& out, int n){
   int isnum;
   lua_getglobal(L, key.c_str());
   for (int i=0; i < n; ++i) {
     lua_pushnumber(L, i + 1);
     lua_gettable(L, -2);
-    out[i] = (double)lua_tonumberx(L, -1, &isnum);
+    out.push_back((double)lua_tonumberx(L, -1, &isnum));
     lua_pop(L, 1);
   }
   lua_pop(L,1);
@@ -98,13 +98,13 @@ void luaReader::getArray(string key, double *out, int n){
 
 // Get array of ints
 template<>
-void luaReader::getArray(string key, int *out, int n){
+void luaReader::getArray(string key, vector<size_t>& out, int n){
   int isnum;
   lua_getglobal(L, key.c_str());
   for (int i=0; i < n; ++i) {
     lua_pushnumber(L, i + 1);
     lua_gettable(L, -2);
-    out[i] = (double)lua_tointegerx(L, -1, &isnum);
+    out.push_back((size_t)lua_tointegerx(L, -1, &isnum));
     lua_pop(L, 1);
   }
   lua_pop(L,1);
@@ -133,7 +133,44 @@ void luaReader::getArray(string key, vector<string>& out, int n){
     error(L, "Error Reading Input File: A string array was expected at '%s'\n", key.c_str());
 }
 
-//void luaReader::getIOBlock(int ndim, string& name, string& path, size_t& freq, size_t* start, size_t* end, size_t* stride){
+void luaReader::getSpeciesData(struct inputConfig& cf){
+  int isnum;
+
+  lua_getglobal(L, "species");
+
+  if (lua_istable(L,-1)){
+    cf.ns = lua_rawlen(L,-1);
+    for (int i=0; i<cf.ns; ++i){
+      lua_pushnumber(L,i+1);
+      lua_gettable(L,-2);
+      
+      lua_pushstring(L,"name");
+      lua_gettable(L,-2);
+      cf.speciesName.push_back(lua_tostring(L,-1));
+      lua_pop(L,1);
+
+      lua_pushstring(L,"gamma");
+      lua_gettable(L,-2);
+      cf.gamma.push_back(lua_tonumberx(L,-1,&isnum));
+      lua_pop(L,1);
+
+      lua_pushstring(L,"M");
+      lua_gettable(L,-2);
+      cf.M.push_back(lua_tonumberx(L,-1,&isnum));
+      lua_pop(L,1);
+
+      lua_pushstring(L,"mu");
+      lua_gettable(L,-2);
+      cf.mu.push_back(lua_tonumberx(L,-1,&isnum));
+      lua_pop(L,1);
+
+      lua_pop(L,1);
+    }
+  }else{
+      error(L, "Error Reading Input File: Could not read blocks.\n");
+  }
+}
+
 void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<blockWriter>& blocks){
   int isnum;
   size_t numElems;
@@ -149,56 +186,71 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
       lua_pushnumber(L,i+1);
       lua_gettable(L,-2);
       
-      lua_pushstring(L,"name");
-      lua_gettable(L,-2);
+      lua_getfield(L,-1,"name");
       myname.assign(lua_tostring(L,-1));
       lua_pop(L,1);
 
-      lua_pushstring(L,"path");
-      lua_gettable(L,-2);
-      mypath.assign(lua_tostring(L,-1));
+      lua_getfield(L,-1,"path");
+      if (!lua_isnoneornil(L,-1))
+        mypath.assign(lua_tostring(L,-1));
+      else
+        mypath.assign("./");
       lua_pop(L,1);
 
-      lua_pushstring(L,"frequency");
-      lua_gettable(L,-2);
+      lua_getfield(L,-1,"frequency");
       frq = lua_tointegerx(L,-1,&isnum);
       lua_pop(L,1);
 
-      lua_pushstring(L,"average");
-      lua_gettable(L,-2);
-      avg = lua_tointegerx(L,-1,&isnum);
+      lua_getfield(L,-1,"average");
+      if (!lua_isnoneornil(L,-1))
+        avg = lua_tointegerx(L,-1,&isnum);
+      else
+        avg = 1;
       lua_pop(L,1);
 
-      lua_pushstring(L,"start");
-      lua_gettable(L,-2);
-      numElems = lua_rawlen(L,-1);
-      for(int j=0;j<numElems; ++j){
-        lua_pushnumber(L,j+1);
-        lua_gettable(L,-2);
-        start.push_back((size_t)lua_tointegerx(L, -1, &isnum));
-        lua_pop(L,1);
+      lua_getfield(L,-1,"start");
+      if (lua_istable(L,-1)){
+        numElems = lua_rawlen(L,-1);
+        for(int j=0;j<numElems; ++j){
+          lua_pushnumber(L,j+1);
+          lua_gettable(L,-2);
+          start.push_back((size_t)lua_tointegerx(L, -1, &isnum));
+          lua_pop(L,1);
+        }
+      }else{
+        for (int j=0; j<ndim; ++j)
+          start.push_back(0);
       }
       lua_pop(L,1);
 
-      lua_pushstring(L,"limit");
-      lua_gettable(L,-2);
-      numElems = lua_rawlen(L,-1);
-      for(int j=0;j<numElems; ++j){
-        lua_pushnumber(L,j+1);
-        lua_gettable(L,-2);
-        limit.push_back((size_t)lua_tointegerx(L, -1, &isnum));
-        lua_pop(L,1);
+      lua_getfield(L,-1,"limit");
+      if (lua_istable(L,-1)){
+        numElems = lua_rawlen(L,-1);
+        for(int j=0;j<numElems; ++j){
+          lua_pushnumber(L,j+1);
+          lua_gettable(L,-2);
+          limit.push_back((size_t)lua_tointegerx(L, -1, &isnum));
+          lua_pop(L,1);
+        }
+      }else{
+          limit.push_back(cf.glbl_nci-1);
+          limit.push_back(cf.glbl_ncj-1);
+          if (ndim > 2) limit.push_back(cf.glbl_nck-1);
       }
       lua_pop(L,1);
 
-      lua_pushstring(L,"stride");
-      lua_gettable(L,-2);
-      numElems = lua_rawlen(L,-1);
-      for(int j=0;j<numElems; ++j){
-        lua_pushnumber(L,j+1);
-        lua_gettable(L,-2);
-        stride.push_back((size_t)lua_tointegerx(L, -1, &isnum));
-        lua_pop(L,1);
+      lua_getfield(L,-1,"stride");
+      if (lua_istable(L,-1)){
+        numElems = lua_rawlen(L,-1);
+        for(int j=0;j<numElems; ++j){
+          lua_pushnumber(L,j+1);
+          lua_gettable(L,-2);
+          stride.push_back((size_t)lua_tointegerx(L, -1, &isnum));
+          lua_pop(L,1);
+        }
+      }else{
+        for (int j=0; j<ndim; ++j)
+          stride.push_back(1);
       }
       lua_pop(L,1);
 
