@@ -32,37 +32,6 @@
 using namespace std;
 using fmt::format;
 
-// if color is enabled insert ascii color codes
-//string c(int cFlag, Color color) {
-//  int use_color = 0;
-//  if (cFlag == 1)
-//    use_color = 1;
-//  if ((cFlag == 2) && isatty(fileno(stdout)))
-//    use_color = 1;
-//  if (use_color) {
-//    switch (color) {
-//    case RED:
-//      return "\033[0;31m";
-//    case GRE:
-//      return "\033[0;32m";
-//    case YEL:
-//      return "\033[0;33m";
-//    case BLU:
-//      return "\033[0;34m";
-//    case MAG:
-//      return "\033[0;35m";
-//    case CYA:
-//      return "\033[0;36m";
-//    case NON:
-//      return "\033[0m";
-//    default:
-//      return "\033[0m";
-//    }
-//  } else {
-//    return "";
-//  }
-//}
-
 void printSplash(int cm) {
   ansiColors k(cm);
   string splashFmt = format("{}{: >4}{{}}{}\n",k(red),"",k(reset));
@@ -82,8 +51,6 @@ void printSplash(int cm) {
 
 void printConfig(struct inputConfig cf) {
   if (cf.rank == 0){
-    //int cFlag = cf.colorFlag;
-    //cout.precision(2);
   
     ansiColors k(cf.colorFlag);
     string keyString   = format("{: >8}{{: <24}}{}'{{}}'{}\n","",k(blue),k(reset));
@@ -146,6 +113,9 @@ void printConfig(struct inputConfig cf) {
   
     if (cf.noise) cout << format(keyEnabled,"Noise Indicator:");
     else cout << format(keyDisabled,"Noise Indicator:");
+
+    if (cf.gravity) cout << format(keyEnabled,"Buoyancy:");
+    else cout << format(keyDisabled,"Buoyancy:");
   
     cout << format(keyValue,"Number of species:",cf.ns);
     string val = format("{}{{}}{}",k(magenta),k(reset));
