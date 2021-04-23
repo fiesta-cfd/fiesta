@@ -124,10 +124,10 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   // Required Parameters
   L.get("nt",    cf.nt);
   L.get("dt",    cf.dt);
-  L.get("R",     cf.R);
   L.get("title", cf.title);
 
   // Defaultable Parameters
+  L.get("R",        cf.R,       8.314462);
   L.get("tstart",   cf.tstart,  0);
   L.get("time",     cf.time,    0.0);
   L.get("cequations",      cf.ceq,     0);

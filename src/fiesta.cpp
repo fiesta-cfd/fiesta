@@ -113,7 +113,7 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
   // If not restarting, generate initial conditions and grid
   if (cf.restart == 0) {
     // Generate Grid Coordinates
-    cf.log->message("Generating initial conditions");
+    cf.log->message("Generating grid");
     cf.gridTimer.start();
     loadGrid(cf, f->grid);
     cf.gridTimer.stop();

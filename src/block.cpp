@@ -188,6 +188,9 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func* f, string name_, strin
   gridH = Kokkos::create_mirror_view(f->grid);
   varH = Kokkos::create_mirror_view(f->var);
   varxH = Kokkos::create_mirror_view(f->varx);
+
+  cf.log->debug(format("{}:'{}', ({},{},{}), ({},{},{}), ({},{},{})",name,path,
+        gStart[0],gStart[1],gStart[2],gEnd[0],gEnd[1],gEnd[2],stride[0],stride[1],stride[2]));
 }
 
 void blockWriter::write(struct inputConfig cf, rk_func *f, int tdx, double time) {
@@ -226,7 +229,11 @@ void blockWriter::write(struct inputConfig cf, rk_func *f, int tdx, double time)
     H5Gclose(group_id);
 
     close_h5(file_id);
+  }
 
+  MPI_Barrier(cf.comm);
+
+  if (cf.rank==0){
     filesystem::path hdfFilePath{hdfPath};
     auto fsize = filesystem::file_size(hdfFilePath);
     double ftime = writeTimer.check();

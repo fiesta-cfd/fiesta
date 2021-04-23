@@ -28,8 +28,10 @@
 #include <string>
 #include <regex>
 #include "block.hpp"
+#include "fmt/core.h"
 
 using namespace std;
+using fmt::format;
 
 // Construct object and open lua file
 luaReader::luaReader(std::string fname){
@@ -214,7 +216,7 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
         for(int j=0;j<numElems; ++j){
           lua_pushnumber(L,j+1);
           lua_gettable(L,-2);
-          start.push_back((size_t)lua_tointegerx(L, -1, &isnum));
+          start.push_back((size_t)lua_tonumberx(L, -1, &isnum)-1);
           lua_pop(L,1);
         }
       }else{
@@ -229,7 +231,7 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
         for(int j=0;j<numElems; ++j){
           lua_pushnumber(L,j+1);
           lua_gettable(L,-2);
-          limit.push_back((size_t)lua_tointegerx(L, -1, &isnum));
+          limit.push_back((size_t)lua_tonumberx(L, -1, &isnum)-1);
           lua_pop(L,1);
         }
       }else{
@@ -245,7 +247,7 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
         for(int j=0;j<numElems; ++j){
           lua_pushnumber(L,j+1);
           lua_gettable(L,-2);
-          stride.push_back((size_t)lua_tointegerx(L, -1, &isnum));
+          stride.push_back((size_t)lua_tonumberx(L, -1, &isnum));
           lua_pop(L,1);
         }
       }else{
