@@ -16,6 +16,8 @@
   You should have received a copy of the GNU Lesser General Public License
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
+#ifndef BC_H
+#define BC_H
 
 #include "Kokkos_Core.hpp"
 #include "kokkosTypes.hpp"
@@ -25,3 +27,5 @@
 #endif
 
 void applyBCs(struct inputConfig cf, class rk_func *f);
+
+#endif

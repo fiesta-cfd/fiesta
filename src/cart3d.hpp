@@ -17,6 +17,9 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifndef CART3D_H
+#define CART3D_H
+
 #include "Kokkos_Core.hpp"
 #include "kokkosTypes.hpp"
 #include "input.hpp"
@@ -50,3 +53,5 @@ public:
   FS6D mFlux;
   FS1D cd; // Device configuration array
 };
+
+#endif

@@ -173,7 +173,7 @@ void luaReader::getSpeciesData(struct inputConfig& cf){
   }
 }
 
-void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<blockWriter>& blocks){
+void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<blockWriter<float> >& blocks){
   int isnum;
   size_t numElems;
   size_t numBlocks;
@@ -256,7 +256,7 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
       }
       lua_pop(L,1);
 
-      blocks.push_back(blockWriter(cf,f,myname,mypath,avg,frq,start,limit,stride));
+      blocks.push_back(blockWriter<float>(cf,f,myname,mypath,avg,frq,start,limit,stride));
       lua_pop(L,1);
     }
   }else{

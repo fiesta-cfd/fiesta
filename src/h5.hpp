@@ -17,17 +17,28 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef STATUS_H
-#define STATUS_H
+#include <string>
+#include <vector>
+#include "hdf5.h"
+#include "mpi.h"
 
-#include "Kokkos_Core.hpp"
-#include "kokkosTypes.hpp"
-#include "timer.hpp"
-#include "rkfunction.hpp"
-#include <iomanip>
-#include <iostream>
+template<typename T>
+class h5Writer {
 
-void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
-                                         fiestaTimer &wall, fiestaTimer &sim);
+  public:
+    h5Writer();
+    void open(MPI_Comm comm, MPI_Info info, std::string fname);
 
-#endif
+    void close();
+
+    void write(std::string, int, std::vector<size_t>, std::vector<size_t>, std::vector<size_t>, std::vector<T>&);
+
+    void openGroup(std::string name);
+    void closeGroup();
+
+  private:
+    std::string filename;
+    MPI_Comm comm;
+    hid_t file_id;
+    hid_t group_id;
+};

@@ -17,6 +17,9 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifndef XDMF_H
+#define XDMF_H
+
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -24,4 +27,6 @@
 
 using namespace std;
 void writeXMFDataItem(FILE*, string, int, vector<int> &);
-void writeXMF(string, string, double, int, size_t*, int, vector<string>, vector<string>);
+void writeXMF(string, string, double, int, size_t*, int, bool, vector<string>, vector<string>);
+
+#endif

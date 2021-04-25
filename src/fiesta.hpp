@@ -24,6 +24,8 @@
 #include "writer.hpp"
 #include "rkfunction.hpp"
 #include <iostream>
+#include <vector>
+#include "block.hpp"
 #ifndef NOMPI
 #include "hdf.hpp"
 #else
@@ -34,7 +36,7 @@ namespace Fiesta {
     struct inputConfig initialize(struct inputConfig&,int, char **);
     void initializeSimulation(struct inputConfig&, rk_func*);
     void reportTimers(struct inputConfig&, rk_func*);
-    void checkIO(struct inputConfig&, rk_func*, int, double);
+    void checkIO(struct inputConfig&, rk_func*, int, double,std::vector<blockWriter<float> >&,blockWriter<double>&);
     //void finalize(struct inputConfig &);
     void collectSignals(struct inputConfig &cf);
     void finalize();

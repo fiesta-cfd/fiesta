@@ -33,11 +33,23 @@
 #include "flux.hpp"
 #include "advect.hpp"
 #include "presgrad.hpp"
-
+#include "block.cpp"
 
 cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
-
   // Allocate all device variables here
+
+  size_t memEstimate = 3*cf.nvt+6+3+6;
+  if (cf.visc==1) memEstimate += 3+27;
+  if (cf.ceq==1) memEstimate += 5+3+3;
+
+  memEstimate *= (cf.ngi*cf.ngj*cf.ngk);
+  memEstimate += 3*(cf.ni+cf.nj+cf.nk);
+  memEstimate *= 8;  // 8 bytes per double
+  double memEstimateMB = memEstimate/(1048576.0);
+
+  cf.log->message("Minimum device memory estimate: {:.2f}",memEstimateMB);
+  cf.log->message("Minimum device memory estimate: {}",memEstimate);
+
   grid    = FS4D("coords",    cf.ni,  cf.nj,  cf.nk,  3);      // Grid Coords
 
   var     = FS4D("var",       cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Primary Vars
@@ -133,35 +145,36 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
 void cart3d_func::preStep() {}
 
 void cart3d_func::postStep() {
-  // MDRange Policy for all cells including ghost cells
-  policy_f3 ghost_pol = policy_f3({0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk});
+  bool varsxNeeded=false;
 
-  // Copy secondary variables to extra variables array
-  //if (cf.write_freq >0)
-  //  if (cf.t % cf.write_freq == 0){
-  if (( (cf.write_freq >0) && (cf.t % cf.write_freq == 0) )||
-      ( (cf.stat_freq  >0) && (cf.t % cf.stat_freq  == 0) )){
+  //for (auto& block : cf.ioblocks)
+  //  if( (block.frq() > 0) && (cf.t % block.frq() == 0) ) varsxNeeded=true;
 
-      timers["calcSecond"].reset();
-      Kokkos::parallel_for(ghost_pol, calculateRhoPT3D(var, p, rho, T, cd));
-      Kokkos::parallel_for(ghost_pol, computeVelocity3D(var, rho, vel));
-      Kokkos::parallel_for(ghost_pol, copyExtraVars3D(varx, vel, p, rho, T));
-      Kokkos::fence();
-      timers["calcSecond"].accumulate();
+  if ( (cf.write_freq >0) && (cf.t % cf.write_freq == 0) ) varsxNeeded=true;
+  if ( (cf.stat_freq  >0) && (cf.t % cf.stat_freq  == 0) ) varsxNeeded=true;
 
-      // Kokkos::parallel_for( "CopyVarx", ghost_pol,
-      //   KOKKOS_LAMBDA(const int i, const int j, const int k) {
-      //     varx(i,j,k,0) = vel(i,j,k,0);
-      //     varx(i,j,k,1) = vel(i,j,k,1);
-      //     varx(i,j,k,2) = vel(i,j,k,2);
-      //     varx(i,j,k,3) =   p(i,j,k);
-      //     varx(i,j,k,4) =   T(i,j,k);
-      //     varx(i,j,k,5) = rho(i,j,k);
-      // });
-    }
+  if (varsxNeeded){
+    timers["calcSecond"].reset();
+    policy_f3 ghost_pol = policy_f3({0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk});
+    Kokkos::parallel_for(ghost_pol, calculateRhoPT3D(var, p, rho, T, cd));
+    Kokkos::parallel_for(ghost_pol, computeVelocity3D(var, rho, vel));
+    Kokkos::parallel_for(ghost_pol, copyExtraVars3D(varx, vel, p, rho, T));
+    Kokkos::fence();
+    timers["calcSecond"].accumulate();
+  }
 }
 
-void cart3d_func::preSim() {}
+void cart3d_func::preSim() {
+  policy_f3 ghost_pol = policy_f3({0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk});
+
+  timers["calcSecond"].reset();
+  Kokkos::parallel_for(ghost_pol, calculateRhoPT3D(var, p, rho, T, cd));
+  Kokkos::parallel_for(ghost_pol, computeVelocity3D(var, rho, vel));
+  Kokkos::parallel_for(ghost_pol, copyExtraVars3D(varx, vel, p, rho, T));
+  Kokkos::fence();
+  timers["calcSecond"].accumulate();
+}
+
 void cart3d_func::postSim() {}
 
 void cart3d_func::compute() {

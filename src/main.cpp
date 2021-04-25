@@ -22,10 +22,14 @@
 #include "rkfunction.hpp"
 #include "fiesta.hpp"
 #include "rk.hpp"
+#include "bc.hpp"
 #include "debug.hpp"
 #include "log.hpp"
 #include "block.hpp"
 #include "signal.hpp"
+
+#include <vector>
+#include "luaReader.hpp"
 
 // Compute Objects
 #include "cart2d.hpp"
@@ -66,28 +70,37 @@ int main(int argc, char *argv[]) {
  
     // Initialize Simulation
     Fiesta::initializeSimulation(cf,f);
+
+    class blockWriter<double> myblock(cf, f, "restart", cf.pathName, false, cf.restart_freq);
+
+    std::vector<blockWriter<float> > testblocks;
+    luaReader L(cf.inputFname);
+    L.getIOBlock(cf,f,cf.ndim,testblocks);
+    L.close();
  
     // Pre Simulation
     cf.log->message("Executing pre-simulation hook");
+    applyBCs(cf, f);
     f->preSim();
+
     cf.initTimer.stop();
     cf.simTimer.reset();
 
     // Main time loop
     cf.log->message("Beginning Main Time Loop");
-    for (int t = cf.tstart; t < cf.tend; ++t) {
-      cf.time += cf.dt;
-      cf.t = t + 1;
- 
+    for (int t = cf.tstart; t < cf.tend+1; ++t) {
+      Fiesta::collectSignals(cf);
+      if (cf.exitFlag==1)
+        break;
+
+      Fiesta::checkIO(cf,f,t,cf.time,testblocks,myblock);
+
       f->preStep();
       rkAdvance(cf,f);
       f->postStep();
- 
-      Fiesta::collectSignals(cf);
-      Fiesta::checkIO(cf,f,t,cf.time);
 
-      if (cf.exitFlag==1)
-        break;
+      cf.time += cf.dt;
+      cf.t = t + 1;
     }
     cf.log->message("Simulation complete!");
  

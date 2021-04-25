@@ -17,10 +17,10 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "kokkosTypes.hpp"
 #ifndef FST_H
 #define FST_H
 
+#include "kokkosTypes.hpp"
 #include "input.hpp"
 #include "writer.hpp"
 

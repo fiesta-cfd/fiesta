@@ -23,31 +23,11 @@
 #define PRETTY_HPP
 
 #include "unistd.h"
-//#include "Kokkos_Core.hpp"
-//#include <iostream>
 #include <string>
-//#include <iomanip>
-//#include <locale>
-//#include "unistd.h"
-//#include <sstream>
-//#include <fstream>
-//#include <ctime>
-//#include <chrono>
-//#include <algorithm>
-//#include "fmt/core.h"
 
 using std::string;
 
 enum Colour { red, green, yellow, blue, magenta, cyan, reset, none};
-//ansiColors k(cf.colorFlag);
-//string keyString   = format("{: >8}{{: <24}}{}'{{}}'{}\n","",k(blue),k(reset));
-//string keyValue    = format("{: >8}{{: <24}}{}{{}}{}\n","",k(magenta),k(reset));
-//string keyEnabled  = format("{: >8}{{: <24}}{}enabled{}\n","",k(green),k(reset));
-//string keyDisabled = format("{: >8}{{: <24}}{}disabled{}\n","",k(yellow),k(reset));
-//string keyTuple    = format("{: >8}{{: <24}}({}{{}}{},{}{{}}{},{}{{}}{})\n","",
-//                   k(magenta),k(reset),k(magenta),k(reset),k(magenta),k(reset));
-//string keyPair     = format("{: >8}{{: <24}}({}{{}}{},{}{{}}{})\n","",
-//                              k(magenta),k(reset),k(magenta),k(reset));
 
 struct ansiColors {
   ansiColors(const int c_):colorMode(c_){};

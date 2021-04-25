@@ -118,7 +118,7 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, fies
   string smin,smax;
 
   if (cf.rank == 0) {
-    cf.log->message(fmt::format("[{}] Reporting Status",cf.t));
+    cf.log->message("[{}] Reporting Status",cf.t);
     cout << fmt::format("{: >8}Timestep:  {}{}{}/{}{}{}\n","",c(magenta),cf.t,c(reset),c(magenta),cf.tend,c(reset));
     cout << fmt::format("{: >8}Wall Time: {}{:.0f}{}s\n","",c(magenta),wall.check(),c(reset));
     cout << fmt::format("{: >8}ETR:       {}{:.0f}{}s\n","", c(magenta),cf.nt*sim.check()/(cf.t-1-cf.tstart)-sim.check(),c(reset));

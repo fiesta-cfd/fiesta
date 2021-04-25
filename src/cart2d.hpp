@@ -17,6 +17,9 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifndef CART2D_H
+#define CART2D_H
+
 #include "kokkosTypes.hpp"
 #include "input.hpp"
 #include "rkfunction.hpp"
@@ -58,3 +61,5 @@ public:
   FS3D gradRho; // Density Gradient array
   FS2D_I noise; // Noise indicator array
 };
+
+#endif

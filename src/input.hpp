@@ -36,9 +36,9 @@
 //#include "rkfunction.hpp"
 #include <map>
 #include "log.hpp"
-#include "block.hpp"
 #include <vector>
 #include <memory>
+#include "block.hpp"
 
 typedef struct inputConfig fsconf;
 
@@ -67,7 +67,7 @@ struct inputConfig {
   std::shared_ptr<class writer> w;
   std::shared_ptr<class mpiBuffers> m;
   std::shared_ptr<class Logger> log;
-  std::vector<class blockWriter> ioblocks;
+  //std::vector<blockWriter<float> > ioblocks;
 
   int colorFlag,timeFormat;
   std::string inputFname;

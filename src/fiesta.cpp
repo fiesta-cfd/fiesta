@@ -36,6 +36,7 @@
 #include "luaReader.hpp"
 #include "fmt/core.h"
 #include "pretty.hpp"
+#include <filesystem>
 
 using namespace std;
 
@@ -72,12 +73,13 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
   // Execute lua script and get input parameters
   cf.log->message("Executing Lua Input Script");
   executeConfiguration(cf,cArgs);
-  //cf.log->message("Title: ",cf.title);
 
 #ifndef NOMPI
   // perform domain decomposition
   cf.log->message("Initializing MPI Setup");
   mpi_init(cf);
+  cf.log->debugAll("Subdomain Dimensions=({},{},{}), Offset=({},{},{})",cf.nci,cf.ncj,cf.nck,cf.subdomainOffset[0],cf.subdomainOffset[1],cf.subdomainOffset[2]);
+  MPI_Barrier(cf.comm);
 #endif
   cf.log->message("Printing Configuration");
   printConfig(cf);
@@ -104,9 +106,9 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
   cf.w = std::make_shared<hdfWriter>(cf,f);
   cf.m = std::make_shared<mpiBuffers>(cf);
 
-  luaReader L(cf.inputFname);
-  L.getIOBlock(cf,f,cf.ndim,cf.ioblocks);
-  L.close();
+  //luaReader L(cf.inputFname);
+  //L.getIOBlock(cf,f,cf.ndim,cf.ioblocks);
+  //L.close();
 
 #endif
 
@@ -117,53 +119,59 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
     cf.gridTimer.start();
     loadGrid(cf, f->grid);
     cf.gridTimer.stop();
-    cf.log->message("Grid generated in: ",cf.gridTimer.get());
+    cf.log->message("Grid generated in: {}",cf.gridTimer.get());
 
     // Generate Initial Conditions
     cf.log->message("Generating initial conditions");
     cf.loadTimer.start();
     loadInitialConditions(cf, f->var, f->grid);
     cf.loadTimer.stop();
-    cf.log->message("Initial conditions generated in: ",cf.loadTimer.get());
+    cf.log->message("Initial conditions generated in: {}",cf.loadTimer.get());
 
-    cf.writeTimer.start();
-    // Write initial solution file
-    if (cf.write_freq > 0) {
-      f->timers["solWrite"].reset();
-      cf.w->writeSolution(cf, f, 0, 0.00);
-      f->timers["solWrite"].accumulate();
-    }
+    // cf.writeTimer.start();
+    // // Write initial solution file
+    // if (cf.write_freq > 0) {
+    //   f->timers["solWrite"].reset();
+    //   cf.w->writeSolution(cf, f, 0, 0.00);
+    //   f->timers["solWrite"].accumulate();
+    // }
 
-    // Write Initial Restart File
-    if (cf.restart_freq > 0) {
-      f->timers["resWrite"].reset();
-      cf.w->writeRestart(cf, f, 0, 0.00);
-      f->timers["resWrite"].accumulate();
-    }
-    cf.writeTimer.stop();
+    // // Write Initial Restart File
+    // if (cf.restart_freq > 0) {
+    //   f->timers["resWrite"].reset();
+    //   cf.w->writeRestart(cf, f, 0, 0.00);
+    //   f->timers["resWrite"].accumulate();
+    // }
+    // cf.writeTimer.stop();
   }else{ // If Restarting, Load Restart File
     cf.writeTimer.start();
     cf.log->message("Loading restart file:");
     cf.loadTimer.reset();
     cf.w->readSolution(cf, f->grid, f->var);
     cf.loadTimer.stop();
-    cf.log->message("Loaded restart data in: ",cf.loadTimer.get());
+    cf.log->message("Loaded restart data in: {}",cf.loadTimer.get());
+  }
 
+  if (cf.rank==0){
+    if (!std::filesystem::exists(cf.pathName)){
+      cf.log->message("Creating directory: '{}'",cf.pathName);
+      std::filesystem::create_directories(cf.pathName);
+    }
   }
 }
 
 // Write solutions, restarts and status checks
-void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time){
+void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time,vector<blockWriter<float> >& ioblocks, blockWriter<double>& rsblock){
   // Print current time step
   if (cf.rank == 0) {
     if (cf.out_freq > 0)
-      if ((t + 1) % cf.out_freq == 0)
-        cf.log->info(fmt::format("[{}] Completed timestep {} of {}. Simulation Time: {:.2e}s",t+1,t+1,cf.tend,time));
+      if (t % cf.out_freq == 0)
+        cf.log->info("[{}] Timestep {} of {}. Simulation Time: {:.2e}s",t,t,cf.tend,time);
   }
 
   // Print status check if necessary
   if (cf.stat_freq > 0) {
-    if ((t + 1) % cf.stat_freq == 0) {
+    if (t % cf.stat_freq == 0) {
       f->timers["statCheck"].reset();
       statusCheck(cf.colorFlag, cf, f, time, cf.totalTimer, cf.simTimer);
       f->timers["statCheck"].accumulate();
@@ -172,17 +180,17 @@ void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time){
 
   // Write solution file if necessary
   if (cf.write_freq > 0) {
-    if ((t + 1) % cf.write_freq == 0) {
+    if (t % cf.write_freq == 0) {
       f->timers["solWrite"].reset();
-      cf.w->writeSolution(cf, f, t + 1, time);
+      cf.w->writeSolution(cf, f, t, time);
       Kokkos::fence();
       f->timers["solWrite"].accumulate();
     }
   }
 
   // Check Restart Frequency
-  if (cf.restart_freq > 0) {
-    if ((t + 1) % cf.restart_freq == 0) {
+  if (cf.restart_freq > 0 && t > 0) {
+    if (t % cf.restart_freq == 0) {
       cf.restartFlag=1;
     }
   }
@@ -190,18 +198,19 @@ void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time){
   // Write restart file if necessary
   if (cf.restartFlag==1){
     f->timers["resWrite"].reset();
-    cf.w->writeRestart(cf, f, t + 1, time);
+    //cf.w->writeRestart(cf, f, t, time);
+    rsblock.write(cf,f,t,time);
     Kokkos::fence();
     f->timers["resWrite"].accumulate();
     cf.restartFlag=0;
   }
 
   // Write solution blocks
-  for (auto& block : cf.ioblocks){
+  for (auto& block : ioblocks){
     if(block.frq() > 0){
-      if ((t + 1) % block.frq() == 0) {
+      if (t % block.frq() == 0) {
         f->timers["solWrite"].reset();
-        block.write(cf,f,t+1,time);
+        block.write(cf,f,t,time);
         f->timers["solWrite"].accumulate();
       }
     }
@@ -219,11 +228,11 @@ void Fiesta::collectSignals(struct inputConfig &cf){
   cf.exitFlag=glblExitFlag;
 
   if (cf.restartFlag && cf.exitFlag)
-      cf.log->warning("Recieved SIGINT:  Writing restart and exiting after timestep ",cf.t,".");
+      cf.log->warning("Recieved SIGURG:  Writing restart and exiting after timestep {}.",cf.t);
   else if (cf.restartFlag)
-      cf.log->message("Recieved SIGUSR1:  Writing restart after timestep ",cf.t,".");
+      cf.log->message("Recieved SIGUSR1:  Writing restart after timestep {}.",cf.t);
   else if (cf.exitFlag)
-      cf.log->error("Recieved SIGTERM:  Exiting after timestep ",cf.t,".");
+      cf.log->error("Recieved SIGTERM:  Exiting after timestep {}.",cf.t);
 }
 
 void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){

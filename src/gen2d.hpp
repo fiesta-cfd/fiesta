@@ -17,6 +17,9 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifndef GEN2D_H
+#define GEN2D_H
+
 #include "kokkosTypes.hpp"
 #include "input.hpp"
 #include "noise.hpp"
@@ -57,3 +60,5 @@ public:
   FS4DH lsH, lrH, rsH, rrH, bsH, brH, tsH, trH;
 #endif
 };
+
+#endif

@@ -40,7 +40,7 @@ void writeXMFDataItem(FILE* xmf, string path, int ndim, size_t *dims){
   fprintf(xmf, "       </DataItem>\n");
 }
 void writeXMF(string fname, string hname, double time,
-               int ndim, size_t *in_dims, int nvt,
+               int ndim, size_t *in_dims, int nvt, bool writeVarx,
                vector<string> vNames, vector<string> vxNames ){
 
     size_t gdims[ndim];
@@ -118,30 +118,32 @@ void writeXMF(string fname, string hname, double time,
       fprintf(xmf, "     </Attribute>\n");
     }
 
-    // Velocity Vector
-    fprintf(xmf, "     <Attribute Name=\"Velocity\" AttributeType=\"Vector\" " "Center=\"Cell\">\n");
-    if (ndim == 1)
-      fprintf(xmf, "      <DataItem Dimensions=\"%zu 1\" Function=\"JOIN($0)\" " "ItemType=\"Function\">\n",dims[0]);
-    else if (ndim == 2)
-      fprintf(xmf, "      <DataItem Dimensions=\"%zu %zu 2\" Function=\"JOIN($0,$1)\" " "ItemType=\"Function\">\n",dims[0],dims[1]);
-    else
-      fprintf(xmf, "      <DataItem Dimensions=\"%zu %zu %zu 3\" Function=\"JOIN($0,$1,$2)\" " "ItemType=\"Function\">\n", dims[0], dims[1],dims[2]);
+    if (writeVarx){
+      // Velocity Vector
+      fprintf(xmf, "     <Attribute Name=\"Velocity\" AttributeType=\"Vector\" " "Center=\"Cell\">\n");
+      if (ndim == 1)
+        fprintf(xmf, "      <DataItem Dimensions=\"%zu 1\" Function=\"JOIN($0)\" " "ItemType=\"Function\">\n",dims[0]);
+      else if (ndim == 2)
+        fprintf(xmf, "      <DataItem Dimensions=\"%zu %zu 2\" Function=\"JOIN($0,$1)\" " "ItemType=\"Function\">\n",dims[0],dims[1]);
+      else
+        fprintf(xmf, "      <DataItem Dimensions=\"%zu %zu %zu 3\" Function=\"JOIN($0,$1,$2)\" " "ItemType=\"Function\">\n", dims[0], dims[1],dims[2]);
 
-    for (int d=0; d<ndim; ++d){
-      path.str("");
-      path << hname << ":/Solution/Variable" << setw(2) << setfill('0') << nvt+d;
-      writeXMFDataItem(xmf, path.str(), ndim, dims);
-    }
-    fprintf(xmf, "      </DataItem>\n");
-    fprintf(xmf, "     </Attribute>\n");
-
-    // Other Extra Variables
-    for (size_t var = ndim; var < vxNames.size(); ++var) {
-      fprintf(xmf, "     <Attribute Name=\"%s\" AttributeType=\"Scalar\" " "Center=\"Cell\">\n",vxNames[var].c_str());
-      path.str("");
-      path << hname << ":/Solution/Variable" << setw(2) << setfill('0') << var+nvt;
-      writeXMFDataItem(xmf, path.str(), ndim, dims);
+      for (int d=0; d<ndim; ++d){
+        path.str("");
+        path << hname << ":/Solution/Variable" << setw(2) << setfill('0') << nvt+d;
+        writeXMFDataItem(xmf, path.str(), ndim, dims);
+      }
+      fprintf(xmf, "      </DataItem>\n");
       fprintf(xmf, "     </Attribute>\n");
+
+      // Other Extra Variables
+      for (size_t var = ndim; var < vxNames.size(); ++var) {
+        fprintf(xmf, "     <Attribute Name=\"%s\" AttributeType=\"Scalar\" " "Center=\"Cell\">\n",vxNames[var].c_str());
+        path.str("");
+        path << hname << ":/Solution/Variable" << setw(2) << setfill('0') << var+nvt;
+        writeXMFDataItem(xmf, path.str(), ndim, dims);
+        fprintf(xmf, "     </Attribute>\n");
+      }
     }
 
     // End Field Variables

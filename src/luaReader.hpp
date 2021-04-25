@@ -17,6 +17,9 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifndef LUAREADER_H
+#define LUAREADER_H
+
 #include <string>
 #include "lua.hpp"
 #include <vector>
@@ -46,7 +49,7 @@ public:
   void getArray(std::string,std::vector<T>&,int);
 
   void getSpeciesData(struct inputConfig&);
-  void getIOBlock(struct inputConfig&, rk_func*, int, vector<blockWriter>&);
+  void getIOBlock(struct inputConfig&, rk_func*, int, vector<blockWriter<float>>&);
 
   double call(std::string, int ,...);
 
@@ -63,3 +66,5 @@ private:
   std::string getString(std::string);
 
 };
+
+#endif

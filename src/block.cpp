@@ -36,49 +36,88 @@
 #include <filesystem>
 //#ifndef NOMPI
 #include "mpi.h"
+#include "h5.hpp"
 //#endif
 
 using namespace std;
 using fmt::format;
 
-template <typename T, typename C>
-void blockWriter::reverseArray(int ndim, T* out, C* in){
-  for (int i=0; i<ndim; ++i){
-    out[i] = in[ndim-1-i];
+template <typename T>
+size_t blockWriter<T>::frq() { return freq; }
+
+template <typename T>
+blockWriter<T>::blockWriter(){}
+
+template <typename T>
+blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, string path_, bool avg_, size_t frq_):
+  name(name_),path(path_),avg(avg_),freq(frq_){
+
+  if (cf.rank==0){
+    if (!std::filesystem::exists(path)){
+      cf.log->message("Creating directory: '{}'",path);
+      std::filesystem::create_directories(path);
+    }
   }
+
+  pad = (int)log10(cf.tend) + 1;
+
+  writeVarx=false;
+
+  // initialize parameters
+  lElems=1;
+  lElemsG=1;
+  myColor=1;
+  slicePresent=true;
+  MPI_Comm_split(cf.comm,myColor,cf.rank,&sliceComm);
+
+  for (int i=0; i<cf.ndim; ++i){
+    gStart.push_back(0);
+    gEnd.push_back(cf.globalCellDims[i]-1);
+    gExt.push_back(cf.globalCellDims[i]);
+    gExtG.push_back(cf.globalCellDims[i]+1);
+    stride.push_back(1);
+
+    lStart.push_back(0);
+    lEnd.push_back(cf.localCellDims[i]-1);
+    lEndG.push_back(cf.localCellDims[i]);
+    lExt.push_back(cf.localCellDims[i]);
+    lExtG.push_back(cf.localCellDims[i]+1);
+
+    lOffset.push_back(cf.subdomainOffset[i]);
+
+    lElems*=lExt[i];
+    lElemsG*=lExtG[i];
+  }
+
+  // allocate pack buffers
+  fill_n(back_inserter(varData),lElems,0.0);
+  fill_n(back_inserter(gridData),lElemsG,0.0);
+
+  // create kokkos host mirrors
+  gridH = Kokkos::create_mirror_view(f->grid);
+  varH = Kokkos::create_mirror_view(f->var);
+  varxH = Kokkos::create_mirror_view(f->varx);
+
+  cf.log->debug("{}: gStart={} gEnd={} stride={}",name,gStart,gEnd,stride);
+  MPI_Barrier(cf.comm);
+  cf.log->debugAll("{}: lStart={} lEnd={} lExt={}",name,gStart,gEnd,stride);
+
 }
 
-// open and hdf5 file for writing
-hid_t blockWriter::openHDF5ForWrite(MPI_Comm comm, MPI_Info info, string fname){
-  hid_t fid,pid;
-
-  pid = H5Pcreate(H5P_FILE_ACCESS);
-  H5Pset_fapl_mpio(pid, comm, info);
-  fid = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, pid);
-  H5Pclose(pid);
-
-  return fid;
-}
-
-// close an hdf5 file
-void blockWriter::close_h5(hid_t fid){
-  H5Fclose(fid);
-}
-
-size_t blockWriter::frq() { return freq; }
-
-// function to return hdf5 type id given c++ type
-template <> hid_t blockWriter::getH5Type<float>(){ return H5T_NATIVE_FLOAT; }
-template <> hid_t blockWriter::getH5Type<double>(){ return H5T_NATIVE_DOUBLE; }
-template <> hid_t blockWriter::getH5Type<int>(){ return H5T_NATIVE_INT; }
-
-blockWriter::blockWriter(){}
-blockWriter::blockWriter(struct inputConfig& cf, rk_func* f, string name_, string path_, bool avg_, size_t frq_,
+template <typename T>
+blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, string path_, bool avg_, size_t frq_,
   vector<size_t> start_, vector<size_t> end_, vector<size_t> stride_):
   name(name_),path(path_),avg(avg_),freq(frq_),gStart(start_),gEnd(end_),stride(stride_){
 
   int strideDelta;
   size_t gMin;
+
+  if (cf.rank==0){
+    if (!std::filesystem::exists(path)){
+      cf.log->message("Creating directory: '{}'",path);
+      std::filesystem::create_directories(path);
+    }
+  }
 
   pad = (int)log10(cf.tend) + 1;
 
@@ -87,6 +126,7 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func* f, string name_, strin
   lElemsG=1;
   myColor=MPI_UNDEFINED;
   slicePresent=true;
+  writeVarx=true;
 
   for (int i=0; i<cf.ndim; ++i){
     //adjust block global size if it does not line up with strides
@@ -132,11 +172,20 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func* f, string name_, strin
       if(offsetDelta > 0){
         lEnd[i]=cf.localCellDims[i]-offsetDelta;   // if slice ends in subdomain, set local end to slide edge
       }
+    }
 
-      //adjust start and offset if it does not land on a stride
-      strideDelta = (lOffset[i]-gStart[i])%stride[i];
-      lStart[i]+=(stride[i]-strideDelta)%stride[i];
-      lOffset[i]+=(stride[i]-strideDelta)%stride[i];
+      MPI_Barrier(sliceComm);
+      cf.log->debugAll("PRE {}: gStart={} lStart={} offset={}",name,gStart,lStart,lOffset);
+      MPI_Barrier(sliceComm);
+
+    for (int i=0; i<cf.ndim; ++i){
+      //adjust start and offset if it does not land on a stride if the slice does not start in this domain
+      offsetDelta = lOffset[i]-gStart[i];
+        strideDelta = (lOffset[i])%stride[i];
+      if( strideDelta > 0 ){
+        lStart[i]+=stride[i]-strideDelta;
+        lOffset[i]+=stride[i]-strideDelta;
+      }
       lOffset[i]/=stride[i];
 
       //adjust local end index if it does not align with a stride
@@ -154,7 +203,7 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func* f, string name_, strin
         lEndG[i]=lEnd[i]+stride[i];
       }
 
-      // compute local data and grid extend based on computed start and end indexex
+      // compute local data and grid extent based on computed start and end indexes
       lExt[i]=(lEnd[i]-lStart[i])/stride[i]+1;
       lExtG[i]=(lEndG[i]-lStart[i])/stride[i]+1;
 
@@ -163,10 +212,10 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func* f, string name_, strin
       lElemsG*=lExtG[i];
     }
 
-    // processes must agree on global dimensions
+    // Processes must agree on global dimensions
     // last "righ-most" process may have had to reduce
-    // global dimensions to accomadate the stride
-    // so the minimum extent and end index are used
+    // global dimensions to accomadate the stride.
+    // Processes will use the minimum extent and end index.
     gMin=0;
     for (int i=0; i<cf.ndim; ++i){
       MPI_Allreduce(&gEnd[i],&gMin,1,MPI_INT,MPI_MIN,sliceComm);
@@ -189,46 +238,55 @@ blockWriter::blockWriter(struct inputConfig& cf, rk_func* f, string name_, strin
   varH = Kokkos::create_mirror_view(f->var);
   varxH = Kokkos::create_mirror_view(f->varx);
 
-  cf.log->debug(format("{}:'{}', ({},{},{}), ({},{},{}), ({},{},{})",name,path,
-        gStart[0],gStart[1],gStart[2],gEnd[0],gEnd[1],gEnd[2],stride[0],stride[1],stride[2]));
+  if (slicePresent){
+    cf.log->debug("{}: gStart={} gEnd={} gExt={} gExtG={} stride={}",name,gStart,gEnd,gExt,gExtG,stride);
+    MPI_Barrier(sliceComm);
+    if (myColor==1)
+      cf.log->debugAll("{}: lStart={} lEnd={} lExt={} offset={}",name,lStart,lEnd,lExt,lOffset);
+    MPI_Barrier(sliceComm);
+  }
 }
 
-void blockWriter::write(struct inputConfig cf, rk_func *f, int tdx, double time) {
+template<typename T>
+void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double time) {
   string baseFormat = format("{{}}-{{:0{}d}}",pad);
   string blockBase = format(baseFormat,name,tdx);
   string hdfName   = format("{}.h5",blockBase);
   string hdfPath   = format("{}/{}",path,hdfName);
   string xmfPath   = format("{}/{}.xmf",path,blockBase);
   
-  cf.log->message(format("[{}] Writing '{}'",cf.t,hdfPath));
+  cf.log->message("[{}] Writing '{}'",cf.t,hdfPath);
   fiestaTimer writeTimer = fiestaTimer();
 
   if (myColor==1){
+
+    h5Writer<T> writer;
+    writer.open(sliceComm, MPI_INFO_NULL, hdfPath);
+
+    writer.openGroup("/Grid");
     Kokkos::deep_copy(gridH,f->grid);
-    Kokkos::deep_copy(varH,f->var);
-    Kokkos::deep_copy(varxH,f->varx);
-
-    hid_t file_id = openHDF5ForWrite(sliceComm, MPI_INFO_NULL, hdfPath);
-
-    hid_t group_id = H5Gcreate(file_id, "/Grid", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     for (int vn=0; vn<cf.ndim; ++vn){
       dataPack(cf.ndim, 0, lStart, lEndG, lExtG, stride, gridData, gridH,vn,false);
-      write_h5<float>(group_id, format("Dimension{}",vn), cf.ndim, gExtG, lExtG, lOffset, gridData); 
+      writer.write(format("Dimension{}",vn), cf.ndim, gExtG, lExtG, lOffset, gridData); 
     }
-    H5Gclose(group_id);
+    writer.closeGroup();
 
-    group_id = H5Gcreate(file_id, "/Solution", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    writer.openGroup("/Solution");
+    Kokkos::deep_copy(varH,f->var);
     for (int vn=0; vn<cf.nvt; ++vn){
       dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varH,vn,avg);
-      write_h5<float>(group_id, format("Variable{:02d}",vn), cf.ndim, gExt, lExt, lOffset, varData); 
+      writer.write(format("Variable{:02d}",vn), cf.ndim, gExt, lExt, lOffset, varData); 
     }
-    for (size_t vn = 0; vn < f->varxNames.size(); ++vn) {
-      dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varxH,vn,avg);
-      write_h5<float>(group_id, format("Variable{:02d}",vn+cf.nvt), cf.ndim, gExt, lExt, lOffset, varData); 
+    if (writeVarx){
+      Kokkos::deep_copy(varxH,f->varx);
+      for (size_t vn = 0; vn < f->varxNames.size(); ++vn) {
+        dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varxH,vn,avg);
+        writer.write(format("Variable{:02d}",vn+cf.nvt), cf.ndim, gExt, lExt, lOffset, varData); 
+      }
     }
-    H5Gclose(group_id);
+    writer.closeGroup();
 
-    close_h5(file_id);
+    writer.close();
   }
 
   MPI_Barrier(cf.comm);
@@ -240,69 +298,19 @@ void blockWriter::write(struct inputConfig cf, rk_func *f, int tdx, double time)
     double frate = (fsize/1048576.0)/ftime;
 
     if (fsize > 1073741824)
-      cf.log->message(format("[{}] '{}': {:.2f} GiB in {:.2f}s ({:.2f} MiB/s)",cf.t,hdfPath,fsize/1073741824.0,ftime,frate));  //divide by bytes per GiB (1024*1024*1024)
+      cf.log->message("[{}] '{}': {:.2f} GiB in {:.2f}s ({:.2f} MiB/s)",cf.t,hdfPath,fsize/1073741824.0,ftime,frate);  //divide by bytes per GiB (1024*1024*1024)
     else
-      cf.log->message(format("[{}] '{}': {:.2f} MiB in {:.2f}s ({:.2f} MiB/s)",cf.t,hdfPath,fsize/1048576.0,ftime,frate));     //divide by bytes per MiB (1024*1024)
+      cf.log->message("[{}] '{}': {:.2f} MiB in {:.2f}s ({:.2f} MiB/s)",cf.t,hdfPath,fsize/1048576.0,ftime,frate);     //divide by bytes per MiB (1024*1024)
   }
 
-  cf.log->message(format("[{}] Writing '{}'",cf.t,xmfPath));
+  cf.log->message("[{}] Writing '{}'",cf.t,xmfPath);
   if (myColor==1){
-    writeXMF(xmfPath, hdfName, time, cf.ndim, gExt.data(), cf.nvt, f->varNames,f->varxNames);
+    writeXMF(xmfPath, hdfName, time, cf.ndim, gExt.data(), cf.nvt, writeVarx,f->varNames,f->varxNames);
   }
-}
-
-// writer function for hdf5
-template <typename S>
-void blockWriter::write_h5(hid_t group_id, string dname, int ndim,
-                   vector<size_t> in_dims_global, vector<size_t> in_dims_local, vector<size_t> in_offset, vector<S>& data){
-
-  vector<hsize_t> gdims(ndim,0);
-  vector<hsize_t> ldims(ndim,0);
-  vector<hsize_t> offset(ndim,0);
-
-  // reverse order of array indexes to "c"
-  std::reverse_copy(in_dims_global.begin(),in_dims_global.end(),gdims.begin());
-  std::reverse_copy(in_dims_local.begin(),in_dims_local.end(),ldims.begin());
-  std::reverse_copy(in_offset.begin(),in_offset.end(),offset.begin());
-
-  // identifiers
-  hid_t filespace, memspace, dset_id, plist_id, dtype_id;
-
-  // get type id
-  dtype_id = getH5Type<S>();
-
-  // create global filespace and local memoryspace
-  filespace = H5Screate_simple(ndim, gdims.data(), NULL);
-  memspace  = H5Screate_simple(ndim, ldims.data(), NULL);
-
-  // create dataset
-  dset_id = H5Dcreate(group_id, dname.c_str(), dtype_id, filespace,
-                                        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-  H5Sclose(filespace);
-
-  // select hyperslab in global filespace
-  filespace = H5Dget_space(dset_id);
-  H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset.data(), NULL, ldims.data(), NULL);
-  //status = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL, dims_local, NULL);
-
-  // create property list for collective dataset write
-  plist_id = H5Pcreate(H5P_DATASET_XFER);
-  H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
-
-  // write data
-  H5Dwrite(dset_id, dtype_id, memspace, filespace, plist_id, data.data());
-  //status = H5Dwrite(dset_id, dtype_id, memspace, filespace, plist_id, data);
-
-  // close sets, spaces and lists
-  H5Dclose(dset_id);
-  H5Sclose(filespace);
-  H5Sclose(memspace);
-  H5Pclose(plist_id);
 }
 
 template<typename T>
-void blockWriter::dataPack(int ndim, int ng, const vector<size_t>& start, const vector<size_t>& end, const vector<size_t>& extent, const vector<size_t>& stride, vector<T>& dest, const FS4DH& source, const int vn, const bool average){
+void blockWriter<T>::dataPack(int ndim, int ng, const vector<size_t>& start, const vector<size_t>& end, const vector<size_t>& extent, const vector<size_t>& stride, vector<T>& dest, const FS4DH& source, const int vn, const bool average){
   int ii,jj,kk;
   int idx;
   double mean;
@@ -353,7 +361,5 @@ void blockWriter::dataPack(int ndim, int ng, const vector<size_t>& start, const 
   }
 }
 
-blockWriter::~blockWriter(){
-  //free(varData);
-  //free(gridData);
-}
+template class blockWriter<float>;
+template class blockWriter<double>;

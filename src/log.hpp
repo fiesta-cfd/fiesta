@@ -32,6 +32,7 @@
 #include <chrono>
 #include <algorithm>
 #include "fmt/core.h"
+#include "fmt/ranges.h"
 #include "pretty.hpp"
 
 using namespace std;
@@ -39,11 +40,10 @@ using fmt::format;
 
 class Logger {
   public:
-    Logger(int v_, int c_, int r_) : verbosity(v_), colorMode(c_), rank(r_) {
+    Logger(int v_, int c_, int r_) : verbosity(v_), c(c_), rank(r_) {
       timer = new Kokkos::Timer();
       print("Logger",format("Log started {}",getTime()),green);
       print("Logger",format("Log Level {}",verbosity),green);
-      if (colorMode) print("Logger","Color logs enabled",green);
     }
 
     ~Logger() {
@@ -51,47 +51,63 @@ class Logger {
     }
 
     template<typename... Args>
-    void debug(Args... args) {
-      if (verbosity >= 5){
-        stringstream message;
-        (message << ... << args) << "";
-        print("Debug",message.str(),magenta);
+    void debugAll(string format, Args&&... args) {
+      if (verbosity>=5) logAll(magenta,"Debug",format,args...);
+    }
+
+    template<typename... Args>
+    void infoAll(string format, Args&&... args) {
+      if (verbosity>=4) logAll(none,"Info",format,args...);
+    }
+
+    template<typename... Args>
+    void debug(string format, Args&&... args) {
+      if (verbosity>=5) log(magenta,"Debug",format,args...);
+    }
+
+    template<typename... Args>
+    void info(string format, Args&&... args) {
+      if (verbosity>=4) log(none,"Info",format,args...);
+    }
+
+    template<typename... Args>
+    void message(string format, Args&&... args) {
+      if (verbosity>=3) log(blue,"Message",format,args...);
+    }
+
+    template<typename... Args>
+    void warning(string format, Args&&... args) {
+      if (verbosity>=2) log(yellow,"Warning",format,args...);
+    }
+
+    template<typename... Args>
+    void error(string format, Args&&... args) {
+      if (verbosity>=1) log(red,"Error",format,args...);
+    }
+
+  private:
+    Kokkos::Timer *timer;
+    const int verbosity;
+    const int rank;
+    ansiColors c;
+
+    template<typename... Args>
+    void log(Colour color, std::string type, std::string logformat, Args&&... args){
+      if (rank==0){
+        std::string format = fmt::format("{}[{: >12.5f}] {: >7}: {}{}\n",c(color),timer->seconds(),type,logformat,c(reset));
+        fmt::vprint(format,fmt::make_args_checked<Args...>(format,args...));
       }
     }
-    
+
     template<typename... Args>
-    void info(Args... args) {
-      if (verbosity >= 4){
-        stringstream message;
-        (message << ... << args) << "";
-        print("Info",message.str(),none);
-      }
+    void logAll(Colour color, std::string type, std::string logformat, Args&&... args){
+      std::string format = fmt::format("{}[{: >12.5f}] {: >7} <{}>: {}{}\n",c(color),timer->seconds(),type,rank,logformat,c(reset));
+      fmt::vprint(format,fmt::make_args_checked<Args...>(format,args...));
     }
-    
-    template<typename... Args>
-    void message(Args... args) {
-      if (verbosity >= 3){
-        stringstream message;
-        (message << ... << args) << "";
-        print("Message",message.str(),blue);
-      }
-    }
-    
-    template<typename... Args>
-    void warning(Args... args) {
-      if (verbosity >= 2){
-        stringstream message;
-        (message << ... << args) << "";
-        print("WARNING",message.str(),yellow);
-      }
-    }
-    
-    template<typename... Args>
-    void error(Args... args) {
-      if (verbosity >= 1){
-        stringstream message;
-        (message << ... << args) << "";
-        print("ERROR",message.str(),red);
+
+    void print(std::string header, std::string message, Colour color){
+      if (rank==0){
+        fmt::print("{}[{: >12.5f}] {: >7}: {}{}\n",c(color),timer->seconds(),header,message,c(reset));
       }
     }
     
@@ -102,21 +118,6 @@ class Logger {
       message.erase(remove(message.begin(), message.end(), '\n'), message.end());
       return message;
     }
-    
-  private:
-    void print(std::string header, std::string message, Colour color){
-      using namespace std;
-      using namespace fmt;
-      ansiColors c(colorMode);
-
-      if (rank==0){
-        cout << format("{}[{: >12.5f}] {: >7}: {}{}",c(color),timer->seconds(),header,message,c(reset)) << endl;
-      }
-    }
-    Kokkos::Timer *timer;
-    const int verbosity;
-    const int rank;
-    const int colorMode;
 };
 
 #endif
