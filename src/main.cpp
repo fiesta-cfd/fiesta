@@ -90,10 +90,11 @@ int main(int argc, char *argv[]) {
     cf.log->message("Beginning Main Time Loop");
     for (int t = cf.tstart; t < cf.tend+1; ++t) {
       Fiesta::collectSignals(cf);
-      if (cf.exitFlag==1)
-        break;
 
       Fiesta::checkIO(cf,f,t,cf.time,testblocks,myblock);
+
+      if (cf.exitFlag==1)
+        break;
 
       f->preStep();
       rkAdvance(cf,f);
