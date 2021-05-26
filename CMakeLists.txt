@@ -211,7 +211,7 @@ message("Fiesta Build Time ${BUILD_TIME}")
 message("MPI Version: ${MPI_CXX_VERSION}")
 
 add_subdirectory(catch2)
-add_executable(tests tests/test.cpp)
+add_executable(tests tests/test.cpp src/cart2d.cpp)
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain kokkos fiestaLib)
 
 include(CTest)
