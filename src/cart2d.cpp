@@ -163,11 +163,12 @@ void cart2d_func::postStep() {
         policy_f({cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
 
     if (cf.ceq == 1) {
-      double maxCh;
+      double maxCh, maxCh_recv;
       Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 1, cd),
                               Kokkos::Max<double>(maxCh));
 #ifndef NOMPI
-      MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+      MPI_Allreduce(&maxCh, &maxCh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+      maxCh = maxCh_recv;
 #endif
       coff = cf.n_coff * maxCh;
 
@@ -263,16 +264,16 @@ void cart2d_func::compute() {
   }
 
   if (cf.ceq == 1) {
-    double maxS;
-    double maxG;
-    double maxGh;
-    double maxTau1;
-    double maxTau2;
     double mu;
-    double maxC;
-    double maxCh;
-    double maxT1;
-    double maxT2;
+    double maxS,    maxS_recv;
+    double maxG,    maxG_recv;
+    double maxGh,   maxGh_recv;
+    double maxTau1, maxTau1_recv;
+    double maxTau2, maxTau2_recv;
+    double maxC,    maxC_recv;
+    double maxCh,   maxCh_recv;
+    double maxT1,   maxT1_recv;
+    double maxT2,   maxT2_recv;
 
     timers["ceq"].reset();
     Kokkos::parallel_reduce(cell_pol, maxWaveSpeed2D(var, p, rho, cd),
@@ -295,15 +296,25 @@ void cart2d_func::compute() {
                             Kokkos::Max<double>(maxT2));
 
 #ifndef NOMPI
-    MPI_Allreduce(&maxS, &maxS, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxG, &maxG, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxGh, &maxGh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxTau1, &maxTau1, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxTau1, &maxTau2, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxC, &maxC, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxT1, &maxT1, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxT2, &maxT2, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxS, &maxS_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxG, &maxG_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxGh, &maxGh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxTau1, &maxTau1_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxTau2, &maxTau2_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxC, &maxC_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxCh, &maxCh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxT1, &maxT1_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxT2, &maxT2_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+
+    maxS    = maxS_recv;
+    maxG    = maxG_recv;
+    maxGh   = maxGh_recv;
+    maxTau1 = maxTau1_recv;
+    maxTau2 = maxTau2_recv;
+    maxC    = maxC_recv;
+    maxCh   = maxCh_recv;
+    maxT1   = maxT1_recv;
+    maxT2   = maxT2_recv;
 #endif
 
     if (maxG < 1e-6)
