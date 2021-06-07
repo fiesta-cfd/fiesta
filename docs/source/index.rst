@@ -9,6 +9,9 @@ Welcome to Fiesta's documentation!
 
 Documentation for Fiesta
 
+.. image:: fiesta.jpg
+   :width: 600
+
 
 .. toctree::
     :maxdepth: 2
