@@ -18,6 +18,7 @@ Documentation for Fiesta
     intro.rst
     buildguide.rst
     userguide.rst
+    tutorials.rst
     devguide.rst
     techref.rst
 
