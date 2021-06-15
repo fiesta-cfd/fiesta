@@ -53,6 +53,7 @@ class directHaloExchange : public mpiHaloExchange
 
     virtual void sendHalo(MPI_Request reqs[]);
     virtual void receiveHalo(MPI_Request reqs[]);
+
     directHaloExchange(inputConfig &c, FS4D &v);
 };
 
@@ -66,28 +67,6 @@ class packedHaloExchange : public mpiHaloExchange
     FS4D topSend, topRecv;
     FS4D backSend, backRecv;
     FS4D frontSend, frontRecv;
-
-    // Tags and tag-dispatched operators to get around nvcc lambda capture problems
-    struct xPack {}; 
-    struct yPack {};
-    struct zPack {};
-    struct xUnpack {};
-    struct yUnpack {};
-    struct zUnpack {};
-
-    KOKKOS_INLINE_FUNCTION
-    void operator()( const xPack&, const int i, const int j, const int k, const int v ) const;
-    KOKKOS_INLINE_FUNCTION
-    void operator()( const yPack&, const int i, const int j, const int k, const int v ) const;
-    KOKKOS_INLINE_FUNCTION
-    void operator()( const zPack&, const int i, const int j, const int k, const int v ) const;
-
-    KOKKOS_INLINE_FUNCTION
-    void operator()( const xUnpack&, const int i, const int j, const int k, const int v ) const;
-    KOKKOS_INLINE_FUNCTION
-    void operator()( const yUnpack&, const int i, const int j, const int k, const int v ) const;    
-    KOKKOS_INLINE_FUNCTION
-    void operator()( const zUnpack&, const int i, const int j, const int k, const int v ) const;
 
     virtual void sendHalo(MPI_Request reqs[]);
     virtual void receiveHalo(MPI_Request reqs[]);
