@@ -5,11 +5,51 @@ Build Guide
 *******************************************************************************
 Supported Platforms
 *******************************************************************************
+Fiesta has been tested on linux platforms running on ARM, AMD and Intel CPUs
+with AMD and NVIDIA GPUs.
+
+Fiesta is known to work with the CUDA, HIP and OPENMP backends.  Kokkos, the
+performance portability framework that Fiesta uses, supports Intel GPUs with the
+SYCL backend but support for Intel GPUs in Fiesta is still under development.
+
+Specifically, the following devices are known to work:
+
+.. csv-table:: Fiesta Supported CPUs
+   :header: "Vendor", "Models", "Backend"
+   :widths: 30, 30, 30
+
+   "Intel", "Broadwell, Skylake, Cascadelake", "Serial,OpenMP"
+   "AMD", "Ryzen,Epyc,Rome", "Serial,OpenMP"
+   "ARM", "ThunderX2,M1", "Serial,OpenMP"
+
+.. csv-table:: Fiesta Supported GPUs
+   :header: "Vendor", "Models", "Backend"
+   :widths: 30, 30, 30
+
+   "NVIDIA", "Maxwell, Pascal, Volta, Ampere", "CUDA"
+   "AMD", "Instinct", "HIP"
 
 
 *******************************************************************************
 Building
 *******************************************************************************
+Fiesta supports three build options for compiling and installing the code.
+
+1. **Superbuild** The super build option will force Fiesta to build some of it's third party
+   dependencies.  This option is best for sites which do not provide
+   pre-installed version of these dependencies.  The super build option
+   increases the compilation time and does not set special comilation options
+   that may be required at a site.
+
+2. **Site-Build** The Site-Build option first looks for properly installed versions of
+   Kokkos, HDF5, Lua and FMT.  If it finds them, it will use them, if not, then
+   they will be built.  The Site-build option results in reduced compilation
+   times and can take advantage of site-specific configurations.
+
+3. **Containers** Some prebuilt containers are provided for Fiesta.  Container
+   usage is an advanced option and their management is beyond the scope of this
+   document.  However, the available containers and their requirements are
+   listed below.
 
 ===============================================================================
 1. Superbuild
@@ -56,7 +96,7 @@ downloaded from `<github.com/fiesta-cfd/fiesta/releases>`_
 
 1. | Create a working directory and clone the Fiesta repository.
    | :code:`mkdir work_dir && cd work_dir` (`work_dir` is an example. Any directory name and location may be chosen)
-   | :code:`git clone https://github.com/fiesta-cfd/fiesta`
+   | :code:`git clone --recursive https://github.com/fiesta-cfd/fiesta`
 
 2. | Create a build directory.  Out of tree builds are suggested (where the build
    | directory is outside of the source code directory) but in-tree builds are
@@ -78,39 +118,42 @@ Configuration
 -------------------------------------------------------------------------------
 Fiesta may now be configured.  Configuration is done with the CMAKE tool.
 Configuration options include install location, single or multi-node builds and
-GPU type.
+GPU type.  The superbuild uses the special option `BUILDALL` as indicated below.
 
 To configure Fiesta for different situations, run one of the following configure
 commands from the build directory.
 
 * | For multi-gpu support for NVIDIA GPUs:
-  | :code:`cmake ../fiesta -DCUDA=on`
+  | :code:`cmake -DBUILDALL=on ../fiesta -DCUDA=on`
 
 * | For multi-gpu support for AMD GPUs:
-  | :code:`cmake ../fiesta -DHIP=on`
+  | :code:`cmake ../fiesta -DBUILDALL=on -DHIP=on`
 
 * | For single-cpu, serial support (also known as a lite build):
-  | :code:`cmake ../fiesta -DLITE=on`
+  | :code:`cmake ../fiesta -DBUILDALL=on -DLITE=on`
 
 * | For single-gpu support:
-  | :code:`cmake ../fiesta -DLITE=on -DCUDA=on`
+  | :code:`cmake ../fiesta -DBUILDALL=on -DLITE=on -DCUDA=on`
 
-* | For multi-cpu support:
-  | :code:`cmake ../fiesta`
+* | For multi-node multi-cpu support:
+  | :code:`cmake ../fiesta -DBUILDALL=on`
+
+* | For single-node multi-cpu support:
+  | :code:`cmake ../fiesta -DBUILDALL=on -DOPENMP=on`
 
 * | To specify an install directory, use `-DCMAKE_INSTALL_PREFIX`. e.g.:
-  | :code:`cmake ../fiesta -DCUDA=on -DCMAKE_INSTALL_PREFIX=~/.local`
+  | :code:`cmake ../fiesta -DBUILDALL=on -DCUDA=on -DCMAKE_INSTALL_PREFIX=~/.local`
   | This configures Fiesta for multi-gpu support for NVIDIA gpus and specifies that the code should be installed to the users local bin directory.
 
 * | To use the ninja build generator, use `-G`:
-  | :code:`cmake -G Ninja ../fiesta ...`
+  | :code:`cmake -G Ninja ../fiesta -DBUILDALL=on ...`
 
 After configuration is complete, there are several ways to make changes or corrections:
 
 1. With the `ccmake` tool, if it is installed.  Just run :code:`ccmake .` from the build directory.
 
 2. | by running the cmake command again, but prepended with `--clean-first`.  e.g.:
-   | :code:`cmake --clean-first ../fiesta -D...`
+   | :code:`cmake --clean-first ../fiesta -DBUILDALL=on -D...`
 
 3. by deleting the contents of the build directory and running another `cmake` command.
 
