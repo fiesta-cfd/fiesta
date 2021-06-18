@@ -15,15 +15,8 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 
-cmake_minimum_required(VERSION 3.10)
-include(ExternalProject)
-
-# Switch to nvcc compiler wrapper if building for cuda
-if (CUDA)
-  set(CMAKE_CXX_COMPILER "${CMAKE_SOURCE_DIR}/kokkos/bin/nvcc_wrapper")
-elseif(AMDGPU)
-  set(CMAKE_CXX_COMPILER "hipcc")
-endif()
+cmake_minimum_required(VERSION 3.12)
+#include(ExternalProject)
 
 # set project name and languages
 project(Fiesta CXX C Fortran)
@@ -63,42 +56,46 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(Kokkos_ENABLE_DEBUG_BOUNDS_CHECK ON CACHE BOOL "")
 endif()
 
-# set kokkos options depending on build type
-if (CUDA)
-  # detect cuda architecture
-  find_package(CUDA)
-  CUDA_SELECT_NVCC_ARCH_FLAGS(TEST_ARCH Auto)
-
-  # set kokkos architecture flags depending on detected cuda architecture
-  if ("${TEST_ARCH_readable}" STREQUAL "sm_35")
-    set(Kokkos_ARCH_KEPLER35 ON CACHE BOOL "")
-  elseif ("${TEST_ARCH_readable}" STREQUAL "sm_60")
-    set(Kokkos_ARCH_PASCAL60 ON CACHE BOOL "")
-  elseif ("${TEST_ARCH_readable}" STREQUAL "sm_61")
-    set(Kokkos_ARCH_PASCAL61 ON CACHE BOOL "")
-  elseif ("${TEST_ARCH_readable}" STREQUAL "sm_70")
-    message("TURNING ON VOLTA70")
-    set(Kokkos_ARCH_VOLTA70 ON CACHE BOOL "")
-  endif()
-
-  # enable other kokkos cuda options and append build type string
-  set(Kokkos_ENABLE_CUDA ON CACHE BOOL "")
-  set(Kokkos_ENABLE_CUDA_LAMBDA ON CACHE BOOL "")
-  set(Kokkos_ENABLE_CXX17 ON CACHE BOOL "")
-  set(FIESTA_OPTS "${FIESTA_OPTS}+CUDA")
-elseif(AMDGPU)
-  set(Kokkos_ENABLE_HIP ON CACHE BOOL "")
-  set(Kokkos_ARCH_VEGA900 ON CACHE BOOL "")
-  set(FIESTA_OPTS "${FIESTA_OPTS}+AMD")
-elseif(OPENMP)
-  # set kokkos openmp optins and append build type string
-  set(Kokkos_ENABLE_OPENMP ON CACHE BOOL "")
-  set(FIESTA_OPTS "${FIESTA_OPTS}+OPENMP")
+if (Fiesta_CUDA)
+    set(DEVICE CUDA)
+    set(FIESTA_OPTS "${FIESTA_OPTS}+CUDA")
+elseif(Fiesta_HIP)
+    set(DEVICE HIP)
+    set(FIESTA_OPTS "${FIESTA_OPTS}+HIP")
+elseif(Fiesta_OPENMP)
+    set(DEVICE OPENMP)
+    set(FIESTA_OPTS "${FIESTA_OPTS}+OPENMP")
+else()
+    set(DEVICE SERIAL)
+    set(FIESTA_OPTS "${FIESTA_OPTS}+SERIAL")
 endif()
 
+if(Fiesta_BUILD_ALL)
+    message("##### Superbuild enabled")
+    set(Fiesta_BUILD_KOKKOS on)
+    set(Fiesta_BUILD_HDF5 on)
+    set(Fiesta_BUILD_FMT on)
+    set(Fiesta_BUILD_LUA on)
+endif()
 # Configure Kokkos
-include_directories(${Kokkos_INCLUDE_DIRS_RET})
-add_subdirectory(kokkos)
+if (Fiesta_BUILD_KOKKOS)
+    set(BUILD_KOKKOS TRUE)
+else()
+  message("##### Looking for Kokkos")
+  find_package(Kokkos)
+  if (Kokkos_FOUND)
+    message("##### Found Kokkos")
+    if("${DEVICE}" IN_LIST Kokkos_DEVICES)
+      message("##### Kokkos has ${DEVICE}")
+      set(BUILD_KOKKOS FALSE)
+    else()
+        message(FATAL_ERROR "##### Kokkos was found but does not have ${DEVICE}.  Please configure with -DFiesta_BUILD_KOKKOS or -DFiesta_BUILD_ALL")
+    endif()
+  else()
+    message("##### Did Not Find Kokkos")
+    set(BUILD_KOKKOS TRUE)
+  endif()
+endif()
 
 # Get and Configure Tempi
 #find_package(Git QUIET)
@@ -123,6 +120,29 @@ add_subdirectory(kokkos)
 #if(USE_TEMPI)
 #  add_subdirectory(extern/tempi)
 #endif(USE_TEMPI)
+if (BUILD_KOKKOS)
+  unset(Kokkos_DEVICES)
+  unset(Kokkos_OPTIONS)
+  unset(Kokkos_TPLS)
+  unset(Kokkos_ARCH)
+  unset(Kokkos_CXX_COMPILER)
+  unset(Kokkos_CXX_COMPILER_ID)
+  message("#### Building Kokkos")
+  if (Fiesta_CUDA)
+    set(Kokkos_ENABLE_CUDA ON CACHE BOOL "")
+    set(Kokkos_ENABLE_CUDA_LAMBDA ON CACHE BOOL "")
+    set(Kokkos_ENABLE_LAUNCH_COMPILER ON CACHE BOOL "")
+  elseif(Fiesta_HIP)
+    set(Kokkos_ENABLE_HIP ON CACHE BOOL "")
+    #set(Kokkos_ARCH_VEGA900 ON CACHE BOOL "")
+  elseif(Fiesta_OPENMP)
+    set(Kokkos_ENABLE_OPENMP ON CACHE BOOL "")
+  elseif()
+      set(Kokkos_ENABLE_SERIAL ON CACHE BOOL "")
+  endif()
+  include_directories(${Kokkos_INCLUDE_DIRS_RET})
+  add_subdirectory(kokkos)
+endif()
 
 # Configure Lua
 include_directories(lua/src)
@@ -132,10 +152,10 @@ add_subdirectory(fmt)
 
 include_directories(src)
 
-## enforce static build
-#SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-#SET(BUILD_SHARED_LIBS OFF)
-#SET(CMAKE_EXE_LINKER_FLAGS "-static")
+# enforce static build
+SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+SET(BUILD_SHARED_LIBS OFF)
+SET(CMAKE_EXE_LINKER_FLAGS "-static")
 
 # If doing a full build, find mpi
 find_package(MPI REQUIRED)
@@ -149,7 +169,7 @@ set(installDir ${CMAKE_CURRENT_BINARY_DIR}/install)
 # include third party headers (might be empty if third party components are provided elsewhere)
 include_directories(${installDir}/include)
 
-# set base source files
+#set base source files
 set(FIESTA_SRCS src/rk.cpp src/fiesta.cpp src/luaReader.cpp src/bc.cpp
      src/status.cpp src/timer.cpp src/input.cpp src/output.cpp src/h5.cpp
      src/rkfunction.cpp src/writer.cpp src/mpi.cpp src/hdf.cpp src/xdmf.cpp src/block.cpp)
@@ -184,7 +204,7 @@ if (LITE)
     target_compile_definitions(fiestaLib PRIVATE NOMPI)
 endif()
 
-# add built strings to source code
+#add built strings to source code
 if(CUDA)
     target_compile_definitions(fiesta PRIVATE HAVE_CUDA)
 elseif(OPENMP)
