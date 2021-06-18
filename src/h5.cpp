@@ -23,6 +23,7 @@
 #include "hdf5.h"
 #include "mpi.h"
 #include "h5.hpp"
+#include <algorithm>
 
 // open and hdf5 file for writing
 template <typename T>

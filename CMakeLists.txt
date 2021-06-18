@@ -153,9 +153,9 @@ add_subdirectory(fmt)
 include_directories(src)
 
 # enforce static build
-SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-SET(BUILD_SHARED_LIBS OFF)
-SET(CMAKE_EXE_LINKER_FLAGS "-static")
+#SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+#SET(BUILD_SHARED_LIBS OFF)
+#SET(CMAKE_EXE_LINKER_FLAGS "-static")
 
 # If doing a full build, find mpi
 find_package(MPI REQUIRED)
