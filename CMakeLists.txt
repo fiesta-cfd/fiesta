@@ -15,13 +15,24 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.19)
 #include(ExternalProject)
 
 # set project name and languages
 project(Fiesta CXX C Fortran)
 
 set(CMAKE_CXX_STANDARD 17)
+
+# Default cache variables
+set (Fiesta_CUDA         OFF CACHE BOOL "Enable Cuda build")
+set (Fiesta_HIP          OFF CACHE BOOL "Enable HIP build")
+set (Fiesta_OPENMP       OFF CACHE BOOL "Enable OpenMP build")
+set (Fiesta_SERIAL       OFF CACHE BOOL "Enable Serial build")
+set (Fiesta_BUILD_ALL    OFF CACHE BOOL "Enable super-build")
+set (Fiesta_BUILD_KOKKOS OFF CACHE BOOL "Build kokkos")
+set (Fiesta_BUILD_HDF5   OFF CACHE BOOL "Build hdf5")
+set (Fiesta_BUILD_LUA    OFF CACHE BOOL "Build lua")
+set (Fiesta_BUILD_FMT    OFF CACHE BOOL "Build fmt")
 
 # get git branch and hash to set version, build type and date variables
 execute_process(COMMAND bash -c "cd ${CMAKE_CURRENT_LIST_DIR} && git describe --tags --dirty=+"
@@ -71,30 +82,11 @@ else()
 endif()
 
 if(Fiesta_BUILD_ALL)
-    message("##### Superbuild enabled")
-    set(Fiesta_BUILD_KOKKOS on)
-    set(Fiesta_BUILD_HDF5 on)
-    set(Fiesta_BUILD_FMT on)
-    set(Fiesta_BUILD_LUA on)
-endif()
-# Configure Kokkos
-if (Fiesta_BUILD_KOKKOS)
-    set(BUILD_KOKKOS TRUE)
-else()
-  message("##### Looking for Kokkos")
-  find_package(Kokkos)
-  if (Kokkos_FOUND)
-    message("##### Found Kokkos")
-    if("${DEVICE}" IN_LIST Kokkos_DEVICES)
-      message("##### Kokkos has ${DEVICE}")
-      set(BUILD_KOKKOS FALSE)
-    else()
-        message(FATAL_ERROR "##### Kokkos was found but does not have ${DEVICE}.  Please configure with -DFiesta_BUILD_KOKKOS or -DFiesta_BUILD_ALL")
-    endif()
-  else()
-    message("##### Did Not Find Kokkos")
-    set(BUILD_KOKKOS TRUE)
-  endif()
+    message(STATUS "FIESTA: Super-build enabled.  Third-party components will be built.")
+    set (Fiesta_BUILD_KOKKOS ON CACHE BOOL "Build kokkos" FORCE)
+    set (Fiesta_BUILD_HDF5   ON CACHE BOOL "Build hdf5" FORCE)
+    set (Fiesta_BUILD_LUA    ON CACHE BOOL "Build lua" FORCE)
+    set (Fiesta_BUILD_FMT    ON CACHE BOOL "Build fmt" FORCE)
 endif()
 
 # Get and Configure Tempi
@@ -120,29 +112,7 @@ endif()
 #if(USE_TEMPI)
 #  add_subdirectory(extern/tempi)
 #endif(USE_TEMPI)
-if (BUILD_KOKKOS)
-  unset(Kokkos_DEVICES)
-  unset(Kokkos_OPTIONS)
-  unset(Kokkos_TPLS)
-  unset(Kokkos_ARCH)
-  unset(Kokkos_CXX_COMPILER)
-  unset(Kokkos_CXX_COMPILER_ID)
-  message("#### Building Kokkos")
-  if (Fiesta_CUDA)
-    set(Kokkos_ENABLE_CUDA ON CACHE BOOL "")
-    set(Kokkos_ENABLE_CUDA_LAMBDA ON CACHE BOOL "")
-    set(Kokkos_ENABLE_LAUNCH_COMPILER ON CACHE BOOL "")
-  elseif(Fiesta_HIP)
-    set(Kokkos_ENABLE_HIP ON CACHE BOOL "")
-    #set(Kokkos_ARCH_VEGA900 ON CACHE BOOL "")
-  elseif(Fiesta_OPENMP)
-    set(Kokkos_ENABLE_OPENMP ON CACHE BOOL "")
-  elseif()
-      set(Kokkos_ENABLE_SERIAL ON CACHE BOOL "")
-  endif()
-  include_directories(${Kokkos_INCLUDE_DIRS_RET})
-  add_subdirectory(kokkos)
-endif()
+include(cmake/kokkos.cmake)
 
 # Configure Lua
 include_directories(lua/src)
@@ -159,9 +129,9 @@ include_directories(src)
 
 # If doing a full build, find mpi
 find_package(MPI REQUIRED)
-include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-find_package(HDF5)
-include_directories(SYSTEM ${HDF5_C_INCLUDE_DIRS})
+#include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+find_package(HDF5 COMPONENTS C)
+#include_directories(SYSTEM ${HDF5_C_INCLUDE_DIRS})
 
 # set install directory for third party components
 set(installDir ${CMAKE_CURRENT_BINARY_DIR}/install)
@@ -181,8 +151,10 @@ add_executable(fiesta src/main.cpp src/cart2d.cpp src/cart3d.cpp src/gen2d.cpp s
 
 target_link_libraries(fiestaLib
                       Kokkos::kokkos
-                      ${MPI_CXX_LIBRARIES}
-                      ${HDF5_C_LIBRARIES}
+                      MPI::MPI_CXX
+                      hdf5::hdf5
+                      #${MPI_CXX_LIBRARIES}
+                      #${HDF5_C_LIBRARIES}
                       lua
                       fmt::fmt
 )
