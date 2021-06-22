@@ -386,10 +386,9 @@ void copyHaloExchange::sendHalo(MPI_Request reqs[6]) {
       leftSend(i,j,k,v) = mdeviceV(mng+i,j,k,v);
       rightSend(i,j,k,v) = mdeviceV(i+mnci,j,k,v);
     } );
-
   Kokkos::deep_copy(leftSend_H, leftSend);
-  MPI_Isend(leftSend_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[0]);
   Kokkos::deep_copy(rightSend_H, rightSend);
+  MPI_Isend(leftSend_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[0]);
   MPI_Isend(rightSend_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[1]);
 
   // y direction pack, copy, and send
@@ -400,8 +399,8 @@ void copyHaloExchange::sendHalo(MPI_Request reqs[6]) {
       topSend(i,j,k,v) = mdeviceV(i,j+mncj,k,v);
     } );
   Kokkos::deep_copy(bottomSend_H, bottomSend);
-  MPI_Isend(bottomSend_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[2]);
   Kokkos::deep_copy(topSend_H, topSend);
+  MPI_Isend(bottomSend_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[2]);
   MPI_Isend(topSend_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[3]);
 
   // z direction pack, copy, and send
@@ -412,10 +411,9 @@ void copyHaloExchange::sendHalo(MPI_Request reqs[6]) {
         backSend(i,j,k,v) = mdeviceV(i,j,mng+k,v);
         frontSend(i,j,k,v) = mdeviceV(i,j,k+mnck,v);
       } );
-
     Kokkos::deep_copy(backSend_H, backSend);
-    MPI_Isend(backSend_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nvt), MPI_DOUBLE, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[4]);
     Kokkos::deep_copy(frontSend_H, frontSend);
+    MPI_Isend(backSend_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nvt), MPI_DOUBLE, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[4]);
     MPI_Isend(frontSend_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nvt), MPI_DOUBLE, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[5]);
   }
 }
