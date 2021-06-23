@@ -1,5 +1,5 @@
 project ( lua C )
-cmake_minimum_required ( VERSION 2.8 )
+cmake_minimum_required ( VERSION 3.12 )
 
 include_directories ( src ${CMAKE_CURRENT_BINARY_DIR} )
 
@@ -10,3 +10,6 @@ set ( LUA_SRC src/lapi.c src/lcode.c src/lctype.c src/ldebug.c src/ldo.c src/ldu
 
 add_library(lua ${LUA_SRC})
 set_target_properties(lua PROPERTIES COMPILE_DEFINITIONS "LUA_USE_LINUX")
+
+target_include_directories(lua INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_library(Lua::lua ALIAS lua)

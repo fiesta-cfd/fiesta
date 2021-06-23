@@ -15,8 +15,9 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 
-cmake_minimum_required(VERSION 3.19)
-#include(ExternalProject)
+cmake_minimum_required(VERSION 3.14)
+include(ExternalProject)
+include(FetchContent)
 
 # set project name and languages
 project(Fiesta CXX C Fortran)
@@ -31,8 +32,7 @@ set (Fiesta_SERIAL       OFF CACHE BOOL "Enable Serial build")
 set (Fiesta_BUILD_ALL    OFF CACHE BOOL "Enable super-build")
 set (Fiesta_BUILD_KOKKOS OFF CACHE BOOL "Build kokkos")
 set (Fiesta_BUILD_HDF5   OFF CACHE BOOL "Build hdf5")
-set (Fiesta_BUILD_LUA    OFF CACHE BOOL "Build lua")
-set (Fiesta_BUILD_FMT    OFF CACHE BOOL "Build fmt")
+set (Fiesta_BUILD_TESTS  OFF CACHE BOOL "Build all tests")
 
 # get git branch and hash to set version, build type and date variables
 execute_process(COMMAND bash -c "cd ${CMAKE_CURRENT_LIST_DIR} && git describe --tags --dirty=+"
@@ -51,6 +51,8 @@ else()
     set(FIESTA_OPTS "FULL")
 endif()
 string(TIMESTAMP BUILD_TIME "%Y-%m-%dT%H:%MZ" UTC)
+
+add_library(fiestaLib)
 
 # compile flags
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
@@ -82,11 +84,9 @@ else()
 endif()
 
 if(Fiesta_BUILD_ALL)
-    message(STATUS "FIESTA: Super-build enabled.  Third-party components will be built.")
+    message(STATUS "FIESTA: Super-build enabled.")
     set (Fiesta_BUILD_KOKKOS ON CACHE BOOL "Build kokkos" FORCE)
     set (Fiesta_BUILD_HDF5   ON CACHE BOOL "Build hdf5" FORCE)
-    set (Fiesta_BUILD_LUA    ON CACHE BOOL "Build lua" FORCE)
-    set (Fiesta_BUILD_FMT    ON CACHE BOOL "Build fmt" FORCE)
 endif()
 
 # Get and Configure Tempi
@@ -115,29 +115,22 @@ endif()
 include(cmake/kokkos.cmake)
 
 # Configure Lua
-include_directories(lua/src)
 add_subdirectory(lua)
 
 add_subdirectory(fmt)
 
-include_directories(src)
-
-# enforce static build
-#SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-#SET(BUILD_SHARED_LIBS OFF)
-#SET(CMAKE_EXE_LINKER_FLAGS "-static")
 
 # If doing a full build, find mpi
-find_package(MPI REQUIRED)
-#include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-find_package(HDF5 COMPONENTS C)
-#include_directories(SYSTEM ${HDF5_C_INCLUDE_DIRS})
+find_package(MPI QUIET REQUIRED)
+#find_package(HDF5 COMPONENTS C)
+include(cmake/hdf5.cmake)
 
 # set install directory for third party components
-set(installDir ${CMAKE_CURRENT_BINARY_DIR}/install)
+#set(installDir ${CMAKE_CURRENT_BINARY_DIR}/install)
+include_directories(src)
 
 # include third party headers (might be empty if third party components are provided elsewhere)
-include_directories(${installDir}/include)
+#include_directories(${installDir}/include)
 
 #set base source files
 set(FIESTA_SRCS src/rk.cpp src/fiesta.cpp src/luaReader.cpp src/bc.cpp
@@ -145,17 +138,16 @@ set(FIESTA_SRCS src/rk.cpp src/fiesta.cpp src/luaReader.cpp src/bc.cpp
      src/rkfunction.cpp src/writer.cpp src/mpi.cpp src/hdf.cpp src/xdmf.cpp src/block.cpp)
      
 
-add_library(fiestaLib ${FIESTA_SRCS})
+#add_library(fiestaLib ${FIESTA_SRCS})
+target_sources(fiestaLib PRIVATE ${FIESTA_SRCS})
 
 add_executable(fiesta src/main.cpp src/cart2d.cpp src/cart3d.cpp src/gen2d.cpp src/gen3d.cpp)
 
 target_link_libraries(fiestaLib
                       Kokkos::kokkos
                       MPI::MPI_CXX
-                      hdf5::hdf5
-                      #${MPI_CXX_LIBRARIES}
-                      #${HDF5_C_LIBRARIES}
-                      lua
+                      ${HDF5_C_LIBRARIES}
+                      Lua::lua
                       fmt::fmt
 )
 
@@ -202,10 +194,13 @@ message("Fiesta Build Options ${FIESTA_OPTS}")
 message("Fiesta Build Time ${BUILD_TIME}")
 message("MPI Version: ${MPI_CXX_VERSION}")
 
-add_subdirectory(catch2)
-add_executable(tests tests/test.cpp src/cart2d.cpp)
-target_link_libraries(tests PRIVATE Catch2::Catch2WithMain Kokkos::kokkos fiestaLib)
 
-include(CTest)
-include(catch2/extras/Catch.cmake)
-catch_discover_tests(tests)
+if (Fiesta_BUILD_TESTS)
+    add_subdirectory(catch2)
+    add_executable(tests tests/test.cpp src/cart2d.cpp)
+    target_link_libraries(tests PRIVATE Catch2::Catch2WithMain Kokkos::kokkos fiestaLib)
+
+    include(CTest)
+    include(catch2/extras/Catch.cmake)
+    catch_discover_tests(tests)
+endif()
