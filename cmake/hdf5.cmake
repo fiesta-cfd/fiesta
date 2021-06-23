@@ -15,19 +15,6 @@ endif()
 if (Fiesta_BUILD_HDF5)
     message(STATUS "FIESTA: HDF5 will be built with parallel support.")
 
-    #FetchContent_Declare(hdf5
-    #    GIT_REPOSITORY https://github.com/hdfgroup/hdf5.git
-    #    GIT_TAG hdf5-1_10_0
-    #)
-    #set(BUILD_SHARED OFF CACHE BOOL "")
-    #set(HDF5_ENABLE_PARALLEL ON CACHE BOOL "")
-    #set(HDF5_BUILD_CPP_LIB OFF CACHE BOOL "")
-    #set(HDF5_BUILD_EXAMPLES OFF CACHE BOOL "")
-    #set(HDF5_DISABLE_COMPILER_WARNINGS ON CACHE BOOL "")
-    #set(HDF5_GENERATE_HEADERS OFF CACHE BOOL "")
-    #FetchContent_MakeAvailable(hdf5)
-    #include_directories(${CMAKE_BINARY_DIR}/_deps/hdf5-src/src)
-    #include_directories(${CMAKE_BINARY_DIR}/_deps/hdf5-build)
     set(installDir ${CMAKE_BINARY_DIR}/hdf5Parallel)
     ExternalProject_Add(hdf5Parallel
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/hdf5
