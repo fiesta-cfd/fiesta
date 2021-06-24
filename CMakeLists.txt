@@ -32,6 +32,8 @@ set (Fiesta_SERIAL       OFF CACHE BOOL "Enable Serial build"    )
 set (Fiesta_BUILD_ALL    OFF CACHE BOOL "Enable super-build"     )
 set (Fiesta_BUILD_KOKKOS OFF CACHE BOOL "Build kokkos"           )
 set (Fiesta_BUILD_HDF5   OFF CACHE BOOL "Build hdf5"             )
+set (Fiesta_BUILD_LUA    OFF CACHE BOOL "Build lua"              )
+set (Fiesta_BUILD_FMT    OFF CACHE BOOL "Build fmt"              )
 set (Fiesta_BUILD_TESTS  OFF CACHE BOOL "Build all tests"        )
 set (Fiesta_ENABLE_DEBUG OFF CACHE BOOL "Enable Fiesta Debugging")
 set (Fiesta_LITE         OFF CACHE BOOL "Enable Fiesta Debugging")
@@ -65,7 +67,7 @@ set(FIESTA_SOURCES
     src/main.cpp src/cart2d.cpp src/cart3d.cpp src/gen2d.cpp src/gen3d.cpp
 )
      
-add_library(fiestaLib ${FIESTA_LIB_SOURCES})
+add_library(FiestaCore STATIC ${FIESTA_LIB_SOURCES})
 add_executable(fiesta ${FIESTA_SOURCES})
 
 # compile flags
@@ -95,12 +97,15 @@ elseif(Fiesta_OPENMP)
 else()
     set(DEVICE SERIAL)
     set(FIESTA_OPTS "${FIESTA_OPTS}+SERIAL")
+    set(Fiesta_SERIAL ON CACHE BOOL "Enable Serial build" FORCE)
 endif()
 
 if(Fiesta_BUILD_ALL)
     message(STATUS "FIESTA: Super-build enabled.")
     set (Fiesta_BUILD_KOKKOS ON CACHE BOOL "Build kokkos" FORCE)
-    set (Fiesta_BUILD_HDF5   ON CACHE BOOL "Build hdf5" FORCE)
+    set (Fiesta_BUILD_HDF5   ON CACHE BOOL "Build hdf5"   FORCE)
+    set (Fiesta_BUILD_LUA    ON CACHE BOOL "Build lua"    FORCE)
+    set (Fiesta_BUILD_FMT    ON CACHE BOOL "Build fmt"    FORCE)
 endif()
 
 # Get and Configure Tempi
@@ -127,35 +132,18 @@ endif()
 #  add_subdirectory(extern/tempi)
 #endif(USE_TEMPI)
 #find third party components
-include(cmake/kokkos.cmake)
-
-# Configure Lua
-find_package(Lua)
-if(LUA_FOUND)
-    message(STATUS "FIESTA: Found Lua")
-    include_directories(${LUA_INCLUDE_DIR})
-else()
-    message(STATUS "FIESTA: Did not find Lua")
-    add_subdirectory(lua)
-endif()
-
-find_package(FMT)
-if(FMT_FOUND)
-    message(STATUS "FIESTA: Found FMT")
-else()
-    message(STATUS "FIESTA: Did not find FMT")
-    add_subdirectory(fmt)
-endif()
-
-# If doing a full build, find mpi
 find_package(MPI QUIET REQUIRED)
-include(cmake/hdf5.cmake)
+include(tpls/kokkos.cmake)
+include(tpls/hdf5.cmake)
+include(tpls/lua.cmake)
+include(tpls/fmt.cmake)
+
 
 # set install directory for third party components
 include_directories(src)
 
 #Link libraries
-target_link_libraries(fiestaLib
+target_link_libraries(FiestaCore
                       Kokkos::kokkos
                       MPI::MPI_CXX
                       ${HDF5_C_LIBRARIES}
@@ -163,39 +151,37 @@ target_link_libraries(fiestaLib
                       fmt::fmt
 )
 
-target_link_libraries(fiesta
-                      fiestaLib
-)
+target_link_libraries(fiesta FiestaCore)
 
 # add built strings to source code
-target_compile_definitions(fiesta    PRIVATE FIESTA_VERSION="${FIESTA_VER}")
-target_compile_definitions(fiestaLib PRIVATE FIESTA_VERSION="${FIESTA_VER}")
-target_compile_definitions(fiesta    PRIVATE FIESTA_OPTIONS="${FIESTA_OPTS}")
-target_compile_definitions(fiestaLib PRIVATE FIESTA_OPTIONS="${FIESTA_OPTS}")
-target_compile_definitions(fiesta    PRIVATE FIESTA_BTIME="${BUILD_TIME}")
-target_compile_definitions(fiestaLib PRIVATE FIESTA_BTIME="${BUILD_TIME}")
+target_compile_definitions(fiesta     PRIVATE FIESTA_VERSION="${FIESTA_VER}")
+target_compile_definitions(FiestaCore PUBLIC  FIESTA_VERSION="${FIESTA_VER}")
+target_compile_definitions(fiesta     PRIVATE FIESTA_OPTIONS="${FIESTA_OPTS}")
+target_compile_definitions(FiestaCore PUBLIC  FIESTA_OPTIONS="${FIESTA_OPTS}")
+target_compile_definitions(fiesta     PRIVATE FIESTA_BTIME="${BUILD_TIME}")
+target_compile_definitions(FiestaCore PUBLIC  FIESTA_BTIME="${BUILD_TIME}")
 
 #add build strings to source code
 if(Fiesta_CUDA)
-    target_compile_definitions(fiesta    PRIVATE HAVE_CUDA)
-    target_compile_definitions(fiestaLib PRIVATE HAVE_CUDA)
+    target_compile_definitions(fiesta     PRIVATE HAVE_CUDA)
+    target_compile_definitions(FiestaCore PUBLIC  HAVE_CUDA)
 endif()
 if(Fiesta_HIP)
-    target_compile_definitions(fiesta    PRIVATE HAVE_HIP)
-    target_compile_definitions(fiestaLib PRIVATE HAVE_HIP)
+    target_compile_definitions(fiesta     PRIVATE HAVE_HIP)
+    target_compile_definitions(FiestaCore PUBLIC  HAVE_HIP)
 endif()
 if(Fiesta_OPENMP)
-    target_compile_definitions(fiesta    PRIVATE HAVE_OPENMP)
-    target_compile_definitions(fiestaLib PRIVATE HAVE_OPENMP)
+    target_compile_definitions(fiesta     PRIVATE HAVE_OPENMP)
+    target_compile_definitions(FiestaCore PUBLIC  HAVE_OPENMP)
 endif()
 if(Fiesta_SERIAL)
-    target_compile_definitions(fiesta    PRIVATE HAVE_SERIAL)
-    target_compile_definitions(fiestaLib PRIVATE HAVE_SERIAL)
+    target_compile_definitions(fiesta     PRIVATE HAVE_SERIAL)
+    target_compile_definitions(FiestaCore PUBLIC  HAVE_SERIAL)
 endif()
 if(Fiesta_LITE)
 else()
-    target_compile_definitions(fiesta    PRIVATE HAVE_MPI)
-    target_compile_definitions(fiestaLib PRIVATE HAVE_MPI)
+    target_compile_definitions(fiesta     PRIVATE HAVE_MPI)
+    target_compile_definitions(FiestaCore PUBLIC  HAVE_MPI)
 endif()
 
 
@@ -204,24 +190,24 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 if(Fiesta_ENABLE_DEBUG)
-    target_compile_definitions(fiesta    PRIVATE DEBUG)
-    target_compile_definitions(fiestaLib PRIVATE DEBUG)
+    target_compile_definitions(fiesta     PRIVATE DEBUG)
+    target_compile_definitions(FiestaCore PUBLIC  DEBUG)
 endif()
 
 # set install destination
 install(TARGETS fiesta RUNTIME DESTINATION)
+install(TARGETS FiestaCore RUNTIME DESTINATION)
 
 # print build strings
 message("Fiesta Version:       ${FIESTA_VER}"     )
 message("Fiesta Build Options: ${FIESTA_OPTS}"    )
 message("Fiesta Build Time:    ${BUILD_TIME}"     )
-message("MPI Version:          ${MPI_CXX_VERSION}")
 
 #
 if (Fiesta_BUILD_TESTS)
     add_subdirectory(catch2)
     add_executable(tests tests/test.cpp src/cart2d.cpp)
-    target_link_libraries(tests PRIVATE Catch2::Catch2WithMain Kokkos::kokkos fiestaLib)
+    target_link_libraries(tests PRIVATE Catch2::Catch2WithMain Kokkos::kokkos FiestaCore)
 
     include(CTest)
     include(catch2/extras/Catch.cmake)
