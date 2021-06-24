@@ -26,105 +26,36 @@
 #include "mpi.h"
 #endif
 
-struct bc_L {
+struct bc_gen {
   FS4D u;
-  int n, ng, bc_type;
+  int ihat, jhat, khat, ng, type, nv;
 
-  bc_L(int n_, int ng_, int bc_type_, FS4D u_)
-      : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
+  bc_gen(int type_, int ng_, int i_, int j_, int k_, int nv_, FS4D u_)
+      : type(type_), ng(ng_), ihat(i_), jhat(j_), khat(k_), nv(nv_), u(u_) {}
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(const int j, const int k, const int v) const {
-    for (int i = 0; i < ng; ++i)
-      if (v == 0 && bc_type == 1)
-        u(n - i - 1, j, k, v) = -u(n + i, j, k, v);
-      else
-        u(n - i - 1, j, k, v) = u(n + i, j, k, v);
-  }
-};
+  void operator()(const int i, const int j, const int k) const {
 
-struct bc_R {
-  FS4D u;
-  int n, ng, bc_type;
+    if (type == 0){
+      for (int v=0; v<nv; ++v){
+        for (int n=0; n<ng; ++n){
+          u(i+ihat*(n+1),j+jhat*(n+1),k+khat*(n+1),v) = u(i-ihat*n,j-jhat*n,k-khat*n,v);
+        }
+      }
+    }
+    if (type == 1){
+      double reflect=1.0;
+      for (int v=0; v<nv; ++v){
+        reflect=1.0;
+        if(ihat != 0 && v==0) reflect=-1.0;
+        if(jhat != 0 && v==1) reflect=-1.0;
+        if(khat != 0 && v==2) reflect=-1.0;
+        for (int n=0; n<ng; ++n){
+          u(i+ihat*(n+1),j+jhat*(n+1),k+khat*(n+1),v) = reflect*u(i-ihat*n,j-jhat*n,k-khat*n,v);
+        }
+      }
+    }
 
-  bc_R(int n_, int ng_, int bc_type_, FS4D u_)
-      : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
-
-  KOKKOS_INLINE_FUNCTION
-  void operator()(const int j, const int k, const int v) const {
-    for (int i = 0; i < ng; ++i)
-      if (v == 0 && bc_type == 1)
-        u(n + i, j, k, v) = -u(n - i - 1, j, k, v);
-      else
-        u(n + i, j, k, v) = u(n - i - 1, j, k, v);
-  }
-};
-
-struct bc_B {
-  FS4D u;
-  int n, ng, bc_type;
-
-  bc_B(int n_, int ng_, int bc_type_, FS4D u_)
-      : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
-
-  KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int k, const int v) const {
-    for (int j = 0; j < ng; ++j)
-      if (v == 1 && bc_type == 1)
-        u(i, n - j - 1, k, v) = -u(i, n + j, k, v);
-      else
-        u(i, n - j - 1, k, v) = u(i, n + j, k, v);
-  }
-};
-
-struct bc_T {
-  FS4D u;
-  int n, ng, bc_type;
-
-  bc_T(int n_, int ng_, int bc_type_, FS4D u_)
-      : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
-
-  KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int k, const int v) const {
-    for (int j = 0; j < ng; ++j)
-      if (v == 1 && bc_type == 1)
-        u(i, n + j, k, v) = -u(i, n - j - 1, k, v);
-      else
-        u(i, n + j, k, v) = u(i, n - j - 1, k, v);
-  }
-};
-
-struct bc_H {
-  FS4D u;
-  int n, ng, bc_type;
-
-  bc_H(int n_, int ng_, int bc_type_, FS4D u_)
-      : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
-
-  KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j, const int v) const {
-    for (int k = 0; k < ng; ++k)
-      if (v == 2 && bc_type == 1)
-        u(i, j, n - k - 1, v) = -u(i, j, n + k, v);
-      else
-        u(i, j, n - k - 1, v) = u(i, j, n + k, v);
-  }
-};
-
-struct bc_F {
-  FS4D u;
-  int n, ng, bc_type;
-
-  bc_F(int n_, int ng_, int bc_type_, FS4D u_)
-      : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
-
-  KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j, const int v) const {
-    for (int k = 0; k < ng; ++k)
-      if (v == 2 && bc_type == 1)
-        u(i, j, n + k, v) = -u(i, j, n - k - 1, v);
-      else
-        u(i, j, n + k, v) = u(i, j, n - k - 1, v);
   }
 };
 
@@ -207,34 +138,34 @@ void applyBCs(struct inputConfig cf, class rk_func *f) {
 #endif
 
   if (cf.xMinus < 0) {
-    Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngj, cf.ngk, cf.nvt}),
-                         bc_L(cf.ng, cf.ng, cf.bcL, f->var));
+    Kokkos::parallel_for(policy_bl({cf.ng, 0, 0}, {cf.ng+1, cf.ngj, cf.ngk}),
+                         bc_gen(cf.bcL, cf.ng, -1, 0, 0, cf.nvt, f->var));
   }
 
   if (cf.xPlus < 0) {
-    Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngj, cf.ngk, cf.nvt}),
-                         bc_R(cf.ng + cf.nci, cf.ng, cf.bcR, f->var));
+    Kokkos::parallel_for(policy_bl({cf.ng+cf.nci-1, 0, 0}, {cf.ng+cf.nci, cf.ngj, cf.ngk}),
+                         bc_gen(cf.bcR, cf.ng, 1, 0, 0, cf.nvt, f->var));
   }
 
   if (cf.yMinus < 0) {
-    Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngi, cf.ngk, cf.nvt}),
-                         bc_B(cf.ng, cf.ng, cf.bcB, f->var));
+    Kokkos::parallel_for(policy_bl({0, cf.ng, 0}, {cf.ngi, cf.ng+1, cf.ngk}),
+                         bc_gen(cf.bcB, cf.ng, 0, -1, 0, cf.nvt, f->var));
   }
 
   if (cf.yPlus < 0) {
-    Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngi, cf.ngk, cf.nvt}),
-                         bc_T(cf.ng + cf.ncj, cf.ng, cf.bcT, f->var));
+    Kokkos::parallel_for(policy_bl({0, cf.ng+cf.ncj-1, 0}, {cf.ngi, cf.ng+cf.ncj, cf.ngk}),
+                         bc_gen(cf.bcT, cf.ng, 0, 1, 0, cf.nvt, f->var));
   }
 
   if (cf.ndim == 3) {
     if (cf.zMinus < 0) {
-      Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngi, cf.ngj, cf.nvt}),
-                           bc_H(cf.ng, cf.ng, cf.bcH, f->var));
+      Kokkos::parallel_for(policy_bl({0, 0, cf.ng}, {cf.ngi, cf.ngj, cf.ng+1}),
+                           bc_gen(cf.bcH, cf.ng, 0, 0, -1, cf.nvt, f->var));
     }
 
     if (cf.zPlus < 0) {
-      Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngi, cf.ngj, cf.nvt}),
-                           bc_F(cf.ng + cf.nck, cf.ng, cf.bcF, f->var));
+      Kokkos::parallel_for(policy_bl({0, 0, cf.ng+cf.nck-1}, {cf.ngi, cf.ngj, cf.ng+cf.nck}),
+                           bc_gen(cf.bcF, cf.ng, 0, 0, 1, cf.nvt, f->var));
     }
   }
   f->timers["bc"].accumulate();
