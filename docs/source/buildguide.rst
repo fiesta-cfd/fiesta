@@ -31,33 +31,9 @@ The following devices have been tested and are known to work:
    "NVIDIA", "Kepler, Pascal, Volta, Ampere", "CUDA"
    "AMD", "Instinct", "HIP"
 
-
 *******************************************************************************
-Building
-*******************************************************************************
-Fiesta supports three build options for compiling and installing the code.
-
-1. **Super Build** The super build option will force Fiesta to build some of it's
-   third party dependencies.  This option is best for sites which do not provide
-   pre-installed version of these dependencies.  The super build option is
-   simpler and requires less user interaction, however, it increases the
-   compilation time and does not set special comilation options that may be
-   required at a site.
-
-2. **Standard Build** The Site-Build option first looks for properly installed
-   versions of Kokkos, HDF5, Lua and FMT.  If it finds them, it will use them,
-   if not, then they will be built.  The Site-build option results in reduced
-   compilation times and can take advantage of site-specific configurations.
-
-3. **Custom Build** The Custom-Build option allows control over which packages
-   are built and which are searched for.
-
-4. **Containers** Some prebuilt containers images are available for Fiesta.
-   Container usage is an advanced option and their management is beyond the
-   scope of this document.  However, the available containers are listed below.
-
 Requirements
--------------------------------------------------------------------------------
+*******************************************************************************
 Regardless of build type, several packages are required which are not supplied
 by Fiesta and must be pre-installed.
 
@@ -73,6 +49,7 @@ by Fiesta and must be pre-installed.
 * | Make Program (Required)
   | GNU Make or Ninja-build are required.
   | Check that make version 3.82 or greater is installed with :code:`make --version` or ninja version 1.10 or later with :code:`ninja --version`
+  | GNU Make is the default on most systems, but the Ninja build tool can reduce compilation time and has an (arguably) more manageable readout.
 
 * | MPI (Required if Fiesta will be run on multiple nodes and/or GPUs)
   | MPI may be provided by OpenMPI, MPICH or Intel MPI. OpenMPI is recommended.
@@ -86,7 +63,7 @@ by Fiesta and must be pre-installed.
   | Check that HIP version 4.0 or greater is installed with :code:`hipcc --version`
 
 Third-Party Libraries
--------------------------------------------------------------------------------
+===============================================================================
 Fiesta makes use of the following third-party libraries.  The superbuild option
 will provide all these packages, but pre-installed versions may be used with the
 standard and custom builds.
@@ -103,7 +80,7 @@ standard and custom builds.
 
 * | **Lua**
   | `lua.org <https://lua.org>`_
-  | Lua is an embed-able scripting langage that is used by Fiesta input decks.
+  | Lua is an embed-able scripting language that is used by Fiesta input decks.
   | Fiesta requires Lua version 5.3 or later.
 
 * | **FMT**
@@ -111,19 +88,30 @@ standard and custom builds.
   | FMT it a C++ string formatting library used for Fiesta logs and command-line output.
   | Fiesta requires FMT version 7.1.3 or later.
 
-===============================================================================
-1. Superbuild
-===============================================================================
-The easiest way to install Fiesta is with the superbuild option.  This option
-will install Fiesta along with several of it's dependencies including Kokkos,
-HDF5, Lua and FMT.  This method reduces the dependence on pre-installed packages.
+
+*******************************************************************************
+Building Instructions
+*******************************************************************************
+Building Fiesta is done in several steps which are further detailed below.
+
+1. | **Prepare**
+   | Acquire the source code and prepare a directory structure.
+
+2. | **Configure**
+   | Inform the build system what options Fiesta should be built with and how to satisfy certain dependencies.
+
+3. | **Compile**
+   | Compile the Fiesta source code to an executable binary with the indicated configuration options.
+
+4. | **Install** (optional)
+   | Optionally install Fiesta and its supporting files to a target location.
 
 Preparation
--------------------------------------------------------------------------------
+===============================================================================
 Before configuring and installing fiesta, a directory structure must be created
 and the source code must be downloaded.  The recommended method for downloading
 the source code is with git clone, but pre-packaged versions of the code can be
-downloaded wirhout git from `<https://github.com/fiesta-cfd/fiesta/releases>`_.
+downloaded without git from `<https://github.com/fiesta-cfd/fiesta/releases>`_.
 
 1. | Create a working directory and clone the Fiesta repository.
    | :code:`mkdir work_dir && cd work_dir` (`work_dir` is an example. Any directory name and location may be chosen)
@@ -134,7 +122,7 @@ downloaded wirhout git from `<https://github.com/fiesta-cfd/fiesta/releases>`_.
    | :code:`cd work_dir`
    | :code:`mkdir build && cd build`
 
-3. The resulting directory structure should look something like this:
+3. The resulting directory structure for an out-of-tree build would look like the following:
    ::
 
       work_dir
@@ -146,39 +134,92 @@ downloaded wirhout git from `<https://github.com/fiesta-cfd/fiesta/releases>`_.
   configuration step.
 
 Configuration
+===============================================================================
+Configuration is done with the CMake configuration tool.  CMake commands are
+executed from the build directory and specify the location of the source code
+along with configuration variables.  Configuration variables are set with the
+`-D` flag.  For example :code:`cmake /project/source_code -DMY_VARIABLE=val`
+will tell cmake to look for the source code at `/project/source` and set the
+configuration variable `MY_VARIABLE` to the value `val`.
+
+During configuration the backend must be specified.  The available backends
+and their configuration variable are:
+
+* | **Serial**
+  | :code:`Fiesta_SERIAL`
+  | This is the default option when no backend is specified.  This enables execution on one CPU cores per process.
+* | **OpenMP**
+  | :code:`Fiesta_OPENMP`
+  | The OpenMP backend enables execution on multiple CPU cores per process.
+* | **CUDA**
+  | :code:`Fiesta_CUDA`
+  | The CUDA backend enables execution on NVIDIA GPUs.
+* | **HIP**
+  | :code:`Fiesta_HIP`
+  | The HIP backend enables execution on AMD GPUs.
+
+Fiesta supports three approaches to satisfying third-party library dependencies.
+
+1. Standard Build
 -------------------------------------------------------------------------------
-Fiesta may now be configured.  Configuration is done with the CMAKE tool.
-Configuration options include install location, single or multi-node builds and
-GPU type.  The superbuild uses the special option `Fiesta_BUILD_ALL` as
-indicated below.
+The standard build option will automatically search for the third party
+libraries in default locations, or build them if they are not found. The
+standard build option is the default and no special configuration variables are
+required.
 
-To configure Fiesta for different situations, run one of the following configure
-commands from the build directory.
+When searching for Kokkos, Fiesta will look for a version which has the
+requested backend.  Configuration will fail with an informative error message if
+a version of Kokkos is found with a wrong backend.  HDF5 also requires parallel
+support.  If HDF5 is found, but without parallel support, an informative error
+message will be displayed.
 
-* | For multi-gpu support for NVIDIA GPUs:
+2. Superbuild
+-------------------------------------------------------------------------------
+The superbuild option will compile Fiesta along with several of it's
+dependencies including Kokkos, HDF5, Lua and FMT without checking for
+pre-installed versions.  This method reduces the dependence on pre-installed
+packages but increases compile time.
+
+To configure a super-build, enable the `Fiesta_BUILD_ALL` configuration
+variable.
+
+3. Custom Build
+-------------------------------------------------------------------------------
+The custom build option allows individual third-party libraries to be built or
+found in non-standard locations.
+
+Configuration is done with the CMAKE tool.  Configuration options include
+install location, single or multi-node builds and GPU type.  The standard build
+does not require any special CMake options.  
+
+There are several configuration options to indicate whether third-party
+libraries should be built or where to find them.
+
+* | :code:`Fiesta_BUILD_KOKKOS` Do not look for Kokkos, just build it.
+* | :code:`KOKKOS_ROOT` Location in which to look for kokkos.
+* | :code:`Fiesta_BUILD_HDF5` Do not look for HDF5, just build it.
+* | :code:`HDF5_ROOT` Location in which to look for HDF5.
+* | :code:`Fiesta_BUILD_LUA` Do not look for Lua, just build it.
+* | :code:`LUA_ROOT` Location in which to look for Lua.
+* | :code:`Fiesta_BUILD_FMT` Do not look for FMT, just build it.
+* | :code:`FMT_ROOT` Location in which to look for FMT.
+
+Examples
+-------------------------------------------------------------------------------
+* | Search for pre-installed versions of all dependencies, then build Fiesta with CPU support. (Default)
+  | :code:`cmake ../fiesta`
+
+* | Build Fiesta and all it's third-party libraries with support for multiple NVIDIA GPUs.
   | :code:`cmake ../fiesta -DFiesta_BUILD_ALL=on -DFiesta_CUDA=on`
 
-* | For multi-gpu support for AMD GPUs:
-  | :code:`cmake ../fiesta -DFiesta_BUILD_ALL=on -DFiesta_HIP=on`
+* | Build Fiesta and Kokkos with support for multiple AMD GPUs and search for pre-installed versions of all other third-party libraries.
+  | :code:`cmake ../fiesta -DFiesta_BUILD_KOKKOS=on -DFiesta_HIP=on`
 
-* | For single-cpu, serial support (also known as a lite build):
-  | :code:`cmake ../fiesta -DFiesta_BUILD_ALL=on -DLITE=on`
+* | Build Fiesta with support for NVIDIA GPUs and look for a pre-installed version of Kokkos in a non-standard location.
+  | :code:`cmake ../fiesta -DFiesta_CUDA=on -DKOKKOS_ROOT=/path/to/kokkos/install`
 
-* | For single-gpu support:
-  | :code:`cmake ../fiesta -DFiesta_BUILD_ALL=on -DLITE=on -DFiesta_CUDA=on`
-
-* | For multi-node multi-cpu support:
-  | :code:`cmake ../fiesta -DFiesta_BUILD_ALL=on`
-
-* | For single-node multi-cpu support:
-  | :code:`cmake ../fiesta -DFiesta_BUILD_ALL=on -DFiesta_OPENMP=on`
-
-* | To specify an install directory, use `-DCMAKE_INSTALL_PREFIX`. e.g.:
-  | :code:`cmake ../fiesta -DFiesta_BUILD_ALL=on -DFiesta_CUDA=on -DCMAKE_INSTALL_PREFIX=~/.local`
-  | This configures Fiesta for multi-gpu support for NVIDIA gpus and specifies that the code should be installed to the users local bin directory.
-
-* | To use the ninja build generator, use `-G`:
-  | :code:`cmake -G Ninja ../fiesta -DFiesta_BUILD_ALL=on ...`
+* | To use the ninja build generator, use `-G Ninja`:
+  | :code:`cmake -G Ninja ../fiesta ...`
 
 After configuration is complete, there are several ways to make changes or corrections:
 
@@ -189,63 +230,30 @@ After configuration is complete, there are several ways to make changes or corre
 
 3. By deleting the contents of the build directory and running another `cmake` command.
 
-Installation
--------------------------------------------------------------------------------
-Fiesta may now be compiled and installed.
-
-To compile with GNU Make (the default, if Ninja was not explicitly specified) run:
-:code:`make -j`
-The `-j` option indicates that as many CPU cores as are available will be used
-to speed up compilation.  :code:`make -j 4` would limit the compilation to four
-CPUs for example.
-
-If Ninja was explicitly specified in the configure step, then, from the build directory, run:
-:code:`ninja` to build in parallel or :code:`ninja -j N` to limit the
-compilation to `N` CPU cores.
-
-If a specific installation path was specifies with `-DCMAKE_INSTALL_PREFIX`,
-then fiesta can now be installed with :code:`make install` of :code:`ninja
-install`.
-
-
+Compilation
 ===============================================================================
-2. Standard Build
-===============================================================================
-The standard build option will automatically search for the third party
-libraries, then build them if they are not found.
-
-Preparation
--------------------------------------------------------------------------------
-
-Configuration
--------------------------------------------------------------------------------
+After configuration is complete, compile Fiesta by executing :code:`make -j`
+from the build directory.  The `-j` option indicates that the maximum number of
+CPU cores that are available will be used to speed up compilation. :code:`make
+-j 4` would limit the compilation to four CPUs, for example.
 
 Installation
--------------------------------------------------------------------------------
-
 ===============================================================================
-3. Containers
-===============================================================================
-
-Requirements
--------------------------------------------------------------------------------
-
-Preparation
--------------------------------------------------------------------------------
-
-Configuration
--------------------------------------------------------------------------------
-
-Installation
--------------------------------------------------------------------------------
+Fiesta may be run directly from the build directory once it has been compiled.
+If installation is necessary (for example, to share the compiled code with
+multiple users) then the command :code:`make install` (or `ninja install`) may
+be executed.  If a specific installation path was specifies with
+`-DCMAKE_INSTALL_PREFIX=/path/to/install`, then Fiesta will be installed there.  If not
+installation directory was specified, then Fiesta will attempt to install to the
+default location such as `/usr/local`.
 
 *******************************************************************************
 Testing
 *******************************************************************************
-The functionality and correctness of Fiesta can be tested after compilation if
-the :code:`-DFiesta_BUILD_TESTS=on` option was privided to `CMake` in the
-configure step.  Enabling tests significantly increases compilation time and is
-most useful during development of new Fiesta functionality.
+The code correctness of Fiesta can be tested after compilation if the
+:code:`-DFiesta_BUILD_TESTS=on` option was provided to `CMake` in the configure
+step.  Enabling tests significantly increases compilation time and is most
+useful during development of new Fiesta functionality.
 
 After configuring with tests enabled and compiling, run tests from the build
 directory with :code:`ctest` to see pass/fail results for each test, or
@@ -256,7 +264,44 @@ Testing is covered in detail in the developer guide.
 *******************************************************************************
 Configure Reference
 *******************************************************************************
+All common Fiesta CMake variables are listed below.  Consult the CMake documentation for additional options that are not specific to Fiesta.
 
 * | :code:`Fiesta_BUILD_ALL`
-  | Build all third-party-libraries (tpls).  This is equivalent to setting all of :code:`Fiesta_BUILD_KOKKOS=on` :code:`Fiesta_BUILD_HDF5=on` :code:`Fiesta_BUILD_LUA=on` :code:`Fiesta_BUILD_FMT=on`
+  | This option will ignore pre-installed versions of all third-party libraries and build them from source.  This is equivalent to setting all of :code:`Fiesta_BUILD_KOKKOS=on` :code:`Fiesta_BUILD_HDF5=on` :code:`Fiesta_BUILD_LUA=on` :code:`Fiesta_BUILD_FMT=on`
+
+* | :code:`Fiesta_BUILD_KOKKOS`
+  | This option will ignore pre-installed versions and compile Kokkos from source with support for the indicated backend.
+
+* | :code:`Fiesta_BUILD_HDF5`
+  | This option will ignore pre-installed versions and compile HDF5 from source with parallel support.
+
+* | :code:`Fiesta_BUILD_LUA`
+  | This option will ignore pre-installed versions and compile Lua from source.
+
+* | :code:`Fiesta_BUILD_FMT`
+  | This option will ignore pre-installed versions and compile FMT from source.
+
+* | :code:`Fiesta_BUILD_TESTS`
+  | This will build ALL unit tests for Fiesta and may significantly impact compile time.
+
+* | :code:`Fiesta_ENABLE_DEBUG`
+  | This enables both Fiesta and Kokkos debugging features.
+
+* | :code:`Fiesta_LITE`
+  | This option builds Fiesta without distributed memory support (Without MPI).  This option is mostly used for development purposes, but is also useful if Fiesta will only be run on a single GPU.
+
+* | :code:`KOKKOS_ROOT`
+  | This option sets the directory in which to look for a Kokkos installation if `Fiesta_BUILD_KOKKOS` is not enabled.
+
+* | :code:`HDF5_ROOT`
+  | This option sets the directory in which to look for a HDF5 installation if `Fiesta_BUILD_HDF5` is not enabled.
+
+* | :code:`LUA_ROOT`
+  | This option sets the directory in which to look for a Lua installation if `Fiesta_BUILD_LUA` is not enabled.
+
+* | :code:`FMT_ROOT`
+  | This option sets the directory in which to look for a FMT installation if `Fiesta_BUILD_FMT` is not enabled.
+
+* | :code:`CMAKE_INSTALL_PREFIX`
+  | This option sets the installation directory.
 
