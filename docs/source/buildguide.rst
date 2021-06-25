@@ -34,39 +34,37 @@ The following devices have been tested and are known to work:
 *******************************************************************************
 Requirements
 *******************************************************************************
-Regardless of build type, several packages are required which are not supplied
-by Fiesta and must be pre-installed.
+Several system packages are required which are not supplied by Fiesta and must be pre-installed.
 
-* | Compiler (Required)
+* | **Compiler** (Required)
   | A C++ compiler which supports C++17 is required such as GNU(g++), LLVM(clang++), and Intel(icpc).
   | GNU g++ 9.3 or greater is recommended.  
   | Chack that g++ version 10 or later is installed with :code:`g++ --version`.
 
-* | CMake (Required)
-  | CMake version 3.12 or greater is required.
+* | **CMake** (Required)
+  | CMake version 3.14 or greater is required.
   | Check the cmake version with :code:`cmake --version`
 
-* | Make Program (Required)
+* | **Make Program** (Required)
   | GNU Make or Ninja-build are required.
   | Check that make version 3.82 or greater is installed with :code:`make --version` or ninja version 1.10 or later with :code:`ninja --version`
   | GNU Make is the default on most systems, but the Ninja build tool can reduce compilation time and has an (arguably) more manageable readout.
 
-* | MPI (Required if Fiesta will be run on multiple nodes and/or GPUs)
+* | **MPI** (Required if Fiesta will be run on multiple nodes and/or GPUs)
   | MPI may be provided by OpenMPI, MPICH or Intel MPI. OpenMPI is recommended.
   | Check that OpenMPI version 3.1 or greater is installed with :code:`ompi_info --version`.
   | OpenMPI development tools must also be available, check that they are installed by running :code:`mpicc --version`.
 
-* | CUDA (Required if Fiesta will be run on NVIDIA GPUs)
+* | **CUDA** (Required if Fiesta will be run on NVIDIA GPUs)
   | Check that CUDA version 11.0 or greater is available with :code:`nvcc --version`
 
-* | HIP (Required if Fiesta will be run on AMD GPUs)
+* | **HIP** (Required if Fiesta will be run on AMD GPUs)
   | Check that HIP version 4.0 or greater is installed with :code:`hipcc --version`
 
 Third-Party Libraries
 ===============================================================================
-Fiesta makes use of the following third-party libraries.  The superbuild option
-will provide all these packages, but pre-installed versions may be used with the
-standard and custom builds.
+Fiesta makes use of the following third-party libraries.  Unlike the required
+packages above, Fiesta can build these packages itself.
 
 * | **Kokkos**
   | `github.com/kokkos/kokkos <https://github.com/kokkos/kokkos>`_
@@ -90,7 +88,7 @@ standard and custom builds.
 
 
 *******************************************************************************
-Building Instructions
+Build Instructions
 *******************************************************************************
 Building Fiesta is done in several steps which are further detailed below.
 
@@ -160,30 +158,34 @@ and their configuration variable are:
 
 Fiesta supports three approaches to satisfying third-party library dependencies.
 
-1. Standard Build
+Standard Build
 -------------------------------------------------------------------------------
 The standard build option will automatically search for the third party
 libraries in default locations, or build them if they are not found. The
 standard build option is the default and no special configuration variables are
 required.
 
-When searching for Kokkos, Fiesta will look for a version which has the
-requested backend.  Configuration will fail with an informative error message if
-a version of Kokkos is found with a wrong backend.  HDF5 also requires parallel
-support.  If HDF5 is found, but without parallel support, an informative error
-message will be displayed.
+.. warning:: 
 
-2. Superbuild
+    When searching for Kokkos, Fiesta will look for a version which has the
+    requested backend.  Configuration will fail with an informative error
+    message if a version of Kokkos is found with a wrong backend.  HDF5 also
+    requires parallel support.  If HDF5 is found, but without parallel support,
+    an informative error message will be displayed.  Reconfigure with on of the
+    custom build options below to ignore the pre-installed version of these
+    packages.
+
+Superbuild
 -------------------------------------------------------------------------------
 The superbuild option will compile Fiesta along with several of it's
 dependencies including Kokkos, HDF5, Lua and FMT without checking for
 pre-installed versions.  This method reduces the dependence on pre-installed
 packages but increases compile time.
 
-To configure a super-build, enable the `Fiesta_BUILD_ALL` configuration
+To configure a super-build, enable the :code:`Fiesta_BUILD_ALL` configuration
 variable.
 
-3. Custom Build
+Custom Build
 -------------------------------------------------------------------------------
 The custom build option allows individual third-party libraries to be built or
 found in non-standard locations.
