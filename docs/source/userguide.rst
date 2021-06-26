@@ -35,7 +35,8 @@ discussed later.  All number types in Lua are double precision floating point
 numbers.
 
 Setting scalar type variables (string, boolean and number) is as simple as:
-::
+
+.. code-block:: lua
 
     nt = 200
     title = "Simulation Case Name"
@@ -45,11 +46,11 @@ Comments
 -------------------------------------------------------------------------------
 Lua supports inline and block comments:
 
-::
+.. code-block:: lua
 
     -- This is an inline comment
 
-::
+.. code-block:: lua
 
     --[[ This
          is a multiline
@@ -66,7 +67,7 @@ are accessed with either a numeric index (starting from 1) or with a key.
 Create a table with a string as the first element, another table
 as the second element, a number as the third element and a key/value pair.
 
-::
+.. code-block:: lua
 
     --[[Create a table with a string as the first element, another table
     as the second element, a number as the third element and a key/value
@@ -89,7 +90,7 @@ Arithmetic
 -------------------------------------------------------------------------------
 All arithmetic in Lua is performed with double precision.
 
-::
+.. code-block:: lua
 
     -- Add subtract, multiply and divide
     c = c - (b + a)/(a*b)
@@ -118,7 +119,7 @@ Logical statements can be constructed with `and`, `or` and `not` operands.
 
 If-Else
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-::
+.. code-block:: lua
 
     -- inline if statement
     if a<0 then print("a is negative") end
@@ -134,8 +135,8 @@ Loops
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Lua supports for loops, while loops and iterators.
 
-::
-    
+.. code-block:: lua
+
     -- while loop (prints the statement infinitely)
     while(true)
     d
@@ -164,7 +165,7 @@ Lua can read environment variables and execute system calls.
 For example to read a task id from a slurm job array and store it in a variable
 called `angle`, do the following.
 
-::
+.. code-block:: lua
 
     angle = os.getenv("SLURM_ARRAY_TASK_ID")
 
@@ -198,7 +199,8 @@ cells.  For example, a problem with 101 cells in the x-direction divided amongst
 on the third.
 
 Example:
-::
+
+.. code-block:: lua
 
     --[[
         The following sets up a domain that is 5mX10mX20m divided into 50
@@ -225,7 +227,8 @@ direction of the indicated corner.
 
 For example, to recreate a cartesian grid with the generalized coordinate
 mechanism:
-::
+
+.. code-block:: lua
 
     grid_type="generalized"
     Lx,Ly,Lz=5,10,20    -- User variables storing the domain size
@@ -251,7 +254,8 @@ value of the variable at that location.
 
 In 3D, primary variables are indexed as follows (where N is the number of gas
 species):
-::
+
+.. code-block:: lua
 
     0: x-momentum
     1: y-momentum
@@ -278,7 +282,7 @@ a numerical value (1 or 0) or with a string specifier.  Srting specifiers are
 not case-sensitive.  String specifiers may be surrounded by periods (like in
 fortran `.TRUE.`).  For
 example the following are all equivalent:
-::
+.. code-block:: lua
 
   viscosity=1
   viscosity="on"
@@ -288,7 +292,7 @@ example the following are all equivalent:
   viscosity="enabled"
 
 Similariy, the following are also equivalent
-::
+.. code-block:: lua
 
   buoyancy=0
   buoyancy="off"
