@@ -7,7 +7,7 @@ Writing Input Files
 *******************************************************************************
 Fortran input files are written in the Lua language and provide information on
 the type of solver, grid and domain decomposition, initial conditions, file I/O,
-runtime characteristics and more. Input files are full featured Lua scritps and
+runtime characteristics and more. Input files are full featured Lua scripts and
 are executed when the input file is read.  Fiesta input files may interact with
 external Lua scripts and the operating system through system commands.
 
@@ -24,7 +24,7 @@ resources on Learning Lua.
 Variables
 -------------------------------------------------------------------------------
 Lua variables of "identifiers" may only begin with uppercase of lowercase
-letters or the undescore symbol '`_`' but may also contain digits in the
+letters or the underscore symbol '`_`' but may also contain digits in the
 remainder of the name.  Many parameters that Fiesta reads are set with global
 variables in the input file.  All variables are considered global unless
 explicitly declares with a different scope.
@@ -113,7 +113,7 @@ Examples of Lua if blocks are below.  Relational operators are:
 * :code:`>` Greater than
 * :code:`<` Less than
 * :code:`>=` Greater than or equal to
-* :code:`<=` Lesss than or equal to
+* :code:`<=` Less than or equal to
 
 Logical statements can be constructed with `and`, `or` and `not` operands.
 
@@ -162,7 +162,7 @@ Environment Variables
 -------------------------------------------------------------------------------
 Lua can read environment variables and execute system calls.
 
-For example to read a task id from a slurm job array and store it in a variable
+For example to read a task id from a Slurm job array and store it in a variable
 called `angle`, do the following.
 
 .. code-block:: lua
@@ -176,7 +176,7 @@ The simulation duration and timestep size are controlled through the :code:`nt`
 (number of time-steps) and :code:`dt` (time step size).  Currently,
 time-stepping is done with a low-storage second order Runge-Kutta scheme.
 
-by default, the physical simulation time starts from 0.0 and the time-step
+By default, the physical simulation time starts from 0.0 and the time-step
 indexing starts from zero.  These can be changed with the :code:`time` (start
 time) and :code:`tstart` (starting time index).  These are mostly useful for
 restarts as discussed below.
@@ -218,14 +218,14 @@ Example:
 
 The "cartesian" grid type uses equally sized rectangular hexahedral cells.  
 
-Genarlized curvilinear meshes are also supported.  For generalized meshes, the
+Generalized curvilinear meshes are also supported.  For generalized meshes, the
 :code:`dx` parameter need not be supplied.  Instead, the :code:`grid(i,j,k,d)` function
-must be defined.  Thid function mus take four parameters: `i,j,k` the index of
+must be defined.  Third function mus take four parameters: `i,j,k` the index of
 the cell corner, starting from 0, `d`, the direction (0 for x, 1 for y, 2 for
 z).  This function must return a number indicating the position in the `d`
 direction of the indicated corner.
 
-For example, to recreate a cartesian grid with the generalized coordinate
+For example, to recreate a Cartesian grid with the generalized coordinate
 mechanism:
 
 .. code-block:: lua
@@ -245,7 +245,7 @@ Terrain following coordinates can be used with :code:`grid_type="terrain"` and
 :code:`terrain_name=/path/to/height/map`.  Terrain following coordinates will
 read a height map from a specially formatted HDF5 file.
 
-InitialConditions
+Initial Conditions
 ===============================================================================
 Initial conditions are specified with a function
 :code:`initial_conditions(x,y,z,v)`.  This function takes in the coordinates of
@@ -278,9 +278,9 @@ Solution I/O
 Input File Options Reference
 ===============================================================================
 Parameters that take boolean values can be specified in several ways with either
-a numerical value (1 or 0) or with a string specifier.  Srting specifiers are
+a numerical value (1 or 0) or with a string specifier.  String specifiers are
 not case-sensitive.  String specifiers may be surrounded by periods (like in
-fortran `.TRUE.`).  For
+Fortran `.TRUE.`).  For
 example the following are all equivalent:
 .. code-block:: lua
 
@@ -291,7 +291,7 @@ example the following are all equivalent:
   viscosity="enable"
   viscosity="enabled"
 
-Similariy, the following are also equivalent
+Similarly, the following are also equivalent
 .. code-block:: lua
 
   buoyancy=0
@@ -337,7 +337,7 @@ their default value is used.
 * | :code:`cequations`
   | *boolean*
   | **Default: disabled**
-  | Enable cequations.
+  | Enable C-Equations.
 
 * | :code:`noise`
   | *boolean*
@@ -432,7 +432,7 @@ their default value is used.
 * | :code:`status_frequency`
   | *integer greater than zero*
   | **Default: 0**
-  | Frequency at which to report simulation status.  Status reports concist of estimated time to completion and minimum and maximum values of flow variables. Status reports have a small impact on performance and which may become significant at high frequencies.
+  | Frequency at which to report simulation status.  Status reports consist of estimated time to completion and minimum and maximum values of flow variables. Status reports have a small impact on performance and which may become significant at high frequencies.
   | A value of `0` disables these status reports.
 
 * | :code:`advection_scheme`
@@ -463,27 +463,27 @@ their default value is used.
 * | :code:`kappa`
   | *floating point number*
   | **Required if** :code:`cequation` **is enabled**
-  | Cequation parameter
+  | C-Equation parameter
 
 * | :code:`epsilon`
   | *floating point number*
   | **Required if** :code:`cequation` **is enabled**
-  | Cequation parameter
+  | C-Equation parameter
 
 * | :code:`alpha`
   | *floating point number*
   | **Required if** :code:`cequation` **is enabled**
-  | Cequation parameter
+  | C-Equation parameter
 
 * | :code:`beta`
   | *floating point number*
   | **Required if** :code:`cequation` **is enabled**
-  | Cequation parameter
+  | C-Equation parameter
 
 * | :code:`betae`
   | *floating point number*
   | **Required if** :code:`cequation` **is enabled**
-  | Cequation parameter
+  | C-Equation parameter
 
 * | :code:`n_dh`
   | *floating point number*
@@ -498,7 +498,7 @@ their default value is used.
 * | :code:`n_coff`
   | *floating point number*
   | **Required if** :code:`noise` **is enabled**
-  | Noise indicator c-equation cutoff amplitude.
+  | Noise indicator C-Equation cutoff amplitude.
 
 * | :code:`block`
   | *table of I/O block specifiers*
