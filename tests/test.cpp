@@ -8,23 +8,6 @@
 #include "bc.hpp"
 #include <iostream>
 
-unsigned int Factorial( unsigned int number ) {
-    return number <= 1 ? number : Factorial(number-1)*number;
-}
-
-TEST_CASE( "Factorials are computed", "[factorial]" ) {
-    REQUIRE( Factorial(1) == 1 );
-    REQUIRE( Factorial(2) == 2 );
-    REQUIRE( Factorial(3) == 6 );
-    REQUIRE( Factorial(10) == 3628800 );
-}
-
-//TEST_CASE( "Test fiesta test", "[fiesta]" ) {
-//    REQUIRE( Fiesta::fiestaTest(5,4) == 9 );
-//    REQUIRE( Fiesta::fiestaTest(3,2) == 1 );
-//}
-
-
 rk_func * initTests(struct inputConfig& cf){
   cf.ndim=3;
   cf.glbl_nci=3;
@@ -202,25 +185,45 @@ TEST_CASE( "Hydrostatic BC Test", "[hydrostatic_bc]" ) {
   rk_func *f = initTests(cf);
 
   FS4DH varH = Kokkos::create_mirror_view(f->var);
-  varH(3,3,0,3) = 1;
-  varH(4,3,0,3) = 1;
-  varH(5,3,0,3) = 1;
-  varH(3,4,0,3) = 1;
-  varH(4,4,0,3) = 1;
-  varH(5,4,0,3) = 1;
-  varH(3,5,0,3) = 1;
-  varH(4,5,0,3) = 1;
-  varH(5,5,0,3) = 1;
+  varH(3,3,4,0) = 0;
+  varH(4,3,4,0) = 0;
+  varH(5,3,4,0) = 0;
+  varH(3,4,4,0) = 0;
+  varH(4,4,4,0) = 0;
+  varH(5,4,4,0) = 0;
+  varH(3,5,4,0) = 0;
+  varH(4,5,4,0) = 0;
+  varH(5,5,4,0) = 0;
 
-  varH(3,3,0,2) = 1;
-  varH(4,3,0,2) = 2;
-  varH(5,3,0,2) = 3;
-  varH(3,4,0,2) = 4;
-  varH(4,4,0,2) = 5;
-  varH(5,4,0,2) = 6;
-  varH(3,5,0,2) = 7;
-  varH(4,5,0,2) = 8;
-  varH(5,5,0,2) = 9;
+  varH(3,3,4,1) = 0;
+  varH(4,3,4,1) = 0;
+  varH(5,3,4,1) = 0;
+  varH(3,4,4,1) = 0;
+  varH(4,4,4,1) = 0;
+  varH(5,4,4,1) = 0;
+  varH(3,5,4,1) = 0;
+  varH(4,5,4,1) = 0;
+  varH(5,5,4,1) = 0;
+
+  varH(3,3,4,3) = 1;
+  varH(4,3,4,3) = 1;
+  varH(5,3,4,3) = 1;
+  varH(3,4,4,3) = 1;
+  varH(4,4,4,3) = 1;
+  varH(5,4,4,3) = 1;
+  varH(3,5,4,3) = 1;
+  varH(4,5,4,3) = 1;
+  varH(5,5,4,3) = 1;
+
+  varH(3,3,4,2) = 1;
+  varH(4,3,4,2) = 2;
+  varH(5,3,4,2) = 3;
+  varH(3,4,4,2) = 4;
+  varH(4,4,4,2) = 5;
+  varH(5,4,4,2) = 6;
+  varH(3,5,4,2) = 7;
+  varH(4,5,4,2) = 8;
+  varH(5,5,4,2) = 9;
   Kokkos::deep_copy(f->var,varH);
 
   cf.bcR=0;
@@ -229,21 +232,22 @@ TEST_CASE( "Hydrostatic BC Test", "[hydrostatic_bc]" ) {
   cf.bcT=3;
   cf.bcH=0;
   cf.bcF=0;
+  //cf.ndim=2;
   applyBCs(cf,f);
 
   Kokkos::deep_copy(varH,f->var);
 
   //e
-  REQUIRE(varH(4,2,0,2)==-1);
-  REQUIRE(varH(4,0,0,2)==-7);
-  REQUIRE(varH(0,4,0,2)==6);
-  REQUIRE(varH(4,8,0,2)==17);
-  REQUIRE(varH(8,4,0,2)==4);
+  REQUIRE(varH(4,2,4,2)==-1);
+  REQUIRE(varH(4,0,4,2)==-7);
+  REQUIRE(varH(0,4,4,2)==6);
+  REQUIRE(varH(4,8,4,2)==17);
+  REQUIRE(varH(8,4,4,2)==4);
 
-  REQUIRE(varH(0,0,0,2)==-6);
-  REQUIRE(varH(8,0,0,2)==-8);
-  REQUIRE(varH(0,8,0,2)==18);
-  REQUIRE(varH(8,8,0,2)==16);
+  REQUIRE(varH(0,0,4,2)==-6);
+  REQUIRE(varH(8,0,4,2)==-8);
+  REQUIRE(varH(0,8,4,2)==18);
+  REQUIRE(varH(8,8,4,2)==16);
   }
   Kokkos::finalize();
   MPI_Finalize();

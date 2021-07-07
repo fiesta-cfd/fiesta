@@ -26,6 +26,8 @@
 #include "mpi.h"
 #endif
 
+#include <cstdio>
+
 struct bc_gen {
   FS4D u;
   int ihat, jhat, khat, ng, type, nv;
@@ -55,7 +57,37 @@ struct bc_gen {
         }
       }
     }
+    if (type == 3){
+      // Do normal extension first (to get momentums and other variables
+      for (int v=0; v<nv; ++v){
+        for (int n=0; n<ng; ++n){
+          u(i+ihat*(n+1),j+jhat*(n+1),k+khat*(n+1),v) = u(i-ihat*n,j-jhat*n,k-khat*n,v);
+        }
+      }
+      // correct energy variable with linear pressure extension
+      int ig,jg,kg; //coordinates of ghost points
+      int i1,j1,k1; //coordinates of real points
+      int i2,j2,k2; //coordinates of real points
+      for (int n=0; n<ng; ++n){
+        ig = i+ihat*(n+1);
+        jg = j+jhat*(n+1);
+        kg = k+khat*(n+1);
+        i1= ig-ihat;
+        j1= jg-jhat;
+        k1= kg-khat;
+        i2= ig-2*ihat;
+        j2= jg-2*jhat;
+        k2= kg-2*khat;
 
+        //compute kinetic energies
+        double ke = 0.5*(u(ig,jg,kg,0)*u(ig,jg,kg,0) + u(ig,jg,kg,1)*u(ig,jg,kg,1))/u(ig,jg,kg,3);
+        double ke1= 0.5*(u(i1,j1,k1,0)*u(i1,j1,k1,0) + u(i1,j1,k1,1)*u(i1,j1,k1,1))/u(i1,j1,k1,3);
+        double ke2= 0.5*(u(i2,j2,k2,0)*u(i2,j2,k2,0) + u(i2,j2,k2,1)*u(i2,j2,k2,1))/u(i2,j2,k2,3);
+
+        // extrapolate pressure
+        u(ig,jg,kg,2)= 2*(u(i1,j1,k1,2)-ke1) - (u(i2,j2,k2,2)-ke2) + ke;
+      }
+    }
   }
 };
 
