@@ -23,6 +23,7 @@ include(FetchContent)
 project(Fiesta CXX C Fortran)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Default cache variables
 set (Fiesta_CUDA         OFF CACHE BOOL "Enable Cuda build"      )
@@ -137,7 +138,6 @@ include(tpls/kokkos.cmake)
 include(tpls/hdf5.cmake)
 include(tpls/lua.cmake)
 include(tpls/fmt.cmake)
-
 
 # set install directory for third party components
 include_directories(src)
