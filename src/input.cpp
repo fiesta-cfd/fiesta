@@ -151,16 +151,6 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   L.get("terrain_name", cf.terrainName, "terrain.h5");
   L.get("restart_path",     cf.pathName, ".");
 
-  // Check if pathName is accessable
-  // struct stat st;
-  // if(stat(cf.pathName.c_str(),&st) != 0){
-  //   printf("Cannot access: %s\n",cf.pathName.c_str());
-  //   exit(EXIT_FAILURE);
-  // }else if(st.st_mode & S_IFDIR == 0){
-  //   printf("Cannot access: %s\n",cf.pathName.c_str());
-  //   exit(EXIT_FAILURE);
-  // }
-
   std::string scheme, grid, mpi;
   L.get("advection_scheme", scheme,"weno5");
   L.get("grid_type",   grid,"cartesian");

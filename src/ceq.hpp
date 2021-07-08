@@ -20,7 +20,6 @@
 #ifndef CEQ_HPP
 #define CEQ_HPP
 struct maxCvar2D {
-
   FS4D dvar;
   int v;
   Kokkos::View<double *> cd;
@@ -41,7 +40,6 @@ struct maxCvar2D {
 };
 
 struct maxGradRho2D {
-
   FS3D gradRho;
   int v;
 
@@ -58,7 +56,6 @@ struct maxGradRho2D {
 };
 
 struct maxWaveSpeed2D {
-
   FS4D var;
   FS2D p;
   FS2D rho;
@@ -97,7 +94,6 @@ struct maxWaveSpeed2D {
 };
 
 struct calculateRhoGrad2D {
-
   FS4D var;
   FS2D rho;
   FS3D gradRho;
@@ -241,7 +237,6 @@ struct calculateRhoGrad2D {
 };
 
 struct updateCeq2D {
-
   FS4D dvar;
   FS4D var;
   FS3D gradRho;
@@ -438,7 +433,6 @@ struct applyCeq2D {
 };
 
 struct maxWaveSpeed {
-
   FS4D var;
   FS3D p;
   FS3D rho;
@@ -457,8 +451,8 @@ struct maxWaveSpeed {
     double a, s;
 
     for (int s = 0; s < ns; ++s) {
-      gammas = cd(6 + 2 * s);
-      Rs = cd(6 + 2 * s + 1);
+      gammas = cd(6 + 3 * s);
+      Rs = cd(6 + 3 * s + 1);
 
       Cp = Cp +
            (var(i, j, k, 4 + s) / rho(i, j, k)) * (gammas * Rs / (gammas - 1));
@@ -479,7 +473,6 @@ struct maxWaveSpeed {
 };
 
 struct calculateRhoGrad {
-
   FS4D var;
   FS3D rho;
   FS4D gradRho;
@@ -624,7 +617,6 @@ struct calculateRhoGrad {
 };
 
 struct maxGradFunctor {
-
   FS4D gradRho;
   int n;
 
@@ -638,7 +630,6 @@ struct maxGradFunctor {
 };
 
 struct updateCeq {
-
   FS4D dvar;
   FS4D var;
   FS4D gradRho;
@@ -671,82 +662,87 @@ struct updateCeq {
     // double dxmag = sqrt(dx*dx + dy*dy + dz*dz);
 
     for (int n = 0; n < 5; ++n) {
-      // left face
-      dc_left[0][0] = (var(i, j, k, nc + n) - var(i - 1, j, k, nc + n)) / dx[0];
-      dc_left[0][1] =
-          (var(i - 1, j + 1, k, nc + n) + var(i, j + 1, k, nc + n) +
-           var(i - 1, j - 1, k, nc + n) + var(i, j - 1, k, nc + n)) /
-          (4 * dx[1]);
-      dc_left[0][2] =
-          (var(i - 1, j, k + 1, nc + n) + var(i, j, k + 1, nc + n) +
-           var(i - 1, j, k - 1, nc + n) + var(i, j, k - 1, nc + n)) /
-          (4 * dx[2]);
+      // // left face
+      // dc_left[0][0] = (var(i, j, k, nc + n) - var(i - 1, j, k, nc + n)) / dx[0];
+      // dc_left[0][1] =
+      //     (var(i - 1, j + 1, k, nc + n) + var(i, j + 1, k, nc + n) +
+      //      var(i - 1, j - 1, k, nc + n) + var(i, j - 1, k, nc + n)) /
+      //     (4 * dx[1]);
+      // dc_left[0][2] =
+      //     (var(i - 1, j, k + 1, nc + n) + var(i, j, k + 1, nc + n) +
+      //      var(i - 1, j, k - 1, nc + n) + var(i, j, k - 1, nc + n)) /
+      //     (4 * dx[2]);
 
-      // bottom face
-      dc_left[1][0] =
-          (var(i - 1, j, k, nc + n) + var(i + 1, j, k, nc + n) +
-           var(i - 1, j - 1, k, nc + n) + var(i + 1, j - 1, k, nc + n)) /
-          (4 * dx[0]);
-      dc_left[1][1] = (var(i, j, k, nc + n) - var(i, j - 1, k, nc + n)) / dx[1];
-      dc_left[1][2] =
-          (var(i, j, k - 1, nc + n) + var(i, j, k + 1, nc + n) +
-           var(i, j - 1, k - 1, nc + n) + var(i, j - 1, k + 1, nc + n)) /
-          (4 * dx[2]);
+      // // bottom face
+      // dc_left[1][0] =
+      //     (var(i - 1, j, k, nc + n) + var(i + 1, j, k, nc + n) +
+      //      var(i - 1, j - 1, k, nc + n) + var(i + 1, j - 1, k, nc + n)) /
+      //     (4 * dx[0]);
+      // dc_left[1][1] = (var(i, j, k, nc + n) - var(i, j - 1, k, nc + n)) / dx[1];
+      // dc_left[1][2] =
+      //     (var(i, j, k - 1, nc + n) + var(i, j, k + 1, nc + n) +
+      //      var(i, j - 1, k - 1, nc + n) + var(i, j - 1, k + 1, nc + n)) /
+      //     (4 * dx[2]);
 
-      // back (hind) face
-      dc_left[2][0] =
-          (var(i - 1, j, k, nc + n) + var(i + 1, j, k, nc + n) +
-           var(i - 1, j, k - 1, nc + n) + var(i + 1, j, k - 1, nc + n)) /
-          (4 * dx[0]);
-      dc_left[2][1] =
-          (var(i, j - 1, k, nc + n) + var(i, j + 1, k, nc + n) +
-           var(i, j - 1, k - 1, nc + n) + var(i, j + 1, k - 1, nc + n)) /
-          (4 * dx[1]);
-      dc_left[2][2] = (var(i, j, k, nc + n) - var(i, j, k - 1, nc + n)) / dx[2];
+      // // back (hind) face
+      // dc_left[2][0] =
+      //     (var(i - 1, j, k, nc + n) + var(i + 1, j, k, nc + n) +
+      //      var(i - 1, j, k - 1, nc + n) + var(i + 1, j, k - 1, nc + n)) /
+      //     (4 * dx[0]);
+      // dc_left[2][1] =
+      //     (var(i, j - 1, k, nc + n) + var(i, j + 1, k, nc + n) +
+      //      var(i, j - 1, k - 1, nc + n) + var(i, j + 1, k - 1, nc + n)) /
+      //     (4 * dx[1]);
+      // dc_left[2][2] = (var(i, j, k, nc + n) - var(i, j, k - 1, nc + n)) / dx[2];
 
-      // right face
-      dc_right[0][0] =
-          (var(i + 1, j, k, nc + n) - var(i, j, k, nc + n)) / dx[0];
-      dc_right[0][1] =
-          (var(i, j + 1, k, nc + n) + var(i + 1, j + 1, k, nc + n) +
-           var(i, j - 1, k, nc + n) + var(i + 1, j - 1, k, nc + n)) /
-          (4 * dx[1]);
-      dc_right[0][2] =
-          (var(i, j, k + 1, nc + n) + var(i + 1, j, k + 1, nc + n) +
-           var(i, j, k - 1, nc + n) + var(i + 1, j, k - 1, nc + n)) /
-          (4 * dx[2]);
+      // // right face
+      // dc_right[0][0] =
+      //     (var(i + 1, j, k, nc + n) - var(i, j, k, nc + n)) / dx[0];
+      // dc_right[0][1] =
+      //     (var(i, j + 1, k, nc + n) + var(i + 1, j + 1, k, nc + n) +
+      //      var(i, j - 1, k, nc + n) + var(i + 1, j - 1, k, nc + n)) /
+      //     (4 * dx[1]);
+      // dc_right[0][2] =
+      //     (var(i, j, k + 1, nc + n) + var(i + 1, j, k + 1, nc + n) +
+      //      var(i, j, k - 1, nc + n) + var(i + 1, j, k - 1, nc + n)) /
+      //     (4 * dx[2]);
 
-      // top face
-      dc_right[1][0] =
-          (var(i - 1, j + 1, k, nc + n) + var(i + 1, j + 1, k, nc + n) +
-           var(i - 1, j, k, nc + n) + var(i + 1, j, k, nc + n)) /
-          (4 * dx[0]);
-      dc_right[1][1] =
-          (var(i, j + 1, k, nc + n) - var(i, j, k, nc + n)) / dx[1];
-      dc_right[1][2] =
-          (var(i, j + 1, k - 1, nc + n) + var(i, j + 1, k + 1, nc + n) +
-           var(i, j, k - 1, nc + n) + var(i, j, k + 1, nc + n)) /
-          (4 * dx[2]);
+      // // top face
+      // dc_right[1][0] =
+      //     (var(i - 1, j + 1, k, nc + n) + var(i + 1, j + 1, k, nc + n) +
+      //      var(i - 1, j, k, nc + n) + var(i + 1, j, k, nc + n)) /
+      //     (4 * dx[0]);
+      // dc_right[1][1] =
+      //     (var(i, j + 1, k, nc + n) - var(i, j, k, nc + n)) / dx[1];
+      // dc_right[1][2] =
+      //     (var(i, j + 1, k - 1, nc + n) + var(i, j + 1, k + 1, nc + n) +
+      //      var(i, j, k - 1, nc + n) + var(i, j, k + 1, nc + n)) /
+      //     (4 * dx[2]);
 
-      // front face
-      dc_right[2][0] =
-          (var(i - 1, j, k + 1, nc + n) + var(i + 1, j, k + 1, nc + n) +
-           var(i - 1, j, k, nc + n) + var(i + 1, j, k, nc + n)) /
-          (4 * dx[0]);
-      dc_right[2][1] =
-          (var(i, j - 1, k + 1, nc + n) + var(i, j + 1, k + 1, nc + n) +
-           var(i, j - 1, k, nc + n) + var(i, j + 1, k, nc + n)) /
-          (4 * dx[1]);
-      dc_right[2][2] =
-          (var(i, j, k + 1, nc + n) - var(i, j, k, nc + n)) / dx[2];
+      // // front face
+      // dc_right[2][0] =
+      //     (var(i - 1, j, k + 1, nc + n) + var(i + 1, j, k + 1, nc + n) +
+      //      var(i - 1, j, k, nc + n) + var(i + 1, j, k, nc + n)) /
+      //     (4 * dx[0]);
+      // dc_right[2][1] =
+      //     (var(i, j - 1, k + 1, nc + n) + var(i, j + 1, k + 1, nc + n) +
+      //      var(i, j - 1, k, nc + n) + var(i, j + 1, k, nc + n)) /
+      //     (4 * dx[1]);
+      // dc_right[2][2] =
+      //     (var(i, j, k + 1, nc + n) - var(i, j, k, nc + n)) / dx[2];
 
-      // update ceq right hand side
-      lap = 0;
-      for (int d = 0; d < 3; ++d) {
-        for (int f = 0; f < 3; ++f) {
-          lap = lap + (dc_right[d][f] - dc_left[d][f]) / dx[d];
-        }
-      }
+      // // update ceq right hand side
+      // lap = 0;
+      // for (int d = 0; d < 3; ++d) {
+      //   for (int f = 0; f < 3; ++f) {
+      //     lap = lap + (dc_right[d][f] - dc_left[d][f]) / dx[d];
+      //   }
+      // }
+
+      lap = (var(i-1,j,k,nc+n)-2*var(i,j,k,nc+n)+var(i+1,j,k,nc+n))/dx[0]
+          + (var(i,j-1,k,nc+n)-2*var(i,j,k,nc+n)+var(i,j+1,k,nc+n))/dx[1]
+          + (var(i,j,k-1,nc+n)-2*var(i,j,k,nc+n)+var(i,j,k+1,nc+n))/dx[2];
+
       dvar(i, j, k, nc + n) =
           maxS / (eps * dxmag) * (gradRho(i, j, k, n) - var(i, j, k, nc + n)) +
           kap * maxS * dxmag * lap;
@@ -755,7 +751,6 @@ struct updateCeq {
 };
 
 struct calculateCeqFlux {
-
   FS4D var;
   FS3D rho;
   FS6D mFlux; //(m,n,i,j,k,dir)
@@ -876,7 +871,6 @@ struct calculateCeqFlux {
 };
 
 struct applyCeq {
-
   FS4D dvar;
   FS4D var;
   FS3D rho;

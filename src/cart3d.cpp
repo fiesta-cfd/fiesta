@@ -33,7 +33,8 @@
 #include "flux.hpp"
 #include "advect.hpp"
 #include "presgrad.hpp"
-#include "block.cpp"
+#include "block.hpp"
+#include "ceq.hpp"
 
 cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   // Allocate all device variables here
@@ -86,6 +87,13 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   varNames.push_back("Energy");
   for (int v=0; v<cf.ns; ++v)
     varNames.push_back("Density " + cf.speciesName[v]);
+  if (cf.ceq == 1) {
+    varNames.push_back("C");
+    varNames.push_back("C_hat");
+    varNames.push_back("C_1");
+    varNames.push_back("C_2");
+    varNames.push_back("C_3");
+  }
   assert(varNames.size()==cf.nvt);
 
   // Secondary Variable Names
@@ -187,14 +195,14 @@ void cart3d_func::compute() {
       policy_f3({cf.ng - 1, cf.ng - 1, cf.ng - 1},
                 {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
 
-  //double maxS;
+  double maxS;
 
-  //double maxC,  maxC_recv;
-  //double maxCh, maxCh_recv;
-  //double maxC1, maxC1_recv;
-  //double maxC2, maxC2_recv;
-  //double maxC3, maxC3_recv;
-  //double mu, alpha, beta, betae;
+  double maxC;
+  double maxCh;
+  double maxC1;
+  double maxC2;
+  double maxC3;
+  double mu, alpha, beta, betae;
 
   /**** WENO ****/
   timers["calcSecond"].reset();
@@ -219,75 +227,69 @@ void cart3d_func::compute() {
   Kokkos::fence();
   timers["pressgrad"].accumulate();
 
-//  if (cf.ceq != 0) {
-//    timers["ceq"].reset();
-//    /**** CEQ ****/
-//    // find mac wavespeed
-//    Kokkos::parallel_reduce(cell_pol, maxWaveSpeed(var, p, rho, cd),
-//                            Kokkos::Max<double>(maxS));
-//#ifndef NOMPI
-//    MPI_Allreduce(&maxS, &maxS, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-//#endif
-//
-//    // calculate density and energy gradients and find ceq source terms
-//    Kokkos::parallel_for(cell_pol, calculateRhoGrad(var, rho, gradRho, cd));
-//
-//    // update c equations
-//    Kokkos::parallel_for(
-//        cell_pol, updateCeq(dvar, var, gradRho, maxS, cd, cf.kap, cf.eps));
-//
-//    /**** Apply CEQ ****/
-//    Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv + 0),
-//                            Kokkos::Max<double>(maxC));
-//    Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv + 1),
-//                            Kokkos::Max<double>(maxCh));
-//    Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv + 2),
-//                            Kokkos::Max<double>(maxC1));
-//    Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv + 3),
-//                            Kokkos::Max<double>(maxC2));
-//    Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv + 4),
-//                            Kokkos::Max<double>(maxC3));
-//#ifndef NOMPI
-//    MPI_Allreduce(&maxC, &maxC_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-//    MPI_Allreduce(&maxCh, &maxCh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-//    MPI_Allreduce(&maxC1, &maxC1_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-//    MPI_Allreduce(&maxC2, &maxC2_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-//    MPI_Allreduce(&maxC3, &maxC3_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-// maxC  = maxC_recv;
-// maxCh = maxCh_recv;
-// maxC1 = maxC1_recv;
-// maxC2 = maxC2_recv;
-// maxC3 = maxC3_recv;
-//#endif
-//
-//    mu = maxC1;
-//    if (maxC2 > mu)
-//      mu = maxC2;
-//    if (maxC3 > mu)
-//      mu = maxC3;
-//
-//    alpha = 0.0;
-//    beta = 0.0;
-//    betae = 0.0;
-//
-//    double dxmag = sqrt(cf.dx * cf.dx + cf.dy * cf.dy + cf.dz * cf.dz);
-//    if (mu > 0 && maxCh > 0)
-//      alpha = (dxmag / (mu * mu * maxCh)) * cf.alpha;
-//    if (maxC > 0) {
-//      beta = (dxmag / maxC) * cf.beta;
-//      betae = (dxmag / maxC) * cf.betae;
-//    }
-//
-//    // if (cf.rank == 0)
-//    //    printf("%.4f,%.4f,%.4f,%.4f,%.4f\n",maxC,maxCh,maxC1,maxC2,maxC3);
-//    //    //printf("alpha = %f, beta = %f, betae = %f\n",alpha,beta,betae);
-//
-//    Kokkos::parallel_for(weno_pol,
-//                         calculateCeqFlux(var, rho, mFlux, cFlux, cd));
-//
-//    Kokkos::parallel_for(cell_pol, applyCeq(dvar, var, rho, mFlux, cFlux, cd,
-//                                            alpha, beta, betae));
-//    Kokkos::fence();
-//    timers["ceq"].reset();
-//  }
+  if (cf.ceq != 0) {
+    timers["ceq"].reset();
+    /**** CEQ ****/
+    // find mac wavespeed
+    Kokkos::parallel_reduce(cell_pol, maxWaveSpeed(var, p, rho, cd),
+                            Kokkos::Max<double>(maxS));
+#ifndef NOMPI
+    MPI_Allreduce(&maxS, &maxS, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+#endif
+
+    // calculate density and energy gradients and find ceq source terms
+    Kokkos::parallel_for(cell_pol, calculateRhoGrad(var, rho, gradRho, cd));
+
+    // update c equations
+    Kokkos::parallel_for(cell_pol, updateCeq(dvar, var, gradRho, maxS, cd, cf.kap, cf.eps));
+
+    /**** Apply CEQ ****/
+     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv + 0),
+                             Kokkos::Max<double>(maxC));
+     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv + 1),
+                             Kokkos::Max<double>(maxCh));
+     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv + 2),
+                             Kokkos::Max<double>(maxC1));
+     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv + 3),
+                             Kokkos::Max<double>(maxC2));
+     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv + 4),
+                             Kokkos::Max<double>(maxC3));
+ #ifndef NOMPI
+    MPI_Allreduce(&maxC, &maxC, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxC1, &maxC1, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxC2, &maxC2, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxC3, &maxC3, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+ #endif
+
+    mu = maxC1;
+    if (maxC2 > mu)
+      mu = maxC2;
+    if (maxC3 > mu)
+      mu = maxC3;
+
+    alpha = 0.0;
+    beta = 0.0;
+    betae = 0.0;
+
+    double dxmag = sqrt(cf.dx * cf.dx + cf.dy * cf.dy + cf.dz * cf.dz);
+    if (mu > 0 && maxCh > 0)
+      alpha = (dxmag / (mu * mu * maxCh)) * cf.alpha;
+    if (maxC > 0) {
+      beta = (dxmag / maxC) * cf.beta;
+      betae = (dxmag / maxC) * cf.betae;
+    }
+
+    //if (cf.rank == 0)
+    //   printf("%.4f,%.4f,%.4f,%.4f,%.4f\n",maxC,maxCh,maxC1,maxC2,maxC3);
+    //   //printf("alpha = %f, beta = %f, betae = %f\n",alpha,beta,betae);
+    cf.log->debug("[{}] C={:.2e} C_hat={:.2e} C1={:.2e} C2={:.2e} C3={:.2e}",
+                  cf.t,maxC,maxCh,maxC1,maxC2,maxC3);
+
+    Kokkos::parallel_for(weno_pol, calculateCeqFlux(var, rho, mFlux, cFlux, cd));
+
+    Kokkos::parallel_for(cell_pol, applyCeq(dvar, var, rho, mFlux, cFlux, cd, alpha, beta, betae));
+    Kokkos::fence();
+    timers["ceq"].reset();
+  }
 }
