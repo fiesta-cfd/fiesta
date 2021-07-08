@@ -407,8 +407,14 @@ Each block may contain several parameters:
          start={0,0,74}, limit={149,149,74}, stride={2,2,1}}
     }
 
+Input File Examples
+===============================================================================
+Example input files can be found in the samples directory of he source code
+tree.
+
+*******************************************************************************
 Input File Options Reference
--------------------------------------------------------------------------------
+*******************************************************************************
 Parameters that take boolean values can be specified in several ways with either
 a numerical value (1 or 0) or with a string specifier.  String specifiers are
 not case-sensitive.  String specifiers may be surrounded by periods (like in
@@ -642,10 +648,6 @@ their default value is used.
   | **Minimum one entry required**
   | Table of parameters specifying a species name and physical properties.  See `Gas Species`_ for more information.
 
-Input File Examples
-===============================================================================
-Example input files can be found in the samples directory of he source code
-tree.
 
 *******************************************************************************
 Running Fiesta
