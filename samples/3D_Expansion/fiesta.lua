@@ -27,8 +27,8 @@ species={
 }
 
 blocks =  {
-    {name="sol",path="./solution",frequency=10},
-    {name="center", path="./centerline", frequency=10,
+    {name="sol",path="./solution",frequency=100},
+    {name="center", path="./centerline", frequency=100,
     start={51,51,74},limit={149,149,74},stride={2,2,1}}
 }
 
