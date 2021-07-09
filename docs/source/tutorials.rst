@@ -137,6 +137,8 @@ become available. To check the status of the job, run the following command:
 
    squeue -u <username>
 
+Once the job begins running, it should complete in less than 5 minutes.
+
 Output Products
 -------------------------------------------------------------------------------
 The file slurm-#####.out (where ##### is a job id assigned by Slurm) contains
@@ -178,7 +180,7 @@ following command from a local computer:
 
 .. code-block:: bash
 
-   rsync -Phavz --stats --info=progress2 <username>@xena.alliance.unm.edu:fiesta/test/centerline .
+   rsync -Phavz <username>@xena.alliance.unm.edu:fiesta/test/centerline .
 
 For Windows PowerShell without rsync support the following command can be used
 instead:
@@ -228,4 +230,6 @@ At this frame, the solution looks like the following:
    :width: 600
 
 Increase :code:`nt` variable in :code:`fiesta.lua` and rerun the simulation to
-see how the solution evolves at later times.s
+see how the solution evolves at later times.
+
+For more advanced ParaView usage, see the SNL ParaView Tutorials `<https://www.paraview.org/Wiki/SNL_ParaView_Tutorials>`_
