@@ -29,6 +29,15 @@ Kelvin and 1kg/m^3.
 
 Building Fiesta
 ===============================================================================
+.. note::
+
+   This tutorial works best with the bash shell.  To check your
+   shell, run the command :code:`echo $SHELL` after logging on to Xena.  Also,
+   make sure that the :code:`module` command is available by running
+   :code:`module --help`.  If you shell is not bash, or if the module command is
+   not found, then contact the UNM CARC Helpdesk for
+   assiastance. (help@carc.unm.edu or support.alliance.unm.edu)
+
 After logging into Xena, create a working directory, for example
 /users/<username>/fiesta.
 
@@ -102,7 +111,8 @@ Running Fiesta
 ===============================================================================
 
 The simulation can now be run with a batch script.  In the test directory,
-create a file named fiesta.slurm and insert the following:
+create a file named fiesta.slurm and insert the following.  Be sure to replace
+<username> with your username.  Be sure to replace <username> with your username.
 
 .. code-block:: bash
 
@@ -121,8 +131,8 @@ create a file named fiesta.slurm and insert the following:
     
     export OMPI_MCA_fs_ufs_lock_algorithm=1
     
-    cd /users/beromer/fiesta/test
-    mpirun -n 2 ../build/fiesta -n 2 -c -v 4
+    cd /users/<username>/fiesta/test
+    mpirun -n 2 ../build/fiesta -n 2
 
 Now submit the job with the following command.
 
@@ -143,12 +153,9 @@ Output Products
 -------------------------------------------------------------------------------
 The file slurm-#####.out (where ##### is a job id assigned by Slurm) contains
 log messages from Fiesta as well as log messages from Slurm itself.  If there
-were any errors they will be reported in this file.  Fiesta was run with colors
-enabled, so viewing this log file requires the following command :code:`less -R
-slurm-#####.out`.  (To disable colors, remove the `-c` from the mpirun command
-in the `fiesta.slurm` batch file.) Inspect this file to see log messages from
-Fiesta including periodic status reports and timing information.
-
+were any errors they will be reported in this file.  This file can be viewed
+with the command :code:`less slurm-#####.out`. Inspect this file to see log
+messages from Fiesta including periodic status reports and timing information.
 
 If the simulation completed sucessfully, there will also be three new
 subdirectories, `centerline`, `restarts`, and `solution`.
