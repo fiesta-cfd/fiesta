@@ -18,7 +18,6 @@ Documentation for Fiesta
     :caption: Fiesta Documentation   
     :hidden:
     
-    intro.rst
     tutorials.rst
     buildguide.rst
     userguide.rst

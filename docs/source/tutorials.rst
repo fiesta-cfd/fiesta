@@ -10,17 +10,22 @@ Tutorials
 *******************************************************************************
 Tutorial 1: A 3D Expansion Problem on Xena
 *******************************************************************************
-This tutorial walks through building Fiesta on the Xena supercomputer at the
-University of New Mexico Center for Advanced Research Computing (CARC).  After
-building Fiesta, a sample input file is modified in order to execute the
-simulation.
-    
+The tutorial demonstrates several key steps in Fiesta usage:
+
+* Building Fiesta
+
+* Working with a sample input file
+
+* Running a batch job
+
+* Visualizing results
+
 Problem Description
 ===============================================================================
-This input deck defines an expanding bubble of hot gas. A 0.5 meter diameter
-zone of hot gas is defined in the center of the domain with a temperature of
-3000 Kelvin and a density of 1000 kg/m^3. The surrounding air has a temperature
-of 300 Kelvin and a density of 1 kg/m^3.
+The input file used below describes an expanding bubble of hot air 0.5m in
+diameter at the center of a cubic box 10m on a side.  The hot air is initially
+at 3000 Kelvin with a density of 1000 kg/m^3 while the surrounding air is at 300
+Kelvin and 1kg/m^3.
 
 Building Fiesta
 ===============================================================================
@@ -85,7 +90,8 @@ First, create a directory for running the test.
    cp ../fiesta/samples/3D_Expansion/fiesta.lua .
 
 Edit the input file to use the number of GPUs available on this system (2).
-Change line 40 to::
+Change line 40 in `fiesta.lua` to using your preferred commandline editor.
+::
 
     procs = {2,1,1}
 
@@ -96,7 +102,7 @@ Running Fiesta
 ===============================================================================
 
 The simulation can now be run with a batch script.  In the test directory,
-create a file names fiesta.slurm and fill it with the following contents.
+create a file named fiesta.slurm and insert the following:
 
 .. code-block:: bash
 
@@ -106,6 +112,7 @@ create a file names fiesta.slurm and fill it with the following contents.
     #SBATCH --ntasks=2
     #SBATCH --time=00:30:00
     #SBATCH --partition=dualGPU
+    #SBATCH --gpus=2
     
     module load gcc/9.3.0-oxji
     module load openmpi/3.1.6-xgqr
@@ -124,47 +131,63 @@ Now submit the job with the following command.
    sbatch fiesta.slurm
 
 The job will be queued on the system and will be executed when the resources
-become available.
+become available. To check the status of the job, run the following command:
+
+.. code-block:: bash
+
+   squeue -u <username>
 
 Output Products
 -------------------------------------------------------------------------------
-The test directory should now contain three subdirectories
-(`centerline`,`restarts`,`solution`) and a file named `slurm-#####.out`.
-
 The file slurm-#####.out (where ##### is a job id assigned by Slurm) contains
-log messages from Fiesta as well as log messages from Slurm itself.  Fiesta was
-run in full color mode, so viewing this log file requires the following command
-:code:`less -R slurm-#####.out`.  (Remove the `-c` from the mpirun command in
-the `fiesta.slurm` batch file.)
+log messages from Fiesta as well as log messages from Slurm itself.  If there
+were any errors they will be reported in this file.  Fiesta was run with colors
+enabled, so viewing this log file requires the following command :code:`less -R
+slurm-#####.out`.  (To disable colors, remove the `-c` from the mpirun command
+in the `fiesta.slurm` batch file.) Inspect this file to see log messages from
+Fiesta including periodic status reports and timing information.
 
+
+If the simulation completed sucessfully, there will also be three new
+subdirectories, `centerline`, `restarts`, and `solution`.
 The directory `centerline` contains files with `.xmf` and `.h5` extensions
-numbered sequentially from 0000 to 0800 with a prefix `center-`.  These are
-solution files pertaining to the "centerline" solution view block described in the
-input file.  These contain solution data extracted from a plane through the
-center of the domain. See the userguide for a description of solution view blocks.
+numbered sequentially from 0000 to 1000 with a prefix `center-`.  These are
+solution files pertaining to the "centerline" solution view described in the
+input file.  These solution blocks contain data extracted from a plane through the
+center of the domain. See the userguide for a description of solution view.
 
 The directory `restarts` should be empty because restarts were not enabled for
 this run.
 
-The directory `solution` contains full resolution solution files of the entire
-domain.  These are also `.xmf` and `.h5` file pairs numbered from 0000 to 0800
-with a prefix of "sol-".
+The directory `solution` contains full resolution solution files for a view of
+the entire domain.  These are also `.xmf` and `.h5` file pairs numbered from
+0000 to 1000 with a prefix of "sol-".
 
 Visualizing Results
 ===============================================================================
-These solution file pairs (`xmf` and `h5`) can be used for visualization in
+Solution file pairs (`xmf` and `h5`) can be used for visualization in
 standard tools such as ParaView.  Paraview is not currently available on Xena,
 so solution files must be downloaded to a local machine to be viewed in
 Paraview.
 
-Files can be downloaded with the Rsync command.  For example, from a local
-computer:
+The solution files for the centerline view are smaller in size than the files
+for the full resoution soution view.  These files consume only 2.0MB and are
+intended for faster visualization. Files can be downloaded with the Rsync
+command.  To download the solution files for the centerline view, run the
+following command from a local computer:
 
 .. code-block:: bash
 
    rsync -Phavz --stats --info=progress2 <username>@xena.alliance.unm.edu:fiesta/test/centerline .
 
-Paravie 5.6 or later is required to view Fiesta output files. Paraview can be
+For Windows PowerShell without rsync support the following command can be used
+instead:
+
+.. code-block:: bash
+
+   sch -r <username>@xena.alliance.unm.edu:fiesta/test/centerline .
+
+Paraview 5.6 or later is required to view Fiesta output files. Paraview can be
 obtained for free from `<https://www.paraview.org/download/>`_.  VisIt and
 TecPlot are also supported.
 
