@@ -2,9 +2,9 @@ title = "3D Idealized Expansion"
 
 --Restart and Output Options
 restart_path = "./restarts"  --Path where hdf, xmf and vtk solution files will be written
-progress_frequency = 10                          --Screen Output Interval
+progress_frequency = 0                          --Screen Output Interval
 restart_frequency = 0                     --Restart Write Interval
-status_frequency = 10
+status_frequency = 100
 
 --restart = 1                           --Whether or not to use restart file
 --time = 0.0                            --Start time of simulation
