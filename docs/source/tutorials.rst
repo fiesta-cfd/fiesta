@@ -99,7 +99,7 @@ First, create a directory for running the test.
    cp ../fiesta/samples/3D_Expansion/fiesta.lua .
 
 Edit the input file to use the number of GPUs available on this system (2).
-Change line 40 in `fiesta.lua` to using your preferred commandline editor.
+Change line 33 in `fiesta.lua` to using your preferred commandline editor.
 ::
 
     procs = {2,1,1}
