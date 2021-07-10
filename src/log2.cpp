@@ -16,19 +16,9 @@
   You should have received a copy of the GNU Lesser General Public License
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
-#ifndef BC_H
-#define BC_H
 
-#include "Kokkos_Core.hpp"
-#include "kokkosTypes.hpp"
-#include "input.hpp"
-#include <string>
-#ifndef NOMPI
-#include "mpi.hpp"
-#endif
-
-enum class BCType {outflow,reflective,noslip,hydrostatic};
-void applyBCs(struct inputConfig cf, class rk_func *f);
-BCType parseBC(std::string name);
-
-#endif
+#include "log2.hpp"
+int Fiesta::Log::verbosity;
+ansiColors *Fiesta::Log::c;
+int Fiesta::Log::rank;
+Kokkos::Timer *Fiesta::Log::timer;

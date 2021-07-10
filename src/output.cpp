@@ -57,7 +57,9 @@ void printConfig(struct inputConfig cf) {
     string keyValue    = format("{: >8}{{: <24}}{}{{}}{}\n","",k(magenta),k(reset));
     string keyEnabled  = format("{: >8}{{: <24}}{}enabled{}\n","",k(green),k(reset));
     string keyDisabled = format("{: >8}{{: <24}}{}disabled{}\n","",k(yellow),k(reset));
-    string keyTuple    = format("{: >8}{{: <24}}({}{{}}{},{}{{}}{},{}{{}}{})\n","",
+    string keyTupleInt = format("{: >8}{{: <24}}({}{{}}{},{}{{}}{},{}{{}}{})\n","",
+                       k(magenta),k(reset),k(magenta),k(reset),k(magenta),k(reset));
+    string keyTupleGen = format("{: >8}{{: <24}}({}{{:.3g}}{},{}{{:.3g}}{},{}{{:.3g}}{})\n","",
                        k(magenta),k(reset),k(magenta),k(reset),k(magenta),k(reset));
     string keyPair     = format("{: >8}{{: <24}}({}{{}}{},{}{{}}{})\n","",
                                   k(magenta),k(reset),k(magenta),k(reset));
@@ -86,7 +88,7 @@ void printConfig(struct inputConfig cf) {
     else cout << format(keyDisabled,"Status reports:");
   
     cout << format(keyValue,"Number of Processes:",cf.numProcs);
-    cout << format(keyTuple,"MPI Discretization:",cf.xProcs,cf.yProcs,cf.zProcs);
+    cout << format(keyTupleInt,"MPI Discretization:",cf.xProcs,cf.yProcs,cf.zProcs);
   
     cout << format(keyValue,"tstart:",cf.tstart);
     cout << format(keyValue,"nt:",cf.nt);
@@ -94,8 +96,8 @@ void printConfig(struct inputConfig cf) {
     cout << format(keyValue,"dt:",cf.dt);
 
     if (cf.ndim==3){
-      cout << format(keyTuple,"Number of Cells:",cf.glbl_nci,cf.glbl_ncj,cf.glbl_nck);
-      cout << format(keyTuple,"Cell Size:",cf.dx,cf.dy,cf.dz);
+      cout << format(keyTupleInt,"Number of Cells:",cf.glbl_nci,cf.glbl_ncj,cf.glbl_nck);
+      cout << format(keyTupleGen,"Cell Size:",cf.dx,cf.dy,cf.dz);
     }else{
       cout << format(keyPair,"Number of Cells:",cf.glbl_nci,cf.glbl_ncj);
       cout << format(keyPair,"Cell Size:",cf.dx,cf.dy);

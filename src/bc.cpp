@@ -21,6 +21,8 @@
 #include "debug.hpp"
 #include "kokkosTypes.hpp"
 #include "input.hpp"
+#include <algorithm>
+#include "log2.hpp"
 #ifndef NOMPI
 #include "mpi.hpp"
 #include "mpi.h"
@@ -30,22 +32,23 @@
 
 struct bc_gen {
   FS4D u;
-  int ihat, jhat, khat, ng, type, nv;
+  int ihat, jhat, khat, ng, nv;
+  BCType type;
 
-  bc_gen(int type_, int ng_, int i_, int j_, int k_, int nv_, FS4D u_)
+  bc_gen(BCType type_, int ng_, int i_, int j_, int k_, int nv_, FS4D u_)
       : type(type_), ng(ng_), ihat(i_), jhat(j_), khat(k_), nv(nv_), u(u_) {}
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
 
-    if (type == 0){
+    if (type == BCType::outflow){
       for (int v=0; v<nv; ++v){
         for (int n=0; n<ng; ++n){
           u(i+ihat*(n+1),j+jhat*(n+1),k+khat*(n+1),v) = u(i-ihat*n,j-jhat*n,k-khat*n,v);
         }
       }
     }
-    if (type == 1){
+    if (type == BCType::reflective){
       double reflect=1.0;
       for (int v=0; v<nv; ++v){
         reflect=1.0;
@@ -57,7 +60,7 @@ struct bc_gen {
         }
       }
     }
-    if (type == 3){
+    if (type == BCType::hydrostatic){
       // Do normal extension first (to get momentums and other variables
       for (int v=0; v<nv; ++v){
         for (int n=0; n<ng; ++n){
@@ -201,4 +204,26 @@ void applyBCs(struct inputConfig cf, class rk_func *f) {
     }
   }
   f->timers["bc"].accumulate();
+}
+
+BCType parseBC(std::string name){
+  string oldname = name;
+  std::transform(name.begin(),name.end(),name.begin(),::tolower);
+  name.erase(std::remove(name.begin(),name.end(),'-'),name.end());
+  name.erase(std::remove(name.begin(),name.end(),'_'),name.end());
+  name.erase(std::remove(name.begin(),name.end(),' '),name.end());
+  Fiesta::Log::debugWarning("NAME: {} to {}",oldname,name);
+
+  if(name.compare("outflow")==0)
+    return BCType::outflow;
+  else if(name.compare("reflective")==0)
+    return BCType::reflective;
+  else if(name.compare("noslip")==0)
+    return BCType::noslip;
+  else if(name.compare("hydrostatic")==0)
+    return BCType::hydrostatic;
+  else{
+    Fiesta::Log::error("Unknown boundary condition '{}'",oldname);
+    exit(EXIT_FAILURE);
+  }
 }

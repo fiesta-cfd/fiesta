@@ -30,6 +30,7 @@
 
 #include <vector>
 #include "luaReader.hpp"
+#include "log2.hpp"
 
 // Compute Objects
 #include "cart2d.hpp"
@@ -38,7 +39,6 @@
 #include "gen3d.hpp"
 
 int main(int argc, char *argv[]) {
-  
   {
     // read input file and initialize configuration
     fsconf cf;
@@ -74,12 +74,12 @@ int main(int argc, char *argv[]) {
     class blockWriter<double> myblock(cf, f, "restart", cf.pathName, false, cf.restart_freq);
 
     std::vector<blockWriter<float> > testblocks;
-    luaReader L(cf.inputFname);
+    luaReader L(cf.inputFname,"fiesta");
     L.getIOBlock(cf,f,cf.ndim,testblocks);
     L.close();
  
     // Pre Simulation
-    cf.log->message("Executing pre-simulation hook");
+    Fiesta::Log::message("Executing pre-simulation hook");
     applyBCs(cf, f);
     f->preSim();
 
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
     cf.simTimer.reset();
 
     // Main time loop
-    cf.log->message("Beginning Main Time Loop");
+    Fiesta::Log::message("Beginning Main Time Loop");
     for (int t = cf.tstart; t < cf.tend+1; ++t) {
       Fiesta::collectSignals(cf);
 
@@ -103,17 +103,17 @@ int main(int argc, char *argv[]) {
       cf.time += cf.dt;
       cf.t = t + 1;
     }
-    cf.log->message("Simulation complete!");
+    Fiesta::Log::message("Simulation complete!");
  
     // Post Simulation
-    cf.log->message("Executing post-simulation hook");
+    Fiesta::Log::message("Executing post-simulation hook");
     f->postSim();
 
 
     // Stop Timers and Report
     cf.simTimer.stop();
     cf.totalTimer.stop();
-    cf.log->message("Reporting Timers:");
+    Fiesta::Log::message("Reporting Timers:");
     Fiesta::reportTimers(cf,f);
   }
   Fiesta::finalize();

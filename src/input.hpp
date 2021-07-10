@@ -39,6 +39,7 @@
 #include <vector>
 #include <memory>
 #include "block.hpp"
+#include "bc.hpp"
 
 typedef struct inputConfig fsconf;
 
@@ -84,8 +85,8 @@ struct inputConfig {
 
   double R;
   int scheme;
-  int visc;
-  int gravity;
+  bool visc;
+  bool gravity;
   double g_accel;
   double *g_vec;
   double dt, dx, dy, dz;
@@ -103,17 +104,18 @@ struct inputConfig {
 #endif
   int cF, cB, cZ;
   int ng, ngi, ngj, ngk;
-  int xPer, yPer, zPer;
-  int restart;
+  bool xPer, yPer, zPer;
+  bool restart;
   std::string restartName;
   std::string pathName;
   int tstart, tend;
   double time;
-  int ceq,st;
+  int st;
+  bool ceq,noise;
   double kap, eps, alpha, beta, betae;
-  int bcL, bcR, bcB, bcT, bcH, bcF;
+  BCType bcL, bcR, bcB, bcT, bcH, bcF;
   double n_dh, n_coff, n_eta;
-  int noise, n_nt;
+  int n_nt;
   int t;
   int grid;
   double h, tdx, tdy;

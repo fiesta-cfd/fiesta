@@ -30,9 +30,10 @@
 #include "hdf.hpp"
 #include <sys/types.h>
 #include <sys/stat.h>
+#include "log2.hpp"
+#include "bc.hpp"
 
 struct commandArgs getCommandlineOptions(int argc, char **argv){
-
   // create command argumet structure
   struct commandArgs cArgs;
 
@@ -114,53 +115,62 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
 
 inputConfig::~inputConfig(){}
 
+//int Fiesta::Log::verbosity;
+//ansiColors *Fiesta::Log::c;
+//int Fiesta::Log::rank;
+//Kokkos::Timer *Fiesta::Log::timer;
+
 void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   cf.colorFlag = cargs.colorFlag;
   cf.timeFormat = cargs.timeFormat;
   cf.verbosity = cargs.verbosity;
 
-  luaReader L(cargs.fileName);
+  luaReader L(cargs.fileName,"fiesta");
 
   // Required Parameters
-  L.get("nt",    cf.nt);
-  L.get("dt",    cf.dt);
-  L.get("title", cf.title);
+  L.get({"title"}, cf.title);
+
+  L.get({"time","nt"},cf.nt);
+  L.get({"time","dt"},cf.dt);
+  L.get({"time","start_index"},   cf.tstart,  0);
+  L.get({"time","start_time"},     cf.time,    0.0);
+
 
   // Defaultable Parameters
-  L.get("R",        cf.R,       8.314462);
-  L.get("tstart",   cf.tstart,  0);
-  L.get("time",     cf.time,    0.0);
-  L.get("cequations",      cf.ceq,     0);
-  L.get("noise",    cf.noise,   0);
-  L.get("buoyancy", cf.gravity, 0);
-  L.get("ndim",     cf.ndim,    2);
-  L.get("viscosity",     cf.visc,    0);
-  L.get("ng",       cf.ng,      3);
-  L.get("xPer",     cf.xPer,    0);
-  L.get("yPer",     cf.yPer,    0);
-  L.get("bcXmin",   cf.bcL,     0);
-  L.get("bcXmax",   cf.bcR,     0);
-  L.get("bcYmin",   cf.bcB,     0);
-  L.get("bcYmax",   cf.bcT,     0);
-  L.get("restart",  cf.restart, 0);
-  L.get("progress_frequency",     cf.out_freq,    0);
-  L.get("write_frequency",   cf.write_freq,  0);
-  L.get("restart_frequency", cf.restart_freq,0);
-  L.get("status_frequency",    cf.stat_freq,   0);
-  L.get("restart_name",  cf.restartName, "restart-0000000.h5");
-  L.get("terrain_name", cf.terrainName, "terrain.h5");
-  L.get("restart_path",     cf.pathName, ".");
+  L.get({"R"},        cf.R,       8.314462);
+  //L.get("cequations"},      cf.ceq,     0);
+  //L.get("noise"},    cf.noise,   0);
+  L.get({"buoyancy","enabled"}, cf.gravity, false);
+  L.get({"grid","ndim"},     cf.ndim,    2);
+  L.get({"viscosity","enabled"},     cf.visc,    false);
+  L.get({"ng"},       cf.ng,      3);
+  L.get({"xperiodic"},     cf.xPer,    false);
+  L.get({"yperiodic"},     cf.yPer,    false);
+
+  L.get({"progress_frequency"},     cf.out_freq,    0);
+  L.get({"write_frequency"},   cf.write_freq,  0);
+  L.get({"restart_frequency"}, cf.restart_freq,0);
+  L.get({"status_frequency"},    cf.stat_freq,   0);
+
+  L.get({"terrain_name"}, cf.terrainName, std::string("terrain.h5"));
+
+  L.get({"restart","enabled"}, cf.restart, false);
+  L.get({"restart","frequency"}, cf.restart_freq,0);
+  L.get({"restart","name"},    cf.restartName, std::string("restart-0000000.h5"));
+  L.get({"restart","path"},    cf.pathName, std::string("."));
 
   std::string scheme, grid, mpi;
-  L.get("advection_scheme", scheme,"weno5");
-  L.get("grid_type",   grid,"cartesian");
-  L.get("mpi",    mpi, "host");
+  L.get({"mpi","type"}, mpi, "host");
+  L.get({"advection_scheme"}, scheme, std::string("weno5"));
+  L.get({"grid","type"},   grid, std::string("cartesian"));
 
   vector<double> dx;
-  L.getArray("dx",dx,cf.ndim);
+  //L.getArray("dx",dx,cf.ndim);
+  L.get({"grid","dx"},dx,cf.ndim);
 
   vector<size_t> ni;
-  L.getArray("ni",ni,cf.ndim);
+  //L.getArray("ni",ni,cf.ndim);
+  L.get({"grid","ni"},ni,cf.ndim);
   cf.glbl_nci = ni[0];
   cf.glbl_ncj = ni[1];
   if (cf.ndim == 3) 
@@ -169,7 +179,8 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
     cf.glbl_nck = 1.0;
 
   vector<size_t> procs;
-  L.getArray("procs",procs,cf.ndim);
+  //L.getArray("procs",procs,cf.ndim);
+  L.get({"mpi","procs"},procs,cf.ndim);
   cf.xProcs=procs[0];
   cf.yProcs=procs[1];
   if (cf.ndim == 3) 
@@ -177,25 +188,43 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   else
     cf.zProcs=1;
 
+  std::string bcname;
+
+  L.get({"bc","xmin"},bcname);
+  cf.bcL=parseBC(bcname);
+  L.get({"bc","xmax"},bcname);
+  cf.bcR=parseBC(bcname);
+  L.get({"bc","ymin"},bcname);
+  cf.bcB=parseBC(bcname);
+  L.get({"bc","ymax"},bcname);
+  cf.bcT=parseBC(bcname);
+
   // Dependent Parameters
-  if (cf.ceq == 1) {
-    L.get("kappa",  cf.kap);
-    L.get("epsilon",cf.eps);
-    L.get("alpha",  cf.alpha);
-    L.get("beta",   cf.beta);
-    L.get("betae",  cf.betae);
-    L.get("st",     cf.st,10);
+  //
+  std::string test;
+  L.get({"ceq","enabled"},cf.ceq,false);
+  if(cf.ceq){
+    L.get({"ceq","kappa"},cf.kap,1.23456);
+    L.get({"ceq","epsilon"},cf.eps);
+    L.get({"ceq","alpha"},cf.alpha);
+    L.get({"ceq","beta"},cf.beta);
+    L.get({"ceq","betae"},cf.betae);
+    L.get({"ceq","st"},cf.st);
   }
-  if (cf.noise == 1) {
-    L.get("n_dh",  cf.n_dh);
-    L.get("n_eta", cf.n_eta);
-    L.get("n_coff",cf.n_coff);
-    L.get("n_nt",  cf.n_nt,1);
+
+  L.get({"noise","enabled"},cf.noise,false);
+  if(cf.noise){
+    L.get({"noise","dh"},cf.n_dh);
+    L.get({"noise","eta"},cf.n_eta);
+    L.get({"noise","coff"},cf.n_coff);
+    L.get({"noise","nt"},cf.n_nt,1);
   }
   if (cf.ndim == 3) {
-    L.get("zPer",   cf.zPer,0);
-    L.get("bcZmin", cf.bcH,0);
-    L.get("bcZmaz", cf.bcF,0);
+    L.get({"bc","zperodic"},   cf.zPer,false);
+    L.get({"bc","zmin"}, bcname);
+    cf.bcH=parseBC(bcname);
+    L.get({"bc","zmax"}, bcname);
+    cf.bcF=parseBC(bcname);
   }
   if (grid.compare("cartesian") == 0) {
     cf.grid = 0;
@@ -210,29 +239,20 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
       cf.dx=1.0;
       cf.dy=1.0;
       cf.dz = 1.0;
-      L.get("tdx",cf.tdx);
-      L.get("tdy",cf.tdy);
-      L.get("h",cf.h);
+      L.get({"tdx"},cf.tdx);
+      L.get({"tdy"},cf.tdy);
+      L.get({"h"},cf.h);
     } else {
       printf("ndim must be equal to 3 for terrain");
       exit(EXIT_FAILURE);
     }
   }
-<<<<<<< HEAD
-  // Array Parameters
-  cf.M = (double *)malloc(cf.ns * sizeof(double));
-  cf.gamma = (double *)malloc(cf.ns * sizeof(double));
-  cf.mu = (double *)malloc(cf.ns * sizeof(double));
-  L.getArray("gamma",cf.gamma,cf.ns);
-  L.getArray("M",cf.M,cf.ns);
-  L.getArray("mu",cf.mu,cf.ns);
-=======
-
   L.getSpeciesData(cf);
->>>>>>> feat(input): updated input param names and structs
 
   // Close Lua File
   L.close();
+
+  Fiesta::Log::debug("BCs: L{} R{} B{} T{} H{} F{}",cf.bcL,cf.bcR,cf.bcB,cf.bcT,cf.bcH,cf.bcF);
 
   // Save input file name
   cf.inputFname = cargs.fileName;
@@ -280,8 +300,8 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
     cf.dz = cf.dx;
     cf.zProcs = 1;
     cf.glbl_nck = 1;
-    cf.bcH = 0;
-    cf.bcF = 0;
+    cf.bcH = BCType::outflow;
+    cf.bcF = BCType::outflow;
     cf.zPer = 0;
   }else{
     cf.nv = 4 + cf.ns;
@@ -343,7 +363,6 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
 }
 
 int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
-
   //int ii,jj,kk;
   double x,y,z;
   FS4DH hostV = Kokkos::create_mirror_view(deviceV);
@@ -351,7 +370,7 @@ int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
 
   Kokkos::deep_copy(hostG,deviceG);
 
-  luaReader L(cf.inputFname);
+  luaReader L(cf.inputFname,"fiesta");
 
   for (int v = 0; v < cf.nv; ++v) {
     if (cf.ndim == 3) {
@@ -413,12 +432,11 @@ void error(lua_State *L, const char *fmt, ...) {
 }
 
 int loadGrid(struct inputConfig cf, FS4D &deviceV) {
-
   FS4DH hostV = Kokkos::create_mirror_view(deviceV);
 
   if (cf.grid == 1) {
 
-    luaReader L(cf.inputFname);
+    luaReader L(cf.inputFname,"fiesta");
 
     int ii,jj,kk;
     for (int v = 0; v < cf.ndim; ++v) {

@@ -30,31 +30,37 @@
 class luaReader {
 
 public:
-  luaReader(std::string fname);
+  luaReader(std::string fname,std::string root);
   void close();
-
-  template <class T>
-  void get(std::string,T&);
-
-  template <class T>
-  void get(std::string,T&,T);
-
-  template <class T>
-  void get(std::string,T&,const char *);
 
   template <class T>
   void getArray(std::string,T*,int);
  
   template <class T>
-  void getArray(std::string,std::vector<T>&,int);
+  void getArray(std::vector<T>&,int);
 
   void getSpeciesData(struct inputConfig&);
   void getIOBlock(struct inputConfig&, rk_func*, int, vector<blockWriter<float>>&);
+
+  template <class T>
+  void get(std::initializer_list<string> keys, T& n);
+
+  template <class T>
+  void get(std::initializer_list<string> keys, T& n,T d);
+
+  template <class T>
+  void get(std::initializer_list<string> keys, std::vector<T>& v, int n);
+
+  template <class T>
+  void getValue(T& n);
 
   double call(std::string, int ,...);
 
 private:
   lua_State *L;
+
+  string root;
+  string filename;
 
   void error(lua_State *, const char *, ...);
 
