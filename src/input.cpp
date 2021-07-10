@@ -220,7 +220,7 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
     L.get({"noise","nt"},cf.n_nt,1);
   }
   if (cf.ndim == 3) {
-    L.get({"bc","zperodic"},   cf.zPer,false);
+    L.get({"bc","zperiodic"},   cf.zPer,false);
     L.get({"bc","zmin"}, bcname);
     cf.bcH=parseBC(bcname);
     L.get({"bc","zmax"}, bcname);
