@@ -653,8 +653,8 @@ struct updateCeq {
     int nv = (int)cd(0) + 4;
     int nc = nv;
 
-    double dc_left[3][3];
-    double dc_right[3][3];
+    //double dc_left[3][3];
+    //double dc_right[3][3];
     double lap;
 
     // average cell size

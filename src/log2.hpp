@@ -84,8 +84,6 @@ namespace Fiesta {
     
       print("Logger",format("Log started {}",getTime()),green);
       print("Logger",format("Log Level {}",verbosity),green);
-      print("Logger",format("rankin={} levelin={}",r,v),green);
-      print("Logger",format("rank={} level={} color={}",rank,verbosity,c_),green);
     }
     
     template<typename... Args> inline

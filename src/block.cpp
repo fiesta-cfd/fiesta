@@ -98,9 +98,9 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   varH = Kokkos::create_mirror_view(f->var);
   varxH = Kokkos::create_mirror_view(f->varx);
 
-  cf.log->debug("{}: gStart={} gEnd={} stride={}",name,gStart,gEnd,stride);
-  MPI_Barrier(cf.comm);
-  cf.log->debugAll("{}: lStart={} lEnd={} lExt={}",name,gStart,gEnd,stride);
+  //cf.log->debug("{}: gStart={} gEnd={} stride={}",name,gStart,gEnd,stride);
+  //MPI_Barrier(cf.comm);
+  //cf.log->debugAll("{}: lStart={} lEnd={} lExt={}",name,gStart,gEnd,stride);
 
 }
 
@@ -174,9 +174,9 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
       }
     }
 
-      MPI_Barrier(sliceComm);
-      cf.log->debugAll("PRE {}: gStart={} lStart={} offset={}",name,gStart,lStart,lOffset);
-      MPI_Barrier(sliceComm);
+      //MPI_Barrier(sliceComm);
+      //cf.log->debugAll("PRE {}: gStart={} lStart={} offset={}",name,gStart,lStart,lOffset);
+      //MPI_Barrier(sliceComm);
 
     for (int i=0; i<cf.ndim; ++i){
       //adjust start and offset if it does not land on a stride if the slice does not start in this domain
@@ -239,11 +239,11 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   varxH = Kokkos::create_mirror_view(f->varx);
 
   if (slicePresent){
-    cf.log->debug("{}: gStart={} gEnd={} gExt={} gExtG={} stride={}",name,gStart,gEnd,gExt,gExtG,stride);
-    MPI_Barrier(sliceComm);
-    if (myColor==1)
-      cf.log->debugAll("{}: lStart={} lEnd={} lExt={} offset={}",name,lStart,lEnd,lExt,lOffset);
-    MPI_Barrier(sliceComm);
+    //cf.log->debug("{}: gStart={} gEnd={} gExt={} gExtG={} stride={}",name,gStart,gEnd,gExt,gExtG,stride);
+    //MPI_Barrier(sliceComm);
+    //if (myColor==1)
+      //cf.log->debugAll("{}: lStart={} lEnd={} lExt={} offset={}",name,lStart,lEnd,lExt,lOffset);
+    //MPI_Barrier(sliceComm);
   }
 }
 

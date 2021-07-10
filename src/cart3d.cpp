@@ -283,8 +283,8 @@ void cart3d_func::compute() {
     //if (cf.rank == 0)
     //   printf("%.4f,%.4f,%.4f,%.4f,%.4f\n",maxC,maxCh,maxC1,maxC2,maxC3);
     //   //printf("alpha = %f, beta = %f, betae = %f\n",alpha,beta,betae);
-    cf.log->debug("[{}] C={:.2e} C_hat={:.2e} C1={:.2e} C2={:.2e} C3={:.2e}",
-                  cf.t,maxC,maxCh,maxC1,maxC2,maxC3);
+    //cf.log->debug("[{}] C={:.2e} C_hat={:.2e} C1={:.2e} C2={:.2e} C3={:.2e}",
+    //              cf.t,maxC,maxCh,maxC1,maxC2,maxC3);
 
     Kokkos::parallel_for(weno_pol, calculateCeqFlux(var, rho, mFlux, cFlux, cd));
 
