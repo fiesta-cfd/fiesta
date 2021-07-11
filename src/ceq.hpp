@@ -19,6 +19,23 @@
 
 #ifndef CEQ_HPP
 #define CEQ_HPP
+struct maxCvar3D {
+  FS4D dvar;
+  int v;
+
+  maxCvar3D(FS4D dvar_, int v_)
+      : dvar(dvar_), v(v_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j, const int k, double &lmax) const {
+
+    double s = dvar(i, j, k, v);
+
+    if (s > lmax)
+      lmax = s;
+  }
+};
+
 struct maxCvar2D {
   FS4D dvar;
   int v;

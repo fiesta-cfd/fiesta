@@ -35,6 +35,7 @@
 #include "presgrad.hpp"
 #include "block.hpp"
 #include "ceq.hpp"
+#include "noise.hpp"
 
 cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   // Allocate all device variables here
@@ -74,10 +75,13 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
     stressy = FS5D( "stressy",  cf.ngi, cf.ngj, cf.ngk, 3, 3); // stress tensor Y
     stressz = FS5D( "stressz",  cf.ngi, cf.ngj, cf.ngk, 3, 3); // stress tensor Z
   }
-  if (cf.ceq == 1) {
+  if (cf.ceq) {
     gradRho = FS4D( "gradRho",  cf.ngi, cf.ngj, cf.ngk, 5);    // Density Gradien
     cFlux   = FS4D("cFlux",     cf.ngi, cf.ngj, cf.ngk, 3);    // 
     mFlux   = FS6D("mFlux", 3,3,cf.ngi, cf.ngj, cf.ngk, 3);    //
+  }
+  if (cf.noise) {
+    noise = FS3D_I("noise", cf.ngi, cf.ngj, cf.ngk);
   }
 
   // Primary Variable Names
@@ -94,6 +98,9 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
     varNames.push_back("C_2");
     varNames.push_back("C_3");
   }
+  if (cf.noise)
+    varNames.push_back("Noise");
+
   assert(varNames.size()==cf.nvt);
 
   // Secondary Variable Names
@@ -123,8 +130,11 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
     timers["qflux"] = fiestaTimer("Heat Flux Calculation");
     timers["visc"] = fiestaTimer("Viscous Term Calculation");
   }
-  if (cf.ceq == 1) {
+  if (cf.ceq) {
     timers["ceq"] = fiestaTimer("C-Equation");
+  }
+  if (cf.noise) {
+    timers["noise"] = fiestaTimer("Noise Filter");
   }
 
   // Create and copy minimal configuration array for data needed
@@ -170,6 +180,53 @@ void cart3d_func::postStep() {
     Kokkos::fence();
     timers["calcSecond"].accumulate();
   }
+
+  if (cf.noise == 1) {
+    timers["noise"].reset();
+    int M = 0;
+    int N = 0;
+    int L = 0;
+    double coff;
+
+    if ((cf.nci - 1) % 2 == 0)
+      M = (cf.nci - 1) / 2;
+    else
+      M = cf.nci / 2;
+
+    if ((cf.ncj - 1) % 2 == 0)
+      N = (cf.ncj - 1) / 2;
+    else
+      N = cf.ncj / 2;
+
+    if ((cf.nck - 1) % 2 == 0)
+      L = (cf.nck - 1) / 2;
+    else
+      L = cf.nck / 2;
+
+    policy_f3 noise_pol = policy_f3({0, 0, 0}, {M, N, L});
+    policy_f3 cell_pol = policy_f3({cf.ng, cf.ng, cf.ng}, {cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
+
+    if (cf.ceq == 1) {
+      double maxCh;
+      Kokkos::parallel_reduce(cell_pol, maxCvar3D(var, 6), Kokkos::Max<double>(maxCh));
+      #ifndef NOMPI
+        MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+      #endif
+      coff = cf.n_coff * maxCh;
+    } else {
+      coff = 0.0;
+    }
+
+    for (int v = 0; v < 3; ++v) {
+      Kokkos::parallel_for(noise_pol, detectNoise3D(var, noise, cf.n_dh, coff, cd, v, cf.nvt));
+      //for (int tau = 0; tau < cf.n_nt; ++tau) {
+      //  Kokkos::parallel_for(cell_pol, removeNoise2D(dvar, var, noise, cf.n_eta, cd, v));
+      //  Kokkos::parallel_for(cell_pol, updateNoise2D(dvar, var, v));
+      //}
+    }
+    Kokkos::fence();
+    timers["noise"].accumulate();
+  } // end noise
 }
 
 void cart3d_func::preSim() {
@@ -186,7 +243,6 @@ void cart3d_func::preSim() {
 void cart3d_func::postSim() {}
 
 void cart3d_func::compute() {
-
   // create range policies
   policy_f3 ghost_pol = policy_f3({0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk});
   policy_f3 cell_pol = policy_f3(

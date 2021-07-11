@@ -25,7 +25,6 @@
 std::map<string,int> varxIds;
 
 cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
-
   grid  = FS4D("coords", cf.ni, cf.nj, cf.nk, 3);          // Grid Coords
   var   = FS4D("var", cf.ngi, cf.ngj, cf.ngk, cf.nvt);     // Primary Variables
   tmp1  = FS4D("tmp1", cf.ngi, cf.ngj, cf.ngk, cf.nvt);    // Temporary Array
@@ -125,7 +124,6 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
 void cart2d_func::preStep() {}
 
 void cart2d_func::postStep() {
-
       policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
   if (( (cf.write_freq >0) && (cf.t % cf.write_freq == 0) )||
       ( (cf.stat_freq  >0) && (cf.t % cf.stat_freq  == 0) )){
@@ -179,11 +177,9 @@ void cart2d_func::postStep() {
     timers["noise"].reset();
     for (int v = 0; v < 2; ++v) {
       // int v = 2;
-      Kokkos::parallel_for(noise_pol,
-                           detectNoise2D(var, noise, cf.n_dh, coff, cd, v));
+      Kokkos::parallel_for(noise_pol, detectNoise2D(var, noise, cf.n_dh, coff, cd, v));
       for (int tau = 0; tau < cf.n_nt; ++tau) {
-        Kokkos::parallel_for(cell_pol,
-                             removeNoise2D(dvar, var, noise, cf.n_eta, cd, v));
+        Kokkos::parallel_for(cell_pol, removeNoise2D(dvar, var, noise, cf.n_eta, cd, v));
         Kokkos::parallel_for(cell_pol, updateNoise2D(dvar, var, v));
       }
     }
@@ -197,7 +193,6 @@ void cart2d_func::preSim() {
 void cart2d_func::postSim() {}
 
 void cart2d_func::compute() {
-
   policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
   policy_f cell_pol =
       policy_f({cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng});

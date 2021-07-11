@@ -51,6 +51,7 @@ public:
   FS4D gradRho; // Density Gradient array
   FS4D cFlux;
   FS6D mFlux;
+  FS3D_I noise;
   FS1D cd; // Device configuration array
 };
 

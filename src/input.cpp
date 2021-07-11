@@ -309,8 +309,12 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
 
   // nvt = Number of Variables Total (including c variables)
   cf.nvt = cf.nv;
+
   if (cf.ceq == 1)
     cf.nvt += 5;
+
+  if (cf.noise)
+    cf.nvt += 1;
 
   /* calculate number of grid vertices from number of cells */
   cf.glbl_ni = cf.glbl_nci + 1;

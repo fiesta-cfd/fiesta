@@ -20,6 +20,101 @@
 #ifndef NOISE_HPP
 #define NOISE_HPP
 
+struct detectNoise3D {
+  FS4D var;
+  FS3D_I noise;
+  int nvt,v;
+  double dh;
+  double coff;
+  Kokkos::View<double *> cd;
+
+  detectNoise3D(FS4D var_, FS3D_I n_, double dh_, double c_,
+                Kokkos::View<double *> cd_, int v_, int nvt_)
+      : var(var_), noise(n_), dh(dh_), coff(c_), cd(cd_), v(v_), nvt(nvt_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int ii, const int jj, const int kk) const {
+
+    int nv = (int)cd(0) + 3;
+    int ng = (int)cd(5);
+
+    double dx = cd(1);
+    double dy = cd(2);
+    double dz = cd(3);
+
+    int i = 2 * ii + ng;
+    int j = 2 * jj + ng;
+    int k = 2 * kk + ng;
+
+    int idx=0;
+    int jdx=0;
+    int kdx=0;
+
+    double a = sqrt(165.0 * dx * dy * dz);
+
+    double c = -(a/15840.0) * (
+                 2.0*var(i-1,j+1,k+1,v) +   2.0*var(i,j+1,k+1,v) + 2.0*var(i+1,j+1,k+1,v)
+               + 2.0*var(i-1,j  ,k+1,v) +   8.0*var(i,j  ,k+1,v) + 2.0*var(i+1,j  ,k+1,v)
+               + 2.0*var(i-1,j-1,k+1,v) +   2.0*var(i,j-1,k+1,v) + 2.0*var(i+1,j-1,k+1,v)
+
+               + 2.0*var(i-1,j+1,k  ,v) +   2.0*var(i,j+1,k  ,v) + 2.0*var(i+1,j+1,k  ,v)
+               + 8.0*var(i-1,j  ,k  ,v) + -88.0*var(i,j  ,k  ,v) + 8.0*var(i+1,j  ,k  ,v)
+               + 2.0*var(i-1,j-1,k  ,v) +   2.0*var(i,j-1,k  ,v) + 2.0*var(i+1,j-1,k  ,v)
+
+               + 2.0*var(i-1,j+1,k-1,v) +   2.0*var(i,j+1,k-1,v) + 2.0*var(i+1,j+1,k-1,v)
+               + 2.0*var(i-1,j  ,k-1,v) +   8.0*var(i,j  ,k-1,v) + 2.0*var(i+1,j  ,k-1,v)
+               + 2.0*var(i-1,j-1,k-1,v) +   2.0*var(i,j-1,k-1,v) + 2.0*var(i+1,j-1,k-1,v)
+               );
+
+    double cref = dh * a / 16.0;
+
+    for (idx=-1;idx<2;++idx){
+      for (idx=-1;idx<2;++idx){
+        for (idx=-1;idx<2;++idx){
+          noise(idx,jdx,kdx)=0;
+        }
+      }
+    }
+
+    if (abs(c) >= cref) {
+
+      if (coff == 0.0) {
+        for (idx=-1;idx<2;++idx){
+          for (idx=-1;idx<2;++idx){
+            for (idx=-1;idx<2;++idx){
+              noise(idx,jdx,kdx)=1;
+            }
+          }
+        }
+
+      }else{
+
+        for (idx=-1;idx<2;++idx){
+          for (idx=-1;idx<2;++idx){
+            for (idx=-1;idx<2;++idx){
+              if(var(idx,jdx,kdx,nv+1) < coff){
+                noise(idx,jdx,kdx)=1;
+              }
+            }
+          }
+        }
+
+      }
+      
+    } // end noise detected
+
+    for (idx=-1;idx<2;++idx){
+      for (idx=-1;idx<2;++idx){
+        for (idx=-1;idx<2;++idx){
+          var(idx,jdx,kdx,nv+10)=noise(idx,jdx,kdx);
+          //var(idx,jdx,kdx,nv+11)=c;
+        }
+      }
+    }
+
+  }
+};
+
 struct detectNoise2D {
   FS4D var;
   FS2D_I noise;
