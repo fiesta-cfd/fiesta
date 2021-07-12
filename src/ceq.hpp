@@ -660,109 +660,27 @@ struct updateCeq {
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
-    double dx[3];
-    dx[0] = cd(1);
-    dx[1] = cd(2);
-    dx[2] = cd(3);
+    double dx = cd(1);
+    double dy = cd(2);
+    double dz = cd(3);
 
     // calculate cequation variable indices based on number of species (c
     // variables come after species densities)
     int nv = (int)cd(0) + 4;
     int nc = nv;
 
-    //double dc_left[3][3];
-    //double dc_right[3][3];
     double lap;
 
     // average cell size
-    double dxmag = pow(dx[0] * dx[1] * dx[2], 1.0 / 3.0);
-    // double dxmag = sqrt(dx*dx + dy*dy + dz*dz);
+    double dxmag = pow(dx * dy * dz, 1.0 / 3.0);
 
     for (int n = 0; n < 5; ++n) {
-      // // left face
-      // dc_left[0][0] = (var(i, j, k, nc + n) - var(i - 1, j, k, nc + n)) / dx[0];
-      // dc_left[0][1] =
-      //     (var(i - 1, j + 1, k, nc + n) + var(i, j + 1, k, nc + n) +
-      //      var(i - 1, j - 1, k, nc + n) + var(i, j - 1, k, nc + n)) /
-      //     (4 * dx[1]);
-      // dc_left[0][2] =
-      //     (var(i - 1, j, k + 1, nc + n) + var(i, j, k + 1, nc + n) +
-      //      var(i - 1, j, k - 1, nc + n) + var(i, j, k - 1, nc + n)) /
-      //     (4 * dx[2]);
-
-      // // bottom face
-      // dc_left[1][0] =
-      //     (var(i - 1, j, k, nc + n) + var(i + 1, j, k, nc + n) +
-      //      var(i - 1, j - 1, k, nc + n) + var(i + 1, j - 1, k, nc + n)) /
-      //     (4 * dx[0]);
-      // dc_left[1][1] = (var(i, j, k, nc + n) - var(i, j - 1, k, nc + n)) / dx[1];
-      // dc_left[1][2] =
-      //     (var(i, j, k - 1, nc + n) + var(i, j, k + 1, nc + n) +
-      //      var(i, j - 1, k - 1, nc + n) + var(i, j - 1, k + 1, nc + n)) /
-      //     (4 * dx[2]);
-
-      // // back (hind) face
-      // dc_left[2][0] =
-      //     (var(i - 1, j, k, nc + n) + var(i + 1, j, k, nc + n) +
-      //      var(i - 1, j, k - 1, nc + n) + var(i + 1, j, k - 1, nc + n)) /
-      //     (4 * dx[0]);
-      // dc_left[2][1] =
-      //     (var(i, j - 1, k, nc + n) + var(i, j + 1, k, nc + n) +
-      //      var(i, j - 1, k - 1, nc + n) + var(i, j + 1, k - 1, nc + n)) /
-      //     (4 * dx[1]);
-      // dc_left[2][2] = (var(i, j, k, nc + n) - var(i, j, k - 1, nc + n)) / dx[2];
-
-      // // right face
-      // dc_right[0][0] =
-      //     (var(i + 1, j, k, nc + n) - var(i, j, k, nc + n)) / dx[0];
-      // dc_right[0][1] =
-      //     (var(i, j + 1, k, nc + n) + var(i + 1, j + 1, k, nc + n) +
-      //      var(i, j - 1, k, nc + n) + var(i + 1, j - 1, k, nc + n)) /
-      //     (4 * dx[1]);
-      // dc_right[0][2] =
-      //     (var(i, j, k + 1, nc + n) + var(i + 1, j, k + 1, nc + n) +
-      //      var(i, j, k - 1, nc + n) + var(i + 1, j, k - 1, nc + n)) /
-      //     (4 * dx[2]);
-
-      // // top face
-      // dc_right[1][0] =
-      //     (var(i - 1, j + 1, k, nc + n) + var(i + 1, j + 1, k, nc + n) +
-      //      var(i - 1, j, k, nc + n) + var(i + 1, j, k, nc + n)) /
-      //     (4 * dx[0]);
-      // dc_right[1][1] =
-      //     (var(i, j + 1, k, nc + n) - var(i, j, k, nc + n)) / dx[1];
-      // dc_right[1][2] =
-      //     (var(i, j + 1, k - 1, nc + n) + var(i, j + 1, k + 1, nc + n) +
-      //      var(i, j, k - 1, nc + n) + var(i, j, k + 1, nc + n)) /
-      //     (4 * dx[2]);
-
-      // // front face
-      // dc_right[2][0] =
-      //     (var(i - 1, j, k + 1, nc + n) + var(i + 1, j, k + 1, nc + n) +
-      //      var(i - 1, j, k, nc + n) + var(i + 1, j, k, nc + n)) /
-      //     (4 * dx[0]);
-      // dc_right[2][1] =
-      //     (var(i, j - 1, k + 1, nc + n) + var(i, j + 1, k + 1, nc + n) +
-      //      var(i, j - 1, k, nc + n) + var(i, j + 1, k, nc + n)) /
-      //     (4 * dx[1]);
-      // dc_right[2][2] =
-      //     (var(i, j, k + 1, nc + n) - var(i, j, k, nc + n)) / dx[2];
-
-      // // update ceq right hand side
-      // lap = 0;
-      // for (int d = 0; d < 3; ++d) {
-      //   for (int f = 0; f < 3; ++f) {
-      //     lap = lap + (dc_right[d][f] - dc_left[d][f]) / dx[d];
-      //   }
-      // }
-
-      lap = (var(i-1,j,k,nc+n)-2*var(i,j,k,nc+n)+var(i+1,j,k,nc+n))/dx[0]
-          + (var(i,j-1,k,nc+n)-2*var(i,j,k,nc+n)+var(i,j+1,k,nc+n))/dx[1]
-          + (var(i,j,k-1,nc+n)-2*var(i,j,k,nc+n)+var(i,j,k+1,nc+n))/dx[2];
+      lap = (var(i-1,j,k,nc+n)-2*var(i,j,k,nc+n)+var(i+1,j,k,nc+n))/(dx)
+          + (var(i,j-1,k,nc+n)-2*var(i,j,k,nc+n)+var(i,j+1,k,nc+n))/(dy)
+          + (var(i,j,k-1,nc+n)-2*var(i,j,k,nc+n)+var(i,j,k+1,nc+n))/(dz);
 
       dvar(i, j, k, nc + n) =
-          maxS / (eps * dxmag) * (gradRho(i, j, k, n) - var(i, j, k, nc + n)) +
-          kap * maxS * dxmag * lap;
+          maxS / (eps * dxmag) * (gradRho(i, j, k, n) - var(i, j, k, nc + n)) + kap * maxS * dxmag * lap;
     }
   }
 };

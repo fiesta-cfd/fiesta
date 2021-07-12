@@ -86,8 +86,9 @@ struct inputConfig {
   double R;
   int scheme;
   bool visc;
-  bool gravity;
-  double g_accel;
+  bool buoyancy;
+  double gAccel;
+  double rhoRef;
   double *g_vec;
   double dt, dx, dy, dz;
   int xProcs, yProcs, zProcs, numProcs;

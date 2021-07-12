@@ -140,7 +140,6 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   L.get({"R"},        cf.R,       8.314462);
   //L.get("cequations"},      cf.ceq,     0);
   //L.get("noise"},    cf.noise,   0);
-  L.get({"buoyancy","enabled"}, cf.gravity, false);
   L.get({"grid","ndim"},     cf.ndim,    2);
   L.get({"viscosity","enabled"},     cf.visc,    false);
   L.get({"ng"},       cf.ng,      3);
@@ -201,6 +200,11 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
 
   // Dependent Parameters
   //
+  L.get({"buoyancy","enabled"}, cf.buoyancy, false);
+  if (cf.buoyancy){
+    L.get({"buoyancy","acceleration"},cf.gAccel,9.81);
+    L.get({"buoyancy","rho_reference"},cf.rhoRef,1.0);
+  }
   std::string test;
   L.get({"ceq","enabled"},cf.ceq,false);
   if(cf.ceq){
@@ -209,7 +213,7 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
     L.get({"ceq","alpha"},cf.alpha);
     L.get({"ceq","beta"},cf.beta);
     L.get({"ceq","betae"},cf.betae);
-    L.get({"ceq","st"},cf.st);
+    L.get({"ceq","st"},cf.st,0);
   }
 
   L.get({"noise","enabled"},cf.noise,false);
@@ -312,9 +316,6 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
 
   if (cf.ceq == 1)
     cf.nvt += 5;
-
-  if (cf.noise)
-    cf.nvt += 1;
 
   /* calculate number of grid vertices from number of cells */
   cf.glbl_ni = cf.glbl_nci + 1;

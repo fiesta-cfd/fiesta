@@ -36,6 +36,8 @@
 #include "block.hpp"
 #include "ceq.hpp"
 #include "noise.hpp"
+#include "log2.hpp"
+#include "buoyancy.hpp"
 
 cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   // Allocate all device variables here
@@ -90,7 +92,7 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   varNames.push_back("Z-Momentum");
   varNames.push_back("Energy");
   for (int v=0; v<cf.ns; ++v)
-    varNames.push_back("Density " + cf.speciesName[v]);
+    varNames.push_back(cf.speciesName[v] + " Density");
   if (cf.ceq == 1) {
     varNames.push_back("C");
     varNames.push_back("C_hat");
@@ -98,8 +100,6 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
     varNames.push_back("C_2");
     varNames.push_back("C_3");
   }
-  if (cf.noise)
-    varNames.push_back("Noise");
 
   assert(varNames.size()==cf.nvt);
 
@@ -109,7 +109,12 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   varxNames.push_back("Z-Velocity");
   varxNames.push_back("Pressure");
   varxNames.push_back("Temperature");
-  varxNames.push_back("Density");
+  varxNames.push_back("Total Density");
+  if (cf.noise){
+    varxNames.push_back("Noise_c");
+    varxNames.push_back("Noise_I");
+    varxNames.push_back("Noise_d");
+  }
 
   // Create Secondary Variable Array
   varx = FS4D("varx",cf.ngi,cf.ngj,cf.ngk,varxNames.size());
@@ -135,6 +140,9 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   }
   if (cf.noise) {
     timers["noise"] = fiestaTimer("Noise Filter");
+  }
+  if (cf.buoyancy) {
+    timers["buoyancy"] = fiestaTimer("Buoyancy Term");
   }
 
   // Create and copy minimal configuration array for data needed
@@ -181,7 +189,7 @@ void cart3d_func::postStep() {
     timers["calcSecond"].accumulate();
   }
 
-  if (cf.noise == 1) {
+  if (cf.noise) {
     timers["noise"].reset();
     int M = 0;
     int N = 0;
@@ -218,11 +226,11 @@ void cart3d_func::postStep() {
     }
 
     for (int v = 0; v < 3; ++v) {
-      Kokkos::parallel_for(noise_pol, detectNoise3D(var, noise, cf.n_dh, coff, cd, v, cf.nvt));
-      //for (int tau = 0; tau < cf.n_nt; ++tau) {
-      //  Kokkos::parallel_for(cell_pol, removeNoise2D(dvar, var, noise, cf.n_eta, cd, v));
-      //  Kokkos::parallel_for(cell_pol, updateNoise2D(dvar, var, v));
-      //}
+      Kokkos::parallel_for(noise_pol, detectNoise3D(var, varx, noise, cf.n_dh, coff, cd, v));
+      for (int tau = 0; tau < cf.n_nt; ++tau) {
+        Kokkos::parallel_for(cell_pol, removeNoise3D(dvar, var, varx, noise, cf.n_eta, cd, v));
+        Kokkos::parallel_for(cell_pol, updateNoise3D(dvar, var, v));
+      }
     }
     Kokkos::fence();
     timers["noise"].accumulate();
@@ -282,6 +290,13 @@ void cart3d_func::compute() {
   Kokkos::parallel_for(cell_pol, applyPressureGradient3D(dvar, p, cd));
   Kokkos::fence();
   timers["pressgrad"].accumulate();
+
+  if (cf.buoyancy) {
+    timers["buoyancy"].reset();
+    Kokkos::parallel_for(cell_pol, computeBuoyancy3D(dvar, var, rho, cf.gAccel, cf.rhoRef));
+    Kokkos::fence();
+    timers["buoyancy"].accumulate();
+  }
 
   if (cf.ceq != 0) {
     timers["ceq"].reset();

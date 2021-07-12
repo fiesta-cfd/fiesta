@@ -116,7 +116,7 @@ void printConfig(struct inputConfig cf) {
     if (cf.noise) cout << format(keyEnabled,"Noise Indicator:");
     else cout << format(keyDisabled,"Noise Indicator:");
 
-    if (cf.gravity) cout << format(keyEnabled,"Buoyancy:");
+    if (cf.buoyancy) cout << format(keyEnabled,"Buoyancy:");
     else cout << format(keyDisabled,"Buoyancy:");
   
     cout << format(keyValue,"Number of species:",cf.ns);

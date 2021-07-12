@@ -105,8 +105,8 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
   timers["rk"] = fiestaTimer("Runge Stage Update");
   timers["halo"] = fiestaTimer("Halo Exchanges");
   timers["bc"] = fiestaTimer("Boundary Conditions");
-  if (cf.gravity == 1) {
-    timers["gravity"] = fiestaTimer("Gravity Term");
+  if (cf.buoyancy) {
+    timers["buoyancy"] = fiestaTimer("Buoyancy Term");
   }
   if (cf.visc == 1) {
     timers["stress"] = fiestaTimer("Stress Tensor Computation");
@@ -231,9 +231,9 @@ void cart2d_func::compute() {
   Kokkos::fence();
   timers["pressgrad"].accumulate();
 
-  if (cf.gravity == 1) {
+  if (cf.buoyancy) {
     timers["gravity"].reset();
-    Kokkos::parallel_for(cell_pol, computeBuoyancy(dvar, var, rho));
+    Kokkos::parallel_for(cell_pol, computeBuoyancy(dvar, var, rho, cf.gAccel, cf.rhoRef));
     Kokkos::fence();
     timers["gravity"].accumulate();
   }

@@ -345,7 +345,6 @@ void luaReader::getValue(int& n){
  
 template<>
 void luaReader::getValue(bool& n){
-  int isnum;
   n=(bool)lua_toboolean(L,-1);
 }
  

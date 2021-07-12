@@ -19,29 +19,51 @@
 
 #ifndef bouyancy_hpp
 #define bouyancy_hpp
+struct computeBuoyancy3D {
+  FS4D dvar;
+  FS4D var;
+  FS3D rho;
+  double g;
+  double rhoRef;
+
+  computeBuoyancy3D(FS4D dvar_, FS4D var_, FS3D rho_, double g_, double r_)
+      : dvar(dvar_), var(var_), rho(rho_), g(g_), rhoRef(r_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j, const int k) const {
+
+    double v = var(i, j, k, 2) / rho(i,j,k);
+    double rhop = rho(i,j,k) - rhoRef;
+    //double eps = 1e-6;
+
+    //if (rhop >= eps || rhop <= -eps) {
+      double f = -g * rhop;
+      dvar(i, j, k, 2) += f;
+      dvar(i, j, k, 3) += v * f;
+    //}
+  }
+};
 struct computeBuoyancy {
   FS4D dvar;
   FS4D var;
   FS2D rho;
+  double g;
+  double rhoRef;
 
-  computeBuoyancy(FS4D dvar_, FS4D var_, FS2D rho_)
-      : dvar(dvar_), var(var_), rho(rho_) {}
+  computeBuoyancy(FS4D dvar_, FS4D var_, FS2D rho_, double g_, double r_)
+      : dvar(dvar_), var(var_), rho(rho_), g(g_), rhoRef(r_) {}
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j) const {
 
     double v = var(i, j, 0, 1) / rho(i, j);
-    double rhop = rho(i, j) - 1.0;
+    double rhop = rho(i, j) - rhoRef;
     double eps = 1e-6;
 
     if (rhop >= eps || rhop <= -eps) {
-      double f = -9.81 * rhop;
-      ;
-
+      double f = -g * rhop;
       dvar(i, j, 0, 1) += f;
       dvar(i, j, 0, 2) += v * f;
-
-      //            printf("%f\n",f);
     }
   }
 };

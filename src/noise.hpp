@@ -19,18 +19,21 @@
 
 #ifndef NOISE_HPP
 #define NOISE_HPP
+#include "log2.hpp"
+
+// 3D
 
 struct detectNoise3D {
-  FS4D var;
+  FS4D var,varx;
   FS3D_I noise;
-  int nvt,v;
+  int v;
   double dh;
   double coff;
   Kokkos::View<double *> cd;
 
-  detectNoise3D(FS4D var_, FS3D_I n_, double dh_, double c_,
-                Kokkos::View<double *> cd_, int v_, int nvt_)
-      : var(var_), noise(n_), dh(dh_), coff(c_), cd(cd_), v(v_), nvt(nvt_) {}
+  detectNoise3D(FS4D var_, FS4D varx_, FS3D_I n_, double dh_, double c_,
+                Kokkos::View<double *> cd_, int v_)
+      : var(var_), varx(varx_), noise(n_), dh(dh_), coff(c_), cd(cd_), v(v_) {}
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int ii, const int jj, const int kk) const {
@@ -69,9 +72,9 @@ struct detectNoise3D {
     double cref = dh * a / 16.0;
 
     for (idx=-1;idx<2;++idx){
-      for (idx=-1;idx<2;++idx){
-        for (idx=-1;idx<2;++idx){
-          noise(idx,jdx,kdx)=0;
+      for (jdx=-1;jdx<2;++jdx){
+        for (kdx=-1;kdx<2;++kdx){
+          noise(i+idx,j+jdx,k+kdx)=0;
         }
       }
     }
@@ -80,9 +83,9 @@ struct detectNoise3D {
 
       if (coff == 0.0) {
         for (idx=-1;idx<2;++idx){
-          for (idx=-1;idx<2;++idx){
-            for (idx=-1;idx<2;++idx){
-              noise(idx,jdx,kdx)=1;
+          for (jdx=-1;jdx<2;++jdx){
+            for (kdx=-1;kdx<2;++kdx){
+              noise(i+idx,j+jdx,k+kdx)=1;
             }
           }
         }
@@ -90,10 +93,10 @@ struct detectNoise3D {
       }else{
 
         for (idx=-1;idx<2;++idx){
-          for (idx=-1;idx<2;++idx){
-            for (idx=-1;idx<2;++idx){
+          for (jdx=-1;jdx<2;++jdx){
+            for (kdx=-1;kdx<2;++kdx){
               if(var(idx,jdx,kdx,nv+1) < coff){
-                noise(idx,jdx,kdx)=1;
+                noise(i+idx,j+jdx,k+kdx)=1;
               }
             }
           }
@@ -104,16 +107,65 @@ struct detectNoise3D {
     } // end noise detected
 
     for (idx=-1;idx<2;++idx){
-      for (idx=-1;idx<2;++idx){
-        for (idx=-1;idx<2;++idx){
-          var(idx,jdx,kdx,nv+10)=noise(idx,jdx,kdx);
-          //var(idx,jdx,kdx,nv+11)=c;
+      for (jdx=-1;jdx<2;++jdx){
+        for (kdx=-1;kdx<2;++kdx){
+          varx(i+idx,j+jdx,k+kdx,6)=c;
+          varx(i+idx,j+jdx,k+kdx,7)=noise(i+idx,j+jdx,k+kdx);
         }
       }
     }
 
   }
 };
+
+struct removeNoise3D {
+  FS4D dvar;
+  FS4D var;
+  FS4D varx;
+  FS3D_I noise;
+  double dt;
+  Kokkos::View<double *> cd;
+  int v;
+
+  removeNoise3D(FS4D dvar_, FS4D var_, FS4D varx_, FS3D_I n_, double dt_,
+                Kokkos::View<double *> cd_, int v_)
+      : dvar(dvar_), var(var_), varx(varx_), noise(n_), dt(dt_), cd(cd_), v(v_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j, const int k) const {
+
+    int ng = (int)cd(5);
+
+    double dx = cd(1);
+    double dy = cd(2);
+    double dz = cd(3);
+    double lap;
+
+    lap = (var(i-1,j,k,v)-2*var(i,j,k,v)+var(i+1,j,k,v))/(dx*dx)
+        + (var(i,j-1,k,v)-2*var(i,j,k,v)+var(i,j+1,k,v))/(dy*dy)
+        + (var(i,j,k-1,v)-2*var(i,j,k,v)+var(i,j,k+1,v))/(dz*dz);
+
+    dvar(i,j,k,v) = dt * noise(i,j,k) * lap;
+    varx(i,j,k,8) = dvar(i,j,k,v);
+  }
+};
+
+struct updateNoise3D {
+  FS4D dvar;
+  FS4D var;
+  int v;
+
+  updateNoise3D(FS4D dvar_, FS4D var_, int v_)
+      : dvar(dvar_), var(var_), v(v_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j, const int k) const {
+
+    var(i, j, k, v) += dvar(i, j, k, v);
+  }
+};
+
+// 2D
 
 struct detectNoise2D {
   FS4D var;
