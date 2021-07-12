@@ -117,6 +117,7 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   }
   if (cf.ceq)
     varxNames.push_back("dc");
+  Fiesta::Log::debug("varxName.size()={}",varxNames.size());
 
   // Create Secondary Variable Array
   varx = FS4D("varx",cf.ngi,cf.ngj,cf.ngk,varxNames.size());
@@ -300,7 +301,7 @@ void cart3d_func::compute() {
     timers["buoyancy"].accumulate();
   }
 
-  if (cf.ceq != 0) {
+  if (cf.ceq) {
     timers["ceq"].reset();
     /**** CEQ ****/
     // find mac wavespeed
@@ -346,11 +347,9 @@ void cart3d_func::compute() {
       betae = (dxmag*dxmag / maxC) * cf.betae;
     }
 
-    Fiesta::Log::debug("alpha={}",alpha);
-
     Kokkos::parallel_for(weno_pol, calculateCeqFlux(var, rho, mFlux, cFlux, cd));
 
-    Kokkos::parallel_for(cell_pol, applyCeq(dvar, varx, var, vel, rho, mFlux, cFlux, cd, alpha, beta, betae));
+    Kokkos::parallel_for(cell_pol, applyCeq(dvar, var, varx, vel, rho, mFlux, cFlux, cd, alpha, beta, betae));
     Kokkos::fence();
     timers["ceq"].accumulate();
   }
