@@ -95,7 +95,7 @@ struct detectNoise3D {
         for (idx=-1;idx<2;++idx){
           for (jdx=-1;jdx<2;++jdx){
             for (kdx=-1;kdx<2;++kdx){
-              if(var(idx,jdx,kdx,nv+1) < coff){
+              if(abs(var(idx,jdx,kdx,nv+1)) < coff){
                 noise(i+idx,j+jdx,k+kdx)=1;
               }
             }

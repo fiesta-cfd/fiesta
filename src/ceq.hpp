@@ -19,6 +19,7 @@
 
 #ifndef CEQ_HPP
 #define CEQ_HPP
+#include <cstdio>
 struct maxCvar3D {
   FS4D dvar;
   int v;
@@ -29,7 +30,7 @@ struct maxCvar3D {
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k, double &lmax) const {
 
-    double s = dvar(i, j, k, v);
+    double s = abs(dvar(i, j, k, v));
 
     if (s > lmax)
       lmax = s;
@@ -49,7 +50,7 @@ struct maxCvar2D {
     int ns = (int)cd(0);
     int nv = ns + 3;
 
-    double s = dvar(i, j, 0, nv + v);
+    double s = abs(dvar(i, j, 0, nv + v));
 
     if (s > lmax)
       lmax = s;
@@ -672,7 +673,8 @@ struct updateCeq {
     double lap;
 
     // average cell size
-    double dxmag = pow(dx * dy * dz, 1.0 / 3.0);
+    //double dxmag = pow(dx * dy * dz, 1.0 / 3.0);
+    double dxmag = sqrt(dx*dx + dy*dy + dz*dz);
 
     for (int n = 0; n < 5; ++n) {
       lap = (var(i-1,j,k,nc+n)-2*var(i,j,k,nc+n)+var(i+1,j,k,nc+n))/(dx)
@@ -726,6 +728,9 @@ struct calculateCeqFlux {
 
     // for each direction (i=0, j=1, k=2)
     for (int dir = 0; dir < 3; ++dir) {
+      ip = 0;
+      jp = 0;
+      kp = 0;
       if (dir == 0)
         ip = 1;
       if (dir == 1)
@@ -797,9 +802,6 @@ struct calculateCeqFlux {
         // calcualte isotropic C flux
         cFlux(i, j, k, dir) = (c_right * rho_right - c_left * rho_left) / 2.0;
 
-        ip = 0;
-        jp = 0;
-        kp = 0;
       }
     }
   }
@@ -808,16 +810,18 @@ struct calculateCeqFlux {
 struct applyCeq {
   FS4D dvar;
   FS4D var;
+  FS4D varx;
+  FS4D vel;
   FS3D rho;
   FS6D mFlux; //(m,n,i,j,k,dir)
   FS4D cFlux; //(i,j,k,dir)
   double alpha, beta, betae;
   Kokkos::View<double *> cd;
 
-  applyCeq(FS4D dvar_, FS4D var_, FS3D rho_, FS6D mFlux_, FS4D cFlux_,
+  applyCeq(FS4D dvar_, FS4D var_, FS4D varx_, FS4D vel_, FS3D rho_, FS6D mFlux_, FS4D cFlux_,
            Kokkos::View<double *> cd_, double alpha_, double beta_,
            double betae_)
-      : dvar(dvar_), var(var_), rho(rho_), mFlux(mFlux_), cFlux(cFlux_),
+      : dvar(dvar_), var(var_), varx(varx_), vel(vel_), rho(rho_), mFlux(mFlux_), cFlux(cFlux_),
         cd(cd_), alpha(alpha_), beta(beta_), betae(betae_) {}
 
   KOKKOS_INLINE_FUNCTION
@@ -843,94 +847,46 @@ struct applyCeq {
     // for each velocity component and energy
     for (int n = 0; n < 4; ++n) {
       // left face
-      du_left[0][0] = (var(i, j, k, n) / rho(i, j, k) -
-                       var(i - 1, j, k, n) / rho(i - 1, j, k)) /
-                      cd(1);
-      du_left[0][1] = (var(i - 1, j + 1, k, n) / rho(i - 1, j + 1, k) +
-                       var(i, j + 1, k, n) / rho(i, j + 1, k) +
-                       var(i - 1, j - 1, k, n) / rho(i - 1, j - 1, k) +
-                       var(i, j - 1, k, n) / rho(i, j - 1, k)) /
-                      (4 * cd(2));
-      du_left[0][2] = (var(i - 1, j, k + 1, n) / rho(i - 1, j, k + 1) +
-                       var(i, j, k + 1, n) / rho(i, j, k + 1) +
-                       var(i - 1, j, k - 1, n) / rho(i - 1, j, k - 1) +
-                       var(i, j, k - 1, n) / rho(i, j, k - 1)) /
-                      (4 * cd(3));
+      du_left[0][0] = (vel(i,j,k,n) - vel(i-1,j,k,n)) / cd(1);
+      du_left[0][1] = ( (vel(i-1,j+1,k,n) + vel(i,j+1,k,n))
+                       -(vel(i-1,j-1,k,n) + vel(i,j-1,k,n)) ) / (4*cd(2));
+      du_left[0][2] = ( (vel(i-1,j,k+1,n) + vel(i,j,k+1,n))
+                       -(vel(i-1,j,k-1,n) + vel(i,j,k-1,n)) ) / (4*cd(3));
 
       // bottom face
-      du_left[1][0] = (var(i - 1, j, k, n) / rho(i - 1, j, k) +
-                       var(i + 1, j, k, n) / rho(i + 1, j, k) +
-                       var(i - 1, j - 1, k, n) / rho(i - 1, j - 1, k) +
-                       var(i + 1, j - 1, k, n) / rho(i + 1, j - 1, k)) /
-                      (4 * cd(1));
-      du_left[1][1] = (var(i, j, k, n) / rho(i, j, k) -
-                       var(i, j - 1, k, n) / rho(i, j - 1, k)) /
-                      cd(2);
-      du_left[1][2] = (var(i, j, k - 1, n) / rho(i, j, k - 1) +
-                       var(i, j, k + 1, n) / rho(i, j, k + 1) +
-                       var(i, j - 1, k - 1, n) / rho(i, j - 1, k - 1) +
-                       var(i, j - 1, k + 1, n) / rho(i, j - 1, k + 1)) /
-                      (4 * cd(3));
+      du_left[1][0] = ( (vel(i+1,j,k,n) + vel(i+1,j-1,k,n))
+                       -(vel(i-1,j,k,n) + vel(i-1,j-1,k,n)) ) / (4*cd(1));
+      du_left[1][1] = (vel(i,j,k,n) - vel(i,j-1,k,n)) / cd(2);
+      du_left[1][2] = ( (vel(i,j,k+1,n) + vel(i,j-1,k+1,n))
+                       -(vel(i,j,k-1,n) + vel(i,j-1,k-1,n)) ) / (4*cd(3));
 
       // back (hind) face
-      du_left[2][0] = (var(i - 1, j, k, n) / rho(i - 1, j, k) +
-                       var(i + 1, j, k, n) / rho(i + 1, j, k) +
-                       var(i - 1, j, k - 1, n) / rho(i - 1, j, k - 1) +
-                       var(i + 1, j, k - 1, n) / rho(i + 1, j, k - 1)) /
-                      (4 * cd(1));
-      du_left[2][1] = (var(i, j - 1, k, n) / rho(i, j - 1, k) +
-                       var(i, j + 1, k, n) / rho(i, j + 1, k) +
-                       var(i, j - 1, k - 1, n) / rho(i, j - 1, k - 1) +
-                       var(i, j + 1, k - 1, n) / rho(i, j + 1, k - 1)) /
-                      (4 * cd(2));
-      du_left[2][2] = (var(i, j, k, n) / rho(i, j, k) -
-                       var(i, j, k - 1, n) / rho(i, j, k - 1)) /
-                      cd(3);
+      du_left[2][0] = ( (vel(i+1,j,k,n) + vel(i+1,j,k-1,n))
+                       -(vel(i-1,j,k,n) + vel(i-1,j,k-1,n)) ) / (4*cd(1));
+      du_left[2][1] = ( (vel(i,j+1,k,n) + vel(i,j+1,k-1,n))
+                       -(vel(i,j-1,k,n) + vel(i,j-1,k-1,n)) ) / (4*cd(2));
+      du_left[2][2] = (vel(i,j,k,n) - vel(i,j,k-1,n)) / cd(3);
 
       // right face
-      du_right[0][0] = (var(i + 1, j, k, n) / rho(i + 1, j, k) -
-                        var(i, j, k, n) / rho(i, j, k)) /
-                       cd(1);
-      du_right[0][1] = (var(i, j + 1, k, n) / rho(i, j + 1, k) +
-                        var(i + 1, j + 1, k, n) / rho(i + 1, j + 1, k) +
-                        var(i, j - 1, k, n) / rho(i, j - 1, k) +
-                        var(i + 1, j - 1, k, n) / rho(i + 1, j - 1, k)) /
-                       (4 * cd(2));
-      du_right[0][2] = (var(i, j, k + 1, n) / rho(i, j, k + 1) +
-                        var(i + 1, j, k + 1, n) / rho(i + 1, j, k + 1) +
-                        var(i, j, k - 1, n) / rho(i, j, k - 1) +
-                        var(i + 1, j, k - 1, n) / rho(i + 1, j, k - 1)) /
-                       (4 * cd(3));
+      du_left[0][0] = (vel(i+1,j,k,n) - vel(i,j,k,n)) / cd(1);
+      du_left[0][1] = ( (vel(i,j+1,k,n) + vel(i+1,j+1,k,n))
+                       -(vel(i,j-1,k,n) + vel(i+1,j-1,k,n)) ) / (4*cd(2));
+      du_left[0][2] = ( (vel(i,j,k+1,n) + vel(i+1,j,k+1,n))
+                       -(vel(i,j,k-1,n) + vel(i+1,j,k-1,n)) ) / (4*cd(3));
 
       // top face
-      du_right[1][0] = (var(i - 1, j + 1, k, n) / rho(i - 1, j + 1, k) +
-                        var(i + 1, j + 1, k, n) / rho(i + 1, j + 1, k) +
-                        var(i - 1, j, k, n) / rho(i - 1, j, k) +
-                        var(i + 1, j, k, n) / rho(i + 1, j, k)) /
-                       (4 * cd(1));
-      du_right[1][1] = (var(i, j + 1, k, n) / rho(i, j + 1, k) -
-                        var(i, j, k, n) / rho(i, j, k)) /
-                       cd(2);
-      du_right[1][2] = (var(i, j + 1, k - 1, n) / rho(i, j + 1, k - 1) +
-                        var(i, j + 1, k + 1, n) / rho(i, j + 1, k + 1) +
-                        var(i, j, k - 1, n) / rho(i, j, k - 1) +
-                        var(i, j, k + 1, n) / rho(i, j, k + 1)) /
-                       (4 * cd(3));
+      du_left[1][0] = ( (vel(i+1,j+1,k,n) + vel(i+1,j,k,n))
+                       -(vel(i-1,j+1,k,n) + vel(i-1,j,k,n)) ) / (4*cd(1));
+      du_left[1][1] = (vel(i,j,k,n) - vel(i,j-1,k,n)) / cd(2);
+      du_left[1][2] = ( (vel(i,j+1,k+1,n) + vel(i,j,k+1,n))
+                       -(vel(i,j+1,k-1,n) + vel(i,j,k-1,n)) ) / (4*cd(3));
 
       // front face
-      du_right[2][0] = (var(i - 1, j, k + 1, n) / rho(i - 1, j, k + 1) +
-                        var(i + 1, j, k + 1, n) / rho(i + 1, j, k + 1) +
-                        var(i - 1, j, k, n) / rho(i - 1, j, k) +
-                        var(i + 1, j, k, n) / rho(i + 1, j, k)) /
-                       (4 * cd(1));
-      du_right[2][1] = (var(i, j - 1, k + 1, n) / rho(i, j - 1, k + 1) +
-                        var(i, j + 1, k + 1, n) / rho(i, j + 1, k + 1) +
-                        var(i, j - 1, k, n) / rho(i, j - 1, k) +
-                        var(i, j + 1, k, n) / rho(i, j + 1, k)) /
-                       (4 * cd(2));
-      du_right[2][2] = (var(i, j, k + 1, n) / rho(i, j, k + 1) -
-                        var(i, j, k, n) / rho(i, j, k)) /
-                       cd(3);
+      du_left[2][0] = ( (vel(i+1,j,k+1,n) + vel(i+1,j,k,n))
+                       -(vel(i-1,j,k+1,n) + vel(i-1,j,k,n)) ) / (4*cd(1));
+      du_left[2][1] = ( (vel(i,j+1,k+1,n) + vel(i,j+1,k,n))
+                       -(vel(i,j-1,k+1,n) + vel(i,j-1,k,n)) ) / (4*cd(2));
+      du_left[2][2] = (vel(i,j,k,n) - vel(i,j,k-1,n)) / cd(3);
 
       an = 0;
       is = 0;
@@ -941,51 +897,40 @@ struct applyCeq {
       if (n < 3) {
         diffu = 0;
         for (int d = 0; d < 3; ++d) { // each direction for divergence
-          if (d == 0)
-            ip = 1;
-          if (d == 1)
-            jp = 1;
-          if (d == 2)
-            kp = 1;
+          ip = 0; jp = 0; kp = 0;
+          if (d == 0) ip = 1;
+          if (d == 1) jp = 1;
+          if (d == 2) kp = 1;
 
           for (int f = 0; f < 3; ++f) { // each direction for gradient
-            an = an + (mFlux(d, f, i, j, k, d) * du_right[d][f] -
-                       mFlux(d, f, i - ip, j - jp, k - kp, d) * du_left[d][f]) /
-                          dx[d];
-            is = is + (cFlux(i, j, k, d) * du_right[d][f] -
-                       cFlux(i - ip, j - jp, k - kp, d) * du_left[d][f]) /
-                          dx[d];
+            an = an + (mFlux(d,f,i,j,k,d) * du_right[d][f] -
+                       mFlux(d,f,i-ip,j-jp,k-kp,d) * du_left[d][f]) / dx[d];
+            is = is + (cFlux(i,j,k,d) * du_right[d][f] -
+                       cFlux(i-ip,j-jp,k-kp,d) * du_left[d][f]) / dx[d];
           }
 
-          ip = 0;
-          jp = 0;
-          kp = 0;
         }
 
-        diffu = alpha * an + beta * is;
+        diffu = alpha*an + beta*is;
 
-        dvar(i, j, k, n) = dvar(i, j, k, n) + diffu;
+        dvar(i,j,k,n) += diffu;
+        varx(i,j,k,9) = dvar(i,j,k,n);
+        //printf("(%d,%d,%d) %d: %f  %f  %f\n",i,j,k,n,diffu,alpha,an);
       } else {
         diffu = 0;
         for (int d = 0; d < 3; ++d) { // each direction for divergence
-          if (d == 0)
-            ip = 1;
-          if (d == 1)
-            jp = 1;
-          if (d == 2)
-            kp = 1;
+          ip = 0; jp = 0; kp = 0;
+          if (d == 0) ip = 1;
+          if (d == 1) jp = 1;
+          if (d == 2) kp = 1;
 
           for (int f = 0; f < 3; ++f) { // each direction for gradient
-            diffu = diffu + (cFlux(i, j, k, d) * du_right[d][f] -
-                             cFlux(i - ip, j - jp, k - kp, d) * du_left[d][f]) /
-                                dx[d];
+            diffu = diffu + (cFlux(i,j,k,d) * du_right[d][f] -
+                             cFlux(i-ip,j-jp,k-kp,d) * du_left[d][f]) / dx[d];
           }
 
-          ip = 0;
-          jp = 0;
-          kp = 0;
         }
-        dvar(i, j, k, n) = dvar(i, j, k, n) + betae * diffu;
+        dvar(i,j,k,n) += betae*diffu;
       }
     }
   }

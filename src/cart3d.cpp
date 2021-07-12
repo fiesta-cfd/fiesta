@@ -115,6 +115,8 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
     varxNames.push_back("Noise_I");
     varxNames.push_back("Noise_d");
   }
+  if (cf.ceq)
+    varxNames.push_back("dc");
 
   // Create Secondary Variable Array
   varx = FS4D("varx",cf.ngi,cf.ngj,cf.ngk,varxNames.size());
@@ -215,7 +217,7 @@ void cart3d_func::postStep() {
     policy_f3 cell_pol = policy_f3({cf.ng, cf.ng, cf.ng}, {cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
 
     if (cf.ceq == 1) {
-      double maxCh;
+      double maxCh=0;
       Kokkos::parallel_reduce(cell_pol, maxCvar3D(var, 6), Kokkos::Max<double>(maxCh));
       #ifndef NOMPI
         MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
@@ -315,18 +317,13 @@ void cart3d_func::compute() {
     Kokkos::parallel_for(cell_pol, updateCeq(dvar, var, gradRho, maxS, cd, cf.kap, cf.eps));
 
     /**** Apply CEQ ****/
-     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv + 0),
-                             Kokkos::Max<double>(maxC));
-     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv + 1),
-                             Kokkos::Max<double>(maxCh));
-     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv + 2),
-                             Kokkos::Max<double>(maxC1));
-     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv + 3),
-                             Kokkos::Max<double>(maxC2));
-     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv + 4),
-                             Kokkos::Max<double>(maxC3));
+     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+0), Kokkos::Max<double>(maxC));
+     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+1), Kokkos::Max<double>(maxCh));
+     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+2), Kokkos::Max<double>(maxC1));
+     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+3), Kokkos::Max<double>(maxC2));
+     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+4), Kokkos::Max<double>(maxC3));
  #ifndef NOMPI
-    MPI_Allreduce(&maxC, &maxC, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxC,  &maxC,  1, MPI_DOUBLE, MPI_MAX, cf.comm);
     MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
     MPI_Allreduce(&maxC1, &maxC1, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
     MPI_Allreduce(&maxC2, &maxC2, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
@@ -334,33 +331,27 @@ void cart3d_func::compute() {
  #endif
 
     mu = maxC1;
-    if (maxC2 > mu)
-      mu = maxC2;
-    if (maxC3 > mu)
-      mu = maxC3;
+    if (maxC2 > mu) mu = maxC2;
+    if (maxC3 > mu) mu = maxC3;
 
     alpha = 0.0;
     beta = 0.0;
     betae = 0.0;
 
-    double dxmag = sqrt(cf.dx * cf.dx + cf.dy * cf.dy + cf.dz * cf.dz);
+    double dxmag = sqrt(cf.dx*cf.dx + cf.dy*cf.dy + cf.dz*cf.dz);
     if (mu > 0 && maxCh > 0)
-      alpha = (dxmag / (mu * mu * maxCh)) * cf.alpha;
+      alpha = (dxmag*dxmag / (mu * mu * maxCh)) * cf.alpha;
     if (maxC > 0) {
-      beta = (dxmag / maxC) * cf.beta;
-      betae = (dxmag / maxC) * cf.betae;
+      beta = (dxmag*dxmag / maxC) * cf.beta;
+      betae = (dxmag*dxmag / maxC) * cf.betae;
     }
 
-    //if (cf.rank == 0)
-    //   printf("%.4f,%.4f,%.4f,%.4f,%.4f\n",maxC,maxCh,maxC1,maxC2,maxC3);
-    //   //printf("alpha = %f, beta = %f, betae = %f\n",alpha,beta,betae);
-    //cf.log->debug("[{}] C={:.2e} C_hat={:.2e} C1={:.2e} C2={:.2e} C3={:.2e}",
-    //              cf.t,maxC,maxCh,maxC1,maxC2,maxC3);
+    Fiesta::Log::debug("alpha={}",alpha);
 
     Kokkos::parallel_for(weno_pol, calculateCeqFlux(var, rho, mFlux, cFlux, cd));
 
-    Kokkos::parallel_for(cell_pol, applyCeq(dvar, var, rho, mFlux, cFlux, cd, alpha, beta, betae));
+    Kokkos::parallel_for(cell_pol, applyCeq(dvar, varx, var, vel, rho, mFlux, cFlux, cd, alpha, beta, betae));
     Kokkos::fence();
-    timers["ceq"].reset();
+    timers["ceq"].accumulate();
   }
 }

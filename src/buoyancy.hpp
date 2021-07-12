@@ -34,13 +34,13 @@ struct computeBuoyancy3D {
 
     double v = var(i, j, k, 2) / rho(i,j,k);
     double rhop = rho(i,j,k) - rhoRef;
-    //double eps = 1e-6;
+    double eps = 1e-6;
 
-    //if (rhop >= eps || rhop <= -eps) {
+    if (rhop >= eps || rhop <= -eps) {
       double f = -g * rhop;
       dvar(i, j, k, 2) += f;
       dvar(i, j, k, 3) += v * f;
-    //}
+    }
   }
 };
 struct computeBuoyancy {
