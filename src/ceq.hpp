@@ -583,15 +583,9 @@ struct calculateRhoGrad {
                       var(i, j, k + 2, 1) * var(i, j, k + 2, 1) +
                       var(i, j, k + 2, 2) * var(i, j, k + 2, 2));
 
-    double dxr = (rho(i - 2, j, k) - 8.0 * rho(i - 1, j, k) +
-                  8.0 * rho(i + 1, j, k) - rho(i + 2, j, k)) /
-                 (12.0 * cd(1));
-    double dyr = (rho(i, j - 2, k) - 8.0 * rho(i, j - 1, k) +
-                  8.0 * rho(i, j + 1, k) - rho(i, j + 2, k)) /
-                 (12.0 * cd(2));
-    double dzr = (rho(i, j, k - 2) - 8.0 * rho(i, j, k - 1) +
-                  8.0 * rho(i, j, k + 1) - rho(i, j, k + 2)) /
-                 (12.0 * cd(3));
+    double dxr = (rho(i-2,j,k) - 8.0*rho(i-1,j,k) + 8.0*rho(i+1,j,k) - rho(i+2,j,k)) / (12.0*cd(1));
+    double dyr = (rho(i,j-2,k) - 8.0*rho(i,j-1,k) + 8.0*rho(i,j+1,k) - rho(i,j+2,k)) / (12.0*cd(2));
+    double dzr = (rho(i,j,k-2) - 8.0*rho(i,j,k-1) + 8.0*rho(i,j,k+1) - rho(i,j,k+2)) / (12.0*cd(3));
 
     double dxe = (ex1 - 8.0 * ex2 + 8.0 * ex3 - ex4) / (12.0 * cd(1));
     double dye = (ey1 - 8.0 * ey2 + 8.0 * ey3 - ey4) / (12.0 * cd(2));
@@ -650,13 +644,14 @@ struct maxGradFunctor {
 struct updateCeq {
   FS4D dvar;
   FS4D var;
+  FS4D varx;
   FS4D gradRho;
   double maxS, kap, eps;
   Kokkos::View<double *> cd;
 
-  updateCeq(FS4D dvar_, FS4D var_, FS4D gradRho_, double maxS_,
+  updateCeq(FS4D dvar_, FS4D var_, FS4D varx_, FS4D gradRho_, double maxS_,
             Kokkos::View<double *> cd_, double kap_, double eps_)
-      : dvar(dvar_), var(var_), gradRho(gradRho_), maxS(maxS_), cd(cd_),
+      : dvar(dvar_), var(var_), varx(varx_), gradRho(gradRho_), maxS(maxS_), cd(cd_),
         kap(kap_), eps(eps_) {}
 
   KOKKOS_INLINE_FUNCTION
@@ -665,24 +660,20 @@ struct updateCeq {
     double dy = cd(2);
     double dz = cd(3);
 
-    // calculate cequation variable indices based on number of species (c
-    // variables come after species densities)
     int nv = (int)cd(0) + 4;
     int nc = nv;
 
     double lap;
 
     // average cell size
-    //double dxmag = pow(dx * dy * dz, 1.0 / 3.0);
     double dxmag = sqrt(dx*dx + dy*dy + dz*dz);
 
     for (int n = 0; n < 5; ++n) {
-      lap = (var(i-1,j,k,nc+n)-2*var(i,j,k,nc+n)+var(i+1,j,k,nc+n))/(dx)
-          + (var(i,j-1,k,nc+n)-2*var(i,j,k,nc+n)+var(i,j+1,k,nc+n))/(dy)
-          + (var(i,j,k-1,nc+n)-2*var(i,j,k,nc+n)+var(i,j,k+1,nc+n))/(dz);
+      lap = (var(i-1,j,k,nc+n)-2*var(i,j,k,nc+n)+var(i+1,j,k,nc+n))/dx
+          + (var(i,j-1,k,nc+n)-2*var(i,j,k,nc+n)+var(i,j+1,k,nc+n))/dy
+          + (var(i,j,k-1,nc+n)-2*var(i,j,k,nc+n)+var(i,j,k+1,nc+n))/dz;
 
-      dvar(i, j, k, nc + n) =
-          maxS / (eps * dxmag) * (gradRho(i, j, k, n) - var(i, j, k, nc + n)) + kap * maxS * dxmag * lap;
+      dvar(i,j,k,nc+n) = (maxS/(eps*dxmag))*(gradRho(i,j,k,n)-var(i,j,k,nc+n)) + kap*maxS*dxmag*lap;
     }
   }
 };
@@ -765,14 +756,14 @@ struct calculateCeqFlux {
         cmag_right += cn_right[idx] * cn_right[idx];
       // cmag_right = sqrt(cmag_right);
 
-      if (cmag_left <= 0.000001 || cmag_right <= 0.000001) {
-        for (int m = 0; m < 3; ++m) {
-          for (int n = 0; n < 3; ++n) {
-            mFlux(m, n, i, j, k, dir) = 0.0;
-            cFlux(i, j, k, dir) = 0.0;
-          }
-        }
-      } else {
+      //if (cmag_left <= 0.000001 || cmag_right <= 0.000001) {
+      //  for (int m = 0; m < 3; ++m) {
+      //    for (int n = 0; n < 3; ++n) {
+      //      mFlux(m, n, i, j, k, dir) = 0.0;
+      //      cFlux(i, j, k, dir) = 0.0;
+      //    }
+      //  }
+      //} else {
         // tensor components
         for (int m = 0; m < 3; ++m) {
           for (int n = 0; n < 3; ++n) {
@@ -783,8 +774,10 @@ struct calculateCeqFlux {
               d = 1;
 
             // calculate right and left tensor components
-            m_left = d - (cn_left[m] * cn_left[n] / cmag_left);
-            m_right = d - (cn_right[m] * cn_right[n] / cmag_right);
+            //m_left = d - (cn_left[m] * cn_left[n] / cmag_left);
+            //m_right = d - (cn_right[m] * cn_right[n] / cmag_right);
+            m_left = d - (cn_left[m] * cn_left[n]);
+            m_right = d - (cn_right[m] * cn_right[n]);
 
             // include isotropic c
             m_left = m_left * ch_left;
@@ -802,7 +795,7 @@ struct calculateCeqFlux {
         // calcualte isotropic C flux
         cFlux(i, j, k, dir) = (c_right * rho_right - c_left * rho_left) / 2.0;
 
-      }
+      //}
     }
   }
 };

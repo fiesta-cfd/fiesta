@@ -38,7 +38,7 @@ struct detectNoise3D {
   KOKKOS_INLINE_FUNCTION
   void operator()(const int ii, const int jj, const int kk) const {
 
-    int nv = (int)cd(0) + 3;
+    int nv = (int)cd(0) + 4;
     int ng = (int)cd(5);
 
     double dx = cd(1);
@@ -95,7 +95,7 @@ struct detectNoise3D {
         for (idx=-1;idx<2;++idx){
           for (jdx=-1;jdx<2;++jdx){
             for (kdx=-1;kdx<2;++kdx){
-              if(abs(var(idx,jdx,kdx,nv+1)) < coff){
+              if(abs(var(i+idx,j+jdx,k+kdx,nv+1)) < coff){
                 noise(i+idx,j+jdx,k+kdx)=1;
               }
             }

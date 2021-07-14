@@ -122,8 +122,10 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, fies
     cout << fmt::format("{: >8}Timestep:  {}{}{}/{}{}{} ({}{:.0f}%{})\n","",
         c(magenta),cf.t,c(reset),c(magenta),cf.tend,c(reset),c(green),100.0*(double)cf.t/(double)cf.tend,c(reset));
     cout << fmt::format("{: >8}Sim Time:  {}{:.2g}{}s\n","",c(magenta),cf.time,c(reset));
-    cout << fmt::format("{: >8}Wall Time: {}{:.0f}{}s\n","",c(magenta),wall.check(),c(reset));
-    cout << fmt::format("{: >8}ETR:       {}{:.0f}{}s\n","", c(magenta),cf.nt*sim.check()/(cf.t-1-cf.tstart)-sim.check(),c(reset));
+    cout << fmt::format("{: >8}Wall Time: {}{}{}\n","",c(magenta),wall.checkf(),c(reset));
+    cout << fmt::format("{: >8}ETR:       {}{}{}\n","", c(magenta),wall.formatTime(cf.nt*sim.check()/(cf.t-1-cf.tstart)-sim.check()),c(reset));
+    //cout << fmt::format("{: >8}Wall Time: {}{:.0f}{}s\n","",c(magenta),wall.checkf(),c(reset));
+    //cout << fmt::format("{: >8}ETR:       {}{:.0f}{}s\n","", c(magenta),wall.formatTime(cf.nt*sim.check()/(cf.t-1-cf.tstart)-sim.check()),c(reset));
 
     cout << fmt::format("{: <8}{: <16}{: >11}{: >11}\n","","","Min","Max");
   }
