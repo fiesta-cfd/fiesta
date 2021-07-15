@@ -756,14 +756,14 @@ struct calculateCeqFlux {
         cmag_right += cn_right[idx] * cn_right[idx];
       // cmag_right = sqrt(cmag_right);
 
-      //if (cmag_left <= 0.000001 || cmag_right <= 0.000001) {
-      //  for (int m = 0; m < 3; ++m) {
-      //    for (int n = 0; n < 3; ++n) {
-      //      mFlux(m, n, i, j, k, dir) = 0.0;
-      //      cFlux(i, j, k, dir) = 0.0;
-      //    }
-      //  }
-      //} else {
+      if (cmag_left <= 0.000001 || cmag_right <= 0.000001) {
+        for (int m = 0; m < 3; ++m) {
+          for (int n = 0; n < 3; ++n) {
+            mFlux(m, n, i, j, k, dir) = 0.0;
+            cFlux(i, j, k, dir) = 0.0;
+          }
+        }
+      } else {
         // tensor components
         for (int m = 0; m < 3; ++m) {
           for (int n = 0; n < 3; ++n) {
@@ -774,10 +774,10 @@ struct calculateCeqFlux {
               d = 1;
 
             // calculate right and left tensor components
-            //m_left = d - (cn_left[m] * cn_left[n] / cmag_left);
-            //m_right = d - (cn_right[m] * cn_right[n] / cmag_right);
-            m_left = d - (cn_left[m] * cn_left[n]);
-            m_right = d - (cn_right[m] * cn_right[n]);
+            m_left = d - (cn_left[m] * cn_left[n] / cmag_left);
+            m_right = d - (cn_right[m] * cn_right[n] / cmag_right);
+            //m_left = d - (cn_left[m] * cn_left[n]);
+            //m_right = d - (cn_right[m] * cn_right[n]);
 
             // include isotropic c
             m_left = m_left * ch_left;
@@ -795,7 +795,7 @@ struct calculateCeqFlux {
         // calcualte isotropic C flux
         cFlux(i, j, k, dir) = (c_right * rho_right - c_left * rho_left) / 2.0;
 
-      //}
+      }
     }
   }
 };

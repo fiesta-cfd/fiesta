@@ -311,22 +311,22 @@ void cart3d_func::postStep() {
     int L = 0;
     double coff;
 
-    if ((cf.nci - 1) % 2 == 0)
-      M = (cf.nci - 1) / 2;
+    if ((cf.nci + 1) % 2 == 0)
+      M = (cf.nci + 1) / 2;
     else
       M = cf.nci / 2;
 
-    if ((cf.ncj - 1) % 2 == 0)
-      N = (cf.ncj - 1) / 2;
+    if ((cf.ncj + 1) % 2 == 0)
+      N = (cf.ncj + 1) / 2;
     else
       N = cf.ncj / 2;
 
-    if ((cf.nck - 1) % 2 == 0)
-      L = (cf.nck - 1) / 2;
+    if ((cf.nck + 1) % 2 == 0)
+      L = (cf.nck + 1) / 2;
     else
       L = cf.nck / 2;
 
-    policy_f3 noise_pol = policy_f3({0, 0, 0}, {M, N, L});
+    policy_f3 noise_pol = policy_f3({0, 0, 0}, {M+1, N+1, L+1});
     policy_f3 cell_pol = policy_f3({cf.ng, cf.ng, cf.ng}, {cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
 
     if (cf.ceq == 1) {
