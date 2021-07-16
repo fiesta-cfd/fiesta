@@ -56,14 +56,15 @@ struct computeBuoyancy {
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j) const {
 
-    double v = var(i, j, 0, 1) / rho(i, j);
+    //double v = var(i, j, 0, 1) / rho(i, j);
+    double v = var(i, j, 0, 1) / var(i,j,0,3);
     double rhop = rho(i, j) - rhoRef;
     double eps = 1e-6;
 
     if (rhop >= eps || rhop <= -eps) {
       double f = -g * rhop;
       dvar(i, j, 0, 1) += f;
-      dvar(i, j, 0, 2) += v * f;
+      dvar(i, j, 0, 2) += abs(v) * f;
     }
   }
 };

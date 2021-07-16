@@ -211,11 +211,8 @@ void cart3d_func::compute() {
 
   for (int v = 0; v < cf.nv; ++v) {
     timers["flux"].reset();
-    Kokkos::parallel_for(
-        weno_pol, calculateWenoFluxesG(var, p, rho, vel, fluxx, fluxy, fluxz, cd, v));
-
-    Kokkos::parallel_for(cell_pol,
-                         advect3D(dvar, fluxx, fluxy, fluxz, v));
+    Kokkos::parallel_for( weno_pol, calculateWenoFluxesG(var, p, rho, vel, fluxx, fluxy, fluxz, cd, v));
+    Kokkos::parallel_for(cell_pol, advect3D(dvar, fluxx, fluxy, fluxz, v));
     Kokkos::fence();
     timers["flux"].accumulate();
   }

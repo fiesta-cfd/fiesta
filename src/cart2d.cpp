@@ -42,25 +42,27 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
   for (int v=0; v<cf.ns; ++v)
       varNames.push_back("Density " + cf.speciesName[v]);
 
-  if (cf.visc == 1) {
+  if (cf.visc) {
     qx      = FS2D("qx", cf.ngi, cf.ngj); // Heat Fluxes X direction
     qy      = FS2D("qy", cf.ngi, cf.ngj); // Heat Fluxes Y direction
     stressx = FS4D("stressx", cf.ngi, cf.ngj, 2, 2); // stress on x faces
     stressy = FS4D("stressy", cf.ngi, cf.ngj, 2, 2); // stress on y faces
   }
 
-  if (cf.ceq == 1) {
+  if (cf.ceq) {
     gradRho = FS3D("gradRho", cf.ngi, cf.ngj, 4);    // Density Gradients
+    m = FS5D("m",2,2,cf.ngi,cf.ngj,2);
     varNames.push_back("C");
     varNames.push_back("C_hat");
     varNames.push_back("Tau_1");
     varNames.push_back("Tau_2");
-    varNames.push_back("Unused");
+    varNames.push_back("Debug");
+    //varNames.push_back("Unused");
   }
 
-  if (cf.noise == 1) {
+  if (cf.noise) {
     noise = FS2D_I("noise", cf.ngi, cf.ngj);         // Noise Indicator
-    varxNames.push_back("Noise");
+    //varxNames.push_back("Noise");
   }
 
   assert(varNames.size() == cf.nvt);
@@ -108,34 +110,170 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
   if (cf.buoyancy) {
     timers["buoyancy"] = fiestaTimer("Buoyancy Term");
   }
-  if (cf.visc == 1) {
+  if (cf.visc) {
     timers["stress"] = fiestaTimer("Stress Tensor Computation");
     timers["qflux"] = fiestaTimer("Heat Flux Calculation");
     timers["visc"] = fiestaTimer("Viscous Term Calculation");
   }
-  if (cf.ceq == 1) {
+  if (cf.ceq) {
     timers["ceq"] = fiestaTimer("C-Equation");
   }
-  if (cf.noise == 1) {
+  if (cf.noise) {
     timers["noise"] = fiestaTimer("Noise Removal");
   }
 };
 
-void cart2d_func::preStep() {}
+void cart2d_func::preSim() {
+  timers["calcSecond"].reset();
+  policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
+  Kokkos::parallel_for(ghost_pol, calculateRhoPT2D(var, p, rho, T, cd));
+  Kokkos::parallel_for(ghost_pol, computeVelocity2D(var, rho, vel));
+  Kokkos::parallel_for(ghost_pol, copyExtraVars2D(varx, vel, p, rho, T));
+  Kokkos::fence();
+  timers["calcSecond"].accumulate();
+}
+
+void cart2d_func::preStep() {
+}
+
+void cart2d_func::compute() {
+  policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
+  policy_f cell_pol  = policy_f({cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
+  policy_f face_pol  = policy_f({cf.ng - 1, cf.ng - 1}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
+
+  // Calcualte Total Density and Pressure Fields
+  timers["calcSecond"].reset();
+  Kokkos::parallel_for(ghost_pol, calculateRhoPT2D(var, p, rho, T, cd));
+  Kokkos::parallel_for(ghost_pol, computeVelocity2D(var, rho, vel));
+  Kokkos::fence();
+  timers["calcSecond"].accumulate();
+
+  // Calculate and apply weno fluxes for each variable
+  for (int v = 0; v < cf.nv; ++v) {
+    timers["flux"].reset();
+    if (cf.scheme == 3) {
+      Kokkos::parallel_for( face_pol, computeFluxQuick2D(var, p, rho, fluxx, fluxy, cd, v));
+    } else if (cf.scheme == 2) {
+      Kokkos::parallel_for( face_pol, computeFluxCentered2D(var, p, rho, fluxx, fluxy, cd, v));
+    } else {
+      Kokkos::parallel_for( face_pol, computeFluxWeno2D(var, p, rho, vel, fluxx, fluxy, cd, v));
+    }
+    //Kokkos::fence();
+    Kokkos::parallel_for(cell_pol, advect2D(dvar, fluxx, fluxy, cd, v));
+    Kokkos::fence();
+    timers["flux"].accumulate();
+  }
+
+  // Apply Pressure Gradient Term
+  timers["pressgrad"].reset();
+  Kokkos::parallel_for(cell_pol, applyPressureGradient2D(dvar, p, cd));
+  Kokkos::fence();
+  timers["pressgrad"].accumulate();
+
+  if (cf.buoyancy) {
+    timers["gravity"].reset();
+    Kokkos::parallel_for(cell_pol, computeBuoyancy(dvar, var, rho, cf.gAccel, cf.rhoRef));
+    Kokkos::fence();
+    timers["gravity"].accumulate();
+  }
+
+  if (cf.visc) {
+    timers["stress"].reset();
+    Kokkos::parallel_for(
+        face_pol, calculateStressTensor2dv(var, rho, vel, stressx, stressy, cd));
+    Kokkos::fence();
+    timers["stress"].accumulate();
+
+    timers["qflux"].reset();
+    Kokkos::parallel_for(face_pol,
+                         calculateHeatFlux2dv(var, rho, T, qx, qy, cd));
+    Kokkos::fence();
+    timers["qflux"].accumulate();
+
+    timers["visc"].reset();
+    Kokkos::parallel_for(cell_pol, applyViscousTerm2dv(dvar, var, rho, vel, stressx,
+                                                       stressy, qx, qy, cd));
+    Kokkos::fence();
+    timers["visc"].accumulate();
+  }
+
+  if (cf.ceq) {
+    double maxS;
+    double maxG;
+    double maxGh;
+    double maxTau1;
+    double maxTau2;
+
+    timers["ceq"].reset();
+
+    Kokkos::parallel_for(cell_pol, calculateRhoGrad2D(var, rho, gradRho, cd));
+
+    Kokkos::parallel_reduce(cell_pol, maxWaveSpeed2D(var, p, rho, cd), Kokkos::Max<double>(maxS));
+    //Kokkos::parallel_reduce(cell_pol, maxGradRho2D(gradRho, 0), Kokkos::Max<double>(maxG));
+    //Kokkos::parallel_reduce(cell_pol, maxGradRho2D(gradRho, 1), Kokkos::Max<double>(maxGh));
+    //Kokkos::parallel_reduce(cell_pol, maxGradRho2D(gradRho, 2), Kokkos::Max<double>(maxTau1));
+    //Kokkos::parallel_reduce(cell_pol, maxGradRho2D(gradRho, 3), Kokkos::Max<double>(maxTau2));
+    Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 0, cd), Kokkos::Max<double>(maxC));
+    Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 1, cd), Kokkos::Max<double>(maxCh));
+    Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 2, cd), Kokkos::Max<double>(maxT1));
+    Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 3, cd), Kokkos::Max<double>(maxT2));
+
+    #ifndef NOMPI
+      MPI_Allreduce(&maxS, &maxS, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+      MPI_Allreduce(&maxG, &maxG, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+      MPI_Allreduce(&maxGh, &maxGh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+      MPI_Allreduce(&maxTau1, &maxTau1, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+      MPI_Allreduce(&maxTau1, &maxTau2, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+      MPI_Allreduce(&maxC, &maxC, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+      MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+      MPI_Allreduce(&maxT1, &maxT1, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+      MPI_Allreduce(&maxT2, &maxT2, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    #endif
+
+    if (maxG < 1e-6) maxG = 1e-6;
+    if (maxGh < 1e-6) maxGh = 1e-6;
+    if (maxTau1 < 1e-6) maxTau1 = 1e-6;
+    if (maxTau2 < 1e-6) maxTau2 = 1e-6;
+    if (maxC < 1e-6) maxC = 1e-6;
+    if (maxCh < 1e-6) maxCh = 1e-6;
+    if (maxT1 < 1e-6) maxT1 = 1e-6;
+    if (maxT2 < 1e-6) maxT2 = 1e-6;
+
+    mu = maxT1;
+    if (maxT2 > mu) mu = maxT2;
+
+    double alpha = (cf.dx*cf.dx + cf.dy*cf.dy)/(mu*mu*maxCh);
+
+    Kokkos::parallel_for(cell_pol, updateCeq2D(dvar, var, gradRho, maxS, cd, cf.kap, cf.eps, maxG, maxGh, maxTau1, maxTau2));
+
+    //if (cf.t >= cf.st){
+    Kokkos::parallel_for(face_pol, computeCeqFlux2D(var, m, vel, rho, alpha, cd));
+    Kokkos::parallel_for(face_pol, computeCeqFaces2D(m, vel, cd));
+    Kokkos::parallel_for(cell_pol, applyCeq2D(dvar, m));
+    //Kokkos::parallel_for(cell_pol, applyCeq2D(dvar, var, vel, rho, cf.beta, cf.betae, cf.alpha, maxC, maxCh, mu, cd));
+    //}
+
+    Kokkos::fence();
+    timers["ceq"].accumulate();
+  }
+}
 
 void cart2d_func::postStep() {
-      policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
-  if (( (cf.write_freq >0) && (cf.t % cf.write_freq == 0) )||
-      ( (cf.stat_freq  >0) && (cf.t % cf.stat_freq  == 0) )){
+  bool varsxNeeded=false;
+
+  if ( (cf.write_freq >0) && (cf.t % cf.write_freq == 0) ) varsxNeeded=true;
+  if ( (cf.stat_freq  >0) && (cf.t % cf.stat_freq  == 0) ) varsxNeeded=true;
 
       // Calcualte Total Density and Pressure Fields
-      timers["calcSecond"].reset();
-      Kokkos::parallel_for(ghost_pol, calculateRhoPT2D(var, p, rho, T, cd));
-      Kokkos::parallel_for(ghost_pol, computeVelocity2D(var, rho, vel));
-      Kokkos::parallel_for(ghost_pol, copyExtraVars2D(varx, vel, p, rho, T));
-      Kokkos::fence();
-      timers["calcSecond"].accumulate();
-    }
+  if (varsxNeeded){
+    timers["calcSecond"].reset();
+    policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
+    Kokkos::parallel_for(ghost_pol, calculateRhoPT2D(var, p, rho, T, cd));
+    Kokkos::parallel_for(ghost_pol, computeVelocity2D(var, rho, vel));
+    Kokkos::parallel_for(ghost_pol, copyExtraVars2D(varx, vel, p, rho, T));
+    Kokkos::fence();
+    timers["calcSecond"].accumulate();
+  }
 
   if (cf.noise == 1) {
     int M = 0;
@@ -161,12 +299,11 @@ void cart2d_func::postStep() {
         policy_f({cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
 
     if (cf.ceq == 1) {
-      double maxCh, maxCh_recv;
+      double maxCh;
       Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 1, cd),
                               Kokkos::Max<double>(maxCh));
 #ifndef NOMPI
-      MPI_Allreduce(&maxCh, &maxCh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-      maxCh = maxCh_recv;
+      MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
 #endif
       coff = cf.n_coff * maxCh;
 
@@ -188,166 +325,5 @@ void cart2d_func::postStep() {
   } // end noise
 }
 
-void cart2d_func::preSim() {
-}
-void cart2d_func::postSim() {}
-
-void cart2d_func::compute() {
-  policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
-  policy_f cell_pol =
-      policy_f({cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
-  policy_f face_pol =
-      policy_f({cf.ng - 1, cf.ng - 1}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
-
-  // Calcualte Total Density and Pressure Fields
-  timers["calcSecond"].reset();
-  Kokkos::parallel_for(ghost_pol, calculateRhoPT2D(var, p, rho, T, cd));
-  Kokkos::parallel_for(ghost_pol, computeVelocity2D(var, rho, vel));
-  Kokkos::fence();
-  timers["calcSecond"].accumulate();
-
-  // Calculate and apply weno fluxes for each variable
-  for (int v = 0; v < cf.nv; ++v) {
-    timers["flux"].reset();
-    if (cf.scheme == 3) {
-      Kokkos::parallel_for(
-          face_pol, computeFluxQuick2D(var, p, rho, fluxx, fluxy, cd, v));
-    } else if (cf.scheme == 2) {
-      Kokkos::parallel_for(
-          face_pol, computeFluxCentered2D(var, p, rho, fluxx, fluxy, cd, v));
-    } else {
-      Kokkos::parallel_for(
-          face_pol, computeFluxWeno2D(var, p, rho, vel, fluxx, fluxy, cd, v));
-    }
-    Kokkos::fence();
-    Kokkos::parallel_for(cell_pol, advect2D(dvar, fluxx, fluxy, cd, v));
-    Kokkos::fence();
-    timers["flux"].accumulate();
-  }
-
-  // Apply Pressure Gradient Term
-  timers["pressgrad"].reset();
-  Kokkos::parallel_for(cell_pol, applyPressureGradient2D(dvar, p, cd));
-  Kokkos::fence();
-  timers["pressgrad"].accumulate();
-
-  if (cf.buoyancy) {
-    timers["gravity"].reset();
-    Kokkos::parallel_for(cell_pol, computeBuoyancy(dvar, var, rho, cf.gAccel, cf.rhoRef));
-    Kokkos::fence();
-    timers["gravity"].accumulate();
-  }
-
-  if (cf.visc == 1) {
-    timers["stress"].reset();
-    Kokkos::parallel_for(
-        face_pol, calculateStressTensor2dv(var, rho, vel, stressx, stressy, cd));
-    Kokkos::fence();
-    timers["stress"].accumulate();
-
-    timers["qflux"].reset();
-    Kokkos::parallel_for(face_pol,
-                         calculateHeatFlux2dv(var, rho, T, qx, qy, cd));
-    Kokkos::fence();
-    timers["qflux"].accumulate();
-
-    timers["visc"].reset();
-    Kokkos::parallel_for(cell_pol, applyViscousTerm2dv(dvar, var, rho, vel, stressx,
-                                                       stressy, qx, qy, cd));
-    Kokkos::fence();
-    timers["visc"].accumulate();
-  }
-
-  if (cf.ceq == 1) {
-    double mu;
-    double maxS,    maxS_recv;
-    double maxG,    maxG_recv;
-    double maxGh,   maxGh_recv;
-    double maxTau1, maxTau1_recv;
-    double maxTau2, maxTau2_recv;
-    double maxC,    maxC_recv;
-    double maxCh,   maxCh_recv;
-    double maxT1,   maxT1_recv;
-    double maxT2,   maxT2_recv;
-
-    timers["ceq"].reset();
-    Kokkos::parallel_reduce(cell_pol, maxWaveSpeed2D(var, p, rho, cd),
-                            Kokkos::Max<double>(maxS));
-    Kokkos::parallel_reduce(cell_pol, maxGradRho2D(gradRho, 1),
-                            Kokkos::Max<double>(maxG));
-    Kokkos::parallel_reduce(cell_pol, maxGradRho2D(gradRho, 1),
-                            Kokkos::Max<double>(maxGh));
-    Kokkos::parallel_reduce(cell_pol, maxGradRho2D(gradRho, 1),
-                            Kokkos::Max<double>(maxTau1));
-    Kokkos::parallel_reduce(cell_pol, maxGradRho2D(gradRho, 1),
-                            Kokkos::Max<double>(maxTau2));
-    Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 0, cd),
-                            Kokkos::Max<double>(maxC));
-    Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 1, cd),
-                            Kokkos::Max<double>(maxCh));
-    Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 2, cd),
-                            Kokkos::Max<double>(maxT1));
-    Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 3, cd),
-                            Kokkos::Max<double>(maxT2));
-
-#ifndef NOMPI
-    MPI_Allreduce(&maxS, &maxS_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxG, &maxG_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxGh, &maxGh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxTau1, &maxTau1_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxTau2, &maxTau2_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxC, &maxC_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxCh, &maxCh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxT1, &maxT1_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxT2, &maxT2_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-
-    maxS    = maxS_recv;
-    maxG    = maxG_recv;
-    maxGh   = maxGh_recv;
-    maxTau1 = maxTau1_recv;
-    maxTau2 = maxTau2_recv;
-    maxC    = maxC_recv;
-    maxCh   = maxCh_recv;
-    maxT1   = maxT1_recv;
-    maxT2   = maxT2_recv;
-#endif
-
-    if (maxG < 1e-6)
-      maxG = 1e-6;
-    if (maxGh < 1e-6)
-      maxGh = 1e-6;
-    if (maxTau1 < 1e-6)
-      maxTau1 = 1e-6;
-    if (maxTau2 < 1e-6)
-      maxTau2 = 1e-6;
-    if (maxC < 1e-6)
-      maxC = 1e-6;
-    if (maxCh < 1e-6)
-      maxCh = 1e-6;
-    if (maxT1 < 1e-6)
-      maxT1 = 1e-6;
-    if (maxT2 < 1e-6)
-      maxT2 = 1e-6;
-
-    mu = maxT1;
-    if (maxT2 > mu)
-      mu = maxT2;
-
-    // printf("### DEBUG ### %f : %f : %f : %f :
-    // %f\n",maxC,maxCh,maxTau1,maxTau2,mu);
-
-    Kokkos::parallel_for(cell_pol, calculateRhoGrad2D(var, rho, gradRho, cd));
-
-    Kokkos::parallel_for(cell_pol,
-                         updateCeq2D(dvar, var, gradRho, maxS, cd, cf.kap,
-                                     cf.eps, maxG, maxGh, maxTau1, maxTau2));
-
-    if (cf.t >= cf.st){
-      Kokkos::parallel_for(cell_pol, applyCeq2D(dvar, var, rho, cf.beta, cf.betae,
-                                                cf.alpha, maxC, maxCh, mu, cd));
-    }
-
-    Kokkos::fence();
-    timers["ceq"].accumulate();
-  }
+void cart2d_func::postSim() {
 }

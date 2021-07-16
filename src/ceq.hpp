@@ -66,7 +66,7 @@ struct maxGradRho2D {
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, double &lmax) const {
 
-    double s = gradRho(i, j, v);
+    double s = abs(gradRho(i, j, v));
 
     if (s > lmax)
       lmax = s;
@@ -95,9 +95,8 @@ struct maxWaveSpeed2D {
       gammas = cd(6 + 2 * s);
       Rs = cd(6 + 2 * s + 1);
 
-      Cp =
-          Cp + (var(i, j, 0, 3 + s) / rho(i, j)) * (gammas * Rs / (gammas - 1));
-      Cv = Cv + (var(i, j, 0, 3 + s) / rho(i, j)) * (Rs / (gammas - 1));
+      Cp = Cp + (var(i,j,0,3+s) / rho(i,j)) * (gammas * Rs / (gammas - 1));
+      Cv = Cv + (var(i,j,0,3+s) / rho(i,j)) * (Rs / (gammas - 1));
     }
 
     gamma = Cp / Cv;
@@ -190,13 +189,15 @@ struct calculateRhoGrad2D {
     double dnednr = (n1 * dxe + n2 * dye) * (n1 * dxr + n2 * dyr);
 
     // compression switch
-    if (dnednr < -1.0e-6)
+    //if (dnednr < -1.0e-6)
+    if (dnednr < 0.0)
       i1 = 1.0;
-    // else
-    //    i1 = 0;
+    else
+      i1 = 0.0;
 
     // detect shock front (equation 5a)
-    if (divu < -1.0e-6) {
+    //if (divu < -1.0e-6) {
+    if (divu < 0.0) {
       i2 = 1.0;
     }
 
@@ -273,7 +274,7 @@ struct updateCeq2D {
   void operator()(const int i, const int j) const {
     double dx = cd(1);
     double dy = cd(2);
-    double maxGr[5];
+    //double maxGr[5];
 
     // calculate cequation variable indices based on number of species (c
     // variables come after species densities)
@@ -282,16 +283,17 @@ struct updateCeq2D {
 
     double dx_right, dx_left, dy_top, dy_bot;
     double lap;
+    //double normalizer=1.0;
 
     // average cell size
     // double dxmag = pow(dx*dy,1.0/2.0);
     double dxmag = sqrt(dx * dx + dy * dy);
 
-    maxGr[0] = maxG;
-    maxGr[1] = maxGh;
-    maxGr[2] = maxTau1;
-    maxGr[3] = maxTau2;
-    maxGr[4] = maxTau2;
+    //maxGr[0] = maxG;
+    //maxGr[1] = maxGh;
+    //maxGr[2] = maxTau1;
+    //maxGr[3] = maxTau2;
+    //maxGr[4] = maxTau2;
 
     for (int n = 0; n < 4; ++n) {
       dx_right = (var(i + 1, j, 0, nc + n) - var(i, j, 0, nc + n)) / dx;
@@ -301,15 +303,20 @@ struct updateCeq2D {
       dy_bot = (var(i, j, 0, nc + n) - var(i, j - 1, 0, nc + n)) / dy;
 
       // update ceq right hand side
-      lap = 0.0;
+      //lap = 0.0;
       lap = dx_right - dx_left + dy_top - dy_bot;
       // lap = (dx_right - dx_left)/dx + (dy_top - dy_bot)/dy;
       // dvar(i,j,0,nc+n) = (maxS/(eps*dxmag))*(gradRho(i,j,n) -
       // var(i,j,0,nc+n)) + kap*maxS*dxmag*lap;
-      dvar(i, j, 0, nc + n) =
-          (maxS / (eps * dxmag)) *
-              (gradRho(i, j, n) / maxGr[n] - var(i, j, 0, nc + n)) +
-          kap * maxS * dxmag * lap;
+      //if (n==0 || n==1)
+      //  normalizer=maxGr[n];
+      //else
+      //  normalizer=1.0;
+
+      //dvar(i,j,0,nc+n) =
+      //    (maxS / (eps * dxmag)) * (gradRho(i,j,n) / normalizer - var(i,j,0,nc+n)) + kap * maxS * dxmag * lap;
+      dvar(i,j,0,nc+n) =
+          (maxS / (eps * dxmag)) * (gradRho(i,j,n) - var(i,j,0,nc+n)) + kap * maxS * dxmag * lap;
 
       // if (n==0)
       //    printf("### DEBUG ### dvar,maxS,dxmag (%d,%d) %f, %f, %f,
@@ -318,137 +325,218 @@ struct updateCeq2D {
   }
 };
 
-struct applyCeq2D {
-  FS4D dvar;
+struct computeCeqFlux2D {
   FS4D var;
-  FS2D rho;
-  Kokkos::View<double *> cd;
-  double betau, betae, maxC, maxCh, alpha, mu;
+  FS5D m;
+  FS2D r;
+  FS3D v;
+  FS1D cd;
+  double alpha;
 
-  applyCeq2D(FS4D dvar_, FS4D var_, FS2D rho_, double betau_, double betae_,
-             double alpha_, double maxC_, double maxCh_, double mu_,
-             Kokkos::View<double *> cd_)
-      : dvar(dvar_), var(var_), rho(rho_), betau(betau_), betae(betae_),
-        alpha(alpha_), maxC(maxC_), maxCh(maxCh_), mu(mu_), cd(cd_) {}
+  computeCeqFlux2D(FS4D var_, FS5D m_, FS3D v_, FS2D r_, double a_, FS1D cd_)
+      : var(var_), m(m_), v(v_), r(r_), alpha(a_), cd(cd_) {}
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j) const {
+    int ip;
+    int jp;
     int nv = (int)cd(0) + 3;
-    int nc = nv;
     double dx = cd(1);
     double dy = cd(2);
-    double dxmag = dx * dx + dy * dy;
 
-    double bTildU = (dxmag / maxC) * betau;
-    double bTildE = (dxmag / maxC) * betae;
-    double aTilde = (dxmag / (mu * mu * maxCh)) * alpha;
+    for (int w=0;w<2;++w){
+      for (int f=0;f<2;++f){
+        for (int d=0;d<2;++d){
+          ip=0; jp=0;
+          if (f==0) ip=1;
+          if (f==1) jp=1;
 
-    double u = var(i, j, 0, 0) / rho(i, j); // u-velocity in current cell
-    double ur = var(i + 1, j, 0, 0) / rho(i + 1, j); // u-velocity in right cell
-    double ul = var(i - 1, j, 0, 0) / rho(i - 1, j); // u-velocity in left cell
-    double ut = var(i, j + 1, 0, 0) / rho(i, j + 1); // u-velocity in top cell
-    double ub =
-        var(i, j - 1, 0, 0) / rho(i, j - 1); // u-velocity in bottom cell
+          m(f,d,i,j,w) =(r(i,j)+r(i+ip,j+jp))/2.0;
+          m(f,d,i,j,w)+=(var(i,j,0,nv+1)+var(i+ip,j+jp,0,nv+1))/2.0;
+          m(f,d,i,j,w)+=(var(i,j,0,nv+2)+var(i+ip,j+jp,0,nv+2))/2.0;
+          m(f,d,i,j,w)+=(var(i,j,0,nv+3)+var(i+ip,j+jp,0,nv+3))/2.0;
 
-    double v = var(i, j, 0, 1) / rho(i, j); // v-velocity
-    double vr = var(i + 1, j, 0, 1) / rho(i + 1, j);
-    double vl = var(i - 1, j, 0, 1) / rho(i - 1, j);
-    double vt = var(i, j + 1, 0, 1) / rho(i, j + 1);
-    double vb = var(i, j - 1, 0, 1) / rho(i, j - 1);
-
-    double e = var(i, j, 0, 2) / rho(i, j); // energy
-    double er = var(i + 1, j, 0, 2) / rho(i + 1, j);
-    double el = var(i - 1, j, 0, 2) / rho(i - 1, j);
-    double et = var(i, j + 1, 0, 2) / rho(i, j + 1);
-    double eb = var(i, j - 1, 0, 2) / rho(i, j - 1);
-
-    double rr = (rho(i, j) + rho(i + 1, j)) / 2.0; // density on right face
-    double rl = (rho(i - 1, j) + rho(i, j)) / 2.0; // density on left face
-    double rt = (rho(i, j) + rho(i, j + 1)) / 2.0; // density on top face
-    double rb = (rho(i, j - 1) + rho(i, j)) / 2.0; // density on bottom face
-
-    double cr =
-        (var(i, j, 0, nc) + var(i + 1, j, 0, nc)) / 2.0; // iso C in right face
-    double cl =
-        (var(i - 1, j, 0, nc) + var(i, j, 0, nc)) / 2.0; // iso C in left face
-    double ct =
-        (var(i, j, 0, nc) + var(i, j + 1, 0, nc)) / 2.0; // iso C in top face
-    double cb =
-        (var(i, j - 1, 0, nc) + var(i, j, 0, nc)) / 2.0; // iso C in bottom face
-
-    double chr = (var(i, j, 0, nc + 1) + var(i + 1, j, 0, nc + 1)) /
-                 2.0; // iso C in right face
-    double chl = (var(i - 1, j, 0, nc + 1) + var(i, j, 0, nc + 1)) /
-                 2.0; // iso C in left face
-    double cht = (var(i, j, 0, nc + 1) + var(i, j + 1, 0, nc + 1)) /
-                 2.0; // iso C in top face
-    double chb = (var(i, j - 1, 0, nc + 1) + var(i, j, 0, nc + 1)) /
-                 2.0; // iso C in bottom face
-
-    double t1r = (var(i, j, 0, nc + 2) + var(i + 1, j, 0, nc + 2)) /
-                 2.0; // iso C in right face
-    double t1l = (var(i - 1, j, 0, nc + 2) + var(i, j, 0, nc + 2)) /
-                 2.0; // iso C in left face
-    double t1t = (var(i, j, 0, nc + 2) + var(i, j + 1, 0, nc + 2)) /
-                 2.0; // iso C in top face
-    double t1b = (var(i, j - 1, 0, nc + 2) + var(i, j, 0, nc + 2)) /
-                 2.0; // iso C in bottom face
-
-    double t2r = (var(i, j, 0, nc + 3) + var(i + 1, j, 0, nc + 3)) /
-                 2.0; // iso C in right face
-    double t2l = (var(i - 1, j, 0, nc + 3) + var(i, j, 0, nc + 3)) /
-                 2.0; // iso C in left face
-    double t2t = (var(i, j, 0, nc + 3) + var(i, j + 1, 0, nc + 3)) /
-                 2.0; // iso C in top face
-    double t2b = (var(i, j - 1, 0, nc + 3) + var(i, j, 0, nc + 3)) /
-                 2.0; // iso C in bottom face
-
-    double dur = (ur - u) / dx; // u-velocity on right face
-    double dul = (u - ul) / dx; // u-velocity on left face
-    double dut = (ut - u) / dy; // u-velocity on top face
-    double dub = (u - ub) / dy; // u-velocity on bottom face
-
-    double dvr = (vr - v) / dx; // v-velocity on right face
-    double dvl = (v - vl) / dx; // v-velocity on left face
-    double dvt = (vt - v) / dy; // v-velocity on top face
-    double dvb = (v - vb) / dy; // v-velocity on bottom face
-
-    double der = (er - e) / dx; // energy on right face
-    double del = (e - el) / dx; // energy on left face
-    double det = (et - e) / dy; // energy on top face
-    double deb = (e - eb) / dy; // energy on bottom face
-
-    // isotropic diffusion operator
-    double diffu = (bTildU / dx) * (rr * cr * dur - rl * cl * dul) +
-                   (bTildU / dy) * (rt * ct * dut - rb * cb * dub);
-    double diffv = (bTildU / dx) * (rr * cr * dvr - rl * cl * dvl) +
-                   (bTildU / dy) * (rt * ct * dvt - rb * cb * dvb);
-    double diffe = (bTildE / dx) * (rr * cr * der - rl * cl * del) +
-                   (bTildE / dy) * (rt * ct * det - rb * cb * deb);
-
-    dvar(i, j, 0, 0) += diffu;
-    dvar(i, j, 0, 1) += diffv;
-    dvar(i, j, 0, 2) += diffe;
-
-    diffu = aTilde *
-            ((rr * chr * t1r * t1r * dur - rl * chl * t1l * t1l * dul) / dx +
-             (rt * cht * t1t * t1t * dut - rb * chb * t1b * t1b * dub) / dy +
-             (rr * chr * t1r * t2r * dur - rl * chl * t1l * t2l * dul) / dx +
-             (rt * cht * t1t * t2t * dut - rb * chb * t1b * t2b * dub) / dy);
-
-    diffv = aTilde *
-            ((rr * chr * t1r * t1r * dvr - rl * chl * t1l * t1l * dvl) / dx +
-             (rt * cht * t1t * t1t * dvt - rb * chb * t1b * t1b * dvb) / dy +
-             (rr * chr * t1r * t2r * dvr - rl * chl * t1l * t2l * dvl) / dx +
-             (rt * cht * t1t * t2t * dvt - rb * chb * t1b * t2b * dvb) / dy);
-
-    dvar(i, j, 0, 0) += diffu;
-    dvar(i, j, 0, 1) += diffv;
-
-    // if (diffu > 0.0 || diffv > 0.0)
-    //    printf("### DEBUG ### %e: %e - %e\n",aTilde,diffu,diffv);
+          if (f==0) m(f,d,i,j,w)*=alpha/dx;
+          if (f==1) m(f,d,i,j,w)*=alpha/dy;
+        }
+      }
+    }
   }
 };
+
+struct computeCeqFaces2D {
+  FS5D m;
+  FS3D v;
+  FS1D cd;
+
+  computeCeqFaces2D(FS5D m_, FS3D v_, FS1D cd_) : m(m_), v(v_), cd(cd_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j) const {
+    double dx = cd(1);
+    double dy = cd(2);
+
+    for (int w=0;w<2;++w){
+      m(0,0,i,j,w) *= ( v(i+1,j,w)-v(i,j,w) )/dx;
+      m(0,1,i,j,w) *= ( (v(i,j+1,w)+v(i+1,j+1,w))-(v(i,j-1,w)+v(i+1,j-1,w)) )/(4.0*dx);
+      m(1,1,i,j,w) *= ( v(i,j+1,w)-v(i,j,w) )/dy;
+      m(1,0,i,j,w) *= ( (v(i+1,j,w)+v(i+1,j+1,w))-(v(i-1,j,w)+v(i-1,j+1,w)) )/(4.0*dx);
+    }
+  }
+};
+
+struct applyCeq2D {
+  FS5D m;
+  FS4D dvar;
+
+  applyCeq2D(FS4D dvar_, FS5D m_) : dvar(dvar_), m(m_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j) const {
+    double diffu;
+
+    for (int w=0;w<2;++w){
+      diffu=0;
+      diffu += m(0,0,i+1,j,w)-m(0,0,i,j,w);
+      diffu += m(0,1,i+1,j,w)-m(0,1,i,j,w);
+      diffu += m(1,0,i,j+1,w)-m(1,0,i,j,w);
+      diffu += m(1,1,i,j+1,w)-m(1,1,i,j,w);
+
+      dvar(i,j,0,w)+=diffu;
+    }
+  }
+};
+
+//struct applyCeq2D {
+//  FS4D dvar;
+//  FS4D var;
+//  FS2D rho;
+//  Kokkos::View<double *> cd;
+//  double betau, betae, maxC, maxCh, alpha, mu;
+//
+//  applyCeq2D(FS4D dvar_, FS4D var_, FS2D rho_, double betau_, double betae_,
+//             double alpha_, double maxC_, double maxCh_, double mu_,
+//             Kokkos::View<double *> cd_)
+//      : dvar(dvar_), var(var_), rho(rho_), betau(betau_), betae(betae_),
+//        alpha(alpha_), maxC(maxC_), maxCh(maxCh_), mu(mu_), cd(cd_) {}
+//
+//  KOKKOS_INLINE_FUNCTION
+//  void operator()(const int i, const int j) const {
+//    int nv = (int)cd(0) + 3;
+//    int nc = nv;
+//    double dx = cd(1);
+//    double dy = cd(2);
+//    double dxmag = dx * dx + dy * dy;
+//
+//    double bTildU = (dxmag / maxC) * betau;
+//    double bTildE = (dxmag / maxC) * betae;
+//    double aTilde = (dxmag / (mu * mu * maxCh)) * alpha;
+//
+//    double u = var(i, j, 0, 0) / rho(i, j); // u-velocity in current cell
+//    double ur = var(i + 1, j, 0, 0) / rho(i + 1, j); // u-velocity in right cell
+//    double ul = var(i - 1, j, 0, 0) / rho(i - 1, j); // u-velocity in left cell
+//    double ut = var(i, j + 1, 0, 0) / rho(i, j + 1); // u-velocity in top cell
+//    double ub = var(i, j - 1, 0, 0) / rho(i, j - 1); // u-velocity in bottom cell
+//
+//    double v = var(i, j, 0, 1) / rho(i, j); // v-velocity
+//    double vr = var(i + 1, j, 0, 1) / rho(i + 1, j);
+//    double vl = var(i - 1, j, 0, 1) / rho(i - 1, j);
+//    double vt = var(i, j + 1, 0, 1) / rho(i, j + 1);
+//    double vb = var(i, j - 1, 0, 1) / rho(i, j - 1);
+//
+//    double e = var(i, j, 0, 2) / rho(i, j); // energy
+//    double er = var(i + 1, j, 0, 2) / rho(i + 1, j);
+//    double el = var(i - 1, j, 0, 2) / rho(i - 1, j);
+//    double et = var(i, j + 1, 0, 2) / rho(i, j + 1);
+//    double eb = var(i, j - 1, 0, 2) / rho(i, j - 1);
+//
+//    double rr = (rho(i, j) + rho(i + 1, j)) / 2.0; // density on right face
+//    double rl = (rho(i - 1, j) + rho(i, j)) / 2.0; // density on left face
+//    double rt = (rho(i, j) + rho(i, j + 1)) / 2.0; // density on top face
+//    double rb = (rho(i, j - 1) + rho(i, j)) / 2.0; // density on bottom face
+//
+//    double cr =
+//        (var(i, j, 0, nc) + var(i + 1, j, 0, nc)) / 2.0; // iso C in right face
+//    double cl =
+//        (var(i - 1, j, 0, nc) + var(i, j, 0, nc)) / 2.0; // iso C in left face
+//    double ct =
+//        (var(i, j, 0, nc) + var(i, j + 1, 0, nc)) / 2.0; // iso C in top face
+//    double cb =
+//        (var(i, j - 1, 0, nc) + var(i, j, 0, nc)) / 2.0; // iso C in bottom face
+//
+//    double chr = (var(i, j, 0, nc + 1) + var(i + 1, j, 0, nc + 1)) /
+//                 2.0; // iso C in right face
+//    double chl = (var(i - 1, j, 0, nc + 1) + var(i, j, 0, nc + 1)) /
+//                 2.0; // iso C in left face
+//    double cht = (var(i, j, 0, nc + 1) + var(i, j + 1, 0, nc + 1)) /
+//                 2.0; // iso C in top face
+//    double chb = (var(i, j - 1, 0, nc + 1) + var(i, j, 0, nc + 1)) /
+//                 2.0; // iso C in bottom face
+//
+//    double t1r = (var(i, j, 0, nc + 2) + var(i + 1, j, 0, nc + 2)) /
+//                 2.0; // iso C in right face
+//    double t1l = (var(i - 1, j, 0, nc + 2) + var(i, j, 0, nc + 2)) /
+//                 2.0; // iso C in left face
+//    double t1t = (var(i, j, 0, nc + 2) + var(i, j + 1, 0, nc + 2)) /
+//                 2.0; // iso C in top face
+//    double t1b = (var(i, j - 1, 0, nc + 2) + var(i, j, 0, nc + 2)) /
+//                 2.0; // iso C in bottom face
+//
+//    double t2r = (var(i, j, 0, nc + 3) + var(i + 1, j, 0, nc + 3)) /
+//                 2.0; // iso C in right face
+//    double t2l = (var(i - 1, j, 0, nc + 3) + var(i, j, 0, nc + 3)) /
+//                 2.0; // iso C in left face
+//    double t2t = (var(i, j, 0, nc + 3) + var(i, j + 1, 0, nc + 3)) /
+//                 2.0; // iso C in top face
+//    double t2b = (var(i, j - 1, 0, nc + 3) + var(i, j, 0, nc + 3)) /
+//                 2.0; // iso C in bottom face
+//
+//    double dur = (ur - u) / dx; // u-velocity on right face
+//    double dul = (u - ul) / dx; // u-velocity on left face
+//    double dut = (ut - u) / dy; // u-velocity on top face
+//    double dub = (u - ub) / dy; // u-velocity on bottom face
+//
+//    double dvr = (vr - v) / dx; // v-velocity on right face
+//    double dvl = (v - vl) / dx; // v-velocity on left face
+//    double dvt = (vt - v) / dy; // v-velocity on top face
+//    double dvb = (v - vb) / dy; // v-velocity on bottom face
+//
+//    double der = (er - e) / dx; // energy on right face
+//    double del = (e - el) / dx; // energy on left face
+//    double det = (et - e) / dy; // energy on top face
+//    double deb = (e - eb) / dy; // energy on bottom face
+//
+//    // isotropic diffusion operator
+//    double diffu = (bTildU / dx) * (rr * cr * dur - rl * cl * dul) +
+//                   (bTildU / dy) * (rt * ct * dut - rb * cb * dub);
+//    double diffv = (bTildU / dx) * (rr * cr * dvr - rl * cl * dvl) +
+//                   (bTildU / dy) * (rt * ct * dvt - rb * cb * dvb);
+//    double diffe = (bTildE / dx) * (rr * cr * der - rl * cl * del) +
+//                   (bTildE / dy) * (rt * ct * det - rb * cb * deb);
+//
+//    dvar(i, j, 0, 0) += diffu;
+//    dvar(i, j, 0, 1) += diffv;
+//    dvar(i, j, 0, 2) += diffe;
+//
+//    diffu = aTilde *
+//            ((rr * chr * t1r * t1r * dur - rl * chl * t1l * t1l * dul) / dx +
+//             (rt * cht * t1t * t1t * dut - rb * chb * t1b * t1b * dub) / dy +
+//             (rr * chr * t1r * t2r * dur - rl * chl * t1l * t2l * dul) / dx +
+//             (rt * cht * t1t * t2t * dut - rb * chb * t1b * t2b * dub) / dy);
+//
+//    diffv = aTilde *
+//            ((rr * chr * t1r * t1r * dvr - rl * chl * t1l * t1l * dvl) / dx +
+//             (rt * cht * t1t * t1t * dvt - rb * chb * t1b * t1b * dvb) / dy +
+//             (rr * chr * t1r * t2r * dvr - rl * chl * t1l * t2l * dvl) / dx +
+//             (rt * cht * t1t * t2t * dvt - rb * chb * t1b * t2b * dvb) / dy);
+//
+//    dvar(i, j, 0, 0) += diffu;
+//    dvar(i, j, 0, 1) += diffv;
+//
+//    // if (diffu > 0.0 || diffv > 0.0)
+//    //    printf("### DEBUG ### %e: %e - %e\n",aTilde,diffu,diffv);
+//  }
+//};
 
 struct maxWaveSpeed {
   FS4D var;

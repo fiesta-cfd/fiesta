@@ -20,7 +20,6 @@
 #ifndef presgrad_H
 #define presgrad_H
 struct applyPressureGradient2D {
-
   FS4D dvar;
   FS2D p;
   FS1D cd;
@@ -34,26 +33,15 @@ struct applyPressureGradient2D {
     double dy = cd(2);
     // calculate pressure gradient across cell in each direction using 4th order
     // central difference
-    double dxp =
-        (p(i - 2, j) - 8.0 * p(i - 1, j) + 8.0 * p(i + 1, j) - p(i + 2, j)) /
-        (12.0 * dx);
-    double dyp =
-        (p(i, j - 2) - 8.0 * p(i, j - 1) + 8.0 * p(i, j + 1) - p(i, j + 2)) /
-        (12.0 * dy);
+    double dxp = (p(i-2,j) - 8.0*p(i-1,j) + 8.0*p(i+1,j) - p(i+2,j)) /(12.0*dx);
+    double dyp = (p(i,j-2) - 8.0*p(i,j-1) + 8.0*p(i,j+1) - p(i,j+2)) /(12.0*dy);
 
-    // apply pressure gradient term to right hand side of Euler equation dV/dt =
-    // ...
-    double p1, p2;
-    p1 = dvar(i, j, 0, 0) - dxp;
-    p2 = dvar(i, j, 0, 1) - dyp;
-
-    dvar(i, j, 0, 0) = p1;
-    dvar(i, j, 0, 1) = p2;
+    dvar(i, j, 0, 0) -= dxp; 
+    dvar(i, j, 0, 1) -= dyp;
   }
 };
 
 struct applyPressureGradient3D {
-
   FS4D dvar;
   FS3D p;
   FS1D cd;
