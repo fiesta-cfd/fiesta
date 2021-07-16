@@ -100,9 +100,9 @@ struct bc_gen {
           ke1 += 0.5*(u(i1,j1,k1,d)*u(i1,j1,k1,d));
           ke2 += 0.5*(u(i2,j2,k2,d)*u(i2,j2,k2,d));
         }
-        ke  =sqrt(ke/u(ig,jg,kg,rdx));
-        ke1 =sqrt(ke1/u(i1,j1,k1,rdx));
-        ke2 =sqrt(ke2/u(i2,j2,k2,rdx));
+        ke  = ke/u(ig,jg,kg,rdx);
+        ke1 = ke1/u(i1,j1,k1,rdx);
+        ke2 = ke2/u(i2,j2,k2,rdx);
 
         u(ig,jg,kg,edx)= 2*(u(i1,j1,k1,edx)-ke1) - (u(i2,j2,k2,edx)-ke2) + ke;
 

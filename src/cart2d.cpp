@@ -21,6 +21,7 @@
 #include "vtk.hpp"
 #include "mpi.hpp"
 #include <cassert>
+#include "log2.hpp"
 
 std::map<string,int> varxIds;
 
@@ -72,6 +73,11 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
   varxNames.push_back("Pressure");
   varxNames.push_back("Temperature");
   varxNames.push_back("Density");
+
+  if (cf.ceq){
+    varxNames.push_back("C_dvar_u");
+    varxNames.push_back("C_dvar_v");
+  }
 
   varx  = FS4D("varx", cf.ngi, cf.ngj, cf.ngk, varxNames.size()); // Extra Vars
 
@@ -171,10 +177,10 @@ void cart2d_func::compute() {
   timers["pressgrad"].accumulate();
 
   if (cf.buoyancy) {
-    timers["gravity"].reset();
+    timers["buoyancy"].reset();
     Kokkos::parallel_for(cell_pol, computeBuoyancy(dvar, var, rho, cf.gAccel, cf.rhoRef));
     Kokkos::fence();
-    timers["gravity"].accumulate();
+    timers["buoyancy"].accumulate();
   }
 
   if (cf.visc) {
@@ -199,59 +205,45 @@ void cart2d_func::compute() {
 
   if (cf.ceq) {
     double maxS;
-    double maxG;
-    double maxGh;
-    double maxTau1;
-    double maxTau2;
+    double mu;
+    double maxC;
+    double maxCh;
+    double maxT1;
+    double maxT2;
 
     timers["ceq"].reset();
 
-    Kokkos::parallel_for(cell_pol, calculateRhoGrad2D(var, rho, gradRho, cd));
+    Kokkos::parallel_for(cell_pol, calculateRhoGrad2D(var, vel, rho, gradRho, cf.dx, cf.dy));
 
     Kokkos::parallel_reduce(cell_pol, maxWaveSpeed2D(var, p, rho, cd), Kokkos::Max<double>(maxS));
-    //Kokkos::parallel_reduce(cell_pol, maxGradRho2D(gradRho, 0), Kokkos::Max<double>(maxG));
-    //Kokkos::parallel_reduce(cell_pol, maxGradRho2D(gradRho, 1), Kokkos::Max<double>(maxGh));
-    //Kokkos::parallel_reduce(cell_pol, maxGradRho2D(gradRho, 2), Kokkos::Max<double>(maxTau1));
-    //Kokkos::parallel_reduce(cell_pol, maxGradRho2D(gradRho, 3), Kokkos::Max<double>(maxTau2));
     Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 0, cd), Kokkos::Max<double>(maxC));
     Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 1, cd), Kokkos::Max<double>(maxCh));
     Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 2, cd), Kokkos::Max<double>(maxT1));
     Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 3, cd), Kokkos::Max<double>(maxT2));
+    Kokkos::fence();
 
     #ifndef NOMPI
       MPI_Allreduce(&maxS, &maxS, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-      MPI_Allreduce(&maxG, &maxG, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-      MPI_Allreduce(&maxGh, &maxGh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-      MPI_Allreduce(&maxTau1, &maxTau1, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-      MPI_Allreduce(&maxTau1, &maxTau2, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
       MPI_Allreduce(&maxC, &maxC, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
       MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
       MPI_Allreduce(&maxT1, &maxT1, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
       MPI_Allreduce(&maxT2, &maxT2, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
     #endif
 
-    if (maxG < 1e-6) maxG = 1e-6;
-    if (maxGh < 1e-6) maxGh = 1e-6;
-    if (maxTau1 < 1e-6) maxTau1 = 1e-6;
-    if (maxTau2 < 1e-6) maxTau2 = 1e-6;
+
     if (maxC < 1e-6) maxC = 1e-6;
     if (maxCh < 1e-6) maxCh = 1e-6;
     if (maxT1 < 1e-6) maxT1 = 1e-6;
     if (maxT2 < 1e-6) maxT2 = 1e-6;
 
-    mu = maxT1;
-    if (maxT2 > mu) mu = maxT2;
+    mu = (maxT1 > maxT2) ? maxT1 : maxT2;
 
-    double alpha = (cf.dx*cf.dx + cf.dy*cf.dy)/(mu*mu*maxCh);
+    double alpha = (cf.dx*cf.dx + cf.dy*cf.dy)/(mu*mu*maxCh)*cf.alpha;
 
-    Kokkos::parallel_for(cell_pol, updateCeq2D(dvar, var, gradRho, maxS, cd, cf.kap, cf.eps, maxG, maxGh, maxTau1, maxTau2));
-
-    //if (cf.t >= cf.st){
-    Kokkos::parallel_for(face_pol, computeCeqFlux2D(var, m, vel, rho, alpha, cd));
+    Kokkos::parallel_for(cell_pol, updateCeq2D(dvar, var, gradRho, maxS, cd, cf.kap, cf.eps));
+    Kokkos::parallel_for(face_pol, computeCeqFlux2D(var, m, vel, rho, alpha, cf.nv));
     Kokkos::parallel_for(face_pol, computeCeqFaces2D(m, vel, cd));
-    Kokkos::parallel_for(cell_pol, applyCeq2D(dvar, m));
-    //Kokkos::parallel_for(cell_pol, applyCeq2D(dvar, var, vel, rho, cf.beta, cf.betae, cf.alpha, maxC, maxCh, mu, cd));
-    //}
+    Kokkos::parallel_for(cell_pol, applyCeq2D(dvar, varx, m, cf.dx, cf.dy));
 
     Kokkos::fence();
     timers["ceq"].accumulate();
@@ -280,13 +272,13 @@ void cart2d_func::postStep() {
     int N = 0;
     double coff;
 
-    if ((cf.nci - 1) % 2 == 0)
-      M = (cf.nci - 1) / 2;
+    if ((cf.nci + 1) % 2 == 0)
+      M = (cf.nci + 1) / 2;
     else
       M = cf.nci / 2;
 
-    if ((cf.ncj - 1) % 2 == 0)
-      N = (cf.ncj - 1) / 2;
+    if ((cf.ncj + 1) % 2 == 0)
+      N = (cf.ncj + 1) / 2;
     else
       N = cf.ncj / 2;
 
@@ -294,7 +286,7 @@ void cart2d_func::postStep() {
     // double dh = 5.0e-4;
     // double doff = 0.1;
 
-    policy_f noise_pol = policy_f({0, 0}, {M, N});
+    policy_f noise_pol = policy_f({0, 0}, {M+1, N+1});
     policy_f cell_pol =
         policy_f({cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
 
