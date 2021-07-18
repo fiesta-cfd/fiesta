@@ -34,7 +34,7 @@
 #include "advect.hpp"
 #include "presgrad.hpp"
 #include "block.hpp"
-#include "ceq.hpp"
+#include "ceq3d.hpp"
 #include "noise.hpp"
 #include "log2.hpp"
 #include "buoyancy.hpp"
@@ -239,7 +239,7 @@ void cart3d_func::compute() {
     #endif
 
     // calculate density and energy gradients and find ceq source terms
-    Kokkos::parallel_for(cell_pol, calculateRhoGrad(var, rho, gradRho, cd));
+    Kokkos::parallel_for(cell_pol, calculateRhoGrad(var, vel, rho, gradRho, cd));
 
     // update c equations
     Kokkos::parallel_for(cell_pol, updateCeq(dvar, var, varx, gradRho, maxS, cd, cf.kap, cf.eps));
