@@ -239,7 +239,7 @@ void cart3d_func::compute() {
     #endif
 
     // calculate density and energy gradients and find ceq source terms
-    Kokkos::parallel_for(cell_pol, calculateRhoGrad(var, vel, rho, gradRho, cd));
+    Kokkos::parallel_for(cell_pol, calculateRhoGrad(var, vel, rho, gradRho, cf.dx, cf.dy, cf.dz));
 
     // update c equations
     Kokkos::parallel_for(cell_pol, updateCeq(dvar, var, varx, gradRho, maxS, cd, cf.kap, cf.eps));

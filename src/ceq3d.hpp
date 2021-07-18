@@ -95,154 +95,64 @@ struct calculateRhoGrad {
   FS4D var,vel;
   FS3D rho;
   FS4D gradRho;
-  Kokkos::View<double *> cd;
+  double dx,dy,dz;
 
   calculateRhoGrad(FS4D var_, FS4D vel_, FS3D rho_, FS4D gradRho_,
-                   Kokkos::View<double *> cd_)
-      : var(var_), vel(vel_), rho(rho_), gradRho(gradRho_), cd(cd_) {}
+                   double dx_, double dy_, double dz_)
+      : var(var_), vel(vel_), rho(rho_), gradRho(gradRho_), dx(dx_), dy(dy_), dz(dz_) {}
 
   // central difference scheme for 1st derivative in 2d on three index variable 
   KOKKOS_INLINE_FUNCTION
-  double deriv24d(const FS4D &var,
+  //double deriv24d(const FS4D &var,
+  double derivVel(
       const int i, const int j, const int k,
       const int ih, const int jh, const int kh,
       const int v, const double dx) const {
-    return (var(i-2*ih,j-2*jh,k-2*kh,v) - 8.0*var(i-ih,j-jh,j-kh,v)
-        + 8.0*var(i+ih,j+jh,k+kh,v) - var(i+2*ih,j+2*jh,k+2*kh,v)) / (12.0*dx);
+    return (vel(i-2*ih,j-2*jh,k-2*kh,v) - 8.0*vel(i-ih,j-jh,j-kh,v)
+        + 8.0*vel(i+ih,j+jh,k+kh,v) - vel(i+2*ih,j+2*jh,k+2*kh,v)) / (12.0*dx);
   }
 
   // central difference scheme for 1st derivative in 2d on two index variable 
   KOKKOS_INLINE_FUNCTION
-  double deriv23d(const FS3D &var, 
+  double derivRho(
       const int i, const int j, const int k,
       const int ih, const int jh, const int kh,
       const double dx) const {
-    return (var(i-2*ih,j-2*jh,k-2*kh) - 8.0*var(i-ih,j-jh,k-kh)
-        + 8.0*var(i+ih,j+jh,k+kh) - var(i+2*ih,j+2*jh,k+2*kh)) / (12.0*dx);
+    return (rho(i-2*ih,j-2*jh,k-2*kh) - 8.0*rho(i-ih,j-jh,k-kh)
+        + 8.0*rho(i+ih,j+jh,k+kh) - rho(i+2*ih,j+2*jh,k+2*kh)) / (12.0*dx);
   }
 
   // central difference scheme for 1st derivative of specific internal energy
   KOKKOS_INLINE_FUNCTION
-  double deriv2de(const FS4D &v, const FS4D &u, const FS3D &r,
+  double derivEnergy(
       const int i, const int j, const int k,
       const int ih, const int jh, const int kh,
       const double dx) const {
-    return (nrg(v,u,r,i-2*ih,j-2*jh,k-2*kh) - 8.0*nrg(v,u,r,i-ih,j-jh,k-kh)
-        + 8.0*nrg(v,u,r,i+ih,j+jh,k+kh) - nrg(v,u,r,i+2*ih,j+2*jh,k+2*kh)) / (12.0*dx);
+    return (nrg(i-2*ih,j-2*jh,k-2*kh) - 8.0*nrg(i-ih,j-jh,k-kh)
+        + 8.0*nrg(i+ih,j+jh,k+kh) - nrg(i+2*ih,j+2*jh,k+2*kh)) / (12.0*dx);
   }
 
   // convert total energy to specific internal energy (TE-KE)/rho
   KOKKOS_INLINE_FUNCTION
-  double nrg(const FS4D &v, const FS4D &u, const FS3D &r,
+  double nrg(
       const int i, const int j, const int k) const {
-    return v(i,j,k,2)/r(i,j,k)-0.5*(u(i,j,k,0)*u(i,j,k,0)+u(i,j,k,1)*u(i,j,k,1)+u(i,j,k,2)*u(i,j,k,2));
+    return var(i,j,k,2)/rho(i,j,k)
+      -0.5*(vel(i,j,k,0)*vel(i,j,k,0)+vel(i,j,k,1)*vel(i,j,k,1)+vel(i,j,k,2)*vel(i,j,k,2));
   }
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
-    int indicator = 0;
+    double dxr = derivRho(i,j,k,1,0,0,dx);
+    double dyr = derivRho(i,j,k,0,1,0,dy);
+    double dzr = derivRho(i,j,k,0,0,1,dz);
 
-    //double u1 = var(i - 2, j, k, 0) / rho(i - 2, j, k);
-    //double u2 = var(i - 1, j, k, 0) / rho(i - 1, j, k);
-    //double u3 = var(i + 1, j, k, 0) / rho(i + 1, j, k);
-    //double u4 = var(i + 2, j, k, 0) / rho(i + 2, j, k);
+    double dxe = derivEnergy(i,j,k,1,0,0,dx);
+    double dye = derivEnergy(i,j,k,0,1,0,dy);
+    double dze = derivEnergy(i,j,k,0,0,1,dz);
 
-    //double v1 = var(i, j - 2, k, 0) / rho(i, j - 2, k);
-    //double v2 = var(i, j - 1, k, 0) / rho(i, j - 1, k);
-    //double v3 = var(i, j + 1, k, 0) / rho(i, j + 1, k);
-    //double v4 = var(i, j + 2, k, 0) / rho(i, j + 2, k);
-
-    //double w1 = var(i, j, k - 2, 0) / rho(i, j, k - 2);
-    //double w2 = var(i, j, k - 1, 0) / rho(i, j, k - 1);
-    //double w3 = var(i, j, k + 1, 0) / rho(i, j, k + 1);
-    //double w4 = var(i, j, k + 2, 0) / rho(i, j, k + 2);
-
-    //double ex1 = var(i - 2, j, k, 3) / rho(i, j, k - 2) -
-    //             0.5 * (1 / (rho(i - 2, j, k) * rho(i - 2, j, k))) *
-    //                 (var(i - 2, j, k, 0) * var(i - 2, j, k, 0) +
-    //                  var(i - 2, j, k, 1) * var(i - 2, j, k, 1) +
-    //                  var(i - 2, j, k, 2) * var(i - 2, j, k, 2));
-    //double ex2 = var(i - 1, j, k, 3) / rho(i, j, k - 1) -
-    //             0.5 * (1 / (rho(i - 1, j, k) * rho(i - 1, j, k))) *
-    //                 (var(i - 1, j, k, 0) * var(i - 1, j, k, 0) +
-    //                  var(i - 1, j, k, 1) * var(i - 1, j, k, 1) +
-    //                  var(i - 1, j, k, 2) * var(i - 1, j, k, 2));
-    //double ex3 = var(i + 1, j, k, 3) / rho(i, j, k + 1) -
-    //             0.5 * (1 / (rho(i + 1, j, k) * rho(i + 1, j, k))) *
-    //                 (var(i + 1, j, k, 0) * var(i + 1, j, k, 0) +
-    //                  var(i + 1, j, k, 1) * var(i + 1, j, k, 1) +
-    //                  var(i + 1, j, k, 2) * var(i + 1, j, k, 2));
-    //double ex4 = var(i + 2, j, k, 3) / rho(i, j, k + 2) -
-    //             0.5 * (1 / (rho(i + 2, j, k) * rho(i + 2, j, k))) *
-    //                 (var(i + 2, j, k, 0) * var(i + 2, j, k, 0) +
-    //                  var(i + 2, j, k, 1) * var(i + 2, j, k, 1) +
-    //                  var(i + 2, j, k, 2) * var(i + 2, j, k, 2));
-
-    //double ey1 = var(i, j - 2, k, 3) / rho(i, j, k - 2) -
-    //             0.5 * (1 / (rho(i, j - 2, k) * rho(i, j - 2, k))) *
-    //                 (var(i, j - 2, k, 0) * var(i, j - 2, k, 0) +
-    //                  var(i, j - 2, k, 1) * var(i, j - 2, k, 1) +
-    //                  var(i, j - 2, k, 2) * var(i, j - 2, k, 2));
-    //double ey2 = var(i, j - 1, k, 3) / rho(i, j, k - 1) -
-    //             0.5 * (1 / (rho(i, j - 1, k) * rho(i, j - 1, k))) *
-    //                 (var(i, j - 1, k, 0) * var(i, j - 1, k, 0) +
-    //                  var(i, j - 1, k, 1) * var(i, j - 1, k, 1) +
-    //                  var(i, j - 1, k, 2) * var(i, j - 1, k, 2));
-    //double ey3 = var(i, j + 1, k, 3) / rho(i, j, k + 1) -
-    //             0.5 * (1 / (rho(i, j + 1, k) * rho(i, j + 1, k))) *
-    //                 (var(i, j + 1, k, 0) * var(i, j + 1, k, 0) +
-    //                  var(i, j + 1, k, 1) * var(i, j + 1, k, 1) +
-    //                  var(i, j + 1, k, 2) * var(i, j + 1, k, 2));
-    //double ey4 = var(i, j + 2, k, 3) / rho(i, j, k + 2) -
-    //             0.5 * (1 / (rho(i, j + 2, k) * rho(i, j + 2, k))) *
-    //                 (var(i, j + 2, k, 0) * var(i, j + 2, k, 0) +
-    //                  var(i, j + 2, k, 1) * var(i, j + 2, k, 1) +
-    //                  var(i, j + 2, k, 2) * var(i, j + 2, k, 2));
-
-    //double ez1 = var(i, j, k - 2, 3) / rho(i, j, k - 2) -
-    //             0.5 * (1 / (rho(i, j, k - 2) * rho(i, j, k - 2))) *
-    //                 (var(i, j, k - 2, 0) * var(i, j, k - 2, 0) +
-    //                  var(i, j, k - 2, 1) * var(i, j, k - 2, 1) +
-    //                  var(i, j, k - 2, 2) * var(i, j, k - 2, 2));
-    //double ez2 = var(i, j, k - 1, 3) / rho(i, j, k - 1) -
-    //             0.5 * (1 / (rho(i, j, k - 1) * rho(i, j, k - 1))) *
-    //                 (var(i, j, k - 1, 0) * var(i, j, k - 1, 0) +
-    //                  var(i, j, k - 1, 1) * var(i, j, k - 1, 1) +
-    //                  var(i, j, k - 1, 2) * var(i, j, k - 1, 2));
-    //double ez3 = var(i, j, k + 1, 3) / rho(i, j, k + 1) -
-    //             0.5 * (1 / (rho(i, j, k + 1) * rho(i, j, k + 1))) *
-    //                 (var(i, j, k + 1, 0) * var(i, j, k + 1, 0) +
-    //                  var(i, j, k + 1, 1) * var(i, j, k + 1, 1) +
-    //                  var(i, j, k + 1, 2) * var(i, j, k + 1, 2));
-    //double ez4 = var(i, j, k + 2, 3) / rho(i, j, k + 2) -
-    //             0.5 * (1 / (rho(i, j, k + 2) * rho(i, j, k + 2))) *
-    //                 (var(i, j, k + 2, 0) * var(i, j, k + 2, 0) +
-    //                  var(i, j, k + 2, 1) * var(i, j, k + 2, 1) +
-    //                  var(i, j, k + 2, 2) * var(i, j, k + 2, 2));
-
-    //double dxr = (rho(i-2,j,k) - 8.0*rho(i-1,j,k) + 8.0*rho(i+1,j,k) - rho(i+2,j,k)) / (12.0*cd(1));
-    //double dyr = (rho(i,j-2,k) - 8.0*rho(i,j-1,k) + 8.0*rho(i,j+1,k) - rho(i,j+2,k)) / (12.0*cd(2));
-    //double dzr = (rho(i,j,k-2) - 8.0*rho(i,j,k-1) + 8.0*rho(i,j,k+1) - rho(i,j,k+2)) / (12.0*cd(3));
-
-    double dxr = deriv23d(rho,i,j,k,1,0,0,cd(1));
-    double dyr = deriv23d(rho,i,j,k,0,1,0,cd(2));
-    double dzr = deriv23d(rho,i,j,k,0,0,1,cd(3));
-
-    //double dxe = (ex1 - 8.0 * ex2 + 8.0 * ex3 - ex4) / (12.0 * cd(1));
-    //double dye = (ey1 - 8.0 * ey2 + 8.0 * ey3 - ey4) / (12.0 * cd(2));
-    //double dze = (ez1 - 8.0 * ez2 + 8.0 * ez3 - ez4) / (12.0 * cd(3));
-
-    double dxe = deriv2de(var,vel,rho,i,j,k,1,0,0,cd(1));
-    double dye = deriv2de(var,vel,rho,i,j,k,0,1,0,cd(2));
-    double dze = deriv2de(var,vel,rho,i,j,k,0,0,1,cd(3));
-
-    //double dxu = (u1 - 8.0 * u2 + 8.0 * u3 - u4) / (12.0 * cd(1));
-    //double dyv = (v1 - 8.0 * v2 + 8.0 * v3 - v4) / (12.0 * cd(2));
-    //double dzw = (w1 - 8.0 * w2 + 8.0 * w3 - w4) / (12.0 * cd(3));
-
-    double dxu = deriv24d(vel,i,j,k,1,0,0,0,cd(1));
-    double dyv = deriv24d(vel,i,j,k,0,1,0,1,cd(2));
-    double dzw = deriv24d(vel,i,j,k,0,0,1,2,cd(3));
+    double dxu = derivVel(i,j,k,1,0,0,0,dx);
+    double dyv = derivVel(i,j,k,0,1,0,1,dy);
+    double dzw = derivVel(i,j,k,0,0,1,2,dz);
 
     double n1 = dxr;
     double n2 = dyr;
@@ -255,13 +165,14 @@ struct calculateRhoGrad {
         (n1 * dxe + n2 * dye + n3 * dze) * (n1 * dxr + n2 * dyr + n3 * dzr);
 
     // compression switch
-    if (dnednr <= 0)
+    int indicator = 0;
+    if (dnednr < 0)
       indicator = 1;
     else
       indicator = 0;
 
     // detect shock front (equation 5a)
-    if (divu <= 0)
+    if (divu < 0)
       gradRho(i, j, k, 0) = (1 - indicator) * rgrad;
     // gradRho(i,j,k,0) = (1-indicator)*divu*rgrad;
     else
