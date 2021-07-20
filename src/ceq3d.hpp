@@ -303,26 +303,31 @@ struct calculateCeqFlux {
         cmag_right += cn_right[idx] * cn_right[idx];
       // cmag_right = sqrt(cmag_right);
 
-      if (cmag_left <= 0.000001 || cmag_right <= 0.000001) {
+      //if (cmag_left <= 0.00000001 || cmag_right <= 0.00000001) {
+      if (cmag_left <= 1.0e-10 || cmag_right <= 1.0e-10) {
+        double dirac;
         for (int m = 0; m < 3; ++m) {
           for (int n = 0; n < 3; ++n) {
-            mFlux(m, n, i, j, k, dir) = 0.0;
+            dirac=0.0;
+            if (m==n)
+              dirac=1.0;
+            mFlux(m, n, i, j, k, dir) = dirac;
             cFlux(i, j, k, dir) = 0.0;
           }
         }
       } else {
         // tensor components
-        for (int m = 0; m < 3; ++m) {
+        //for (int m = 0; m < 3; ++m) {
           for (int n = 0; n < 3; ++n) {
 
             // dirac delta
             double d = 0;
-            if (m == n)
+            if (dir == n)
               d = 1;
 
             // calculate right and left tensor components
-            m_left = d - (cn_left[m] * cn_left[n] / cmag_left);
-            m_right = d - (cn_right[m] * cn_right[n] / cmag_right);
+            m_left = d - (cn_left[dir] * cn_left[n] / cmag_left);
+            m_right = d - (cn_right[dir] * cn_right[n] / cmag_right);
             //m_left = d - (cn_left[m] * cn_left[n]);
             //m_right = d - (cn_right[m] * cn_right[n]);
 
@@ -335,13 +340,12 @@ struct calculateCeqFlux {
             m_right = m_right * rho_right;
 
             // find flux
-            mFlux(m, n, i, j, k, dir) = (m_right - m_left) / 2.0;
+            mFlux(dir, n, i, j, k, 0) = (m_right + m_left) / 2.0;
           }
-        }
+        //}
 
         // calcualte isotropic C flux
-        cFlux(i, j, k, dir) = (c_right * rho_right - c_left * rho_left) / 2.0;
-
+        cFlux(i, j, k, dir) = (c_right * rho_right + c_left * rho_left) / 2.0;
       }
     }
   }
@@ -427,14 +431,14 @@ struct applyCeq {
                        -(vel(i,j-1,k+1,n) + vel(i,j-1,k,n)) ) / (4*cd(2));
       du_right[2][2] = (vel(i,j,k,n) - vel(i,j,k-1,n)) / cd(3);
 
-      an = 0;
-      is = 0;
-      ip = 0;
-      jp = 0;
-      kp = 0;
+      an = 0.0;
+      is = 0.0;
+      ip = 0.0;
+      jp = 0.0;
+      kp = 0.0;
 
       //if (n < 3) {
-        diffu = 0;
+        diffu = 0.0;
         for (int d = 0; d < 3; ++d) { // each direction for divergence
           ip = 0; jp = 0; kp = 0;
           if (d == 0) ip = 1;
@@ -442,8 +446,8 @@ struct applyCeq {
           if (d == 2) kp = 1;
 
           for (int f = 0; f < 3; ++f) { // each direction for gradient
-            an = an + (mFlux(d,f,i,j,k,d) * du_right[d][f] -
-                       mFlux(d,f,i-ip,j-jp,k-kp,d) * du_left[d][f]) / dx[d];
+            an = an + (mFlux(d,f,i,j,k,0) * du_right[d][f] -
+                       mFlux(d,f,i-ip,j-jp,k-kp,0) * du_left[d][f]) / dx[d];
             is = is + (cFlux(i,j,k,d) * du_right[d][f] -
                        cFlux(i-ip,j-jp,k-kp,d) * du_left[d][f]) / dx[d];
           }
@@ -455,7 +459,8 @@ struct applyCeq {
         dvar(i,j,k,n) += diffu;
         //if (n==2) varx(i,j,k,9) = dvar(i,j,k,n);
         //if (n==1) varx(i,j,k,9) = 1.0;
-        if (n==1) varx(i,j,k,9) = dvar(i,j,k,n);
+        if (n==2) varx(i,j,k,9) = diffu;
+        //if (n==2) varx(i,j,k,9) = dvar(i,j,k,n);
         //if (an!=0) printf("(%d,%d,%d) %d: %f  %f  %f %f\n",i,j,k,n,diffu,alpha,an,is);
         //if (an!=0) printf("(%d,%d,%d) %d: %f  %f  %f\n",i,j,k,n,diffu,alpha,an);
       //} else {

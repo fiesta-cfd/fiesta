@@ -56,18 +56,30 @@ struct detectNoise3D {
     double a = sqrt(165.0 * dx * dy * dz);
 
     double c = -(a/15840.0) * (
-                 2.0*var(i-1,j+1,k+1,v) +   2.0*var(i,j+1,k+1,v) + 2.0*var(i+1,j+1,k+1,v)
-               + 2.0*var(i-1,j  ,k+1,v) +   8.0*var(i,j  ,k+1,v) + 2.0*var(i+1,j  ,k+1,v)
-               + 2.0*var(i-1,j-1,k+1,v) +   2.0*var(i,j-1,k+1,v) + 2.0*var(i+1,j-1,k+1,v)
+                 2.0*var(i-1,j+1,k+1,v) +   3.0*var(i,j+1,k+1,v) + 2.0*var(i+1,j+1,k+1,v)
+               + 3.0*var(i-1,j  ,k+1,v) +   6.0*var(i,j  ,k+1,v) + 3.0*var(i+1,j  ,k+1,v)
+               + 2.0*var(i-1,j-1,k+1,v) +   3.0*var(i,j-1,k+1,v) + 2.0*var(i+1,j-1,k+1,v)
 
-               + 2.0*var(i-1,j+1,k  ,v) +   2.0*var(i,j+1,k  ,v) + 2.0*var(i+1,j+1,k  ,v)
-               + 8.0*var(i-1,j  ,k  ,v) + -88.0*var(i,j  ,k  ,v) + 8.0*var(i+1,j  ,k  ,v)
-               + 2.0*var(i-1,j-1,k  ,v) +   2.0*var(i,j-1,k  ,v) + 2.0*var(i+1,j-1,k  ,v)
+               + 3.0*var(i-1,j+1,k  ,v) +   6.0*var(i,j+1,k  ,v) + 3.0*var(i+1,j+1,k  ,v)
+               + 6.0*var(i-1,j  ,k  ,v) + -88.0*var(i,j  ,k  ,v) + 6.0*var(i+1,j  ,k  ,v)
+               + 3.0*var(i-1,j-1,k  ,v) +   6.0*var(i,j-1,k  ,v) + 3.0*var(i+1,j-1,k  ,v)
 
-               + 2.0*var(i-1,j+1,k-1,v) +   2.0*var(i,j+1,k-1,v) + 2.0*var(i+1,j+1,k-1,v)
-               + 2.0*var(i-1,j  ,k-1,v) +   8.0*var(i,j  ,k-1,v) + 2.0*var(i+1,j  ,k-1,v)
-               + 2.0*var(i-1,j-1,k-1,v) +   2.0*var(i,j-1,k-1,v) + 2.0*var(i+1,j-1,k-1,v)
+               + 2.0*var(i-1,j+1,k-1,v) +   3.0*var(i,j+1,k-1,v) + 2.0*var(i+1,j+1,k-1,v)
+               + 3.0*var(i-1,j  ,k-1,v) +   6.0*var(i,j  ,k-1,v) + 3.0*var(i+1,j  ,k-1,v)
+               + 2.0*var(i-1,j-1,k-1,v) +   3.0*var(i,j-1,k-1,v) + 2.0*var(i+1,j-1,k-1,v)
                );
+               //  2.0*var(i-1,j+1,k+1,v) +   2.0*var(i,j+1,k+1,v) + 2.0*var(i+1,j+1,k+1,v)
+               //+ 2.0*var(i-1,j  ,k+1,v) +   8.0*var(i,j  ,k+1,v) + 2.0*var(i+1,j  ,k+1,v)
+               //+ 2.0*var(i-1,j-1,k+1,v) +   2.0*var(i,j-1,k+1,v) + 2.0*var(i+1,j-1,k+1,v)
+
+               //+ 2.0*var(i-1,j+1,k  ,v) +   2.0*var(i,j+1,k  ,v) + 2.0*var(i+1,j+1,k  ,v)
+               //+ 8.0*var(i-1,j  ,k  ,v) + -88.0*var(i,j  ,k  ,v) + 8.0*var(i+1,j  ,k  ,v)
+               //+ 2.0*var(i-1,j-1,k  ,v) +   2.0*var(i,j-1,k  ,v) + 2.0*var(i+1,j-1,k  ,v)
+
+               //+ 2.0*var(i-1,j+1,k-1,v) +   2.0*var(i,j+1,k-1,v) + 2.0*var(i+1,j+1,k-1,v)
+               //+ 2.0*var(i-1,j  ,k-1,v) +   8.0*var(i,j  ,k-1,v) + 2.0*var(i+1,j  ,k-1,v)
+               //+ 2.0*var(i-1,j-1,k-1,v) +   2.0*var(i,j-1,k-1,v) + 2.0*var(i+1,j-1,k-1,v)
+               //);
 
     double cref = dh * a / 16.0;
 

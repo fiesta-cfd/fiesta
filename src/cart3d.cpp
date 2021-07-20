@@ -274,6 +274,8 @@ void cart3d_func::compute() {
       betae = (dxmag*dxmag / maxC) * cf.betae;
     }
 
+    //Fiesta::Log::debug("alpha={} beta={} maxS={}",alpha,beta,maxS);
+
     Kokkos::parallel_for(weno_pol, calculateCeqFlux(var, rho, mFlux, cFlux, cd));
     Kokkos::parallel_for(cell_pol, applyCeq(dvar, var, varx, vel, rho, mFlux, cFlux, cd, alpha, beta, betae));
 
