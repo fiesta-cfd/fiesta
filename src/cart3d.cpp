@@ -187,22 +187,10 @@ void cart3d_func::preStep() {
 void cart3d_func::compute() {
   // create range policies
   policy_f3 ghost_pol = policy_f3({0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk});
-  policy_f3 cell_pol = policy_f3(
-      {cf.ng, cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
-  policy_f3 weno_pol =
-      policy_f3({cf.ng - 1, cf.ng - 1, cf.ng - 1},
-                {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
+  policy_f3 cell_pol = policy_f3( {cf.ng, cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
+  policy_f3 weno_pol = policy_f3({cf.ng - 1, cf.ng - 1, cf.ng - 1}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
 
-  double maxS;
 
-  double maxC;
-  double maxCh;
-  double maxC1;
-  double maxC2;
-  double maxC3;
-  double mu, alpha, beta, betae;
-
-  /**** WENO ****/
   timers["calcSecond"].reset();
   Kokkos::parallel_for(ghost_pol, calculateRhoPT3D(var, p, rho, T, cd));
   Kokkos::parallel_for(ghost_pol, computeVelocity3D(var, rho, vel));
@@ -211,7 +199,7 @@ void cart3d_func::compute() {
 
   for (int v = 0; v < cf.nv; ++v) {
     timers["flux"].reset();
-    Kokkos::parallel_for( weno_pol, calculateWenoFluxesG(var, p, rho, vel, fluxx, fluxy, fluxz, cd, v));
+    Kokkos::parallel_for(weno_pol, calculateFluxesG(var, p, rho, vel, fluxx, fluxy, fluxz, cf.dx, cf.dy, cf.dz, v));
     Kokkos::parallel_for(cell_pol, advect3D(dvar, fluxx, fluxy, fluxz, v));
     Kokkos::fence();
     timers["flux"].accumulate();
@@ -231,8 +219,16 @@ void cart3d_func::compute() {
 
   if (cf.ceq) {
     timers["ceq"].reset();
+    double maxS;
+
+    double maxC;
+    double maxCh;
+    double maxC1;
+    double maxC2;
+    double maxC3;
+    double mu, alpha, beta, betae;
     /**** CEQ ****/
-    // find mac wavespeed
+    // find max wavespeed
     Kokkos::parallel_reduce(cell_pol, maxWaveSpeed(var,p,rho,cd), Kokkos::Max<double>(maxS));
     #ifndef NOMPI
       MPI_Allreduce(&maxS, &maxS, 1, MPI_DOUBLE, MPI_MAX, cf.comm);

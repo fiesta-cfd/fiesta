@@ -116,7 +116,7 @@ struct inputConfig {
   double kap, eps, alpha, beta, betae;
   BCType bcL, bcR, bcB, bcT, bcH, bcF;
   double n_dh, n_coff, n_eta;
-  int n_nt;
+  int n_nt,n_mode;
   int t;
   int grid;
   double h, tdx, tdy;

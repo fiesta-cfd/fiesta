@@ -143,8 +143,8 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   L.get({"grid","ndim"},     cf.ndim,    2);
   L.get({"viscosity","enabled"},     cf.visc,    false);
   L.get({"ng"},       cf.ng,      3);
-  L.get({"xperiodic"},     cf.xPer,    false);
-  L.get({"yperiodic"},     cf.yPer,    false);
+  L.get({"bc","xperiodic"},     cf.xPer,    false);
+  L.get({"bc","yperiodic"},     cf.yPer,    false);
 
   L.get({"progress_frequency"},     cf.out_freq,    0);
   L.get({"write_frequency"},   cf.write_freq,  0);
@@ -189,14 +189,18 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
 
   std::string bcname;
 
-  L.get({"bc","xmin"},bcname);
-  cf.bcL=parseBC(bcname);
-  L.get({"bc","xmax"},bcname);
-  cf.bcR=parseBC(bcname);
-  L.get({"bc","ymin"},bcname);
-  cf.bcB=parseBC(bcname);
-  L.get({"bc","ymax"},bcname);
-  cf.bcT=parseBC(bcname);
+  if (!cf.xPer){
+    L.get({"bc","xmin"},bcname);
+    cf.bcL=parseBC(bcname);
+    L.get({"bc","xmax"},bcname);
+    cf.bcR=parseBC(bcname);
+  }
+  if (!cf.yPer){
+    L.get({"bc","ymin"},bcname);
+    cf.bcB=parseBC(bcname);
+    L.get({"bc","ymax"},bcname);
+    cf.bcT=parseBC(bcname);
+  }
 
   // Dependent Parameters
   //
@@ -222,13 +226,16 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
     L.get({"noise","eta"},cf.n_eta);
     L.get({"noise","coff"},cf.n_coff);
     L.get({"noise","nt"},cf.n_nt,1);
+    L.get({"noise","mode"},cf.n_mode,1);
   }
   if (cf.ndim == 3) {
     L.get({"bc","zperiodic"},   cf.zPer,false);
-    L.get({"bc","zmin"}, bcname);
-    cf.bcH=parseBC(bcname);
-    L.get({"bc","zmax"}, bcname);
-    cf.bcF=parseBC(bcname);
+    if(!cf.zPer){
+      L.get({"bc","zmin"}, bcname);
+      cf.bcH=parseBC(bcname);
+      L.get({"bc","zmax"}, bcname);
+      cf.bcF=parseBC(bcname);
+    }
   }
   if (grid.compare("cartesian") == 0) {
     cf.grid = 0;

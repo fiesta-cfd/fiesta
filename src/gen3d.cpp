@@ -357,7 +357,7 @@ void gen3d_func::compute() {
   for (int v = 0; v < cf.nv; ++v) {
     Kokkos::parallel_for(
         weno_pol,
-        calculateWenoFluxesG(var, p, rho, tvel, fluxx, fluxy, fluxz, cd, v));
+        calculateFluxesG(var, p, rho, tvel, fluxx, fluxy, fluxz, cf.dx, cf.dy, cf.dx, v));
     Kokkos::parallel_for(cell_pol, advect3D(dvar, fluxx, fluxy, fluxz, v));
   }
   Kokkos::fence();

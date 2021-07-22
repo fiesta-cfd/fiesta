@@ -115,7 +115,7 @@ void gen2d_func::compute() {
     } else if (cf.scheme == 2) {
       parallel_for(facePol, computeFluxCentered2D(var,p,rho,fluxx,fluxy,cd,v));
     } else {
-      parallel_for(facePol, computeFluxWeno2D(var,p,rho,tvel,fluxx,fluxy,cd,v));
+      parallel_for(facePol, computeFluxWeno2D(var,p,rho,tvel,fluxx,fluxy,cf.dx,cf.dy,v));
     }
     parallel_for(cellPol, advect2D(dvar, fluxx, fluxy, cd, v));
   }
@@ -168,11 +168,10 @@ void gen2d_func::postStep() {
     timers["noise"].reset();
     for (int v = 0; v < 2; ++v) {
       Kokkos::parallel_for(noise_pol,
-                           detectNoise2D(var, noise, cf.n_dh, coff, cd, v));
+                           detectNoise2D(var, varx, noise, cf.n_dh, coff, cd, v));
       for (int tau = 0; tau < cf.n_nt; ++tau) {
-        Kokkos::parallel_for(cellPol,
-                             removeNoise2D(dvar, var, noise, cf.n_eta, cd, v));
-        Kokkos::parallel_for(cellPol, updateNoise2D(dvar, var, v));
+        Kokkos::parallel_for(cellPol, removeNoise2D(dvar, var, varx, noise, cf.n_eta, cd, v));
+        //Kokkos::parallel_for(cellPol, updateNoise2D(dvar, var, v));
       }
     }
     Kokkos::fence();
