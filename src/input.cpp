@@ -207,7 +207,7 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   L.get({"buoyancy","enabled"}, cf.buoyancy, false);
   if (cf.buoyancy){
     L.get({"buoyancy","acceleration"},cf.gAccel,9.81);
-    L.get({"buoyancy","rho_reference"},cf.rhoRef,1.0);
+    L.get({"buoyancy","rho_reference"},cf.rhoRef,0.0);
   }
   std::string test;
   L.get({"ceq","enabled"},cf.ceq,false);

@@ -41,7 +41,7 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
   varNames.push_back("Y-Momentum");
   varNames.push_back("Energy");
   for (int v=0; v<cf.ns; ++v)
-      varNames.push_back("Density " + cf.speciesName[v]);
+      varNames.push_back(cf.speciesName[v]+" Density");
 
   if (cf.visc) {
     qx      = FS2D("qx", cf.ngi, cf.ngj); // Heat Fluxes X direction
@@ -58,7 +58,6 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
     varNames.push_back("Tau_1");
     varNames.push_back("Tau_2");
     varNames.push_back("Debug");
-    //varNames.push_back("Unused");
   }
 
   if (cf.noise) {
@@ -198,11 +197,8 @@ void cart2d_func::compute() {
 
   if (cf.ceq) {
     double maxS;
-    double mu;
     double maxC;
     double maxCh;
-    double maxT1;
-    double maxT2;
 
     timers["ceq"].reset();
 
@@ -211,38 +207,20 @@ void cart2d_func::compute() {
     Kokkos::parallel_reduce(cell_pol, maxWaveSpeed2D(var, p, rho, cd), Kokkos::Max<double>(maxS));
     Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 0, cd), Kokkos::Max<double>(maxC));
     Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 1, cd), Kokkos::Max<double>(maxCh));
-    Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 2, cd), Kokkos::Max<double>(maxT1));
-    Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 3, cd), Kokkos::Max<double>(maxT2));
     Kokkos::fence();
 
     #ifndef NOMPI
       MPI_Allreduce(&maxS, &maxS, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
       MPI_Allreduce(&maxC, &maxC, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
       MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-      MPI_Allreduce(&maxT1, &maxT1, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-      MPI_Allreduce(&maxT2, &maxT2, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
     #endif
 
-
-    //if (maxC < 1e-6) maxC = 1e-6;
-    //if (maxCh < 1e-6) maxCh = 1e-6;
-    //if (maxT1 < 1e-6) maxT1 = 1e-6;
-    //if (maxT2 < 1e-6) maxT2 = 1e-6;
-
-    mu = (maxT1 > maxT2) ? maxT1 : maxT2;
-
-    //double alpha = (cf.dx*cf.dx + cf.dy*cf.dy)/(mu*mu*maxCh)*cf.alpha;
-    double alpha = (cf.dx*cf.dx + cf.dy*cf.dy)*cf.alpha;
-
-    if ( (cf.stat_freq  >0) && (cf.t % cf.stat_freq  == 0) )
-      Fiesta::Log::debug("alpha={} mu={} maxCh={}",alpha,mu,maxCh);
+    double alpha = (cf.dx*cf.dx + cf.dy*cf.dy)/(maxCh+1.0e-6)*cf.alpha;
 
     Kokkos::parallel_for(cell_pol, updateCeq2D(dvar, var, gradRho, maxS, cd, cf.kap, cf.eps));
-    if (cf.t > 0){
-      Kokkos::parallel_for(face_pol, computeCeqFlux2D(var, m, rho, alpha, cf.nv,mu,maxCh));
-      Kokkos::parallel_for(face_pol, computeCeqFaces2D(m, vel, cd));
-      Kokkos::parallel_for(cell_pol, applyCeq2D(dvar, varx, m, cf.dx, cf.dy));
-    }
+    Kokkos::parallel_for(face_pol, computeCeqFlux2D(var, m, rho, alpha, cf.nv, maxCh));
+    Kokkos::parallel_for(face_pol, computeCeqFaces2D(m, vel, cd));
+    Kokkos::parallel_for(cell_pol, applyCeq2D(dvar, varx, m, cf.dx, cf.dy));
 
     Kokkos::fence();
     timers["ceq"].accumulate();

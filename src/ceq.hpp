@@ -19,38 +19,21 @@
 
 #ifndef CEQ_HPP
 #define CEQ_HPP
-#include <cstdio>
-#include "log2.hpp"
+
 struct maxCvar2D {
-  FS4D dvar;
+  FS4D var;
   int v;
   Kokkos::View<double *> cd;
 
-  maxCvar2D(FS4D dvar_, int v_, Kokkos::View<double *> cd_)
-      : dvar(dvar_), v(v_), cd(cd_) {}
+  maxCvar2D(FS4D var_, int v_, Kokkos::View<double *> cd_)
+      : var(var_), v(v_), cd(cd_) {}
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, double &lmax) const {
     int ns = (int)cd(0);
     int nv = ns + 3;
 
-    double s = abs(dvar(i, j, 0, nv + v));
-
-    if (s > lmax)
-      lmax = s;
-  }
-};
-
-struct maxGradRho2D {
-  FS3D gradRho;
-  int v;
-
-  maxGradRho2D(FS3D gradRho_, int v_) : gradRho(gradRho_), v(v_) {}
-
-  KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j, double &lmax) const {
-
-    double s = abs(gradRho(i, j, v));
+    double s = abs(var(i, j, 0, nv + v));
 
     if (s > lmax)
       lmax = s;
@@ -104,69 +87,66 @@ struct calculateRhoGrad2D {
   calculateRhoGrad2D(FS4D var_, FS3D vel_, FS2D rho_, FS3D gradRho_, double dx_, double dy_)
       : var(var_), vel(vel_), rho(rho_), gradRho(gradRho_), dx(dx_), dy(dy_) {}
 
-  // central difference scheme for 1st derivative in 2d on three index variable 
-  KOKKOS_INLINE_FUNCTION
-  double deriv23d(const FS3D &var, const int i, const int j, const int ih, const int jh, const int v, const double dx) const {
-    return (var(i-2*ih,j-2*jh,v) - 8.0*var(i-ih,j-jh,v) + 8.0*var(i+ih,j+jh,v) - var(i+2*ih,j+2*jh,v)) / (12.0*dx);
-  }
-
   // central difference scheme for 1st derivative in 2d on two index variable 
   KOKKOS_INLINE_FUNCTION
-  double deriv22d(const FS2D &var, const int i, const int j, const int ih, const int jh, const double dx) const {
-    return (var(i-2*ih,j-2*jh) - 8.0*var(i-ih,j-jh) + 8.0*var(i+ih,j+jh) - var(i+2*ih,j+2*jh)) / (12.0*dx);
+  double rhoDerivative(const int i, const int j, const int ih, const int jh, const double dx) const {
+    return (rho(i-2*ih,j-2*jh) - 8.0*rho(i-ih,j-jh) + 8.0*rho(i+ih,j+jh) - rho(i+2*ih,j+2*jh)) / (12.0*dx);
   }
 
   // central difference scheme for 1st derivative of specific internal energy
   KOKKOS_INLINE_FUNCTION
-  double deriv2de(const FS4D &v, const FS3D &u, const FS2D &r,
-      const int i, const int j, const int ih, const int jh, const double dx) const {
-    return (nrg(v,u,r,i-2*ih,j-2*jh) - 8.0*nrg(v,u,r,i-ih,j-jh) + 8.0*nrg(v,u,r,i+ih,j+jh) - nrg(v,u,r,i+2*ih,j+2*jh)) / (12.0*dx);
+  double energyDerivative(const int i, const int j, const int ih, const int jh, const double dx) const {
+    return (nrg(i-2*ih,j-2*jh) - 8.0*nrg(i-ih,j-jh) + 8.0*nrg(i+ih,j+jh) - nrg(i+2*ih,j+2*jh)) / (12.0*dx);
   }
 
   // convert total energy to specific internal energy (TE-KE)/rho
   KOKKOS_INLINE_FUNCTION
-  double nrg(const FS4D &v, const FS3D &u, const FS2D &r, const int i, const int j) const {
-    return v(i,j,0,2)/r(i,j)-0.5*(u(i,j,0)*u(i,j,0)+u(i,j,1)*u(i,j,1));
+  double nrg(const int i, const int j) const {
+    return var(i,j,0,2)/rho(i,j)-0.5*rho(i,j)*(vel(i,j,0)*vel(i,j,0)+vel(i,j,1)*vel(i,j,1));
+  }
+
+  // central difference scheme for 1st derivative in 2d on three index variable 
+  KOKKOS_INLINE_FUNCTION
+  double velocityDerivative(const int i, const int j, const int ih, const int jh, const int v, const double dx) const {
+    return (vel(i-2*ih,j-2*jh,v) - 8.0*vel(i-ih,j-jh,v) + 8.0*vel(i+ih,j+jh,v) - vel(i+2*ih,j+2*jh,v)) / (12.0*dx);
   }
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j) const {
+    double dxr = rhoDerivative(i,j,1,0,dx);
+    double dyr = rhoDerivative(i,j,0,1,dy);
 
-    double i1 = 0;
-    double i2 = 0;
+    double dxe = energyDerivative(i,j,1,0,dx);
+    double dye = energyDerivative(i,j,0,1,dy);
 
-    double dxr = deriv22d(rho,i,j,1,0,dx);
-    double dyr = deriv22d(rho,i,j,0,1,dy);
-
-    double dxe = deriv2de(var,vel,rho,i,j,1,0,dx);
-    double dye = deriv2de(var,vel,rho,i,j,0,1,dy);
-
-    double dxu = deriv23d(vel,i,j,1,0,0,dx);
-    double dyv = deriv23d(vel,i,j,0,1,1,dy);
+    double dxu = velocityDerivative(i,j,1,0,0,dx);
+    double dyv = velocityDerivative(i,j,0,1,1,dy);
 
     double n1 = dxr;
     double n2 = dyr;
 
-    double rgrad = sqrt(dxr * dxr + dyr * dyr);
+    double rgrad = sqrt(dxr*dxr + dyr*dyr);
     double divu = dxu + dyv;
 
-    double dnednr = (n1 * dxe + n2 * dye) * (n1 * dxr + n2 * dyr);
+    double dnednr = (n1*dxe + n2*dye)*(n1*dxr + n2*dyr);
 
     // compression switch
+    double i1 = 0;
     if (dnednr < 0.0)
       i1 = 1.0;
     else
       i1 = 0.0;
 
     // detect shock front (equation 5a)
+    double i2 = 0;
     if (divu < 0.0) {
       i2 = 1.0;
     }
 
-    gradRho(i, j, 0) = (1 - i1) * i2 * rgrad;
-    gradRho(i, j, 1) = i1 * rgrad;
-    gradRho(i, j, 2) = -i1 * dyr;
-    gradRho(i, j, 3) = i1 * dxr;
+    gradRho(i, j, 0) = (1 - i1)*i2*rgrad;
+    gradRho(i, j, 1) = i1*rgrad;
+    gradRho(i, j, 2) = -dyr;
+    gradRho(i, j, 3) = dxr;
   }
 };
 
@@ -199,17 +179,17 @@ struct updateCeq2D {
     double dxmag = sqrt(dx * dx + dy * dy);
 
     for (int n = 0; n < 4; ++n) {
-      dx_right = (var(i + 1, j, 0, nc + n) - var(i, j, 0, nc + n)) / dx;
-      dx_left  = (var(i, j, 0, nc + n) - var(i - 1, j, 0, nc + n)) / dx;
+      dx_right = ( var(i+1,j,0,nc+n) - var(i,j,0,nc+n) )/dx;
+      dx_left  = ( var(i,j,0,nc+n) - var(i-1,j,0,nc+n) )/dx;
 
-      dy_top = (var(i, j + 1, 0, nc + n) - var(i, j, 0, nc + n)) / dy;
-      dy_bot = (var(i, j, 0, nc + n) - var(i, j - 1, 0, nc + n)) / dy;
+      dy_top = ( var(i,j+1,0,nc+n) - var(i,j,0,nc+n) )/dy;
+      dy_bot = ( var(i,j,0,nc+n) - var(i,j-1,0,nc+n) )/dy;
 
       // update ceq right hand side
       lap = dx_right - dx_left + dy_top - dy_bot;
 
       dvar(i,j,0,nc+n) =
-          (maxS / (eps * dxmag)) * (gradRho(i,j,n) - var(i,j,0,nc+n)) + kap * maxS * dxmag * lap;
+          (maxS/(eps*dxmag))*( gradRho(i,j,n) - var(i,j,0,nc+n) ) + kap*maxS*dxmag*lap;
     }
   }
 };
@@ -220,25 +200,27 @@ struct computeCeqFlux2D {
   FS2D rho;
   double alpha;
   int nv;
-  double mu, maxCh;
+  double maxCh;
 
-  computeCeqFlux2D(FS4D var_, FS5D m_, FS2D rho_, double a_, int nv_, double mu_, double maxCh_)
-      : var(var_), m(m_), rho(rho_), alpha(a_), nv(nv_), mu(mu_), maxCh(maxCh_) {}
+  computeCeqFlux2D(FS4D var_, FS5D m_, FS2D rho_, double a_, int nv_, double maxCh_)
+      : var(var_), m(m_), rho(rho_), alpha(a_), nv(nv_), maxCh(maxCh_) {}
 
   KOKKOS_INLINE_FUNCTION
   double interpolateRho(const int i, const int j, const int ih, const int jh) const {
-    return ( rho(i,j)+rho(i+ih,j+jh) )/2.0;
+    return ( rho(i,j) + rho(i+ih,j+jh) )/2.0;
   }
 
   KOKKOS_INLINE_FUNCTION
   double interpolateC(const int i, const int j, const int ih, const int jh, const int v) const {
-    return (var(i,j,0,nv+v)+var(i+ih,j+jh,0,nv+v))/2.0;
+    return ( var(i,j,0,nv+v) + var(i+ih,j+jh,0,nv+v) )/2.0;
   }
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j) const {
     int ih; // ihat - i-direction unit vector
     int jh; // jhat - j-direction unit vector
+    double chat,r,ctmag;
+    double ct[2];
 
     // Compute alph*rho*C*Ctau1*Ctau2 on each face for each direction
     for (int f=0;f<2;++f){
@@ -247,13 +229,15 @@ struct computeCeqFlux2D {
       if (f==0) ih=1;
       if (f==1) jh=1;
 
+      r     = interpolateRho(i,j,ih,jh);
+      chat  = interpolateC(i,j,ih,jh,1);
+      ct[0] = interpolateC(i,j,ih,jh,2);
+      ct[1] = interpolateC(i,j,ih,jh,3);
+      ctmag = (ct[0]*ct[0] + ct[1]*ct[1])+1.0e-6;
+
       for (int d=0;d<2;++d){
         for (int w=0;w<2;++w){
-          m(f,d,i,j,w) =  interpolateRho(i,j,ih,jh);
-          m(f,d,i,j,w) *= (interpolateC(i,j,ih,jh,1)/maxCh);
-          m(f,d,i,j,w) *= (interpolateC(i,j,ih,jh,2)/mu);
-          m(f,d,i,j,w) *= (interpolateC(i,j,ih,jh,3)/mu);
-          m(f,d,i,j,w) *= alpha;
+          m(f,d,i,j,w) = alpha*r*chat*(ct[f]*ct[d])/ctmag;
         }
       }
     }

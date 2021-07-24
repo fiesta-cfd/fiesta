@@ -33,7 +33,6 @@
 using namespace std;
 
 struct maxVarFunctor2d {
-
   FS4D var;
   int v;
 
@@ -45,12 +44,11 @@ struct maxVarFunctor2d {
     double s = var(i, j, 0, v);
 
     if (abs(s) > lmax)
-      lmax = s;
+      lmax = abs(s);
   }
 };
 
 struct minVarFunctor2d {
-
   FS4D var;
   int v;
 
@@ -62,7 +60,7 @@ struct minVarFunctor2d {
     double s = var(i, j, 0, v);
 
     if (abs(s) < lmin)
-      lmin = s;
+      lmin = abs(s);
   }
 };
 
@@ -76,12 +74,11 @@ struct minVarFunctor3d {
   void operator()(const int i, const int j, const int k, double &lmin) const {
     double s = var(i, j, k, v);
     if (abs(s) < lmin)
-      lmin = s;
+      lmin = abs(s);
   }
 };
 
 struct maxVarFunctor3d {
-
   FS4D var;
   int v;
 
@@ -93,7 +90,7 @@ struct maxVarFunctor3d {
     double s = var(i, j, k, v);
 
     if (abs(s) > lmax)
-      lmax = s;
+      lmax = abs(s);
   }
 };
 
