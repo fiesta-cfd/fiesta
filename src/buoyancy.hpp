@@ -32,17 +32,18 @@ struct computeBuoyancy3D {
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
 
-    double v = var(i, j, k, 2) / rho(i,j,k);
+    double v = var(i, j, k, 1) / rho(i,j,k);
     double rhop = rho(i,j,k) - rhoRef;
     double eps = 1e-6;
 
     if (rhop >= eps || rhop <= -eps) {
       double f = -g * rhop;
-      dvar(i, j, k, 2) += f;
+      dvar(i, j, k, 1) += f;
       dvar(i, j, k, 3) += v * f;
     }
   }
 };
+
 struct computeBuoyancy {
   FS4D dvar;
   FS4D var;

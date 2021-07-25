@@ -107,9 +107,9 @@ struct calculateRhoGrad {
   double derivVel(
       const int i, const int j, const int k,
       const int ih, const int jh, const int kh,
-      const int v, const double dx) const {
+      const int v, const double d) const {
     return (vel(i-2*ih,j-2*jh,k-2*kh,v) - 8.0*vel(i-ih,j-jh,j-kh,v)
-        + 8.0*vel(i+ih,j+jh,k+kh,v) - vel(i+2*ih,j+2*jh,k+2*kh,v)) / (12.0*dx);
+        + 8.0*vel(i+ih,j+jh,k+kh,v) - vel(i+2*ih,j+2*jh,k+2*kh,v)) / (12.0*d);
   }
 
   // central difference scheme for 1st derivative in 2d on two index variable 
@@ -117,9 +117,9 @@ struct calculateRhoGrad {
   double derivRho(
       const int i, const int j, const int k,
       const int ih, const int jh, const int kh,
-      const double dx) const {
+      const double d) const {
     return (rho(i-2*ih,j-2*jh,k-2*kh) - 8.0*rho(i-ih,j-jh,k-kh)
-        + 8.0*rho(i+ih,j+jh,k+kh) - rho(i+2*ih,j+2*jh,k+2*kh)) / (12.0*dx);
+        + 8.0*rho(i+ih,j+jh,k+kh) - rho(i+2*ih,j+2*jh,k+2*kh)) / (12.0*d);
   }
 
   // central difference scheme for 1st derivative of specific internal energy
@@ -127,17 +127,16 @@ struct calculateRhoGrad {
   double derivEnergy(
       const int i, const int j, const int k,
       const int ih, const int jh, const int kh,
-      const double dx) const {
+      const double d) const {
     return (nrg(i-2*ih,j-2*jh,k-2*kh) - 8.0*nrg(i-ih,j-jh,k-kh)
-        + 8.0*nrg(i+ih,j+jh,k+kh) - nrg(i+2*ih,j+2*jh,k+2*kh)) / (12.0*dx);
+        + 8.0*nrg(i+ih,j+jh,k+kh) - nrg(i+2*ih,j+2*jh,k+2*kh)) / (12.0*d);
   }
 
   // convert total energy to specific internal energy (TE-KE)/rho
   KOKKOS_INLINE_FUNCTION
-  double nrg(
-      const int i, const int j, const int k) const {
-    return var(i,j,k,2)/rho(i,j,k)
-      -0.5*(vel(i,j,k,0)*vel(i,j,k,0)+vel(i,j,k,1)*vel(i,j,k,1)+vel(i,j,k,2)*vel(i,j,k,2));
+  double nrg( const int i, const int j, const int k) const {
+    return var(i,j,k,3)/rho(i,j,k)
+      -0.5*rho(i,j,k)*(vel(i,j,k,0)*vel(i,j,k,0) + vel(i,j,k,1)*vel(i,j,k,1) + vel(i,j,k,2)*vel(i,j,k,2));
   }
 
   KOKKOS_INLINE_FUNCTION
@@ -158,15 +157,14 @@ struct calculateRhoGrad {
     double n2 = dyr;
     double n3 = dzr;
 
-    double rgrad = sqrt(dxr * dxr + dyr * dyr + dzr * dzr);
+    double rgrad = sqrt(dxr*dxr + dyr*dyr + dzr*dzr);
     double divu = dxu + dyv + dzw;
 
-    double dnednr =
-        (n1 * dxe + n2 * dye + n3 * dze) * (n1 * dxr + n2 * dyr + n3 * dzr);
+    double dnednr = (n1*dxe + n2*dye + n3*dze)*(n1*dxr + n2*dyr + n3*dzr);
 
     // compression switch
     int indicator = 0;
-    if (dnednr < 0)
+    if (dnednr < 0.0)
       indicator = 1;
     else
       indicator = 0;
@@ -225,260 +223,138 @@ struct updateCeq {
   }
 };
 
-struct calculateCeqFlux {
+struct calculateCeqFaces {
   FS4D var;
   FS3D rho;
-  FS6D mFlux; //(m,n,i,j,k,dir)
-  FS4D cFlux; //(i,j,k,dir)
-  Kokkos::View<double *> cd;
+  FS6D mFlux;
+  double alpha;
+  int nv;
 
-  calculateCeqFlux(FS4D var_, FS3D rho_, FS6D mFlux_, FS4D cFlux_,
-                   Kokkos::View<double *> cd_)
-      : var(var_), rho(rho_), mFlux(mFlux_), cFlux(cFlux_), cd(cd_) {}
+  calculateCeqFaces(FS4D var_, FS3D rho_, FS6D mFlux_, double a_, int nv_)
+      : var(var_), rho(rho_), mFlux(mFlux_), alpha(a_), nv(nv_){}
+
+  KOKKOS_INLINE_FUNCTION
+  double interpolateRho(const int i, const int j, const int k, const int ih, const int jh, const int kh) const {
+    return ( rho(i,j,k) + rho(i+ih,j+jh,k+kh) )/2.0;
+  }
+
+  KOKKOS_INLINE_FUNCTION
+  double interpolateC(const int i, const int j, const int k, const int ih, const int jh, const int kh, const int v) const {
+    return ( var(i,j,k,nv+v) + var(i+ih,j+jh,k+kh,nv+v) )/2.0;
+  }
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
-
-    int nv = (int)cd(0) + 4;
-    int nc = nv;
-    int nch = nv + 1;
-    int nc1 = nv + 2;
-
     int ip = 0;
     int jp = 0;
     int kp = 0;
 
-    double c_left;
-    double c_right;
-    double ch_left;
-    double ch_right;
+    double r,ch,cn[3];
 
-    double cn_left[3];
-    double cn_right[3];
-    double cmag_left = 0;
-    double cmag_right = 0;
-
-    double m_left;
-    double m_right;
-
-    double rho_left;
-    double rho_right;
+    double cmag;
 
     // for each direction (i=0, j=1, k=2)
-    for (int dir = 0; dir < 3; ++dir) {
+    for (int face = 0; face < 3; ++face) {
       ip = 0;
       jp = 0;
       kp = 0;
-      if (dir == 0)
+      if (face == 0)
         ip = 1;
-      if (dir == 1)
+      if (face == 1)
         jp = 1;
-      if (dir == 2)
+      if (face == 2)
         kp = 1;
 
-      // left is current cell, right is cell in positive direction
+      r     = interpolateRho(i,j,k,ip,jp,kp);
+      ch    = interpolateC(i,j,k,ip,jp,kp,1);
+      cn[0] = interpolateC(i,j,k,ip,jp,kp,2);
+      cn[1] = interpolateC(i,j,k,ip,jp,kp,3);
+      cn[2] = interpolateC(i,j,k,ip,jp,kp,4);
 
-      // get right and left components of isotropic C
-      c_left = var(i, j, k, nc);
-      c_right = var(i + ip, j + jp, k + kp, nc);
+      cmag  = 1.0e-6;
+      cmag += cn[0]*cn[0];
+      cmag += cn[1]*cn[1];
+      cmag += cn[2]*cn[2];
 
-      // get right and left components of anisotropic C
-      ch_left = var(i, j, k, nch);
-      ch_right = var(i + ip, j + jp, k + kp, nch);
-
-      rho_left = rho(i, j, k);
-      rho_right = rho(i + ip, j + jp, k + kp);
-
-      // get right and left values of each directional C
-      for (int idx = 0; idx < 3; ++idx) {
-        cn_left[idx] = var(i, j, k, nc1 + idx);
-        cn_right[idx] = var(i + ip, j + jp, k + kp, nc1 + idx);
-      }
-
-      // calculate magnitude of directional C
-      for (int idx = 0; idx < 3; ++idx)
-        cmag_left += cn_left[idx] * cn_left[idx];
-      // cmag_left  = sqrt(cmag_left);
-      for (int idx = 0; idx < 3; ++idx)
-        cmag_right += cn_right[idx] * cn_right[idx];
-      // cmag_right = sqrt(cmag_right);
-
-      //if (cmag_left <= 0.00000001 || cmag_right <= 0.00000001) {
-      if (cmag_left <= 1.0e-10 || cmag_right <= 1.0e-10) {
-        double dirac;
-        for (int m = 0; m < 3; ++m) {
-          for (int n = 0; n < 3; ++n) {
-            dirac=0.0;
-            if (m==n)
-              dirac=1.0;
-            mFlux(m, n, i, j, k, dir) = dirac;
-            cFlux(i, j, k, dir) = 0.0;
-          }
+      for (int dir = 0; dir < 3; ++dir) {
+        double dirac = 0.0;
+        if (face == dir)
+          dirac = 1.0;
+        for(int w=0; w<3; ++w){
+          mFlux(face,dir,i,j,k,w) = alpha*(r*ch*(dirac-cn[face]*cn[dir]))/cmag;
         }
-      } else {
-        // tensor components
-        //for (int m = 0; m < 3; ++m) {
-          for (int n = 0; n < 3; ++n) {
-
-            // dirac delta
-            double d = 0;
-            if (dir == n)
-              d = 1;
-
-            // calculate right and left tensor components
-            m_left = d - (cn_left[dir] * cn_left[n] / cmag_left);
-            m_right = d - (cn_right[dir] * cn_right[n] / cmag_right);
-            //m_left = d - (cn_left[m] * cn_left[n]);
-            //m_right = d - (cn_right[m] * cn_right[n]);
-
-            // include isotropic c
-            m_left = m_left * ch_left;
-            m_right = m_right * ch_right;
-
-            // include density
-            m_left = m_left * rho_left;
-            m_right = m_right * rho_right;
-
-            // find flux
-            mFlux(dir, n, i, j, k, 0) = (m_right + m_left) / 2.0;
-          }
-        //}
-
-        // calcualte isotropic C flux
-        cFlux(i, j, k, dir) = (c_right * rho_right + c_left * rho_left) / 2.0;
       }
+    }
+
+  }
+};
+
+struct calculateCeqGrads {
+  FS4D vel;
+  FS6D mFlux;
+  double dx,dy,dz;
+
+  calculateCeqGrads(FS4D vel_, FS6D mFlux_, double dx_, double dy_, double dz_)
+      : vel(vel_), mFlux(mFlux_), dx(dx_), dy(dy_), dz(dz_){}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j, const int k) const {
+
+    for (int w = 0; w < 3; ++w) {
+      // right face
+      mFlux(0,0,i,j,k,w) *= (vel(i+1,j,k,w) - vel(i,j,k,w)) / dx;
+      mFlux(0,1,i,j,k,w) *= ( (vel(i,j+1,k,w) + vel(i+1,j+1,k,w))
+                             -(vel(i,j-1,k,w) + vel(i+1,j-1,k,w)) ) / (4*dy);
+      mFlux(0,2,i,j,k,w) *= ( (vel(i,j,k+1,w) + vel(i+1,j,k+1,w))
+                             -(vel(i,j,k-1,w) + vel(i+1,j,k-1,w)) ) / (4*dz);
+
+      // top face
+      mFlux(1,0,i,j,k,w) *= ( (vel(i+1,j+1,k,w) + vel(i+1,j,k,w))
+                             -(vel(i-1,j+1,k,w) + vel(i-1,j,k,w)) ) / (4*dx);
+      mFlux(1,1,i,j,k,w) *= (vel(i,j,k,w) - vel(i,j-1,k,w)) / dy;
+      mFlux(1,2,i,j,k,w) *= ( (vel(i,j+1,k+1,w) + vel(i,j,k+1,w))
+                             -(vel(i,j+1,k-1,w) + vel(i,j,k-1,w)) ) / (4*dz);
+
+      // front face
+      mFlux(2,0,i,j,k,w) *= ( (vel(i+1,j,k+1,w) + vel(i+1,j,k,w))
+                             -(vel(i-1,j,k+1,w) + vel(i-1,j,k,w)) ) / (4*dx);
+      mFlux(2,1,i,j,k,w) *= ( (vel(i,j+1,k+1,w) + vel(i,j+1,k,w))
+                             -(vel(i,j-1,k+1,w) + vel(i,j-1,k,w)) ) / (4*dy);
+      mFlux(2,2,i,j,k,w) *= (vel(i,j,k,w) - vel(i,j,k-1,w)) / dz;
     }
   }
 };
 
 struct applyCeq {
-  FS4D dvar;
-  FS4D var;
-  FS4D varx;
-  FS4D vel;
-  FS3D rho;
-  FS6D mFlux; //(m,n,i,j,k,dir)
-  FS4D cFlux; //(i,j,k,dir)
-  double alpha, beta, betae;
-  Kokkos::View<double *> cd;
+  FS4D dvar,varx;
+  FS6D mFlux;
+  double dx,dy,dz;
 
-  applyCeq(FS4D dvar_, FS4D var_, FS4D varx_, FS4D vel_, FS3D rho_, FS6D mFlux_, FS4D cFlux_,
-           Kokkos::View<double *> cd_, double alpha_, double beta_, double betae_)
-      : dvar(dvar_), var(var_), varx(varx_), vel(vel_), rho(rho_), mFlux(mFlux_), cFlux(cFlux_),
-        cd(cd_), alpha(alpha_), beta(beta_), betae(betae_) {}
+  applyCeq(FS4D dvar_, FS4D varx_, FS6D mFlux_, double dx_, double dy_, double dz_)
+      : dvar(dvar_), varx(varx_), mFlux(mFlux_), dx(dx_), dy(dy_), dz(dz_) {}
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
-
-    int nv = (int)cd(0) + 4;
     double diffu;
+    int ih, jh, kh;
+    double d[3];
+    d[0]=dx;
+    d[1]=dy;
+    d[2]=dz;
 
-    double du_right[3][3]; // face, direction
-    double du_left[3][3];
-
-    double dx[3];
-
-    dx[0] = cd(1);
-    dx[1] = cd(2);
-    dx[2] = cd(3);
-
-    double an; // anisotropic part
-    double is; // isotropic part
-
-    int ip, jp, kp;
-
-    // for each velocity component and energy
-    for (int n = 0; n < 3; ++n) {
-      // left face
-      du_left[0][0] = (vel(i,j,k,n) - vel(i-1,j,k,n)) / cd(1);
-      du_left[0][1] = ( (vel(i-1,j+1,k,n) + vel(i,j+1,k,n))
-                       -(vel(i-1,j-1,k,n) + vel(i,j-1,k,n)) ) / (4*cd(2));
-      du_left[0][2] = ( (vel(i-1,j,k+1,n) + vel(i,j,k+1,n))
-                       -(vel(i-1,j,k-1,n) + vel(i,j,k-1,n)) ) / (4*cd(3));
-
-      // bottom face
-      du_left[1][0] = ( (vel(i+1,j,k,n) + vel(i+1,j-1,k,n))
-                       -(vel(i-1,j,k,n) + vel(i-1,j-1,k,n)) ) / (4*cd(1));
-      du_left[1][1] = (vel(i,j,k,n) - vel(i,j-1,k,n)) / cd(2);
-      du_left[1][2] = ( (vel(i,j,k+1,n) + vel(i,j-1,k+1,n))
-                       -(vel(i,j,k-1,n) + vel(i,j-1,k-1,n)) ) / (4*cd(3));
-
-      // back (hind) face
-      du_left[2][0] = ( (vel(i+1,j,k,n) + vel(i+1,j,k-1,n))
-                       -(vel(i-1,j,k,n) + vel(i-1,j,k-1,n)) ) / (4*cd(1));
-      du_left[2][1] = ( (vel(i,j+1,k,n) + vel(i,j+1,k-1,n))
-                       -(vel(i,j-1,k,n) + vel(i,j-1,k-1,n)) ) / (4*cd(2));
-      du_left[2][2] = (vel(i,j,k,n) - vel(i,j,k-1,n)) / cd(3);
-
-      // right face
-      du_right[0][0] = (vel(i+1,j,k,n) - vel(i,j,k,n)) / cd(1);
-      du_right[0][1] = ( (vel(i,j+1,k,n) + vel(i+1,j+1,k,n))
-                       -(vel(i,j-1,k,n) + vel(i+1,j-1,k,n)) ) / (4*cd(2));
-      du_right[0][2] = ( (vel(i,j,k+1,n) + vel(i+1,j,k+1,n))
-                       -(vel(i,j,k-1,n) + vel(i+1,j,k-1,n)) ) / (4*cd(3));
-
-      // top face
-      du_right[1][0] = ( (vel(i+1,j+1,k,n) + vel(i+1,j,k,n))
-                       -(vel(i-1,j+1,k,n) + vel(i-1,j,k,n)) ) / (4*cd(1));
-      du_right[1][1] = (vel(i,j,k,n) - vel(i,j-1,k,n)) / cd(2);
-      du_right[1][2] = ( (vel(i,j+1,k+1,n) + vel(i,j,k+1,n))
-                       -(vel(i,j+1,k-1,n) + vel(i,j,k-1,n)) ) / (4*cd(3));
-
-      // front face
-      du_right[2][0] = ( (vel(i+1,j,k+1,n) + vel(i+1,j,k,n))
-                       -(vel(i-1,j,k+1,n) + vel(i-1,j,k,n)) ) / (4*cd(1));
-      du_right[2][1] = ( (vel(i,j+1,k+1,n) + vel(i,j+1,k,n))
-                       -(vel(i,j-1,k+1,n) + vel(i,j-1,k,n)) ) / (4*cd(2));
-      du_right[2][2] = (vel(i,j,k,n) - vel(i,j,k-1,n)) / cd(3);
-
-      an = 0.0;
-      is = 0.0;
-      ip = 0.0;
-      jp = 0.0;
-      kp = 0.0;
-
-      //if (n < 3) {
-        diffu = 0.0;
-        for (int d = 0; d < 3; ++d) { // each direction for divergence
-          ip = 0; jp = 0; kp = 0;
-          if (d == 0) ip = 1;
-          if (d == 1) jp = 1;
-          if (d == 2) kp = 1;
-
-          for (int f = 0; f < 3; ++f) { // each direction for gradient
-            an = an + (mFlux(d,f,i,j,k,0) * du_right[d][f] -
-                       mFlux(d,f,i-ip,j-jp,k-kp,0) * du_left[d][f]) / dx[d];
-            is = is + (cFlux(i,j,k,d) * du_right[d][f] -
-                       cFlux(i-ip,j-jp,k-kp,d) * du_left[d][f]) / dx[d];
-          }
-
+    for (int w = 0; w < 3; ++w) {
+      diffu = 0.0;
+      for (int face=0; face<3; ++face){
+        ih = 0; jh = 0; kh = 0;
+        if (face == 0) ih = 1;
+        if (face == 1) jh = 1;
+        if (face == 2) kh = 1;
+        for (int dir=0; dir<3; ++dir){
+          diffu += (mFlux(face,dir,i,j,k,w)-mFlux(face,dir,i-ih,j-jh,k-kh,w))/d[face];
         }
-
-        diffu = alpha*an + beta*is;
-
-        dvar(i,j,k,n) += diffu;
-        //if (n==2) varx(i,j,k,9) = dvar(i,j,k,n);
-        //if (n==1) varx(i,j,k,9) = 1.0;
-        if (n==2) varx(i,j,k,9) = diffu;
-        //if (n==2) varx(i,j,k,9) = dvar(i,j,k,n);
-        //if (an!=0) printf("(%d,%d,%d) %d: %f  %f  %f %f\n",i,j,k,n,diffu,alpha,an,is);
-        //if (an!=0) printf("(%d,%d,%d) %d: %f  %f  %f\n",i,j,k,n,diffu,alpha,an);
-      //} else {
-      //  diffu = 0;
-      //  for (int d = 0; d < 3; ++d) { // each direction for divergence
-      //    ip = 0; jp = 0; kp = 0;
-      //    if (d == 0) ip = 1;
-      //    if (d == 1) jp = 1;
-      //    if (d == 2) kp = 1;
-
-      //    for (int f = 0; f < 3; ++f) { // each direction for gradient
-      //      diffu = diffu + (cFlux(i,j,k,d) * du_right[d][f] -
-      //                       cFlux(i-ip,j-jp,k-kp,d) * du_left[d][f]) / dx[d];
-      //    }
-
-      //  }
-      //  dvar(i,j,k,n) += betae*diffu;
-      //}
+      }
+      dvar(i,j,k,w) += diffu;
+      varx(i,j,k,9+w) = diffu;
     }
   }
 };

@@ -115,8 +115,11 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
     varxNames.push_back("Noise_I");
     varxNames.push_back("Noise_d");
   }
-  if (cf.ceq)
-    varxNames.push_back("dc");
+  if (cf.ceq){
+    varxNames.push_back("dcu");
+    varxNames.push_back("dcv");
+    varxNames.push_back("dcw");
+  }
 
   // Create Secondary Variable Array
   varx = FS4D("varx",cf.ngi,cf.ngj,cf.ngk,varxNames.size());
@@ -219,61 +222,29 @@ void cart3d_func::compute() {
 
   if (cf.ceq) {
     timers["ceq"].reset();
-    double maxS;
+    double maxS,maxC,maxCh,dxmag,alpha;
 
-    double maxC;
-    double maxCh;
-    double maxC1;
-    double maxC2;
-    double maxC3;
-    double mu, alpha, beta, betae;
-    /**** CEQ ****/
-    // find max wavespeed
-    Kokkos::parallel_reduce(cell_pol, maxWaveSpeed(var,p,rho,cd), Kokkos::Max<double>(maxS));
-    #ifndef NOMPI
-      MPI_Allreduce(&maxS, &maxS, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    #endif
-
-    // calculate density and energy gradients and find ceq source terms
     Kokkos::parallel_for(cell_pol, calculateRhoGrad(var, vel, rho, gradRho, cf.dx, cf.dy, cf.dz));
 
-    // update c equations
-    Kokkos::parallel_for(cell_pol, updateCeq(dvar, var, varx, gradRho, maxS, cd, cf.kap, cf.eps));
-
-    /**** Apply CEQ ****/
-     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+0), Kokkos::Max<double>(maxC));
-     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+1), Kokkos::Max<double>(maxCh));
-     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+2), Kokkos::Max<double>(maxC1));
-     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+3), Kokkos::Max<double>(maxC2));
-     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+4), Kokkos::Max<double>(maxC3));
-     #ifndef NOMPI
+    Kokkos::parallel_reduce(cell_pol, maxWaveSpeed(var,p,rho,cd), Kokkos::Max<double>(maxS));
+    Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+0), Kokkos::Max<double>(maxC));
+    Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+1), Kokkos::Max<double>(maxCh));
+    #ifndef NOMPI
+      MPI_Allreduce(&maxS, &maxS, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
       MPI_Allreduce(&maxC,  &maxC,  1, MPI_DOUBLE, MPI_MAX, cf.comm);
       MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-      MPI_Allreduce(&maxC1, &maxC1, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-      MPI_Allreduce(&maxC2, &maxC2, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-      MPI_Allreduce(&maxC3, &maxC3, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
     #endif
 
-    mu = maxC1;
-    if (maxC2 > mu) mu = maxC2;
-    if (maxC3 > mu) mu = maxC3;
+    dxmag = cf.dx*cf.dx + cf.dy*cf.dy + cf.dz*cf.dz;
+    alpha = (dxmag / (maxCh+1.0e-6)) * cf.alpha;
 
-    alpha = 0.0;
-    beta = 0.0;
-    betae = 0.0;
+    if ( (cf.stat_freq  >0) && (cf.t % cf.stat_freq  == 0) )
+      Fiesta::Log::debug("alpha={} maxCh={}",alpha,maxCh);
 
-    double dxmag = sqrt(cf.dx*cf.dx + cf.dy*cf.dy + cf.dz*cf.dz);
-    if (mu > 0 && maxCh > 0)
-      alpha = (dxmag*dxmag / (mu * mu * maxCh)) * cf.alpha;
-    if (maxC > 0) {
-      beta = (dxmag*dxmag / maxC) * cf.beta;
-      betae = (dxmag*dxmag / maxC) * cf.betae;
-    }
-
-    //Fiesta::Log::debug("alpha={} beta={} maxS={}",alpha,beta,maxS);
-
-    Kokkos::parallel_for(weno_pol, calculateCeqFlux(var, rho, mFlux, cFlux, cd));
-    Kokkos::parallel_for(cell_pol, applyCeq(dvar, var, varx, vel, rho, mFlux, cFlux, cd, alpha, beta, betae));
+    Kokkos::parallel_for(cell_pol, updateCeq(dvar, var, varx, gradRho, maxS, cd, cf.kap, cf.eps));
+    Kokkos::parallel_for(weno_pol, calculateCeqFaces(var, rho, mFlux, alpha, cf.nv));
+    Kokkos::parallel_for(weno_pol, calculateCeqGrads(vel, mFlux, cf.dx, cf.dy, cf.dz));
+    Kokkos::parallel_for(cell_pol, applyCeq(dvar, varx, mFlux, cf.dx, cf.dy, cf.dz));
 
     Kokkos::fence();
     timers["ceq"].accumulate();
