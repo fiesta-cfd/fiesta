@@ -49,14 +49,14 @@ class fiestaSignalHandler{
       signal(SIGINT,fiestaSignalHandler::sigtermHandler);
     }
 
-    void sigurgFunction(int signum){
+    void sigurgFunction([[maybe_unused]] int signum){
       cf.exitFlag=1;
       cf.restartFlag=1;
     }
-    void sigusr1Function(int signum){
+    void sigusr1Function([[maybe_unused]] int signum){
       cf.restartFlag=1;
     }
-    void sigtermFunction(int signum){
+    void sigtermFunction([[maybe_unused]] int signum){
       cf.exitFlag=1;
     }
 

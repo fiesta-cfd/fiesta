@@ -53,35 +53,35 @@ struct detectNoise3D {
     int jdx=0;
     int kdx=0;
 
-    double a = sqrt(165.0 * dx * dy * dz);
+    double a = sqrt(165.0 * dx * dy * dz)/15840.0;
 
-    double c = -(a/15840.0) * (
-                 2.0*var(i-1,j+1,k+1,v) +   3.0*var(i,j+1,k+1,v) + 2.0*var(i+1,j+1,k+1,v)
-               + 3.0*var(i-1,j  ,k+1,v) +   6.0*var(i,j  ,k+1,v) + 3.0*var(i+1,j  ,k+1,v)
-               + 2.0*var(i-1,j-1,k+1,v) +   3.0*var(i,j-1,k+1,v) + 2.0*var(i+1,j-1,k+1,v)
+    double c = -a*(
+               //  2.0*var(i-1,j+1,k+1,v) +   3.0*var(i,j+1,k+1,v) + 2.0*var(i+1,j+1,k+1,v)
+               //+ 3.0*var(i-1,j  ,k+1,v) +   6.0*var(i,j  ,k+1,v) + 3.0*var(i+1,j  ,k+1,v)
+               //+ 2.0*var(i-1,j-1,k+1,v) +   3.0*var(i,j-1,k+1,v) + 2.0*var(i+1,j-1,k+1,v)
 
-               + 3.0*var(i-1,j+1,k  ,v) +   6.0*var(i,j+1,k  ,v) + 3.0*var(i+1,j+1,k  ,v)
-               + 6.0*var(i-1,j  ,k  ,v) + -88.0*var(i,j  ,k  ,v) + 6.0*var(i+1,j  ,k  ,v)
-               + 3.0*var(i-1,j-1,k  ,v) +   6.0*var(i,j-1,k  ,v) + 3.0*var(i+1,j-1,k  ,v)
+               //+ 3.0*var(i-1,j+1,k  ,v) +   6.0*var(i,j+1,k  ,v) + 3.0*var(i+1,j+1,k  ,v)
+               //+ 6.0*var(i-1,j  ,k  ,v) + -88.0*var(i,j  ,k  ,v) + 6.0*var(i+1,j  ,k  ,v)
+               //+ 3.0*var(i-1,j-1,k  ,v) +   6.0*var(i,j-1,k  ,v) + 3.0*var(i+1,j-1,k  ,v)
 
-               + 2.0*var(i-1,j+1,k-1,v) +   3.0*var(i,j+1,k-1,v) + 2.0*var(i+1,j+1,k-1,v)
-               + 3.0*var(i-1,j  ,k-1,v) +   6.0*var(i,j  ,k-1,v) + 3.0*var(i+1,j  ,k-1,v)
-               + 2.0*var(i-1,j-1,k-1,v) +   3.0*var(i,j-1,k-1,v) + 2.0*var(i+1,j-1,k-1,v)
-               );
-               //  2.0*var(i-1,j+1,k+1,v) +   2.0*var(i,j+1,k+1,v) + 2.0*var(i+1,j+1,k+1,v)
-               //+ 2.0*var(i-1,j  ,k+1,v) +   8.0*var(i,j  ,k+1,v) + 2.0*var(i+1,j  ,k+1,v)
-               //+ 2.0*var(i-1,j-1,k+1,v) +   2.0*var(i,j-1,k+1,v) + 2.0*var(i+1,j-1,k+1,v)
-
-               //+ 2.0*var(i-1,j+1,k  ,v) +   2.0*var(i,j+1,k  ,v) + 2.0*var(i+1,j+1,k  ,v)
-               //+ 8.0*var(i-1,j  ,k  ,v) + -88.0*var(i,j  ,k  ,v) + 8.0*var(i+1,j  ,k  ,v)
-               //+ 2.0*var(i-1,j-1,k  ,v) +   2.0*var(i,j-1,k  ,v) + 2.0*var(i+1,j-1,k  ,v)
-
-               //+ 2.0*var(i-1,j+1,k-1,v) +   2.0*var(i,j+1,k-1,v) + 2.0*var(i+1,j+1,k-1,v)
-               //+ 2.0*var(i-1,j  ,k-1,v) +   8.0*var(i,j  ,k-1,v) + 2.0*var(i+1,j  ,k-1,v)
-               //+ 2.0*var(i-1,j-1,k-1,v) +   2.0*var(i,j-1,k-1,v) + 2.0*var(i+1,j-1,k-1,v)
+               //+ 2.0*var(i-1,j+1,k-1,v) +   3.0*var(i,j+1,k-1,v) + 2.0*var(i+1,j+1,k-1,v)
+               //+ 3.0*var(i-1,j  ,k-1,v) +   6.0*var(i,j  ,k-1,v) + 3.0*var(i+1,j  ,k-1,v)
+               //+ 2.0*var(i-1,j-1,k-1,v) +   3.0*var(i,j-1,k-1,v) + 2.0*var(i+1,j-1,k-1,v)
                //);
+                 2.0*var(i-1,j+1,k+1,v) +   2.0*var(i,j+1,k+1,v) + 2.0*var(i+1,j+1,k+1,v)
+               + 2.0*var(i-1,j  ,k+1,v) +   8.0*var(i,j  ,k+1,v) + 2.0*var(i+1,j  ,k+1,v)
+               + 2.0*var(i-1,j-1,k+1,v) +   2.0*var(i,j-1,k+1,v) + 2.0*var(i+1,j-1,k+1,v)
 
-    double cref = dh * a / 16.0;
+               + 2.0*var(i-1,j+1,k  ,v) +   8.0*var(i,j+1,k  ,v) + 2.0*var(i+1,j+1,k  ,v)
+               + 8.0*var(i-1,j  ,k  ,v) + -88.0*var(i,j  ,k  ,v) + 8.0*var(i+1,j  ,k  ,v)
+               + 2.0*var(i-1,j-1,k  ,v) +   8.0*var(i,j-1,k  ,v) + 2.0*var(i+1,j-1,k  ,v)
+
+               + 2.0*var(i-1,j+1,k-1,v) +   2.0*var(i,j+1,k-1,v) + 2.0*var(i+1,j+1,k-1,v)
+               + 2.0*var(i-1,j  ,k-1,v) +   8.0*var(i,j  ,k-1,v) + 2.0*var(i+1,j  ,k-1,v)
+               + 2.0*var(i-1,j-1,k-1,v) +   2.0*var(i,j-1,k-1,v) + 2.0*var(i+1,j-1,k-1,v)
+               );
+
+    double cref = dh * sqrt(dx*dy*dz/12.0);
 
     for (idx=-1;idx<2;++idx){
       for (jdx=-1;jdx<2;++jdx){
@@ -118,11 +118,11 @@ struct detectNoise3D {
       
     } // end noise detected
 
+    if(v==2)
     for (idx=-1;idx<2;++idx){
       for (jdx=-1;jdx<2;++jdx){
         for (kdx=-1;kdx<2;++kdx){
           varx(i+idx,j+jdx,k+kdx,6)=c;
-          varx(i+idx,j+jdx,k+kdx,7)=noise(i+idx,j+jdx,k+kdx);
         }
       }
     }
@@ -151,29 +151,19 @@ struct removeNoise3D {
     double dx = cd(1);
     double dy = cd(2);
     double dz = cd(3);
-    double lap;
+    double lap,dnoise;
 
     lap = (var(i-1,j,k,v)-2*var(i,j,k,v)+var(i+1,j,k,v))/(dx*dx)
         + (var(i,j-1,k,v)-2*var(i,j,k,v)+var(i,j+1,k,v))/(dy*dy)
         + (var(i,j,k-1,v)-2*var(i,j,k,v)+var(i,j,k+1,v))/(dz*dz);
 
-    dvar(i,j,k,v) = dt * noise(i,j,k) * lap;
-    varx(i,j,k,8) = dvar(i,j,k,v);
-  }
-};
+    dnoise = dt*(dx*dx+dy*dy+dz*dz)*noise(i,j,k)*lap;
+    var(i,j,k,v) += dnoise;
 
-struct updateNoise3D {
-  FS4D dvar;
-  FS4D var;
-  int v;
-
-  updateNoise3D(FS4D dvar_, FS4D var_, int v_)
-      : dvar(dvar_), var(var_), v(v_) {}
-
-  KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j, const int k) const {
-
-    var(i, j, k, v) += dvar(i, j, k, v);
+    if(v==2){
+      varx(i,j,k,7) = noise(i,j,k);
+      varx(i,j,k,8) = dnoise;
+    }
   }
 };
 

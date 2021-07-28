@@ -104,26 +104,31 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   assert(varNames.size()==cf.nvt);
 
   // Secondary Variable Names
-  varxNames.push_back("X-Velocity");
-  varxNames.push_back("Y-Velocity");
-  varxNames.push_back("Z-Velocity");
-  varxNames.push_back("Pressure");
-  varxNames.push_back("Temperature");
-  varxNames.push_back("Total Density");
-  if (cf.noise){
-    varxNames.push_back("Noise_c");
-    varxNames.push_back("Noise_I");
-    varxNames.push_back("Noise_d");
-  }
+  varxNames.push_back("X-Velocity");  //0
+  varxNames.push_back("Y-Velocity");  //1
+  varxNames.push_back("Z-Velocity");  //2
+  varxNames.push_back("Pressure");  //3
+  varxNames.push_back("Temperature");  //4
+  varxNames.push_back("Total Density");  //5
+  //if (cf.noise){
+    varxNames.push_back("Noise_c");  //6
+    varxNames.push_back("Noise_I");  //7
+    varxNames.push_back("Noise_d");  //8
+  //}
   if (cf.ceq){
-    varxNames.push_back("dcu");
-    varxNames.push_back("dcv");
-    varxNames.push_back("dcw");
+    varxNames.push_back("dcu");  //9
+    varxNames.push_back("dcv");  //10
+    varxNames.push_back("dcw");  //11
+    varxNames.push_back("M11");  //12
+    varxNames.push_back("M22");  //13
+    varxNames.push_back("M33");  //14
+    varxNames.push_back("M23");  //15
+    varxNames.push_back("M13");  //16
+    varxNames.push_back("M12");  //17
   }
 
   // Create Secondary Variable Array
   varx = FS4D("varx",cf.ngi,cf.ngj,cf.ngk,varxNames.size());
-
 
   // Create Timers
   timers["flux"] = fiestaTimer("Flux Calculation");
@@ -193,7 +198,6 @@ void cart3d_func::compute() {
   policy_f3 cell_pol = policy_f3( {cf.ng, cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
   policy_f3 weno_pol = policy_f3({cf.ng - 1, cf.ng - 1, cf.ng - 1}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
 
-
   timers["calcSecond"].reset();
   Kokkos::parallel_for(ghost_pol, calculateRhoPT3D(var, p, rho, T, cd));
   Kokkos::parallel_for(ghost_pol, computeVelocity3D(var, rho, vel));
@@ -239,10 +243,10 @@ void cart3d_func::compute() {
     alpha = (dxmag / (maxCh+1.0e-6)) * cf.alpha;
 
     if ( (cf.stat_freq  >0) && (cf.t % cf.stat_freq  == 0) )
-      Fiesta::Log::debug("alpha={} maxCh={}",alpha,maxCh);
+      Fiesta::Log::debug("alpha={} maxCh={} maxS={}",alpha,maxCh,maxS);
 
     Kokkos::parallel_for(cell_pol, updateCeq(dvar, var, varx, gradRho, maxS, cd, cf.kap, cf.eps));
-    Kokkos::parallel_for(weno_pol, calculateCeqFaces(var, rho, mFlux, alpha, cf.nv));
+    Kokkos::parallel_for(weno_pol, calculateCeqFaces(var, varx, rho, mFlux, alpha, cf.nv));
     Kokkos::parallel_for(weno_pol, calculateCeqGrads(vel, mFlux, cf.dx, cf.dy, cf.dz));
     Kokkos::parallel_for(cell_pol, applyCeq(dvar, varx, mFlux, cf.dx, cf.dy, cf.dz));
 
@@ -306,11 +310,20 @@ void cart3d_func::postStep() {
       coff = 0.0;
     }
 
-    for (int v = 0; v < 3; ++v) {
+    vector<int> noise_variables;
+    if (cf.n_mode==1){
+      noise_variables.push_back(0);
+      noise_variables.push_back(1);
+      noise_variables.push_back(2);
+    }else{
+      noise_variables.push_back(3);
+    }
+
+    timers["noise"].reset();
+    for (auto v : noise_variables) {
       Kokkos::parallel_for(noise_pol, detectNoise3D(var, varx, noise, cf.n_dh, coff, cd, v));
       for (int tau = 0; tau < cf.n_nt; ++tau) {
         Kokkos::parallel_for(cell_pol, removeNoise3D(dvar, var, varx, noise, cf.n_eta, cd, v));
-        Kokkos::parallel_for(cell_pol, updateNoise3D(dvar, var, v));
       }
     }
     Kokkos::fence();

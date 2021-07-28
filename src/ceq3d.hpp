@@ -20,6 +20,7 @@
 
 #ifndef CEQ3D_HPP
 #define CEQ3D_HPP
+#include <cstdio>
 
 struct maxWaveSpeed {
   FS4D var;
@@ -108,7 +109,7 @@ struct calculateRhoGrad {
       const int i, const int j, const int k,
       const int ih, const int jh, const int kh,
       const int v, const double d) const {
-    return (vel(i-2*ih,j-2*jh,k-2*kh,v) - 8.0*vel(i-ih,j-jh,j-kh,v)
+    return (vel(i-2*ih,j-2*jh,k-2*kh,v) - 8.0*vel(i-ih,j-jh,k-kh,v)
         + 8.0*vel(i+ih,j+jh,k+kh,v) - vel(i+2*ih,j+2*jh,k+2*kh,v)) / (12.0*d);
   }
 
@@ -172,7 +173,6 @@ struct calculateRhoGrad {
     // detect shock front (equation 5a)
     if (divu < 0)
       gradRho(i, j, k, 0) = (1 - indicator) * rgrad;
-    // gradRho(i,j,k,0) = (1-indicator)*divu*rgrad;
     else
       gradRho(i, j, k, 0) = 0;
 
@@ -224,14 +224,14 @@ struct updateCeq {
 };
 
 struct calculateCeqFaces {
-  FS4D var;
+  FS4D var,varx;
   FS3D rho;
   FS6D mFlux;
   double alpha;
   int nv;
 
-  calculateCeqFaces(FS4D var_, FS3D rho_, FS6D mFlux_, double a_, int nv_)
-      : var(var_), rho(rho_), mFlux(mFlux_), alpha(a_), nv(nv_){}
+  calculateCeqFaces(FS4D var_, FS4D varx_, FS3D rho_, FS6D mFlux_, double a_, int nv_)
+      : var(var_), varx(varx_), rho(rho_), mFlux(mFlux_), alpha(a_), nv(nv_){}
 
   KOKKOS_INLINE_FUNCTION
   double interpolateRho(const int i, const int j, const int k, const int ih, const int jh, const int kh) const {
@@ -249,9 +249,9 @@ struct calculateCeqFaces {
     int jp = 0;
     int kp = 0;
 
-    double r,ch,cn[3];
+    double r,chat,cn[3];
 
-    double cmag;
+    double M,cmag;
 
     // for each direction (i=0, j=1, k=2)
     for (int face = 0; face < 3; ++face) {
@@ -266,7 +266,7 @@ struct calculateCeqFaces {
         kp = 1;
 
       r     = interpolateRho(i,j,k,ip,jp,kp);
-      ch    = interpolateC(i,j,k,ip,jp,kp,1);
+      chat  = interpolateC(i,j,k,ip,jp,kp,1);
       cn[0] = interpolateC(i,j,k,ip,jp,kp,2);
       cn[1] = interpolateC(i,j,k,ip,jp,kp,3);
       cn[2] = interpolateC(i,j,k,ip,jp,kp,4);
@@ -280,12 +280,18 @@ struct calculateCeqFaces {
         double dirac = 0.0;
         if (face == dir)
           dirac = 1.0;
+        M=dirac - (cn[face]*cn[dir])/cmag;
         for(int w=0; w<3; ++w){
-          mFlux(face,dir,i,j,k,w) = alpha*(r*ch*(dirac-cn[face]*cn[dir]))/cmag;
+          mFlux(face,dir,i,j,k,w) = alpha*r*chat*M;
         }
       }
     }
-
+    varx(i,j,k,12)=mFlux(0,0,i,j,k,2);
+    varx(i,j,k,13)=mFlux(1,1,i,j,k,2);
+    varx(i,j,k,14)=mFlux(2,2,i,j,k,2);
+    varx(i,j,k,15)=mFlux(1,2,i,j,k,2);
+    varx(i,j,k,16)=mFlux(0,2,i,j,k,2);
+    varx(i,j,k,17)=mFlux(0,1,i,j,k,2);
   }
 };
 
