@@ -1,6 +1,6 @@
 fiesta.title = "2D Double Bubble Problem"
 
-fiesta.status_frequency = 1
+fiesta.status_frequency = 50
 
 fiesta.R = 1.0                          --Universal Gas Constant [J/(K*mol)]
 fiesta.viscosity.enabled=false
@@ -14,14 +14,13 @@ fiesta.species={
 }
 
 fiesta.ioviews =  {
-    {name="sol",path="./solution",frequency=1},
-    {name="center", path="./centerline", frequency=1,
+    {name="sol",path="./solution",frequency=100},
+    {name="center", path="./centerline", frequency=50,
      start={1,1,50},limit={99,99,50},stride={1,1,1}}
 }
 
-fiesta.time.dt = 0.0005
-fiesta.time.nt = 20
---fiesta.time.nt = 3000
+fiesta.time.dt = 0.001
+fiesta.time.nt = 10000
 
 fiesta.grid.ndim = 3
 Lx,Ly,Lz = 2.0, 2.0, 2.0
@@ -38,15 +37,15 @@ fiesta.bc.zmax = "reflective"
 
 fiesta.ceq.enabled=true
 fiesta.ceq.kappa=10.0
-fiesta.ceq.epsilon=0.4
-fiesta.ceq.alpha=1.0
+fiesta.ceq.epsilon=5.0
+fiesta.ceq.alpha=20.0
 fiesta.ceq.beta=0.0
 fiesta.ceq.betae=0.0
 
-fiesta.noise.enabled=true
-fiesta.noise.dh=5e-7
-fiesta.noise.eta=5e-5
-fiesta.noise.coff=0.05
+fiesta.noise.enabled=false
+fiesta.noise.dh=1e-5
+fiesta.noise.eta=1e-3
+fiesta.noise.coff=0.1
 fiesta.noise.nt=1
 fiesta.noise.mode=1
 
