@@ -37,22 +37,26 @@ struct advect2D {
 };
 
 struct advect3D {
-
-  FS4D dvar;
+  FS4D dvar,varx;
   FS3D wenox;
   FS3D wenoy;
   FS3D wenoz;
   int v;
 
-  advect3D(FS4D dvar_, FS3D wenox_, FS3D wenoy_, FS3D wenoz_, int v_)
-      : dvar(dvar_), wenox(wenox_), wenoy(wenoy_), wenoz(wenoz_), v(v_) {}
+  advect3D(FS4D dvar_, FS4D varx_, FS3D wenox_, FS3D wenoy_, FS3D wenoz_, int v_)
+      : dvar(dvar_), varx(varx_), wenox(wenox_), wenoy(wenoy_), wenoz(wenoz_), v(v_) {}
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
 
-    dvar(i, j, k, v) = -((wenox(i, j, k) - wenox(i - 1, j, k)) +
-                         (wenoy(i, j, k) - wenoy(i, j - 1, k)) +
-                         (wenoz(i, j, k) - wenoz(i, j, k - 1)));
+    double res = -((wenox(i, j, k) - wenox(i - 1, j, k)) +
+                   (wenoy(i, j, k) - wenoy(i, j - 1, k)) +
+                   (wenoz(i, j, k) - wenoz(i, j, k - 1)));
+    dvar(i, j, k, v) = res;
+    if (v==1)
+      varx(i,j,k,18) = res;
+    if (v==3)
+      varx(i,j,k,19) = res;
   }
 };
 

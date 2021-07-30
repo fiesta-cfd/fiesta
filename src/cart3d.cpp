@@ -115,7 +115,7 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
     varxNames.push_back("Noise_I");  //7
     varxNames.push_back("Noise_d");  //8
   //}
-  if (cf.ceq){
+  //if (cf.ceq){
     varxNames.push_back("dcu");  //9
     varxNames.push_back("dcv");  //10
     varxNames.push_back("dcw");  //11
@@ -125,7 +125,12 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
     varxNames.push_back("M23");  //15
     varxNames.push_back("M13");  //16
     varxNames.push_back("M12");  //17
-  }
+  //}
+  varxNames.push_back("d_adv_v");  //18
+  varxNames.push_back("d_adv_e");  //19
+  varxNames.push_back("d_press_v"); //20
+  varxNames.push_back("d_buoy_v");  //21
+  varxNames.push_back("d_buoy_e");  //22
 
   // Create Secondary Variable Array
   varx = FS4D("varx",cf.ngi,cf.ngj,cf.ngk,varxNames.size());
@@ -207,19 +212,19 @@ void cart3d_func::compute() {
   for (int v = 0; v < cf.nv; ++v) {
     timers["flux"].reset();
     Kokkos::parallel_for(weno_pol, calculateFluxesG(var, p, rho, vel, fluxx, fluxy, fluxz, cf.dx, cf.dy, cf.dz, v));
-    Kokkos::parallel_for(cell_pol, advect3D(dvar, fluxx, fluxy, fluxz, v));
+    Kokkos::parallel_for(cell_pol, advect3D(dvar, varx, fluxx, fluxy, fluxz, v));
     Kokkos::fence();
     timers["flux"].accumulate();
   }
 
   timers["pressgrad"].reset();
-  Kokkos::parallel_for(cell_pol, applyPressureGradient3D(dvar, p, cd));
+  Kokkos::parallel_for(cell_pol, applyPressureGradient3D(dvar, varx, p, cd));
   Kokkos::fence();
   timers["pressgrad"].accumulate();
 
   if (cf.buoyancy) {
     timers["buoyancy"].reset();
-    Kokkos::parallel_for(cell_pol, computeBuoyancy3D(dvar, var, rho, cf.gAccel, cf.rhoRef));
+    Kokkos::parallel_for(cell_pol, computeBuoyancy3D(dvar, var, varx, rho, cf.gAccel, cf.rhoRef));
     Kokkos::fence();
     timers["buoyancy"].accumulate();
   }

@@ -267,62 +267,107 @@ TEST_CASE( "Hydrostatic BC Test", "[hydrostatic_bc]" ) {
 TEST_CASE( "Periodic BC Test", "[periodic_bc]" ) {
   {
   struct inputConfig cf;
+  cf.ndim=3;
+  cf.glbl_nci=3;
+  cf.glbl_ncj=3;
+  cf.glbl_nck=10;
+  cf.ng=3;
   cf.xPer=1;
   cf.yPer=1;
   cf.zPer=1;
-  rk_func *f = initTests(cf);
+  cf.nvt=4;
+  cf.nv=4;
+
+  cf.ceq=false;
+  cf.noise=false;
+  cf.visc=false;
+  cf.buoyancy=false;
+
+  cf.xProcs=1;
+  cf.yProcs=1;
+  cf.zProcs=1;
+
+  cf.dx=1;
+  cf.dy=1;
+  cf.dz=1;
+
+  cf.R = 1;
+  cf.ns=1;
+  cf.speciesName= {"TestAir"};
+  cf.gamma = {1.0};
+  cf.M = {1.0};
+  cf.mu = {1.0};
+
+  Kokkos::InitArguments kokkosArgs;
+  kokkosArgs.ndevices = 1;
+  MPI_Init(NULL,NULL);
+  Kokkos::initialize(kokkosArgs);
+
+  mpi_init(cf);
+
+  rk_func *f;
+  f = new cart2d_func(cf);
+
+  cf.m = std::make_shared<mpiBuffers>(cf);
 
   FS4DH varH = Kokkos::create_mirror_view(f->var);
-  varH(3,3,4,0) = 1;
-  varH(4,3,4,0) = 2;
-  varH(5,3,4,0) = 3;
-  varH(3,4,4,0) = 4;
-  varH(4,4,4,0) = 5;
-  varH(5,4,4,0) = 6;
-  varH(3,5,4,0) = 7;
-  varH(4,5,4,0) = 8;
-  varH(5,5,4,0) = 9;
-
-  varH(4,3,3,1) = 1;
-  varH(4,3,4,1) = 2;
-  varH(4,3,5,1) = 3;
-  varH(4,4,3,1) = 4;
-  varH(4,4,4,1) = 5;
-  varH(4,4,5,1) = 6;
-  varH(4,5,3,1) = 7;
-  varH(4,5,4,1) = 8;
-  varH(4,5,5,1) = 9;
+  varH(4,4,3,0)  = 50;
+  varH(4,4,4,0)  = 51;
+  varH(4,4,5,0)  = 52;
+  varH(4,4,6,0)  = 53;
+  varH(4,4,7,0)  = 54;
+  varH(4,4,8,0)  = 55;
+  varH(4,4,9,0)  = 56;
+  varH(4,4,10,0) = 57;
+  varH(4,4,11,0) = 58;
+  varH(4,4,12,0) = 59;
 
   Kokkos::deep_copy(f->var,varH);
 
   cf.bcR=BCType::reflective;
   cf.bcL=BCType::reflective;
-  cf.bcB=BCType::outflow;
-  cf.bcT=BCType::outflow;
-  cf.bcH=BCType::outflow;
-  cf.bcF=BCType::outflow;
+  cf.bcB=BCType::reflective;
+  cf.bcT=BCType::reflective;
+  cf.bcH=BCType::reflective;
+  cf.bcF=BCType::reflective;
   applyBCs(cf,f);
 
-  std::cout << cf.xPlus << " : " << cf.xMinus << "\n";
+  std::cout << cf.ngi << ", " << cf.ngj << ", " << cf.ngk << "\n";
+  std::cout << cf.zPlus << " : " << cf.zMinus << "\n";
 
   Kokkos::deep_copy(varH,f->var);
 
   //e
-  REQUIRE(varH(0,4,4,0)==4);
-  REQUIRE(varH(1,4,4,0)==5);
-  REQUIRE(varH(2,4,4,0)==6);
-  
-  REQUIRE(varH(6,4,4,0)==4);
-  REQUIRE(varH(7,4,4,0)==5);
-  REQUIRE(varH(8,4,4,0)==6);
+  std::cout << "Left:  "
+            << varH(4,4, 0,0) << ", "
+            << varH(4,4, 1,0) << ", "
+            << varH(4,4, 2,0) << ", "
+            << varH(4,4, 3,0) << ", "
+            << varH(4,4, 4,0) << ", "
+            << varH(4,4, 5,0) << ", "
+            << varH(4,4, 6,0) << ", "
+            << varH(4,4, 7,0) << ", "
+            << varH(4,4, 8,0) << ", "
+            << varH(4,4, 9,0) << ", "
+            << varH(4,4,10,0) << ", "
+            << varH(4,4,11,0) << ", "
+            << varH(4,4,12,0) << ", "
+            << varH(4,4,13,0) << ", "
+            << varH(4,4,14,0) << ", "
+            << varH(4,4,15,0) << "\n";
 
-  REQUIRE(varH(4,4,0,1)==4);
-  REQUIRE(varH(4,4,1,1)==5);
-  REQUIRE(varH(4,4,2,1)==6);
+  //std::cout << "Right: "
+  //          << varH(4,4,7,0) << ", "
+  //          << varH(4,4,8,0) << ", "
+  //          << varH(4,4,9,0) << "\n";
+
+  REQUIRE(varH(4,4,0,0)==57);
+  REQUIRE(varH(4,4,1,0)==58);
+  REQUIRE(varH(4,4,2,0)==59);
   
-  REQUIRE(varH(4,4,6,1)==4);
-  REQUIRE(varH(4,4,7,1)==5);
-  REQUIRE(varH(4,4,8,1)==6);
+  REQUIRE(varH(4,4,13,0)==50);
+  REQUIRE(varH(4,4,14,0)==51);
+  REQUIRE(varH(4,4,15,0)==52);
   }
   Kokkos::finalize();
   MPI_Finalize();

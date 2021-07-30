@@ -118,7 +118,7 @@ struct detectNoise3D {
       
     } // end noise detected
 
-    if(v==2)
+    if(v==1)
     for (idx=-1;idx<2;++idx){
       for (jdx=-1;jdx<2;++jdx){
         for (kdx=-1;kdx<2;++kdx){
@@ -160,7 +160,7 @@ struct removeNoise3D {
     dnoise = dt*(dx*dx+dy*dy+dz*dz)*noise(i,j,k)*lap;
     var(i,j,k,v) += dnoise;
 
-    if(v==2){
+    if(v==1){
       varx(i,j,k,7) = noise(i,j,k);
       varx(i,j,k,8) = dnoise;
     }

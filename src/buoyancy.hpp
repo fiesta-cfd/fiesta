@@ -21,26 +21,28 @@
 #define bouyancy_hpp
 struct computeBuoyancy3D {
   FS4D dvar;
-  FS4D var;
+  FS4D var,varx;
   FS3D rho;
   double g;
   double rhoRef;
 
-  computeBuoyancy3D(FS4D dvar_, FS4D var_, FS3D rho_, double g_, double r_)
-      : dvar(dvar_), var(var_), rho(rho_), g(g_), rhoRef(r_) {}
+  computeBuoyancy3D(FS4D dvar_, FS4D var_, FS4D varx_, FS3D rho_, double g_, double r_)
+      : dvar(dvar_), var(var_), varx(varx_), rho(rho_), g(g_), rhoRef(r_) {}
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
 
     double v = var(i, j, k, 1) / rho(i,j,k);
     double rhop = rho(i,j,k) - rhoRef;
-    double eps = 1e-6;
+    //double eps = 1e-6;
 
-    if (rhop >= eps || rhop <= -eps) {
+    //if (rhop >= eps || rhop <= -eps) {
       double f = -g * rhop;
       dvar(i, j, k, 1) += f;
       dvar(i, j, k, 3) += v * f;
-    }
+      varx(i,j,k,21) = f;
+      varx(i,j,k,22) = v*f;
+    //}
   }
 };
 

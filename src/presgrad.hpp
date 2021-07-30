@@ -42,12 +42,12 @@ struct applyPressureGradient2D {
 };
 
 struct applyPressureGradient3D {
-  FS4D dvar;
+  FS4D dvar,varx;
   FS3D p;
   FS1D cd;
 
-  applyPressureGradient3D(FS4D dvar_, FS3D p_, FS1D cd_)
-      : dvar(dvar_), p(p_), cd(cd_) {}
+  applyPressureGradient3D(FS4D dvar_, FS4D varx_, FS3D p_, FS1D cd_)
+      : dvar(dvar_), varx(varx_), p(p_), cd(cd_) {}
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
@@ -64,6 +64,8 @@ struct applyPressureGradient3D {
     dvar(i, j, k, 0) = dvar(i, j, k, 0) - dxp;
     dvar(i, j, k, 1) = dvar(i, j, k, 1) - dyp;
     dvar(i, j, k, 2) = dvar(i, j, k, 2) - dzp;
+
+    varx(i,j,k,20) = -dyp;
 
   }
 };

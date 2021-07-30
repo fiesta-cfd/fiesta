@@ -124,12 +124,10 @@ struct bc_xPer {
   bc_xPer(int ng_, int nci_, FS4D u_) : ng(ng_), nci(nci_), u(u_) {}
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j, const int k, const int v) const {
-    double tmp;
-    for (int g = 1; g < ng + 1; ++g) {
-      tmp = u(i - g, j, k, v);
-      u(i - g, j, k, v) = u(nci + g, j, k, v);
-      u(nci + g, j, k, v) = tmp;
+  void operator()(const int j, const int k, const int v) const {
+    for (int g=0; g<ng; ++g) {
+      u(g,j,k,v) = u(nci+g,j,k,v);
+      u(nci+ng+g,j,k,v) = u(ng+g,j,k,v);
     }
   }
 };
@@ -141,12 +139,10 @@ struct bc_yPer {
   bc_yPer(int ng_, int ncj_, FS4D u_) : ng(ng_), ncj(ncj_), u(u_) {}
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j, const int k, const int v) const {
-    double tmp;
-    for (int g = 1; g < ng + 1; ++g) {
-      tmp = u(i, j - g, k, v);
-      u(i, j - g, k, v) = u(i, ncj + g, k, v);
-      u(i, ncj + g, k, v) = tmp;
+  void operator()(const int i, const int k, const int v) const {
+    for (int g=0; g<ng; ++g) {
+      u(i,g,k,v) = u(i,ncj+g,k,v);
+      u(i,ncj+ng+g,k,v) = u(i,ng+g,k,v);
     }
   }
 };
@@ -158,12 +154,10 @@ struct bc_zPer {
   bc_zPer(int ng_, int nck_, FS4D u_) : ng(ng_), nck(nck_), u(u_) {}
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j, const int k, const int v) const {
-    double tmp;
-    for (int g = 1; g < ng + 1; ++g) {
-      tmp = u(i, j, k - g, v);
-      u(i, j, k - g, v) = u(i, j, nck + g, v);
-      u(i, j, nck + g, v) = tmp;
+  void operator()(const int i, const int j, const int v) const {
+    for (int g=0; g<ng; ++g) {
+      u(i,j,g,v) = u(i,j,nck+g,v);
+      u(i,j,nck+ng+g,v) = u(i,j,ng+g,v);
     }
   }
 };
@@ -178,6 +172,18 @@ void applyBCs(struct inputConfig cf, class rk_func *f) {
   cf.m->haloExchange();
   f->timers["halo"].accumulate();
   f->timers["bc"].reset();
+  if (cf.xPer == 1 && cf.xProcs==1)
+    Kokkos::parallel_for(
+        policy_bl({0, 0, 0}, {cf.ngj, cf.ngk, cf.nvt}),
+        bc_xPer(cf.ng, cf.nci, f->var));
+  if (cf.yPer == 1 && cf.yProcs==1)
+    Kokkos::parallel_for(
+        policy_bl({0, 0, 0}, {cf.ngi, cf.ngk, cf.nvt}),
+        bc_yPer(cf.ng, cf.ncj, f->var));
+  if (cf.ndim == 3 && cf.zPer == 1 && cf.zProcs==1)
+    Kokkos::parallel_for(
+        policy_bl({0, 0, 0}, {cf.ngi, cf.ngj, cf.nvt}),
+        bc_zPer(cf.ng, cf.nck, f->var));
 #else
   f->timers["bc"].reset();
   if (cf.xPer == 1)
@@ -192,7 +198,6 @@ void applyBCs(struct inputConfig cf, class rk_func *f) {
     Kokkos::parallel_for(
         policy_bl4({0, 0, 0, 0}, {cf.ngi, cf.ngj, cf.nck, cf.nvt}),
         bc_zPer(cf.ng, cf.nck, f->var));
-
 #endif
 
   if (cf.xMinus < 0) {

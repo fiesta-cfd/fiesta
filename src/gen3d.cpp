@@ -336,7 +336,6 @@ void gen3d_func::preSim() {
 void gen3d_func::postSim() {}
 
 void gen3d_func::compute() {
-
   // create range policies
   policy_f3 ghost_pol = policy_f3({0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk});
   policy_f3 cell_pol = policy_f3(
@@ -358,7 +357,7 @@ void gen3d_func::compute() {
     Kokkos::parallel_for(
         weno_pol,
         calculateFluxesG(var, p, rho, tvel, fluxx, fluxy, fluxz, cf.dx, cf.dy, cf.dx, v));
-    Kokkos::parallel_for(cell_pol, advect3D(dvar, fluxx, fluxy, fluxz, v));
+    Kokkos::parallel_for(cell_pol, advect3D(dvar, varx, fluxx, fluxy, fluxz, v));
   }
   Kokkos::fence();
   timers["flux"].accumulate();

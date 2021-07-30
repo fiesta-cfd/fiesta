@@ -317,7 +317,7 @@ struct calculateCeqGrads {
       // top face
       mFlux(1,0,i,j,k,w) *= ( (vel(i+1,j+1,k,w) + vel(i+1,j,k,w))
                              -(vel(i-1,j+1,k,w) + vel(i-1,j,k,w)) ) / (4*dx);
-      mFlux(1,1,i,j,k,w) *= (vel(i,j,k,w) - vel(i,j-1,k,w)) / dy;
+      mFlux(1,1,i,j,k,w) *= (vel(i,j+1,k,w) - vel(i,j,k,w)) / dy;
       mFlux(1,2,i,j,k,w) *= ( (vel(i,j+1,k+1,w) + vel(i,j,k+1,w))
                              -(vel(i,j+1,k-1,w) + vel(i,j,k-1,w)) ) / (4*dz);
 
@@ -326,7 +326,7 @@ struct calculateCeqGrads {
                              -(vel(i-1,j,k+1,w) + vel(i-1,j,k,w)) ) / (4*dx);
       mFlux(2,1,i,j,k,w) *= ( (vel(i,j+1,k+1,w) + vel(i,j+1,k,w))
                              -(vel(i,j-1,k+1,w) + vel(i,j-1,k,w)) ) / (4*dy);
-      mFlux(2,2,i,j,k,w) *= (vel(i,j,k,w) - vel(i,j,k-1,w)) / dz;
+      mFlux(2,2,i,j,k,w) *= (vel(i,j,k+1,w) - vel(i,j,k,w)) / dz;
     }
   }
 };
