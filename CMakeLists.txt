@@ -77,12 +77,14 @@ if (CUDA)
   elseif ("${TEST_ARCH_readable}" STREQUAL "sm_61")
     set(Kokkos_ARCH_PASCAL61 ON CACHE BOOL "")
   elseif ("${TEST_ARCH_readable}" STREQUAL "sm_70")
+    message("TURNING ON VOLTA70")
     set(Kokkos_ARCH_VOLTA70 ON CACHE BOOL "")
   endif()
 
   # enable other kokkos cuda options and append build type string
   set(Kokkos_ENABLE_CUDA ON CACHE BOOL "")
   set(Kokkos_ENABLE_CUDA_LAMBDA ON CACHE BOOL "")
+  set(Kokkos_ENABLE_CXX17 ON CACHE BOOL "")
   set(FIESTA_OPTS "${FIESTA_OPTS}+CUDA")
 elseif(AMDGPU)
   set(Kokkos_ENABLE_HIP ON CACHE BOOL "")
@@ -98,6 +100,29 @@ endif()
 include_directories(${Kokkos_INCLUDE_DIRS_RET})
 add_subdirectory(kokkos)
 
+# Get and Configure Tempi
+#find_package(Git QUIET)
+#if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+# Update submodules as needed
+#    option(GIT_SUBMODULE "Check submodules during build" ON)
+#    if(GIT_SUBMODULE)
+#        message(STATUS "Submodule update")
+#        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+#                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+#                        RESULT_VARIABLE GIT_SUBMOD_RESULT)
+#        if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+#            message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+#        endif()
+#    endif()
+#endif()
+#
+#if(NOT EXISTS "${PROJECT_SOURCE_DIR}/extern/tempi/CMakeLists.txt")
+#    message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
+#endif()
+
+#if(USE_TEMPI)
+#  add_subdirectory(extern/tempi)
+#endif(USE_TEMPI)
 
 # Configure Lua
 include_directories(lua/src)
@@ -153,41 +178,40 @@ set(FIESTA_SRCS src/rk.cpp src/fiesta.cpp src/luaReader.cpp src/bc.cpp
      src/main.cpp src/rkfunction.cpp src/writer.cpp
      src/cart2d.cpp src/cart3d.cpp src/gen2d.cpp src/gen3d.cpp)
 
+add_executable(fiesta ${FIESTA_SRCS})
+target_link_libraries(fiesta PRIVATE
+                      kokkos
+                      lua)
 
 if (LITE)
     # add LITE only build files and link
-    add_executable(fiesta ${FIESTA_SRCS} src/vtk.cpp)
-    target_link_libraries(fiesta
-                          kokkos
-                          lua
-    )
-else()
+    target_sources(fiesta PRIVATE src/vtk.cpp)
+else(LITE)
     # add additional build files for non-lite builds
-    add_executable(fiesta ${FIESTA_SRCS}  src/mpi.cpp src/hdf.cpp)
-
+    target_sources(fiesta PRIVATE src/mpi.cpp src/hdf.cpp)
+    target_link_libraries(fiesta PRIVATE kokkos)
+  
     if (HDF5_FOUND AND HDF5_IS_PARALLEL)
         message("### Using System HDF5")
         # link to built hdf5 library
-        target_link_libraries(fiesta
-                              kokkos
-                              ${MPI_CXX_LIBRARIES}
-                              ${HDF5_C_LIBRARIES}
-                              lua
-        )
+        target_link_libraries(fiesta PRIVATE ${HDF5_C_LIBRARIES})
     else()
         # link to found hdf5 library
         message("### Building HDF5")
         add_dependencies(fiesta hdf5Parallel)
-        target_link_libraries(fiesta
-                              kokkos
-                              ${MPI_CXX_LIBRARIES}
+        target_link_libraries(fiesta PRIVATE 
                               ${installDir}/lib/libhdf5.a
                               ${installDir}/lib/libhdf5_hl.a
                               ${installDir}/lib/libhdf5_tools.a
-                              lua
         )
-    endif()
-endif()
+    endif(HDF5_FOUND AND HDF5_IS_PARALLEL)
+
+    if (TEMPI)
+        target_link_libraries(fiesta PRIVATE tempi)
+    endif (TEMPI)
+
+    target_link_libraries(fiesta PRIVATE ${MPI_CXX_LIBRARIES})
+endif(LITE)
 
 # add built strings to source code
 if(CUDA)

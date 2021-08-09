@@ -172,11 +172,11 @@ void cart3d_func::compute() {
 
   //double maxS;
 
-  //double maxC;
-  //double maxCh;
-  //double maxC1;
-  //double maxC2;
-  //double maxC3;
+  //double maxC,  maxC_recv;
+  //double maxCh, maxCh_recv;
+  //double maxC1, maxC1_recv;
+  //double maxC2, maxC2_recv;
+  //double maxC3, maxC3_recv;
   //double mu, alpha, beta, betae;
 
   /**** WENO ****/
@@ -231,11 +231,16 @@ void cart3d_func::compute() {
 //    Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv + 4),
 //                            Kokkos::Max<double>(maxC3));
 //#ifndef NOMPI
-//    MPI_Allreduce(&maxC, &maxC, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-//    MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-//    MPI_Allreduce(&maxC1, &maxC1, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-//    MPI_Allreduce(&maxC2, &maxC2, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-//    MPI_Allreduce(&maxC3, &maxC3, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+//    MPI_Allreduce(&maxC, &maxC_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+//    MPI_Allreduce(&maxCh, &maxCh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+//    MPI_Allreduce(&maxC1, &maxC1_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+//    MPI_Allreduce(&maxC2, &maxC2_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+//    MPI_Allreduce(&maxC3, &maxC3_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+// maxC  = maxC_recv;
+// maxCh = maxCh_recv;
+// maxC1 = maxC1_recv;
+// maxC2 = maxC2_recv;
+// maxC3 = maxC3_recv;
 //#endif
 //
 //    mu = maxC1;

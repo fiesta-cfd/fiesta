@@ -186,7 +186,7 @@ void applyBCs(struct inputConfig cf, class rk_func *f) {
 
 #ifndef NOMPI
   f->timers["halo"].reset();
-  haloExchange(cf, f->var, *(cf.m));
+  cf.m->haloExchange();
   f->timers["halo"].accumulate();
   f->timers["bc"].reset();
 #else

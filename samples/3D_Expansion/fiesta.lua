@@ -14,6 +14,9 @@ time = 0.0                            --Start time of simulation
 tstart = 0                            --Start time index of simulation
 restartName = "restart-000000.h5"   --Restart File Name
 
+--MPI Options
+mpi = "gpu-aware"		      --Use CUDA-aware MPI
+
 --Gas Properties
 R = 8.314462                          --Universal Gas Constant [J/(K*mol)]
 ns = 1                                --Number of Gas Species

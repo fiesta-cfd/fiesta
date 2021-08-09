@@ -100,8 +100,8 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
   //policy_f cell_pol =
   //    policy_f({cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
 
-  double max[cf.nvt];
-  double min[cf.nvt];
+  double max[cf.nvt], max_recv[cf.nvt];
+  double min[cf.nvt], min_recv[cf.nvt];
   string vname;
 
   if (cf.rank == 0) {
@@ -148,8 +148,10 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
                               Kokkos::Min<double>(min[v]));
 
       #ifndef NOMPI
-        MPI_Allreduce(&max[v], &max[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-        MPI_Allreduce(&min[v], &min[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
+        MPI_Allreduce(&max[v], &max_recv[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+        MPI_Allreduce(&min[v], &min_recv[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
+        max[v] = max_recv[v];
+        min[v] = min_recv[v];
       #endif
     }
   } else {
@@ -161,8 +163,10 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
       Kokkos::parallel_reduce(cell_pol, minVarFunctor3d(f->var, v),
                               Kokkos::Min<double>(min[v]));
       #ifndef NOMPI
-        MPI_Allreduce(&max[v], &max[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-        MPI_Allreduce(&min[v], &min[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
+        MPI_Allreduce(&max[v], &max_recv[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+        MPI_Allreduce(&min[v], &min_recv[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
+        max[v] = max_recv[v];
+        min[v] = min_recv[v];
       #endif
     }
   }
@@ -211,8 +215,10 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
                               Kokkos::Min<double>(min[v]));
 
       #ifndef NOMPI
-        MPI_Allreduce(&max[v], &max[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-        MPI_Allreduce(&min[v], &min[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
+        MPI_Allreduce(&max[v], &max_recv[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+        MPI_Allreduce(&min[v], &min_recv[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
+        max[v] = max_recv[v];
+        min[v] = min_recv[v];
       #endif
     }
   } else {
@@ -224,8 +230,10 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
       Kokkos::parallel_reduce(cell_pol, minVarFunctor3d(f->varx, v),
                               Kokkos::Min<double>(min[v]));
       #ifndef NOMPI
-        MPI_Allreduce(&max[v], &max[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-        MPI_Allreduce(&min[v], &min[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
+        MPI_Allreduce(&max[v], &max_recv[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+        MPI_Allreduce(&min[v], &min_recv[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
+        max[v] = max_recv[v];
+        min[v] = min_recv[v];
       #endif
     }
   }

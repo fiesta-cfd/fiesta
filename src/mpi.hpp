@@ -25,40 +25,71 @@
 #include "input.hpp"
 #include "mpi.h"
 
-void mpi_init(struct inputConfig &cf);
+void mpi_init(struct inputConfig &c);
 
-class mpiBuffers {
+class mpiHaloExchange {
+  public:
+    virtual void sendHalo(MPI_Request reqs[]) = 0;
+    virtual void receiveHalo(MPI_Request reqs[]) = 0;
+    virtual void unpackHalo() { };
 
-public:
-  mpiBuffers(struct inputConfig cf);
+    FS4D &deviceV;
+    struct inputConfig &cf;
+    void haloExchange();
 
-  FS4D leftSend;
-  FS4D leftRecv;
-  FS4D rightSend;
-  FS4D rightRecv;
-  FS4D bottomSend;
-  FS4D bottomRecv;
-  FS4D topSend;
-  FS4D topRecv;
-  FS4D backSend;
-  FS4D backRecv;
-  FS4D frontSend;
-  FS4D frontRecv;
-
-  FS4DH leftSend_H;
-  FS4DH leftRecv_H;
-  FS4DH rightSend_H;
-  FS4DH rightRecv_H;
-  FS4DH bottomSend_H;
-  FS4DH bottomRecv_H;
-  FS4DH topSend_H;
-  FS4DH topRecv_H;
-  FS4DH backSend_H;
-  FS4DH backRecv_H;
-  FS4DH frontSend_H;
-  FS4DH frontRecv_H;
+    mpiHaloExchange(struct inputConfig &c, FS4D &v) : cf(c), deviceV(v) { }; 
 };
 
-void haloExchange(struct inputConfig cf, FS4D &deviceV, class mpiBuffers &m);
+class directHaloExchange : public mpiHaloExchange 
+{
+  public:
+    MPI_Datatype leftRecvSubArray, rightRecvSubArray;
+    MPI_Datatype bottomRecvSubArray, topRecvSubArray;
+    MPI_Datatype backRecvSubArray, frontRecvSubArray;
 
+    MPI_Datatype leftSendSubArray, rightSendSubArray;
+    MPI_Datatype bottomSendSubArray, topSendSubArray;
+    MPI_Datatype backSendSubArray, frontSendSubArray;
+
+    virtual void sendHalo(MPI_Request reqs[]);
+    virtual void receiveHalo(MPI_Request reqs[]);
+
+    directHaloExchange(inputConfig &c, FS4D &v);
+};
+
+class packedHaloExchange : public mpiHaloExchange 
+{
+
+  public:
+    FS4D leftSend, leftRecv;
+    FS4D rightSend, rightRecv;
+    FS4D bottomSend, bottomRecv;
+    FS4D topSend, topRecv;
+    FS4D backSend, backRecv;
+    FS4D frontSend, frontRecv;
+
+    virtual void sendHalo(MPI_Request reqs[]);
+    virtual void receiveHalo(MPI_Request reqs[]);
+    virtual void unpackHalo();
+
+    packedHaloExchange(inputConfig &c, FS4D &v);
+};
+
+class copyHaloExchange : public packedHaloExchange 
+{
+  public:
+    FS4DH leftSend_H, leftRecv_H;
+    FS4DH rightSend_H, rightRecv_H;
+    FS4DH bottomSend_H, bottomRecv_H;
+    FS4DH topSend_H, topRecv_H;
+    FS4DH backSend_H, backRecv_H;
+    FS4DH frontSend_H, frontRecv_H;
+
+    virtual void sendHalo(MPI_Request reqs[]);
+    virtual void receiveHalo(MPI_Request reqs[]);
+    virtual void unpackHalo();
+
+    copyHaloExchange(inputConfig &c, FS4D &v);
+};
 #endif
+

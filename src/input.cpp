@@ -164,9 +164,10 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
     exit(EXIT_FAILURE);
   }
 
-  std::string scheme, grid;
+  std::string scheme, grid, mpi;
   L.get("scheme", scheme,"weno5");
   L.get("grid",   grid,"cartesian");
+  L.get("mpi",    mpi, "host");
 
   // Dependent Parameters
   if (cf.ceq == 1) {
@@ -211,7 +212,6 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
       exit(EXIT_FAILURE);
     }
   }
-
   // Array Parameters
   cf.M = (double *)malloc(cf.ns * sizeof(double));
   cf.gamma = (double *)malloc(cf.ns * sizeof(double));
@@ -234,6 +234,20 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
     cf.scheme = 2;
   if (scheme.compare("quick") == 0)
     cf.scheme = 3;
+
+#ifndef NOMPI
+  // MPI halo exchange strategy from name
+  if (mpi.compare("host") == 0)
+    cf.mpiScheme = 1;
+  else if (mpi.compare("gpu-pack") == 0)
+    cf.mpiScheme = 2;
+  else if (mpi.compare("gpu-type") == 0)
+    cf.mpiScheme = 3;
+  else {
+      printf("Invalid MPI communication scheme.\n");
+      exit(EXIT_FAILURE);
+  }
+#endif
 
   // Set Grid Options from Grid String
   if (grid.compare("generalized") == 0) {
