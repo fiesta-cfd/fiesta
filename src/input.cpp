@@ -239,7 +239,7 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   // MPI halo exchange strategy from name
   if (mpi.compare("host") == 0)
     cf.mpiScheme = 1;
-  else if (mpi.compare("gpu-pack") == 0)
+  else if (mpi.compare("gpu-aware") == 0)
     cf.mpiScheme = 2;
   else if (mpi.compare("gpu-type") == 0)
     cf.mpiScheme = 3;
