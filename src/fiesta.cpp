@@ -61,7 +61,6 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
 
   if (temp_rank == 0) printSplash(cArgs.colorFlag);
 
-  cf.log = std::make_shared<Logger>(cArgs.verbosity, cArgs.colorFlag, temp_rank);
   Fiesta::Log::Logger(cArgs.verbosity,cArgs.colorFlag,temp_rank);
 
   // Initialize Kokkos

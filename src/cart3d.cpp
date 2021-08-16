@@ -51,8 +51,8 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   memEstimate *= 8;  // 8 bytes per double
   double memEstimateMB = memEstimate/(1048576.0);
 
-  cf.log->message("Minimum device memory estimate: {:.2f}",memEstimateMB);
-  cf.log->message("Minimum device memory estimate: {}",memEstimate);
+  Fiesta::Log::message("Minimum device memory estimate: {:.2f}MiB",memEstimateMB);
+  Fiesta::Log::message("Minimum device memory estimate: {}b",memEstimate);
 
   grid    = FS4D("coords",    cf.ni,  cf.nj,  cf.nk,  3);      // Grid Coords
 

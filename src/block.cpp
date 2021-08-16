@@ -54,7 +54,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
 
   if (cf.rank==0){
     if (!std::filesystem::exists(path)){
-      cf.log->message("Creating directory: '{}'",path);
+      Fiesta::Log::message("Creating directory: '{}'",path);
       std::filesystem::create_directories(path);
     }
   }
@@ -98,9 +98,9 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   varH = Kokkos::create_mirror_view(f->var);
   varxH = Kokkos::create_mirror_view(f->varx);
 
-  //cf.log->debug("{}: gStart={} gEnd={} stride={}",name,gStart,gEnd,stride);
+  //Fiesta::Log::debug("{}: gStart={} gEnd={} stride={}",name,gStart,gEnd,stride);
   //MPI_Barrier(cf.comm);
-  //cf.log->debugAll("{}: lStart={} lEnd={} lExt={}",name,gStart,gEnd,stride);
+  //Fiesta::Log::debugAll("{}: lStart={} lEnd={} lExt={}",name,gStart,gEnd,stride);
 
 }
 
@@ -114,7 +114,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
 
   if (cf.rank==0){
     if (!std::filesystem::exists(path)){
-      cf.log->message("Creating directory: '{}'",path);
+      Fiesta::Log::message("Creating directory: '{}'",path);
       std::filesystem::create_directories(path);
     }
   }
@@ -175,7 +175,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
     }
 
       //MPI_Barrier(sliceComm);
-      //cf.log->debugAll("PRE {}: gStart={} lStart={} offset={}",name,gStart,lStart,lOffset);
+      //Fiesta::Log::debugAll("PRE {}: gStart={} lStart={} offset={}",name,gStart,lStart,lOffset);
       //MPI_Barrier(sliceComm);
 
     for (int i=0; i<cf.ndim; ++i){
@@ -239,10 +239,10 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   varxH = Kokkos::create_mirror_view(f->varx);
 
   if (slicePresent){
-    //cf.log->debug("{}: gStart={} gEnd={} gExt={} gExtG={} stride={}",name,gStart,gEnd,gExt,gExtG,stride);
+    //Fiesta::Log::debug("{}: gStart={} gEnd={} gExt={} gExtG={} stride={}",name,gStart,gEnd,gExt,gExtG,stride);
     //MPI_Barrier(sliceComm);
     //if (myColor==1)
-      //cf.log->debugAll("{}: lStart={} lEnd={} lExt={} offset={}",name,lStart,lEnd,lExt,lOffset);
+      //Fiesta::Log::debugAll("{}: lStart={} lEnd={} lExt={} offset={}",name,lStart,lEnd,lExt,lOffset);
     //MPI_Barrier(sliceComm);
   }
 }
@@ -255,7 +255,7 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
   string hdfPath   = format("{}/{}",path,hdfName);
   string xmfPath   = format("{}/{}.xmf",path,blockBase);
   
-  cf.log->message("[{}] Writing '{}'",cf.t,hdfPath);
+  Fiesta::Log::message("[{}] Writing '{}'",cf.t,hdfPath);
   fiestaTimer writeTimer = fiestaTimer();
 
   if (myColor==1){
@@ -298,12 +298,12 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
     double frate = (fsize/1048576.0)/ftime;
 
     if (fsize > 1073741824)
-      cf.log->message("[{}] '{}': {:.2f} GiB in {:.2f}s ({:.2f} MiB/s)",cf.t,hdfPath,fsize/1073741824.0,ftime,frate);  //divide by bytes per GiB (1024*1024*1024)
+      Fiesta::Log::message("[{}] '{}': {:.2f} GiB in {:.2f}s ({:.2f} MiB/s)",cf.t,hdfPath,fsize/1073741824.0,ftime,frate);  //divide by bytes per GiB (1024*1024*1024)
     else
-      cf.log->message("[{}] '{}': {:.2f} MiB in {:.2f}s ({:.2f} MiB/s)",cf.t,hdfPath,fsize/1048576.0,ftime,frate);     //divide by bytes per MiB (1024*1024)
+      Fiesta::Log::message("[{}] '{}': {:.2f} MiB in {:.2f}s ({:.2f} MiB/s)",cf.t,hdfPath,fsize/1048576.0,ftime,frate);     //divide by bytes per MiB (1024*1024)
   }
 
-  cf.log->message("[{}] Writing '{}'",cf.t,xmfPath);
+  Fiesta::Log::message("[{}] Writing '{}'",cf.t,xmfPath);
   if (myColor==1){
     writeXMF(xmfPath, hdfName, time, cf.ndim, gExt.data(), cf.nvt, writeVarx,f->varNames,f->varxNames);
   }
