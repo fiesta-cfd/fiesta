@@ -212,4 +212,8 @@ if (Fiesta_BUILD_TESTS)
     include(CTest)
     include(catch2/extras/Catch.cmake)
     catch_discover_tests(tests)
+
+    add_executable(halotest tests/halox.cpp src/cart3d.cpp)
+    target_link_libraries(halotest PRIVATE Kokkos::kokkos FiestaCore)
+    add_test(NAME halotest COMMAND mpirun --oversubscribe -n 8 ./halotest)
 endif()
