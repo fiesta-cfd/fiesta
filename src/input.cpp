@@ -159,7 +159,7 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   L.get({"restart","path"},    cf.pathName, std::string("."));
 
   std::string scheme, grid, mpi;
-  L.get({"mpi","type"}, mpi, "host");
+  L.get({"mpi","type"}, mpi, std::string("host"));
   L.get({"advection_scheme"}, scheme, std::string("weno5"));
   L.get({"grid","type"},   grid, std::string("cartesian"));
 

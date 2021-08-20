@@ -99,15 +99,18 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
   cf.w = new serialVTKWriter(cf, f->grid, f->var);
 #else
   if (cf.mpiScheme == 1)
-    cf.m = new copyHaloExchange(cf, f->var);
+    //cf.m = new copyHaloExchange(cf, f->var);
+    cf.m = std::make_shared<copyHaloExchange>(cf,f->var);
   else if (cf.mpiScheme == 2)
-    cf.m = new packedHaloExchange(cf, f->var);
+    //cf.m = new packedHaloExchange(cf, f->var);
+    cf.m = std::make_shared<packedHaloExchange>(cf,f->var);
   else if (cf.mpiScheme == 3)
-    cf.m = new directHaloExchange(cf, f->var);
+    //cf.m = new directHaloExchange(cf, f->var);
+    cf.m = std::make_shared<directHaloExchange>(cf,f->var);
   //cf.w = new hdfWriter(cf, f);
   //cf.m = new mpiBuffers(cf);
   cf.w = std::make_shared<hdfWriter>(cf,f);
-  cf.m = std::make_shared<mpiBuffers>(cf);
+  //cf.m = std::make_shared<mpiBuffers>(cf);
 
   //luaReader L(cf.inputFname);
   //L.getIOBlock(cf,f,cf.ndim,cf.ioblocks);

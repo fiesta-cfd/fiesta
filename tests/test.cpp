@@ -7,6 +7,7 @@
 #include "cart3d.hpp"
 #include "bc.hpp"
 #include <iostream>
+#include "debug.hpp"
 
 rk_func * initTests(struct inputConfig& cf){
   cf.ndim=3;
@@ -48,14 +49,28 @@ rk_func * initTests(struct inputConfig& cf){
   Fiesta::Log::Logger(5,0,temp_rank);
   Kokkos::initialize(kokkosArgs);
 
-
+  Fiesta::Log::debug("AT A");
   mpi_init(cf);
 
+  Fiesta::Log::debug("AT B");
   rk_func *f;
   f = new cart3d_func(cf);
 
-  cf.m = std::make_shared<mpiBuffers>(cf);
+  Fiesta::Log::debug("AT C");
+  cf.mpiScheme=1;
 
+  //cf.m = std::make_shared<mpiBuffers>(cf);
+  if (cf.mpiScheme == 1)
+    //cf.m = new copyHaloExchange(cf, f->var);
+    cf.m = std::make_shared<copyHaloExchange>(cf,f->var);
+  else if (cf.mpiScheme == 2)
+    //cf.m = new packedHaloExchange(cf, f->var);
+    cf.m = std::make_shared<packedHaloExchange>(cf,f->var);
+  else if (cf.mpiScheme == 3)
+    //cf.m = new directHaloExchange(cf, f->var);
+    cf.m = std::make_shared<directHaloExchange>(cf,f->var);
+
+  Fiesta::Log::debug("AT D");
   return f;
 }
 
@@ -65,6 +80,7 @@ TEST_CASE( "Outflow BC Test", "[outflow_bc]" ) {
   cf.yPer=0;
   cf.zPer=0;
   rk_func *f = initTests(cf);
+MYDBG
 
   cf.bcR=BCType::outflow;
   cf.bcL=BCType::outflow;
@@ -74,6 +90,7 @@ TEST_CASE( "Outflow BC Test", "[outflow_bc]" ) {
   cf.bcF=BCType::outflow;
 
   FS4DH varH = Kokkos::create_mirror_view(f->var);
+MYDBG
 
   // x-y
   varH(3,3,3,0) = 1;
@@ -87,8 +104,11 @@ TEST_CASE( "Outflow BC Test", "[outflow_bc]" ) {
   varH(5,5,3,0) = 9;
 
   Kokkos::deep_copy(f->var,varH);
+MYDBG
   applyBCs(cf,f);
+MYDBG
   Kokkos::deep_copy(varH,f->var);
+MYDBG
 
   REQUIRE(varH(4,0,3,0)==8);
   REQUIRE(varH(0,4,3,0)==6);
@@ -98,6 +118,7 @@ TEST_CASE( "Outflow BC Test", "[outflow_bc]" ) {
   REQUIRE(varH(8,0,3,0)==7);
   REQUIRE(varH(0,8,3,0)==3);
   REQUIRE(varH(8,8,3,0)==1);
+MYDBG
 
   // y-z
   varH(3,3,3,0) = 1;
@@ -111,8 +132,11 @@ TEST_CASE( "Outflow BC Test", "[outflow_bc]" ) {
   varH(3,5,5,0) = 9;
 
   Kokkos::deep_copy(f->var,varH);
+MYDBG
   applyBCs(cf,f);
+MYDBG
   Kokkos::deep_copy(varH,f->var);
+MYDBG
 
   REQUIRE(varH(3,4,0,0)==8);
   REQUIRE(varH(3,0,4,0)==6);
@@ -122,6 +146,7 @@ TEST_CASE( "Outflow BC Test", "[outflow_bc]" ) {
   REQUIRE(varH(3,8,0,0)==7);
   REQUIRE(varH(3,0,8,0)==3);
   REQUIRE(varH(3,8,8,0)==1);
+MYDBG
 }
 
 TEST_CASE( "Refelctive BC Test", "[reflective_bc]" ) {
@@ -320,7 +345,18 @@ TEST_CASE( "Periodic BC Test", "[periodic_bc]" ) {
   rk_func *f;
   f = new cart3d_func(cf);
 
-  cf.m = std::make_shared<mpiBuffers>(cf);
+  cf.mpiScheme=1;
+
+  //cf.m = std::make_shared<mpiBuffers>(cf);
+  if (cf.mpiScheme == 1)
+    //cf.m = new copyHaloExchange(cf, f->var);
+    cf.m = std::make_shared<copyHaloExchange>(cf,f->var);
+  else if (cf.mpiScheme == 2)
+    //cf.m = new packedHaloExchange(cf, f->var);
+    cf.m = std::make_shared<packedHaloExchange>(cf,f->var);
+  else if (cf.mpiScheme == 3)
+    //cf.m = new directHaloExchange(cf, f->var);
+    cf.m = std::make_shared<directHaloExchange>(cf,f->var);
 
   FS4DH varH = Kokkos::create_mirror_view(f->var);
   varH(4,4,3,0)  = 50;

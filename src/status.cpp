@@ -112,6 +112,8 @@ bool isConcern(double val){
 void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, fiestaTimer &wall, fiestaTimer &sim) {
   double max[f->varxNames.size()];
   double min[f->varxNames.size()];
+  double max_recv[f->varxNames.size()];
+  double min_recv[f->varxNames.size()];
   ansiColors c(cFlag);
   string smin,smax;
 

@@ -66,7 +66,8 @@ struct inputConfig {
   fiestaTimer writeTimer;
 
   std::shared_ptr<class writer> w;
-  std::shared_ptr<class mpiBuffers> m;
+  std::shared_ptr<class mpiHaloExchange> m;
+  //std::shared_ptr<class mpiBuffers> m;
   std::shared_ptr<class Logger> log;
   //std::vector<blockWriter<float> > ioblocks;
 

@@ -7,6 +7,7 @@
 #include "cart3d.hpp"
 #include "bc.hpp"
 #include <iostream>
+#include "log2.hpp"
 
 int main() {
   {
@@ -48,15 +49,29 @@ int main() {
     MPI_Init(NULL,NULL);
     int temp_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &temp_rank);
-    //Fiesta::Log::Logger(5,0,temp_rank);
+    Fiesta::Log::Logger(5,0,temp_rank);
     Kokkos::initialize(kokkosArgs);
 
+    Fiesta::Log::debug("AT A");
     mpi_init(cf);
 
+    Fiesta::Log::debug("AT B");
     rk_func *f;
     f = new cart3d_func(cf);
 
-    cf.m = std::make_shared<mpiBuffers>(cf);
+    cf.mpiScheme=1;
+
+    Fiesta::Log::debug("AT C");
+    //cf.m = std::make_shared<mpiBuffers>(cf);
+    if (cf.mpiScheme == 1)
+      //cf.m = new copyHaloExchange(cf, f->var);
+      cf.m = std::make_shared<copyHaloExchange>(cf,f->var);
+    else if (cf.mpiScheme == 2)
+      //cf.m = new packedHaloExchange(cf, f->var);
+      cf.m = std::make_shared<packedHaloExchange>(cf,f->var);
+    else if (cf.mpiScheme == 3)
+      //cf.m = new directHaloExchange(cf, f->var);
+      cf.m = std::make_shared<directHaloExchange>(cf,f->var);
 
     FS4DH varH = Kokkos::create_mirror_view(f->var);
 
