@@ -104,7 +104,6 @@ void mpi_init(struct inputConfig &cf) {
   cf.subdomainOffset[0] = cf.iStart;
   cf.subdomainOffset[1] = cf.jStart;
   cf.subdomainOffset[2] = cf.kStart;
-  Fiesta::Log::debug("zPer={} zm={} zp={}",cf.zPer,cf.zMinus,cf.zPlus);
 }
 
 void mpiHaloExchange::haloExchange() {

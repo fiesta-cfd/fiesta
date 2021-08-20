@@ -4,7 +4,7 @@
 #include <vector>
 #include "mpi.hpp"
 #include "rkfunction.hpp"
-#include "cart2d.hpp"
+#include "cart3d.hpp"
 #include "bc.hpp"
 #include <iostream>
 
@@ -17,8 +17,8 @@ rk_func * initTests(struct inputConfig& cf){
   //cf.xPer=0;
   //cf.yPer=0;
   //cf.zPer=0;
-  cf.nvt=4;
-  cf.nv=4;
+  cf.nvt=5;
+  cf.nv=5;
 
   cf.ceq=false;
   cf.noise=false;
@@ -43,13 +43,16 @@ rk_func * initTests(struct inputConfig& cf){
   Kokkos::InitArguments kokkosArgs;
   kokkosArgs.ndevices = 1;
   MPI_Init(NULL,NULL);
+  int temp_rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &temp_rank);
+  Fiesta::Log::Logger(5,0,temp_rank);
   Kokkos::initialize(kokkosArgs);
 
 
   mpi_init(cf);
 
   rk_func *f;
-  f = new cart2d_func(cf);
+  f = new cart3d_func(cf);
 
   cf.m = std::make_shared<mpiBuffers>(cf);
 
@@ -58,6 +61,9 @@ rk_func * initTests(struct inputConfig& cf){
 
 TEST_CASE( "Outflow BC Test", "[outflow_bc]" ) {
   struct inputConfig cf;
+  cf.xPer=0;
+  cf.yPer=0;
+  cf.zPer=0;
   rk_func *f = initTests(cf);
 
   cf.bcR=BCType::outflow;
@@ -120,6 +126,9 @@ TEST_CASE( "Outflow BC Test", "[outflow_bc]" ) {
 
 TEST_CASE( "Refelctive BC Test", "[reflective_bc]" ) {
   struct inputConfig cf;
+  cf.xPer=0;
+  cf.yPer=0;
+  cf.zPer=0;
   rk_func *f = initTests(cf);
   cf.bcR=BCType::reflective;
   cf.bcL=BCType::reflective;
@@ -182,6 +191,9 @@ TEST_CASE( "Refelctive BC Test", "[reflective_bc]" ) {
 TEST_CASE( "Hydrostatic BC Test", "[hydrostatic_bc]" ) {
   {
   struct inputConfig cf;
+  cf.xPer=0;
+  cf.yPer=0;
+  cf.zPer=0;
   rk_func *f = initTests(cf);
 
   FS4DH varH = Kokkos::create_mirror_view(f->var);
@@ -275,8 +287,8 @@ TEST_CASE( "Periodic BC Test", "[periodic_bc]" ) {
   cf.xPer=1;
   cf.yPer=1;
   cf.zPer=1;
-  cf.nvt=4;
-  cf.nv=4;
+  cf.nvt=5;
+  cf.nv=5;
 
   cf.ceq=false;
   cf.noise=false;
@@ -306,7 +318,7 @@ TEST_CASE( "Periodic BC Test", "[periodic_bc]" ) {
   mpi_init(cf);
 
   rk_func *f;
-  f = new cart2d_func(cf);
+  f = new cart3d_func(cf);
 
   cf.m = std::make_shared<mpiBuffers>(cf);
 

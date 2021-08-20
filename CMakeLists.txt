@@ -206,7 +206,7 @@ message("Fiesta Build Time:    ${BUILD_TIME}"     )
 #
 if (Fiesta_BUILD_TESTS)
     add_subdirectory(catch2)
-    add_executable(tests tests/test.cpp src/cart2d.cpp)
+    add_executable(tests tests/test.cpp src/cart3d.cpp)
     target_link_libraries(tests PRIVATE Catch2::Catch2WithMain Kokkos::kokkos FiestaCore)
 
     include(CTest)
