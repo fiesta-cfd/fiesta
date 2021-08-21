@@ -7,7 +7,7 @@ title = "2D Plume Test"
 out_freq = 0                          --Screen Output Interval
 restart_freq = 0                      --Restart Write Interval
 write_freq = frq                       --Solution Write Interval
-stat_freq = frq 
+stat_freq = frq
 restart = 0                           --Whether or not to use restart file
 time = 0.0                            --Start time of simulation
 tstart = 0                            --Start time index of simulation
@@ -16,6 +16,7 @@ restartName = "restart-000000.cgns"   --Restart File Name
 --Gas Properties
 R = 8.314462                          --Universal Gas Constant [J/(K*mol)]
 ns = 1                                --Number of Gas Species
+species_names = {'Air'}
 gamma = {1.40}                        --Array of Species Ratio of Specific Heats
 M = {0.02897}                         --Array of Species Molar Masses [kg/mol]
 mu = {2.928e-5}
