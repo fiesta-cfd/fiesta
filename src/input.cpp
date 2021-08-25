@@ -146,12 +146,12 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   L.get({"bc","xperiodic"},     cf.xPer,    false);
   L.get({"bc","yperiodic"},     cf.yPer,    false);
 
-  L.get({"progress_frequency"},     cf.out_freq,    0);
+  L.get({"progress","frequency"},     cf.out_freq,    0);
   L.get({"write_frequency"},   cf.write_freq,  0);
-  L.get({"restart_frequency"}, cf.restart_freq,0);
-  L.get({"status_frequency"},    cf.stat_freq,   0);
+  //L.get({"restart_frequency"}, cf.restart_freq,0);
+  L.get({"status","frequency"},    cf.stat_freq,   0);
 
-  L.get({"terrain_name"}, cf.terrainName, std::string("terrain.h5"));
+  L.get({"terrain","name"}, cf.terrainName, std::string("terrain.h5"));
 
   L.get({"restart","enabled"}, cf.restart, false);
   L.get({"restart","frequency"}, cf.restart_freq,0);
