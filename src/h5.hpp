@@ -20,14 +20,20 @@
 #include <string>
 #include <vector>
 #include "hdf5.h"
+#ifdef HAVE_MPI
 #include "mpi.h"
+#endif
 
 template<typename T>
 class h5Writer {
 
   public:
     h5Writer();
+#ifdef HAVE_MPI
     void open(MPI_Comm comm, MPI_Info info, std::string fname);
+#else
+    void open(std::string fname);
+#endif
 
     void close();
 
@@ -38,7 +44,9 @@ class h5Writer {
 
   private:
     std::string filename;
+#ifdef HAVE_MPI
     MPI_Comm comm;
+#endif
     hid_t file_id;
     hid_t group_id;
 };

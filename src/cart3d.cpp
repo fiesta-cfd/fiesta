@@ -20,7 +20,7 @@
 #include "kokkosTypes.hpp"
 #include <cassert>
 #include "input.hpp"
-#ifndef NOMPI
+#ifdef HAVE_MPI
 #include "mpi.hpp"
 #include "mpi.h"
 #endif
@@ -238,7 +238,7 @@ void cart3d_func::compute() {
     Kokkos::parallel_reduce(cell_pol, maxWaveSpeed(var,p,rho,cd), Kokkos::Max<double>(maxS));
     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+0), Kokkos::Max<double>(maxC));
     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+1), Kokkos::Max<double>(maxCh));
-    #ifndef NOMPI
+    #ifdef HAVE_MPI
       MPI_Allreduce(&maxS, &maxS, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
       MPI_Allreduce(&maxC,  &maxC,  1, MPI_DOUBLE, MPI_MAX, cf.comm);
       MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
@@ -307,7 +307,7 @@ void cart3d_func::postStep() {
     if (cf.ceq == 1) {
       double maxCh=0;
       Kokkos::parallel_reduce(cell_pol, maxCvar3D(var, 6), Kokkos::Max<double>(maxCh));
-      #ifndef NOMPI
+      #ifdef HAVE_MPI
         MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
       #endif
       coff = cf.n_coff * maxCh;

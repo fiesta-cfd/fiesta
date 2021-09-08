@@ -23,7 +23,7 @@
 #include "kokkosTypes.hpp"
 #include "input.hpp"
 #include <string>
-#ifndef NOMPI
+#ifdef HAVE_MPI
 #include "mpi.hpp"
 #endif
 

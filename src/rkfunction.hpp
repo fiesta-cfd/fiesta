@@ -24,7 +24,7 @@
 #include "kokkosTypes.hpp"
 #include "input.hpp"
 #include "timer.hpp"
-#ifndef NOMPI
+#ifdef HAVE_MPI
 #include "mpi.hpp"
 #endif
 #include <map>

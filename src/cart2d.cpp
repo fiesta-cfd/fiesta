@@ -19,7 +19,9 @@
 
 #include "cart2d.hpp"
 #include "vtk.hpp"
+#ifdef HAVE_MPI
 #include "mpi.hpp"
+#endif
 #include <cassert>
 #include "log2.hpp"
 
@@ -209,7 +211,7 @@ void cart2d_func::compute() {
     Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 1, cd), Kokkos::Max<double>(maxCh));
     Kokkos::fence();
 
-    #ifndef NOMPI
+    #ifdef HAVE_MPI
       MPI_Allreduce(&maxS, &maxS, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
       MPI_Allreduce(&maxC, &maxC, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
       MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
@@ -265,7 +267,7 @@ void cart2d_func::postStep() {
     if (cf.ceq == 1) {
       double maxCh;
       Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 1, cd), Kokkos::Max<double>(maxCh));
-      #ifndef NOMPI
+      #ifdef HAVE_MPI
         MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
       #endif
       coff = cf.n_coff * maxCh;

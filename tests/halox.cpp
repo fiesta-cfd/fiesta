@@ -44,6 +44,8 @@ int main() {
     cf.M = {1.0};
     cf.mu = {1.0};
 
+    cf.mpiScheme = 2;
+
     Kokkos::InitArguments kokkosArgs;
     kokkosArgs.ndevices = 1;
     MPI_Init(NULL,NULL);
@@ -76,10 +78,22 @@ int main() {
     FS4DH varH = Kokkos::create_mirror_view(f->var);
 
     // x-y
-    for (int i=0;i<6;++i)
-      for (int j=0;j<6;++j)
-        for (int k=0;k<6;++k)
+    for (int i=0;i<9;++i)
+      for (int j=0;j<9;++j)
+        for (int k=0;k<9;++k)
+          varH(i,j,k,0) = 10+cf.rank;
+    for (int i=3;i<6;++i)
+      for (int j=3;j<6;++j)
+        for (int k=3;k<6;++k)
           varH(i,j,k,0) = cf.rank;
+
+    Fiesta::Log::debug("varH(0,0,0,0)={}",varH(0,0,0,0));
+    Fiesta::Log::debug("varH(1,1,1,0)={}",varH(1,1,1,0));
+    Fiesta::Log::debug("varH(2,2,2,0)={}",varH(2,2,2,0));
+
+    Fiesta::Log::debug("varH(6,6,6,0)={}",varH(6,6,6,0));
+    Fiesta::Log::debug("varH(7,7,7,0)={}",varH(7,7,7,0));
+    Fiesta::Log::debug("varH(8,8,8,0)={}",varH(8,8,8,0));
 
     Kokkos::deep_copy(f->var,varH);
     applyBCs(cf,f);
@@ -99,21 +113,28 @@ int main() {
 
       //// diagonals
       Fiesta::Log::debug("varH(0,0,0,0)={}",varH(0,0,0,0));
-      //assert(varH(0,0,0,0)==7);
-      //assert(varH(1,1,1,0)==7);
-      //assert(varH(2,2,2,0)==7);
+      Fiesta::Log::debug("varH(1,1,1,0)={}",varH(1,1,1,0));
+      Fiesta::Log::debug("varH(2,2,2,0)={}",varH(2,2,2,0));
 
-      //assert(varH(6,6,6,0)==7);
-      //assert(varH(7,7,7,0)==7);
-      //assert(varH(8,8,8,0)==7);
+      Fiesta::Log::debug("varH(6,6,6,0)={}",varH(6,6,6,0));
+      Fiesta::Log::debug("varH(7,7,7,0)={}",varH(7,7,7,0));
+      Fiesta::Log::debug("varH(8,8,8,0)={}",varH(8,8,8,0));
 
-      //assert(varH(6,0,0,0)==7);
-      //assert(varH(7,1,1,0)==7);
-      //assert(varH(8,2,2,0)==7);
+      assert(varH(0,0,0,0)==7);
+      assert(varH(1,1,1,0)==7);
+      assert(varH(2,2,2,0)==7);
 
-      //assert(varH(6,0,4,0)==6);
-      //assert(varH(7,1,4,0)==6);
-      //assert(varH(8,2,4,0)==6);
+      assert(varH(6,6,6,0)==7);
+      assert(varH(7,7,7,0)==7);
+      assert(varH(8,8,8,0)==7);
+
+      assert(varH(6,0,0,0)==7);
+      assert(varH(7,1,1,0)==7);
+      assert(varH(8,2,2,0)==7);
+
+      assert(varH(6,0,4,0)==6);
+      assert(varH(7,1,4,0)==6);
+      assert(varH(8,2,4,0)==6);
 
       // x
       assert(varH(0,4,4,0)==4);

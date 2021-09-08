@@ -21,7 +21,9 @@
 #include <string>
 #include <vector>
 #include "hdf5.h"
+#ifdef HAVE_MPI
 #include "mpi.h"
+#endif
 #include "h5.hpp"
 #include <algorithm>
 
@@ -29,6 +31,7 @@
 template <typename T>
 h5Writer<T>::h5Writer(){}
 
+#ifdef HAVE_MPI
 template <typename T>
 void h5Writer<T>::open(MPI_Comm comm, MPI_Info info, std::string fname){
   hid_t pid;
@@ -38,6 +41,16 @@ void h5Writer<T>::open(MPI_Comm comm, MPI_Info info, std::string fname){
   file_id = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, pid);
   H5Pclose(pid);
 }
+#else
+template <typename T>
+void h5Writer<T>::open(std::string fname){
+  hid_t pid;
+
+  pid = H5Pcreate(H5P_FILE_ACCESS);
+  file_id = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, pid);
+  H5Pclose(pid);
+}
+#endif
 
 // close an hdf5 file
 template <typename T>
@@ -84,7 +97,9 @@ void h5Writer<T>::write(std::string dname, int ndim,
 
   // create property list for collective dataset write
   plist_id = H5Pcreate(H5P_DATASET_XFER);
+#ifdef HAVE_MPI
   H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+#endif
 
   // write data
   H5Dwrite(dset_id, dtype_id, memspace, filespace, plist_id, data.data());

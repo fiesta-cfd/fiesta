@@ -26,11 +26,7 @@
 #include <iostream>
 #include <vector>
 #include "block.hpp"
-#ifndef NOMPI
 #include "hdf.hpp"
-#else
-#include "vtk.hpp"
-#endif
 
 namespace Fiesta {
     struct inputConfig initialize(struct inputConfig&,int, char **);

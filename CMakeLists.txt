@@ -61,8 +61,11 @@ endif()
 set(FIESTA_LIB_SOURCES
      src/rk.cpp src/fiesta.cpp src/luaReader.cpp src/bc.cpp src/log2.cpp
      src/status.cpp src/timer.cpp src/input.cpp src/output.cpp src/h5.cpp
-     src/rkfunction.cpp src/writer.cpp src/mpi.cpp src/hdf.cpp src/xdmf.cpp src/block.cpp
+     src/rkfunction.cpp src/writer.cpp src/hdf.cpp src/xdmf.cpp src/block.cpp
 )
+if(NOT Fiesta_LITE)
+    set(FIESTA_LIB_SOURCES ${FIESTA_LIB_SOURCES} src/mpi.cpp)
+endif()
 
 set(FIESTA_SOURCES
     src/main.cpp src/cart2d.cpp src/cart3d.cpp src/gen2d.cpp src/gen3d.cpp
@@ -133,7 +136,9 @@ endif()
 #  add_subdirectory(extern/tempi)
 #endif(USE_TEMPI)
 #find third party components
-find_package(MPI QUIET REQUIRED)
+if (NOT Fiesta_LITE)
+    find_package(MPI QUIET REQUIRED)
+endif()
 include(tpls/kokkos.cmake)
 include(tpls/hdf5.cmake)
 include(tpls/lua.cmake)
@@ -145,11 +150,14 @@ include_directories(src)
 #Link libraries
 target_link_libraries(FiestaCore
                       Kokkos::kokkos
-                      MPI::MPI_CXX
                       ${HDF5_C_LIBRARIES}
                       ${LUA_LIBRARIES}
                       fmt::fmt
 )
+
+if (NOT Fiesta_LITE)
+    target_link_libraries(FiestaCore MPI::MPI_CXX)
+endif()
 
 target_link_libraries(fiesta FiestaCore)
 
@@ -207,13 +215,18 @@ message("Fiesta Build Time:    ${BUILD_TIME}"     )
 if (Fiesta_BUILD_TESTS)
     add_subdirectory(catch2)
     add_executable(tests tests/test.cpp src/cart3d.cpp)
+    if (NOT Fiesta_LITE)
+        target_compile_definitions(tests     PRIVATE HAVE_MPI)
+    endif()
     target_link_libraries(tests PRIVATE Catch2::Catch2WithMain Kokkos::kokkos FiestaCore)
 
     include(CTest)
     include(catch2/extras/Catch.cmake)
     catch_discover_tests(tests)
 
-    add_executable(halotest tests/halox.cpp src/cart3d.cpp)
-    target_link_libraries(halotest PRIVATE Kokkos::kokkos FiestaCore)
-    add_test(NAME halotest COMMAND mpirun --oversubscribe -n 8 ./halotest)
+    if (NOT Fiesta_LITE)
+        add_executable(halotest tests/halox.cpp src/cart3d.cpp)
+        target_link_libraries(halotest PRIVATE Kokkos::kokkos FiestaCore)
+        add_test(NAME halotest COMMAND mpirun --oversubscribe -n 8 ./halotest)
+    endif()
 endif()

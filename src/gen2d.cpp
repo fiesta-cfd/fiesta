@@ -197,7 +197,7 @@ void gen2d_func::preSim() {
   int mnci = cf.nci;
   int mncj = cf.ncj;
 
-#ifndef NOMPI
+#ifdef HAVE_MPI
   // mpi exchange of metrics
   ls = Kokkos::View<double ****, FS_LAYOUT>("leftSend", cf.ng, cf.ngj, 2, 2);
   lr = Kokkos::View<double ****, FS_LAYOUT>("leftRecv", cf.ng, cf.ngj, 2, 2);

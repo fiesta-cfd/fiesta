@@ -21,7 +21,7 @@
 #include "input.hpp"
 #include <iomanip>
 #include <locale>
-#ifndef NOMPI
+#ifdef HAVE_MPI
 #include "mpi.h"
 #endif
 #include "output.hpp"
@@ -112,8 +112,10 @@ bool isConcern(double val){
 void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, fiestaTimer &wall, fiestaTimer &sim) {
   double max[f->varxNames.size()];
   double min[f->varxNames.size()];
+#ifdef HAVE_MPI
   double max_recv[f->varxNames.size()];
   double min_recv[f->varxNames.size()];
+#endif
   ansiColors c(cFlag);
   string smin,smax;
 
@@ -140,7 +142,7 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, fies
     for (int v = 0; v < cf.nvt; ++v) {
       Kokkos::parallel_reduce(cell_pol, maxVarFunctor2d(f->var, v), Kokkos::Max<double>(max[v]));
       Kokkos::parallel_reduce(cell_pol, minVarFunctor2d(f->var, v), Kokkos::Min<double>(min[v]));
-      #ifndef NOMPI
+      #ifdef HAVE_MPI
         MPI_Allreduce(&max[v], &max_recv[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
         MPI_Allreduce(&min[v], &min_recv[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
         max[v] = max_recv[v];
@@ -152,7 +154,7 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, fies
     for (int v = 0; v < cf.nvt; ++v) {
       Kokkos::parallel_reduce(cell_pol, maxVarFunctor3d(f->var, v), Kokkos::Max<double>(max[v]));
       Kokkos::parallel_reduce(cell_pol, minVarFunctor3d(f->var, v), Kokkos::Min<double>(min[v]));
-      #ifndef NOMPI
+      #ifdef HAVE_MPI
         MPI_Allreduce(&max[v], &max_recv[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
         MPI_Allreduce(&min[v], &min_recv[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
         max[v] = max_recv[v];
@@ -187,7 +189,7 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, fies
     for (size_t v = 0; v < f->varxNames.size(); ++v) {
       Kokkos::parallel_reduce(cell_pol, maxVarFunctor2d(f->varx, v), Kokkos::Max<double>(max[v]));
       Kokkos::parallel_reduce(cell_pol, minVarFunctor2d(f->varx, v), Kokkos::Min<double>(min[v]));
-      #ifndef NOMPI
+      #ifdef HAVE_MPI
         MPI_Allreduce(&max[v], &max_recv[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
         MPI_Allreduce(&min[v], &min_recv[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
         max[v] = max_recv[v];
@@ -199,7 +201,7 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, fies
     for (size_t v = 0; v < f->varxNames.size(); ++v) {
       Kokkos::parallel_reduce(cell_pol, maxVarFunctor3d(f->varx, v), Kokkos::Max<double>(max[v]));
       Kokkos::parallel_reduce(cell_pol, minVarFunctor3d(f->varx, v), Kokkos::Min<double>(min[v]));
-      #ifndef NOMPI
+      #ifdef HAVE_MPI
         MPI_Allreduce(&max[v], &max_recv[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
         MPI_Allreduce(&min[v], &min_recv[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
         max[v] = max_recv[v];

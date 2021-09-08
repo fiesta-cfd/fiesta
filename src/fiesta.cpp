@@ -21,7 +21,7 @@
 #include "fiesta.hpp"
 #include "input.hpp"
 #include "debug.hpp"
-#ifndef NOMPI
+#ifdef HAVE_MPI
 #include "mpi.hpp"
 #endif
 #include "output.hpp"
@@ -54,7 +54,7 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
 
   // Initialize MPI and get temporary rank.
   int temp_rank = 0;
-#ifndef NOMPI
+#ifdef HAVE_MPI
   MPI_Init(NULL, NULL);
   MPI_Comm_rank(MPI_COMM_WORLD, &temp_rank);
 #endif
@@ -77,7 +77,7 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
   Fiesta::Log::message("Executing Lua Input Script");
   executeConfiguration(cf,cArgs);
 
-#ifndef NOMPI
+#ifdef HAVE_MPI
   // perform domain decomposition
   Fiesta::Log::message("Initializing MPI Setup");
   mpi_init(cf);
@@ -94,29 +94,16 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
 // Initialize the simulation and load initial data
 //
 void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
-  //create IO object
-#ifdef NOMPI
-  cf.w = new serialVTKWriter(cf, f->grid, f->var);
-#else
+#ifdef HAVE_MPI
   if (cf.mpiScheme == 1)
-    //cf.m = new copyHaloExchange(cf, f->var);
     cf.m = std::make_shared<copyHaloExchange>(cf,f->var);
   else if (cf.mpiScheme == 2)
-    //cf.m = new packedHaloExchange(cf, f->var);
     cf.m = std::make_shared<packedHaloExchange>(cf,f->var);
   else if (cf.mpiScheme == 3)
-    //cf.m = new directHaloExchange(cf, f->var);
     cf.m = std::make_shared<directHaloExchange>(cf,f->var);
-  //cf.w = new hdfWriter(cf, f);
-  //cf.m = new mpiBuffers(cf);
-  cf.w = std::make_shared<hdfWriter>(cf,f);
-  //cf.m = std::make_shared<mpiBuffers>(cf);
-
-  //luaReader L(cf.inputFname);
-  //L.getIOBlock(cf,f,cf.ndim,cf.ioblocks);
-  //L.close();
-
 #endif
+  cf.w = std::make_shared<hdfWriter>(cf,f);
+
 
   // If not restarting, generate initial conditions and grid
   if (cf.restart == 0) {
@@ -224,6 +211,7 @@ void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time,vect
 }
 
 void Fiesta::collectSignals(struct inputConfig &cf){
+#ifdef HAVE_MPI
   int glblRestartFlag=0;
   int glblExitFlag=0;
 
@@ -232,6 +220,7 @@ void Fiesta::collectSignals(struct inputConfig &cf){
 
   MPI_Allreduce(&cf.exitFlag,&glblExitFlag,1,MPI_INT,MPI_MAX,cf.comm);
   cf.exitFlag=glblExitFlag;
+#endif
 
   if (cf.restartFlag && cf.exitFlag)
       Fiesta::Log::warning("Recieved SIGURG:  Writing restart and exiting after timestep {}.",cf.t);
@@ -280,7 +269,7 @@ void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
 // clean up kokkos and mpi
 void Fiesta::finalize(){
   Kokkos::finalize();
-#ifndef NOMPI
+#ifdef HAVE_MPI
   MPI_Finalize();
 #endif
 }

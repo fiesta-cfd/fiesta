@@ -21,7 +21,9 @@
 
 #include <string>
 #include "rkfunction.hpp"
+#ifdef HAVE_MPI
 #include "mpi.h"
+#endif
 #include "kokkosTypes.hpp"
 #include "hdf5.h"
 
@@ -47,7 +49,7 @@ class blockWriter {
     std::vector<size_t> gEnd;    // local ending index
     std::vector<size_t> gExt;    // global extent
     std::vector<size_t> gExtG;   // global grid extent
-    std::vector<size_t> stride; // slice stride
+    std::vector<size_t> stride;  // slice stride
 
     size_t freq;    // block write frequency
 
@@ -56,7 +58,9 @@ class blockWriter {
     size_t lElems;
     size_t lElemsG;
 
+#ifdef HAVE_MPI
     MPI_Comm sliceComm;
+#endif
     int myColor;
 
     std::vector<T> varData;
@@ -79,7 +83,11 @@ class blockWriter {
     void dataPack(int, int, const std::vector<size_t>&, const std::vector<size_t>&, const std::vector<size_t>&,
                             const std::vector<size_t>&, std::vector<T>&, const FS4DH&, const int, const bool);
     
+#ifdef HAVE_MPI
     hid_t openHDF5ForWrite(MPI_Comm, MPI_Info, std::string);
+#else
+    hid_t openHDF5ForWrite(std::string);
+#endif
     void close_h5(hid_t);
 };
 

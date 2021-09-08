@@ -34,10 +34,10 @@
 #include "timer.hpp"
 #include "fmt/core.h"
 #include <filesystem>
-//#ifndef NOMPI
+#ifdef HAVE_MPI
 #include "mpi.h"
+#endif
 #include "h5.hpp"
-//#endif
 
 using namespace std;
 using fmt::format;
@@ -68,7 +68,9 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   lElemsG=1;
   myColor=1;
   slicePresent=true;
+#ifdef HAVE_MPI
   MPI_Comm_split(cf.comm,myColor,cf.rank,&sliceComm);
+#endif
 
   for (int i=0; i<cf.ndim; ++i){
     gStart.push_back(0);
@@ -98,10 +100,6 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   varH = Kokkos::create_mirror_view(f->var);
   varxH = Kokkos::create_mirror_view(f->varx);
 
-  //Fiesta::Log::debug("{}: gStart={} gEnd={} stride={}",name,gStart,gEnd,stride);
-  //MPI_Barrier(cf.comm);
-  //Fiesta::Log::debugAll("{}: lStart={} lEnd={} lExt={}",name,gStart,gEnd,stride);
-
 }
 
 template <typename T>
@@ -124,7 +122,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   // initialize parameters
   lElems=1;
   lElemsG=1;
-  myColor=MPI_UNDEFINED;
+  myColor=1;
   slicePresent=true;
   writeVarx=true;
 
@@ -149,6 +147,8 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   }
 
   // check if any part of the block slice is in this subdomain
+#ifdef HAVE_MPI
+  myColor=MPI_UNDEFINED;
   for (int i=0; i<cf.ndim; ++i){
     slicePresent = slicePresent 
                   && ( (cf.subdomainOffset[i]+cf.localCellDims[i]) >= gStart[i]
@@ -159,8 +159,10 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   if (slicePresent){
     myColor=1;
   }
+
   // create slice communicator
   MPI_Comm_split(cf.comm,myColor,cf.rank,&sliceComm);
+#endif
 
   if (slicePresent){
     for (int i=0; i<cf.ndim; ++i){
@@ -173,10 +175,6 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
         lEnd[i]=cf.localCellDims[i]-offsetDelta;   // if slice ends in subdomain, set local end to slide edge
       }
     }
-
-      //MPI_Barrier(sliceComm);
-      //Fiesta::Log::debugAll("PRE {}: gStart={} lStart={} offset={}",name,gStart,lStart,lOffset);
-      //MPI_Barrier(sliceComm);
 
     for (int i=0; i<cf.ndim; ++i){
       //adjust start and offset if it does not land on a stride if the slice does not start in this domain
@@ -217,6 +215,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
     // global dimensions to accomadate the stride.
     // Processes will use the minimum extent and end index.
     gMin=0;
+#ifdef HAVE_MPI
     for (int i=0; i<cf.ndim; ++i){
       MPI_Allreduce(&gEnd[i],&gMin,1,MPI_INT,MPI_MIN,sliceComm);
       gEnd[i]=gMin;
@@ -227,6 +226,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
       MPI_Allreduce(&gExtG[i],&gMin,1,MPI_INT,MPI_MIN,sliceComm);
       gExtG[i]=gMin;
     }
+#endif
   }
   
   // allocate pack buffers
@@ -238,13 +238,6 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   varH = Kokkos::create_mirror_view(f->var);
   varxH = Kokkos::create_mirror_view(f->varx);
 
-  if (slicePresent){
-    //Fiesta::Log::debug("{}: gStart={} gEnd={} gExt={} gExtG={} stride={}",name,gStart,gEnd,gExt,gExtG,stride);
-    //MPI_Barrier(sliceComm);
-    //if (myColor==1)
-      //Fiesta::Log::debugAll("{}: lStart={} lEnd={} lExt={} offset={}",name,lStart,lEnd,lExt,lOffset);
-    //MPI_Barrier(sliceComm);
-  }
 }
 
 template<typename T>
@@ -261,7 +254,11 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
   if (myColor==1){
 
     h5Writer<T> writer;
+#ifdef HAVE_MPI
     writer.open(sliceComm, MPI_INFO_NULL, hdfPath);
+#else
+    writer.open(hdfPath);
+#endif
 
     writer.openGroup("/Grid");
     Kokkos::deep_copy(gridH,f->grid);
@@ -289,7 +286,7 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
     writer.close();
   }
 
-  MPI_Barrier(cf.comm);
+  //MPI_Barrier(cf.comm);
 
   if (cf.rank==0){
     filesystem::path hdfFilePath{hdfPath};

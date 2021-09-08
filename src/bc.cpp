@@ -23,7 +23,7 @@
 #include "input.hpp"
 #include <algorithm>
 #include "log2.hpp"
-#ifndef NOMPI
+#ifdef HAVE_MPI
 #include "mpi.hpp"
 #include "mpi.h"
 #endif
@@ -167,12 +167,9 @@ void applyBCs(struct inputConfig cf, class rk_func *f) {
   typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_bl;
   typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_bl4;
 
-MYDBG
-#ifndef NOMPI
+#ifdef HAVE_MPI
   f->timers["halo"].reset();
-MYDBG
   cf.m->haloExchange();
-MYDBG
   f->timers["halo"].accumulate();
   f->timers["bc"].reset();
   if (cf.xPer == 1 && cf.xProcs==1)
@@ -188,23 +185,21 @@ MYDBG
         policy_bl({0, 0, 0}, {cf.ngi, cf.ngj, cf.nvt}),
         bc_zPer(cf.ng, cf.nck, f->var));
 #else
-MYDBG
   f->timers["bc"].reset();
   if (cf.xPer == 1)
     Kokkos::parallel_for(
-        policy_bl4({0, 0, 0, 0}, {cf.nci, cf.ngj, cf.ngk, cf.nvt}),
+        policy_bl({0, 0, 0}, {cf.ngj, cf.ngk, cf.nvt}),
         bc_xPer(cf.ng, cf.nci, f->var));
   if (cf.yPer == 1)
     Kokkos::parallel_for(
-        policy_bl4({0, 0, 0, 0}, {cf.ngi, cf.ncj, cf.ngk, cf.nvt}),
+        policy_bl({0, 0, 0}, {cf.ngi, cf.ngk, cf.nvt}),
         bc_yPer(cf.ng, cf.ncj, f->var));
   if (cf.ndim == 3 && cf.zPer == 1)
     Kokkos::parallel_for(
-        policy_bl4({0, 0, 0, 0}, {cf.ngi, cf.ngj, cf.nck, cf.nvt}),
+        policy_bl({0, 0, 0}, {cf.ngi, cf.ngj, cf.nvt}),
         bc_zPer(cf.ng, cf.nck, f->var));
 #endif
 
-MYDBG
   if (cf.xMinus < 0) {
     Kokkos::parallel_for(policy_bl({cf.ng, 0, 0}, {cf.ng+1, cf.ngj, cf.ngk}),
                          bc_gen(cf.bcL, cf.ng, -1, 0, 0, cf.nvt, f->var,cf.ndim));
@@ -236,7 +231,6 @@ MYDBG
                            bc_gen(cf.bcF, cf.ng, 0, 0, 1, cf.nvt, f->var,cf.ndim));
     }
   }
-MYDBG
   f->timers["bc"].accumulate();
 }
 

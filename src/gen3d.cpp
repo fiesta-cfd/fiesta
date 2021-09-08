@@ -20,7 +20,7 @@
 #include "kokkosTypes.hpp"
 #include <cassert>
 #include "input.hpp"
-#ifndef NOMPI
+#ifdef HAVE_MPI
 #include "mpi.hpp"
 #include "mpi.h"
 #endif
@@ -144,7 +144,7 @@ void gen3d_func::preSim() {
   int mnck = cf.nck;
   int mng = cf.ng;
 
-#ifndef NOMPI
+#ifdef HAVE_MPI
   // mpi exchange of metrics
   ls = FS5D("leftSend", cf.ng, cf.ngj, cf.ngk, 3, 3);
   lr = FS5D("leftRecv", cf.ng, cf.ngj, cf.ngk, 3, 3);

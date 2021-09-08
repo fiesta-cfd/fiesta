@@ -2,7 +2,9 @@
 #include "fiesta.hpp"
 #include "input.hpp"
 #include <vector>
+#ifdef HAVE_MPI
 #include "mpi.hpp"
+#endif
 #include "rkfunction.hpp"
 #include "cart3d.hpp"
 #include "bc.hpp"
@@ -14,12 +16,25 @@ rk_func * initTests(struct inputConfig& cf){
   cf.glbl_nci=3;
   cf.glbl_ncj=3;
   cf.glbl_nck=3;
+  cf.nci=3;
+  cf.ncj=3;
+  cf.nck=3;
+  cf.ngi=9;
+  cf.ngj=9;
+  cf.ngk=9;
   cf.ng=3;
   //cf.xPer=0;
   //cf.yPer=0;
   //cf.zPer=0;
   cf.nvt=5;
   cf.nv=5;
+
+  cf.xMinus=-1;
+  cf.xPlus=-1;
+  cf.yMinus=-1;
+  cf.yPlus=-1;
+  cf.zMinus=-1;
+  cf.zPlus=-1;
 
   cf.ceq=false;
   cf.noise=false;
@@ -43,22 +58,29 @@ rk_func * initTests(struct inputConfig& cf){
 
   Kokkos::InitArguments kokkosArgs;
   kokkosArgs.ndevices = 1;
+#ifdef HAVE_MPI
   MPI_Init(NULL,NULL);
   int temp_rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &temp_rank);
   Fiesta::Log::Logger(5,0,temp_rank);
+#else
+  Fiesta::Log::Logger(5,0,0);
+#endif
   Kokkos::initialize(kokkosArgs);
 
   Fiesta::Log::debug("AT A");
+#ifdef HAVE_MPI
   mpi_init(cf);
+#endif
 
   Fiesta::Log::debug("AT B");
   rk_func *f;
   f = new cart3d_func(cf);
 
   Fiesta::Log::debug("AT C");
-  cf.mpiScheme=1;
 
+#ifdef HAVE_MPI
+  cf.mpiScheme=1;
   //cf.m = std::make_shared<mpiBuffers>(cf);
   if (cf.mpiScheme == 1)
     //cf.m = new copyHaloExchange(cf, f->var);
@@ -69,6 +91,7 @@ rk_func * initTests(struct inputConfig& cf){
   else if (cf.mpiScheme == 3)
     //cf.m = new directHaloExchange(cf, f->var);
     cf.m = std::make_shared<directHaloExchange>(cf,f->var);
+#endif
 
   Fiesta::Log::debug("AT D");
   return f;
@@ -80,7 +103,6 @@ TEST_CASE( "Outflow BC Test", "[outflow_bc]" ) {
   cf.yPer=0;
   cf.zPer=0;
   rk_func *f = initTests(cf);
-MYDBG
 
   cf.bcR=BCType::outflow;
   cf.bcL=BCType::outflow;
@@ -90,7 +112,6 @@ MYDBG
   cf.bcF=BCType::outflow;
 
   FS4DH varH = Kokkos::create_mirror_view(f->var);
-MYDBG
 
   // x-y
   varH(3,3,3,0) = 1;
@@ -104,11 +125,8 @@ MYDBG
   varH(5,5,3,0) = 9;
 
   Kokkos::deep_copy(f->var,varH);
-MYDBG
   applyBCs(cf,f);
-MYDBG
   Kokkos::deep_copy(varH,f->var);
-MYDBG
 
   REQUIRE(varH(4,0,3,0)==8);
   REQUIRE(varH(0,4,3,0)==6);
@@ -118,7 +136,6 @@ MYDBG
   REQUIRE(varH(8,0,3,0)==7);
   REQUIRE(varH(0,8,3,0)==3);
   REQUIRE(varH(8,8,3,0)==1);
-MYDBG
 
   // y-z
   varH(3,3,3,0) = 1;
@@ -132,11 +149,8 @@ MYDBG
   varH(3,5,5,0) = 9;
 
   Kokkos::deep_copy(f->var,varH);
-MYDBG
   applyBCs(cf,f);
-MYDBG
   Kokkos::deep_copy(varH,f->var);
-MYDBG
 
   REQUIRE(varH(3,4,0,0)==8);
   REQUIRE(varH(3,0,4,0)==6);
@@ -146,7 +160,6 @@ MYDBG
   REQUIRE(varH(3,8,0,0)==7);
   REQUIRE(varH(3,0,8,0)==3);
   REQUIRE(varH(3,8,8,0)==1);
-MYDBG
 }
 
 TEST_CASE( "Refelctive BC Test", "[reflective_bc]" ) {
@@ -298,7 +311,9 @@ TEST_CASE( "Hydrostatic BC Test", "[hydrostatic_bc]" ) {
   REQUIRE(varH(8,8,4,3)==16);
   }
   Kokkos::finalize();
+#ifdef HAVE_MPI
   MPI_Finalize();
+#endif
 }
 
 TEST_CASE( "Periodic BC Test", "[periodic_bc]" ) {
@@ -308,6 +323,12 @@ TEST_CASE( "Periodic BC Test", "[periodic_bc]" ) {
   cf.glbl_nci=3;
   cf.glbl_ncj=3;
   cf.glbl_nck=10;
+  cf.nci=3;
+  cf.ncj=3;
+  cf.nck=10;
+  cf.ngi=9;
+  cf.ngj=9;
+  cf.ngk=16;
   cf.ng=3;
   cf.xPer=1;
   cf.yPer=1;
@@ -337,16 +358,21 @@ TEST_CASE( "Periodic BC Test", "[periodic_bc]" ) {
 
   Kokkos::InitArguments kokkosArgs;
   kokkosArgs.ndevices = 1;
+#ifdef HAVE_MPI
   MPI_Init(NULL,NULL);
+#endif
   Kokkos::initialize(kokkosArgs);
 
+#ifdef HAVE_MPI
   mpi_init(cf);
+#endif
 
   rk_func *f;
   f = new cart3d_func(cf);
 
-  cf.mpiScheme=1;
 
+#ifdef HAVE_MPI
+  cf.mpiScheme=1;
   //cf.m = std::make_shared<mpiBuffers>(cf);
   if (cf.mpiScheme == 1)
     //cf.m = new copyHaloExchange(cf, f->var);
@@ -357,6 +383,7 @@ TEST_CASE( "Periodic BC Test", "[periodic_bc]" ) {
   else if (cf.mpiScheme == 3)
     //cf.m = new directHaloExchange(cf, f->var);
     cf.m = std::make_shared<directHaloExchange>(cf,f->var);
+#endif
 
   FS4DH varH = Kokkos::create_mirror_view(f->var);
   varH(4,4,3,0)  = 50;
@@ -418,5 +445,7 @@ TEST_CASE( "Periodic BC Test", "[periodic_bc]" ) {
   REQUIRE(varH(4,4,15,0)==52);
   }
   Kokkos::finalize();
+#ifdef HAVE_MPI
   MPI_Finalize();
+#endif
 }

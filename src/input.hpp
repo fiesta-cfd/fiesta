@@ -28,7 +28,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#ifndef NOMPI
+#ifdef HAVE_MPI
 #include "mpi.h"
 #endif
 #include <string>
@@ -100,7 +100,7 @@ struct inputConfig {
   int nt, ni, nj, nk, nv, ns, nvt;
   int iStart, jStart, kStart;
   int iEnd, jEnd, kEnd;
-#ifndef NOMPI
+#ifdef HAVE_MPI
   int mpiScheme;
   MPI_Comm comm;
 #endif

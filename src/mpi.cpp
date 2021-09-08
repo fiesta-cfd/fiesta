@@ -386,10 +386,14 @@ void copyHaloExchange::sendHalo(MPI_Request reqs[6]) {
       rightSend(i,j,k,v) = mdeviceV(i+mnci,j,k,v);
     } );
 
+#define CLOCKWISE 1
+#define ANTI_CLOCKWISE 2
+
+
   Kokkos::deep_copy(leftSend_H, leftSend);
-  MPI_Isend(leftSend_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[0]);
+  MPI_Isend(leftSend_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.xMinus, CLOCKWISE, cf.comm, &reqs[0]);
   Kokkos::deep_copy(rightSend_H, rightSend);
-  MPI_Isend(rightSend_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[1]);
+  MPI_Isend(rightSend_H.data(), cf.ng*cf.ngj*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.xPlus, ANTI_CLOCKWISE, cf.comm, &reqs[1]);
 
   // y direction pack, copy, and send
   int mncj = cf.ncj;
@@ -399,9 +403,9 @@ void copyHaloExchange::sendHalo(MPI_Request reqs[6]) {
       topSend(i,j,k,v) = mdeviceV(i,j+mncj,k,v);
     } );
   Kokkos::deep_copy(bottomSend_H, bottomSend);
-  MPI_Isend(bottomSend_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[2]);
+  MPI_Isend(bottomSend_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.yMinus, CLOCKWISE, cf.comm, &reqs[2]);
   Kokkos::deep_copy(topSend_H, topSend);
-  MPI_Isend(topSend_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[3]);
+  MPI_Isend(topSend_H.data(), cf.ngi*cf.ng*cf.ngk*(cf.nvt), MPI_DOUBLE, cf.yPlus, ANTI_CLOCKWISE, cf.comm, &reqs[3]);
 
   // z direction pack, copy, and send
   if (cf.ndim == 3){
@@ -413,9 +417,9 @@ void copyHaloExchange::sendHalo(MPI_Request reqs[6]) {
       } );
 
     Kokkos::deep_copy(backSend_H, backSend);
-    MPI_Isend(backSend_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nvt), MPI_DOUBLE, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[4]);
+    MPI_Isend(backSend_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nvt), MPI_DOUBLE, cf.zMinus, CLOCKWISE, cf.comm, &reqs[4]);
     Kokkos::deep_copy(frontSend_H, frontSend);
-    MPI_Isend(frontSend_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nvt), MPI_DOUBLE, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[5]);
+    MPI_Isend(frontSend_H.data(), cf.ngi*cf.ngj*cf.ng*(cf.nvt), MPI_DOUBLE, cf.zPlus, ANTI_CLOCKWISE, cf.comm, &reqs[5]);
   }
 }
 
@@ -423,18 +427,18 @@ void copyHaloExchange::receiveHalo(MPI_Request reqs[6]) {
   int wait_count = 0;
 
   MPI_Irecv(leftRecv_H.data(), cf.ng * cf.ngj * cf.ngk * (cf.nvt),
-            MPI_DOUBLE, cf.xMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+            MPI_DOUBLE, cf.xMinus, ANTI_CLOCKWISE, cf.comm, &reqs[wait_count++]);
   MPI_Irecv(rightRecv_H.data(), cf.ng * cf.ngj * cf.ngk * (cf.nvt),
-            MPI_DOUBLE, cf.xPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+            MPI_DOUBLE, cf.xPlus, CLOCKWISE, cf.comm, &reqs[wait_count++]);
   MPI_Irecv(bottomRecv_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt),
-            MPI_DOUBLE, cf.yMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+            MPI_DOUBLE, cf.yMinus, ANTI_CLOCKWISE, cf.comm, &reqs[wait_count++]);
   MPI_Irecv(topRecv_H.data(), cf.ngi * cf.ng * cf.ngk * (cf.nvt),
-            MPI_DOUBLE, cf.yPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+            MPI_DOUBLE, cf.yPlus, CLOCKWISE, cf.comm, &reqs[wait_count++]);
   if (cf.ndim == 3) {
     MPI_Irecv(backRecv_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
-              MPI_DOUBLE, cf.zMinus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+              MPI_DOUBLE, cf.zMinus, ANTI_CLOCKWISE, cf.comm, &reqs[wait_count++]);
     MPI_Irecv(frontRecv_H.data(), cf.ngi * cf.ngj * cf.ng * (cf.nvt),
-              MPI_DOUBLE, cf.zPlus, FIESTA_HALO_TAG, cf.comm, &reqs[wait_count++]);
+              MPI_DOUBLE, cf.zPlus, CLOCKWISE, cf.comm, &reqs[wait_count++]);
   }
 }
 

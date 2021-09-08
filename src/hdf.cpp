@@ -31,13 +31,13 @@
 #include <string>
 #include <vector>
 #include "xdmf.hpp"
-//#ifndef NOMPI
+#ifdef HAVE_MPI
 #include "mpi.h"
+#endif
 #include <vector>
 #include "timer.hpp"
 #include <filesystem>
 #include "fmt/core.h"
-//#endif
 
 using namespace std;
 using Kokkos::ALL;
@@ -54,6 +54,7 @@ void invertArray(int ndim, T* out, C* in){
                 struct inputConfig &cf, vector<string> vNames, vector<string> vxNames ){}
 
 // open and hdf5 file for writing
+#ifdef HAVE_MPI
 hid_t openHDF5ForWrite(MPI_Comm comm, MPI_Info info, string fname){
   hid_t fid,pid;
 
@@ -64,6 +65,17 @@ hid_t openHDF5ForWrite(MPI_Comm comm, MPI_Info info, string fname){
 
   return fid;
 }
+#else
+hid_t openHDF5ForWrite(string fname){
+  hid_t fid,pid;
+
+  pid = H5Pcreate(H5P_FILE_ACCESS);
+  fid = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, pid);
+  H5Pclose(pid);
+
+  return fid;
+}
+#endif
 
 // open an hdf5 file for reading only
 hid_t openHDF5ForRead(string fname){
