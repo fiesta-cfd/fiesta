@@ -27,7 +27,7 @@
 #include "log2.hpp"
 #include "debug.hpp"
 
-void readRestart(struct inputConfig cf, rk_func *f) {
+void readRestart(struct inputConfig &cf, rk_func *f) {
   h5Writer<double> writer;
   writer.openRead(cf.restartName);
 
@@ -73,15 +73,23 @@ void readRestart(struct inputConfig cf, rk_func *f) {
     }
   }
 
-  //readAttribute("t",cf.t);
-  //readAttribute("time",cf.time);
+  std::string temp_title;
+  if(cf.restartReset==false){
+    writer.readAttribute("time_index",cf.tstart);
+    writer.readAttribute("time",cf.time);
+
+    writer.readAttribute("title",temp_title);
+  }
+  cf.tend=cf.tstart+cf.nt;
+  Fiesta::Log::message("Restart Title: '{}'",temp_title);
+  Fiesta::Log::message("Restart Properties: t={} time={:.2g}",cf.tstart,cf.time);
   
   writer.close();
   Kokkos::deep_copy(f->grid,gridH);
   Kokkos::deep_copy(f->var,varH);
 }
 
-void readTerrain(struct inputConfig cf, rk_func *f) {
+void readTerrain(struct inputConfig &cf, rk_func *f) {
   h5Writer<double> writer;
   writer.openRead(cf.restartName);
 

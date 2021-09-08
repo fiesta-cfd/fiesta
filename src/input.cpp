@@ -156,6 +156,7 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   L.get({"restart","frequency"}, cf.restart_freq,0);
   L.get({"restart","name"},    cf.restartName, std::string("restart-0000000.h5"));
   L.get({"restart","path"},    cf.pathName, std::string("."));
+  L.get({"restart","reset"}, cf.restartReset, false);
 
   std::string scheme, grid, mpi;
   L.get({"mpi","type"}, mpi, std::string("host"));

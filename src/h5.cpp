@@ -121,16 +121,59 @@ void h5Writer<T>::write(std::string dname, int ndim,
 template<typename T>
 template<typename S>
 void h5Writer<T>::writeAttribute(std::string name, S data){
-  hid_t dspace_id, att_id, dtype_id,dtypemem_id;
+  hid_t dspace_id, att_id, dtype_id;
+  //bool stringAttribute;
 
   if (std::is_same<S,double>::value) dtype_id = H5T_NATIVE_DOUBLE;
   if (std::is_same<S,float>::value) dtype_id = H5T_NATIVE_FLOAT;
   if (std::is_same<S,int>::value) dtype_id = H5T_NATIVE_INT;
+  //if (std::is_same<S,std::string>::value) stringAttribute=true;
+
+  //if (stringAttribute){
+  //  dspace_id = H5Screate(H5S_SCALAR);
+  //  dtype_id = H5Tcopy(H5T_C_S1);
+  //  H5Tset_size(dtype_id, data.length());
+  //  H5Tset_strpad(dtype_id,H5T_STR_NULLTERM);
+  //  att_id = H5Acreate2(group_id, name.c_str(), dtype_id, dspace_id, H5P_DEFAULT, H5P_DEFAULT);
+  //  H5Awrite(att_id,dtype_id,data.c_str());
+  //  H5Aclose(att_id);
+  //  H5Sclose(dspace_id);
+  //}else{
+    dspace_id = H5Screate(H5S_SCALAR);
+    att_id = H5Acreate2(group_id,name.c_str(),dtype_id,dspace_id, H5P_DEFAULT,H5P_DEFAULT);
+    H5Awrite(att_id,dtype_id,&data);
+
+    H5Aclose(att_id);
+    H5Sclose(dspace_id);
+  //}
+
+}
+
+template<>
+template<>
+void h5Writer<double>::writeAttribute(std::string name, std::string data){
+  hid_t dspace_id, att_id, dtype_id;
 
   dspace_id = H5Screate(H5S_SCALAR);
-  att_id = H5Acreate2(group_id,name.c_str(),dtype_id,dspace_id, H5P_DEFAULT,H5P_DEFAULT);
-  H5Awrite(att_id,dtype_id,&data);
+  dtype_id = H5Tcopy(H5T_C_S1);
+  H5Tset_size(dtype_id, data.length());
+  H5Tset_strpad(dtype_id,H5T_STR_NULLTERM);
+  att_id = H5Acreate2(group_id, name.c_str(), dtype_id, dspace_id, H5P_DEFAULT, H5P_DEFAULT);
+  H5Awrite(att_id,dtype_id,data.c_str());
+  H5Aclose(att_id);
+  H5Sclose(dspace_id);
+}
+template<>
+template<>
+void h5Writer<float>::writeAttribute(std::string name, std::string data){
+  hid_t dspace_id, att_id, dtype_id;
 
+  dspace_id = H5Screate(H5S_SCALAR);
+  dtype_id = H5Tcopy(H5T_C_S1);
+  H5Tset_size(dtype_id, data.length());
+  H5Tset_strpad(dtype_id,H5T_STR_NULLTERM);
+  att_id = H5Acreate2(group_id, name.c_str(), dtype_id, dspace_id, H5P_DEFAULT, H5P_DEFAULT);
+  H5Awrite(att_id,dtype_id,data.c_str());
   H5Aclose(att_id);
   H5Sclose(dspace_id);
 }
@@ -180,6 +223,66 @@ void h5Writer<T>::read(std::string path, int ndim, std::vector<size_t> in_dims_g
 }
 
 template <typename T>
+template <typename S>
+void h5Writer<T>::readAttribute(std::string name, S& data){
+  hid_t gpid,att_id,dtype_id;
+
+  if (std::is_same<S,double>::value) dtype_id = H5T_NATIVE_DOUBLE;
+  if (std::is_same<S,float>::value) dtype_id = H5T_NATIVE_FLOAT;
+  if (std::is_same<S,int>::value) dtype_id = H5T_NATIVE_INT;
+
+  //char tmp[96];
+  //att_id = H5Aopen(gpid,"Name",H5P_DEFAULT);
+  //dtype_id = H5Aget_type(att_id);
+  //dtypemem_id = H5Tget_native_type(dtype_id,H5T_DIR_ASCEND);
+  //H5Aread(att_id,dtypemem_id,tmp);
+  //H5Aclose(att_id);
+
+  gpid = H5Gopen(file_id,"Properties",H5P_DEFAULT);
+  att_id = H5Aopen(gpid,name.c_str(),H5P_DEFAULT);
+  H5Aread(att_id,dtype_id,&data);
+
+  H5Aclose(att_id);
+  H5Gclose(gpid);
+}
+
+template <>
+template <>
+void h5Writer<float>::readAttribute(std::string name, std::string& data){
+  hid_t gpid,att_id,dtype_id,dtypemem_id;
+
+  gpid = H5Gopen(file_id,"Properties",H5P_DEFAULT);
+  char tmp[128];
+  att_id = H5Aopen(gpid,name.c_str(),H5P_DEFAULT);
+  dtype_id = H5Aget_type(att_id);
+  dtypemem_id = H5Tget_native_type(dtype_id,H5T_DIR_ASCEND);
+  H5Aread(att_id,dtypemem_id,tmp);
+  data = tmp;
+  
+  H5Aclose(att_id);
+  H5Gclose(gpid);
+}
+
+template <>
+template <>
+void h5Writer<double>::readAttribute(std::string name, std::string& data){
+  hid_t gpid,att_id,dtype_id,dtypemem_id;
+
+  gpid = H5Gopen(file_id,"Properties",H5P_DEFAULT);
+  char tmp[128];
+  att_id = H5Aopen(gpid,name.c_str(),H5P_DEFAULT);
+  dtype_id = H5Aget_type(att_id);
+  dtypemem_id = H5Tget_native_type(dtype_id,H5T_DIR_ASCEND);
+  H5Aread(att_id,dtypemem_id,tmp);
+  data = tmp;
+  
+  H5Aclose(att_id);
+  H5Gclose(gpid);
+}
+
+
+
+template <typename T>
 void h5Writer<T>::openGroup(std::string name){
   group_id = H5Gcreate(file_id, name.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 }
@@ -219,6 +322,16 @@ template class h5Writer<double>;
 
 template void h5Writer<float>::writeAttribute<int>(std::string,int);
 template void h5Writer<float>::writeAttribute<double>(std::string,double);
+//template void h5Writer<float>::writeAttribute<std::string>(std::string,std::string);
 
 template void h5Writer<double>::writeAttribute<int>(std::string,int);
 template void h5Writer<double>::writeAttribute<double>(std::string,double);
+//template void h5Writer<double>::writeAttribute<std::string>(std::string,std::string);
+
+template void h5Writer<float>::readAttribute<int>(std::string,int&);
+template void h5Writer<float>::readAttribute<double>(std::string,double&);
+//template void h5Writer<float>::readAttribute<std::string>(std::string,std::string&);
+
+template void h5Writer<double>::readAttribute<int>(std::string,int&);
+template void h5Writer<double>::readAttribute<double>(std::string,double&);
+//template void h5Writer<double>::readAttribute<std::string>(std::string,std::string&);

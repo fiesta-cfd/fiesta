@@ -282,6 +282,7 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
     writer.openGroup("/Properties");
     writer.writeAttribute("time_index",tdx);
     writer.writeAttribute("time",time);
+    writer.writeAttribute("title",cf.title);
     writer.closeGroup();
 
     writer.close();

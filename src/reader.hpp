@@ -21,6 +21,6 @@
 #include "input.hpp"
 #include "rkfunction.hpp"
 
-void readRestart(struct inputConfig cf, rk_func *f);
+void readRestart(struct inputConfig &cf, rk_func *f);
 
-void readTerrain(struct inputConfig cf, rk_func *f);
+void readTerrain(struct inputConfig &cf, rk_func *f);

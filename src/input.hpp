@@ -109,6 +109,7 @@ struct inputConfig {
   bool xPer, yPer, zPer;
   bool restart;
   std::string restartName;
+  bool restartReset;
   std::string pathName;
   int tstart, tend;
   double time;

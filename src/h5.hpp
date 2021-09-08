@@ -45,6 +45,9 @@ class h5Writer {
 
     void read(std::string path, int ndim, std::vector<size_t>, std::vector<size_t>, std::vector<size_t>, T*);
 
+    template<typename S>
+    void readAttribute(std::string, S& data);
+
     void openGroup(std::string name);
     void closeGroup();
 
