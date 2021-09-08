@@ -37,6 +37,7 @@
 #include "mpi.h"
 #endif
 #include "h5.hpp"
+#include "log2.hpp"
 
 using namespace std;
 using fmt::format;
@@ -104,6 +105,34 @@ template <typename T>
 blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, string path_, bool avg_, size_t frq_,
   vector<size_t> start_, vector<size_t> end_, vector<size_t> stride_):
   name(name_),path(path_),avg(avg_),freq(frq_),gStart(start_),gEnd(end_),stride(stride_){
+
+  for (int i=0; i<cf.ndim; ++i){
+    if (gStart[i] > cf.globalCellDims[i]){
+      Fiesta::Log::error("Starting index of ioview '{}' exceeds domain bounds.",name);
+      exit(EXIT_FAILURE);
+    }
+
+    if (gEnd[i] > cf.globalCellDims[i]){
+      Fiesta::Log::error("Ending index of ioview '{}' exceeds domain bounds.",name);
+      exit(EXIT_FAILURE);
+    }
+
+    if (gStart[i] > gEnd[i]){
+      Fiesta::Log::error("Sarting index of ioview '{}' exceeds ending index.",name);
+      exit(EXIT_FAILURE);
+    }
+
+    if (stride[i] > 4){
+      Fiesta::Log::error("Stride of ioview '{}' exceeds 4.",name);
+      exit(EXIT_FAILURE);
+    }
+
+    if (gEnd[i] > gStart[i] && gEnd[i]-gStart[i] < stride[i]){
+      Fiesta::Log::error("Stride of ioview '{}' exceeds view dimensions.",name);
+      exit(EXIT_FAILURE);
+    }
+
+  }
 
   int strideDelta;
   size_t gMin;
