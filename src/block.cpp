@@ -17,7 +17,6 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "hdf.hpp"
 #include "block.hpp"
 #include "kokkosTypes.hpp"
 #include "hdf5.h"
@@ -235,7 +234,6 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   gridH = Kokkos::create_mirror_view(f->grid);
   varH = Kokkos::create_mirror_view(f->var);
   varxH = Kokkos::create_mirror_view(f->varx);
-
 }
 
 template<typename T>
@@ -279,6 +277,11 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
         writer.write(format("Variable{:02d}",vn+cf.nvt), cf.ndim, gExt, lExt, lOffset, varData); 
       }
     }
+    writer.closeGroup();
+
+    writer.openGroup("/Properties");
+    writer.writeAttribute("time_index",tdx);
+    writer.writeAttribute("time",time);
     writer.closeGroup();
 
     writer.close();

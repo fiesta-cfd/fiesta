@@ -27,7 +27,6 @@
 #include <string>
 #include <regex>
 #include "luaReader.hpp"
-#include "hdf.hpp"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "log2.hpp"

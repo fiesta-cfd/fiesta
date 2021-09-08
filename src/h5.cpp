@@ -118,6 +118,23 @@ void h5Writer<T>::write(std::string dname, int ndim,
   H5Pclose(plist_id);
 }
 
+template<typename T>
+template<typename S>
+void h5Writer<T>::writeAttribute(std::string name, S data){
+  hid_t dspace_id, att_id, dtype_id,dtypemem_id;
+
+  if (std::is_same<S,double>::value) dtype_id = H5T_NATIVE_DOUBLE;
+  if (std::is_same<S,float>::value) dtype_id = H5T_NATIVE_FLOAT;
+  if (std::is_same<S,int>::value) dtype_id = H5T_NATIVE_INT;
+
+  dspace_id = H5Screate(H5S_SCALAR);
+  att_id = H5Acreate2(group_id,name.c_str(),dtype_id,dspace_id, H5P_DEFAULT,H5P_DEFAULT);
+  H5Awrite(att_id,dtype_id,&data);
+
+  H5Aclose(att_id);
+  H5Sclose(dspace_id);
+}
+
 template <typename T>
 void h5Writer<T>::read(std::string path, int ndim, std::vector<size_t> in_dims_global, std::vector<size_t> in_dims_local, std::vector<size_t> in_offset, T* data){
   std::vector<hsize_t> gdims(ndim,0);
@@ -199,3 +216,9 @@ void h5Writer<T>::checkDataDimensions(hid_t filespace, int ndim, std::vector<hsi
 
 template class h5Writer<float>;
 template class h5Writer<double>;
+
+template void h5Writer<float>::writeAttribute<int>(std::string,int);
+template void h5Writer<float>::writeAttribute<double>(std::string,double);
+
+template void h5Writer<double>::writeAttribute<int>(std::string,int);
+template void h5Writer<double>::writeAttribute<double>(std::string,double);

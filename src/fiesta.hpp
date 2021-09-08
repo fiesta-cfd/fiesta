@@ -26,7 +26,6 @@
 #include <iostream>
 #include <vector>
 #include "block.hpp"
-#include "hdf.hpp"
 
 namespace Fiesta {
     struct inputConfig initialize(struct inputConfig&,int, char **);
