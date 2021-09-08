@@ -26,8 +26,17 @@
 #include <vector>
 #include "log2.hpp"
 #include "debug.hpp"
+#include <filesystem>
+#include "fiesta.hpp"
 
 void readRestart(struct inputConfig &cf, rk_func *f) {
+  if (cf.rank==0){
+    if (!std::filesystem::exists(cf.restartName)){
+      Fiesta::Log::error("Restart file '{}' does not exist.",cf.restartName);
+      exit(EXIT_FAILURE);
+    }
+  }
+
   h5Writer<double> writer;
   writer.openRead(cf.restartName);
 
@@ -74,12 +83,25 @@ void readRestart(struct inputConfig &cf, rk_func *f) {
   }
 
   std::string temp_title;
+  int restart_version;
+
+  writer.readAttribute("restart_file_version",restart_version);
+  if(restart_version != FIESTA_RESTART_VERSION){
+    Fiesta::Log::error("Cannot read restart file '{}' with version {}. Only version {} files are readable by Fiesta version {}",
+        cf.restartName,restart_version,FIESTA_RESTART_VERSION,FIESTA_VERSION);
+    exit(EXIT_FAILURE);
+  }
+
+
+  writer.readAttribute("title",temp_title);
+
   if(cf.restartReset==false){
     writer.readAttribute("time_index",cf.tstart);
     writer.readAttribute("time",cf.time);
-
-    writer.readAttribute("title",temp_title);
+  }else{
+    Fiesta::Log::message("Restart reset enabled, using index and time from input file.");
   }
+
   cf.tend=cf.tstart+cf.nt;
   Fiesta::Log::message("Restart Title: '{}'",temp_title);
   Fiesta::Log::message("Restart Properties: t={} time={:.2g}",cf.tstart,cf.time);

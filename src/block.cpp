@@ -38,6 +38,7 @@
 #endif
 #include "h5.hpp"
 #include "log2.hpp"
+#include "fiesta.hpp"
 
 using namespace std;
 using fmt::format;
@@ -312,6 +313,10 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
     writer.writeAttribute("time_index",tdx);
     writer.writeAttribute("time",time);
     writer.writeAttribute("title",cf.title);
+    writer.writeAttribute("fiesta_version",std::string(FIESTA_VERSION));
+    writer.writeAttribute("fiesta_options",std::string(FIESTA_OPTIONS));
+    writer.writeAttribute("fiesta_btime",std::string(FIESTA_BTIME));
+    writer.writeAttribute("restart_file_version",FIESTA_RESTART_VERSION);
     writer.closeGroup();
 
     writer.close();
