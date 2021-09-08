@@ -61,6 +61,8 @@ luaReader::luaReader(std::string f_, std::string r_):filename(f_),root(r_){
   lua_newtable(L);
   lua_setfield(L,-2,"mpi");
   lua_newtable(L);
+  lua_setfield(L,-2,"eos");
+  lua_newtable(L);
   lua_setfield(L,-2,"progress");
   lua_newtable(L);
   lua_setfield(L,-2,"status");

@@ -136,7 +136,7 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
 
 
   // Defaultable Parameters
-  L.get({"R"},        cf.R,       8.314462);
+  L.get({"eos","R"},        cf.R,       8.314462);
   //L.get("cequations"},      cf.ceq,     0);
   //L.get("noise"},    cf.noise,   0);
   L.get({"grid","ndim"},     cf.ndim,    2);
@@ -479,7 +479,7 @@ int loadGrid(struct inputConfig cf, FS4D &deviceV) {
             ii = cf.iStart + i;
             jj = cf.jStart + j;
             kk = cf.kStart + k;
-            hostV(i, j, k, v) = L.call("grid",4,(double)ii,(double)jj,(double)kk,(double)v);
+            hostV(i, j, k, v) = L.call("initialize_grid",4,(double)ii,(double)jj,(double)kk,(double)v);
           }
         }
       }
