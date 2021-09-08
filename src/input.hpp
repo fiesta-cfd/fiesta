@@ -125,11 +125,11 @@ struct inputConfig {
   int restartFlag;
   int exitFlag;
 
-  int globalGridDims[3];
-  int globalCellDims[3];
-  int localGridDims[3];
-  int localCellDims[3];
-  int subdomainOffset[3];
+  std::vector<size_t> globalGridDims;
+  std::vector<size_t> globalCellDims;
+  std::vector<size_t> localGridDims;
+  std::vector<size_t> localCellDims;
+  std::vector<size_t> subdomainOffset;
 
   int out_freq, stat_freq, write_freq, restart_freq;
 };

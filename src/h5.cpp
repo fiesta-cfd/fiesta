@@ -1,4 +1,3 @@
-
 /*
   Copyright 2019-2021 The University of New Mexico
 
@@ -26,6 +25,8 @@
 #endif
 #include "h5.hpp"
 #include <algorithm>
+#include "log2.hpp"
+#include "debug.hpp"
 
 // open and hdf5 file for writing
 template <typename T>
@@ -51,6 +52,11 @@ void h5Writer<T>::open(std::string fname){
   H5Pclose(pid);
 }
 #endif
+
+template <typename T>
+void h5Writer<T>::openRead(std::string fname){
+  file_id = H5Fopen(fname.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+}
 
 // close an hdf5 file
 template <typename T>
@@ -113,6 +119,50 @@ void h5Writer<T>::write(std::string dname, int ndim,
 }
 
 template <typename T>
+void h5Writer<T>::read(std::string path, int ndim, std::vector<size_t> in_dims_global, std::vector<size_t> in_dims_local, std::vector<size_t> in_offset, T* data){
+  std::vector<hsize_t> gdims(ndim,0);
+  std::vector<hsize_t> ldims(ndim,0);
+  std::vector<hsize_t> offset(ndim,0);
+
+  // reverse order of array indexes to "c"
+  std::reverse_copy(in_dims_global.begin(),in_dims_global.end(),gdims.begin());
+  std::reverse_copy(in_dims_local.begin(),in_dims_local.end(),ldims.begin());
+  std::reverse_copy(in_offset.begin(),in_offset.end(),offset.begin());
+
+  //Fiesta::Log::debugAll("{} {} {}",gdims,ldims,offset);
+
+  // identifiers
+  hid_t dset_id, filespace, memspace, dtype_id;
+  //herr_t status;
+
+  // get hd5 datatype
+  if (std::is_same<T,double>::value) dtype_id = H5T_NATIVE_DOUBLE;
+  if (std::is_same<T,float>::value) dtype_id = H5T_NATIVE_FLOAT;
+  if (std::is_same<T,int>::value) dtype_id = H5T_NATIVE_INT;
+
+  // open dataset
+  dset_id = H5Dopen(file_id,path.c_str(),H5P_DEFAULT);
+
+  // get filespace
+  filespace = H5Dget_space(dset_id);    /* Get filespace handle first. */
+
+  // check dimensions
+  checkDataDimensions(filespace, ndim, gdims);
+
+  // specify memory space for this mpi rank
+  memspace =  H5Screate_simple(ndim, ldims.data(), NULL);
+
+  // create hyperslab and read data
+  H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset.data(), NULL, ldims.data(), NULL);
+  H5Dread(dset_id, dtype_id, memspace, filespace, H5P_DEFAULT, data);
+
+  // close identifiers
+  H5Sclose(memspace);
+  H5Sclose(filespace);
+  H5Dclose(dset_id);
+}
+
+template <typename T>
 void h5Writer<T>::openGroup(std::string name){
   group_id = H5Gcreate(file_id, name.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 }
@@ -120,6 +170,31 @@ void h5Writer<T>::openGroup(std::string name){
 template <typename T>
 void h5Writer<T>::closeGroup(){
   H5Gclose(group_id);
+}
+
+template <typename T>
+void h5Writer<T>::checkDataDimensions(hid_t filespace, int ndim, std::vector<hsize_t> dims){
+  int rank;
+  //herr_t status;
+  hsize_t dimsg[ndim];
+
+  // get and check rank
+  rank      = H5Sget_simple_extent_ndims(filespace);
+  if (ndim != rank){
+    Fiesta::Log::error("Expected {}D restart but found {}D restart.",ndim,rank);
+    exit(EXIT_FAILURE);
+  }
+
+  // get dimensions
+  H5Sget_simple_extent_dims(filespace, dimsg, NULL);
+
+  // check dimensions
+  for (int d=0; d<ndim; ++d){
+    if (dims[d] != dimsg[d]){
+      Fiesta::Log::error("Extents of restart file different than expected\n");
+      exit (EXIT_FAILURE);
+    }
+  }
 }
 
 template class h5Writer<float>;

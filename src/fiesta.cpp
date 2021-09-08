@@ -39,6 +39,7 @@
 #include <filesystem>
 #include "log2.hpp"
 #include <iostream>
+#include "reader.hpp"
 
 using namespace std;
 
@@ -102,7 +103,7 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
   else if (cf.mpiScheme == 3)
     cf.m = std::make_shared<directHaloExchange>(cf,f->var);
 #endif
-  cf.w = std::make_shared<hdfWriter>(cf,f);
+  //cf.w = std::make_shared<hdfWriter>(cf,f);
 
 
   // If not restarting, generate initial conditions and grid
@@ -140,7 +141,7 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
     cf.writeTimer.start();
     Fiesta::Log::message("Loading restart file:");
     cf.loadTimer.reset();
-    cf.w->readSolution(cf, f->grid, f->var);
+    readRestart(cf, f);
     cf.loadTimer.stop();
     Fiesta::Log::message("Loaded restart data in: {}",cf.loadTimer.get());
   }
@@ -182,7 +183,7 @@ void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time,vect
   }
 
   // Check Restart Frequency
-  if (cf.restart_freq > 0 && t > 0) {
+  if (cf.restart_freq > 0 && t > cf.tstart) {
     if (t % cf.restart_freq == 0) {
       cf.restartFlag=1;
     }

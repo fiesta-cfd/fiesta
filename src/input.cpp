@@ -374,21 +374,23 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   cf.xmp = 0;
   cf.ymp = 0;
   cf.zmp = 0;
-  cf.globalGridDims[0] = cf.glbl_ni;
-  cf.globalGridDims[1] = cf.glbl_nj;
-  cf.globalGridDims[2] = cf.glbl_nk;
-  cf.globalCellDims[0] = cf.glbl_nci;
-  cf.globalCellDims[1] = cf.glbl_ncj;
-  cf.globalCellDims[2] = cf.glbl_nck;
-  cf.localGridDims[0] = cf.ni;
-  cf.localGridDims[1] = cf.nj;
-  cf.localGridDims[2] = cf.nk;
-  cf.localCellDims[0] = cf.nci;
-  cf.localCellDims[1] = cf.ncj;
-  cf.localCellDims[2] = cf.nck;
-  cf.subdomainOffset[0] = cf.iStart;
-  cf.subdomainOffset[1] = cf.jStart;
-  cf.subdomainOffset[2] = cf.kStart;
+#ifndef HAVE_MPI
+  cf.globalGridDims.push_back(cf.glbl_ni);
+  cf.globalGridDims.push_back(cf.glbl_nj);
+  cf.globalGridDims.push_back(cf.glbl_nk);
+  cf.globalCellDims.push_back(cf.glbl_nci);
+  cf.globalCellDims.push_back(cf.glbl_ncj);
+  cf.globalCellDims.push_back(cf.glbl_nck);
+  cf.localGridDims.push_back(cf.ni);
+  cf.localGridDims.push_back(cf.nj);
+  cf.localGridDims.push_back(cf.nk);
+  cf.localCellDims.push_back(cf.nci);
+  cf.localCellDims.push_back(cf.ncj);
+  cf.localCellDims.push_back(cf.nck);
+  cf.subdomainOffset.push_back(cf.iStart);
+  cf.subdomainOffset.push_back(cf.jStart);
+  cf.subdomainOffset.push_back(cf.kStart);
+#endif
 
   //return cf;
 }

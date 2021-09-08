@@ -99,7 +99,6 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   gridH = Kokkos::create_mirror_view(f->grid);
   varH = Kokkos::create_mirror_view(f->var);
   varxH = Kokkos::create_mirror_view(f->varx);
-
 }
 
 template <typename T>
@@ -116,7 +115,6 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
       std::filesystem::create_directories(path);
     }
   }
-
   pad = (int)log10(cf.tend) + 1;
 
   // initialize parameters
@@ -300,7 +298,7 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
       Fiesta::Log::message("[{}] '{}': {:.2f} MiB in {:.2f}s ({:.2f} MiB/s)",cf.t,hdfPath,fsize/1048576.0,ftime,frate);     //divide by bytes per MiB (1024*1024)
   }
 
-  Fiesta::Log::message("[{}] Writing '{}'",cf.t,xmfPath);
+  //Fiesta::Log::message("[{}] Writing '{}'",cf.t,xmfPath);
   if (myColor==1){
     writeXMF(xmfPath, hdfName, time, cf.ndim, gExt.data(), cf.nvt, writeVarx,f->varNames,f->varxNames);
   }

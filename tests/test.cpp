@@ -22,6 +22,9 @@ rk_func * initTests(struct inputConfig& cf){
   cf.ngi=9;
   cf.ngj=9;
   cf.ngk=9;
+  cf.ni=4;
+  cf.nj=4;
+  cf.nk=4;
   cf.ng=3;
   //cf.xPer=0;
   //cf.yPer=0;
@@ -329,6 +332,9 @@ TEST_CASE( "Periodic BC Test", "[periodic_bc]" ) {
   cf.ngi=9;
   cf.ngj=9;
   cf.ngk=16;
+  cf.ni=4;
+  cf.nj=4;
+  cf.nk=11;
   cf.ng=3;
   cf.xPer=1;
   cf.yPer=1;

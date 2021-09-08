@@ -34,15 +34,18 @@ class h5Writer {
 #else
     void open(std::string fname);
 #endif
+    void openRead(std::string fname);
 
     void close();
 
     void write(std::string, int, std::vector<size_t>, std::vector<size_t>, std::vector<size_t>, std::vector<T>&);
+    void read(std::string path, int ndim, std::vector<size_t>, std::vector<size_t>, std::vector<size_t>, T*);
 
     void openGroup(std::string name);
     void closeGroup();
 
   private:
+    void checkDataDimensions(hid_t, int ndim, std::vector<hsize_t>);
     std::string filename;
 #ifdef HAVE_MPI
     MPI_Comm comm;
