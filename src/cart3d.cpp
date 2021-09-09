@@ -231,18 +231,24 @@ void cart3d_func::compute() {
 
   if (cf.ceq) {
     timers["ceq"].reset();
-    double maxS,maxC,maxCh,dxmag,alpha;
+    double maxS,maxS_recv;
+    double maxC,maxC_recv;
+    double maxCh,maxCh_recv;
+    double dxmag,alpha;
 
     Kokkos::parallel_for(cell_pol, calculateRhoGrad(var, vel, rho, gradRho, cf.dx, cf.dy, cf.dz));
 
     Kokkos::parallel_reduce(cell_pol, maxWaveSpeed(var,p,rho,cd), Kokkos::Max<double>(maxS));
     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+0), Kokkos::Max<double>(maxC));
     Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+1), Kokkos::Max<double>(maxCh));
-    #ifdef HAVE_MPI
-      MPI_Allreduce(&maxS, &maxS, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-      MPI_Allreduce(&maxC,  &maxC,  1, MPI_DOUBLE, MPI_MAX, cf.comm);
-      MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    #endif
+#ifdef HAVE_MPI
+    MPI_Allreduce(&maxS, &maxS_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxC,  &maxC_recv,  1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxCh, &maxCh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+#endif
+    maxS=maxS_recv;
+    maxC=maxC_recv;
+    maxCh=maxCh_recv;
 
     dxmag = cf.dx*cf.dx + cf.dy*cf.dy + cf.dz*cf.dz;
     alpha = (dxmag / (maxCh+1.0e-6)) * cf.alpha;

@@ -198,9 +198,9 @@ void cart2d_func::compute() {
   }
 
   if (cf.ceq) {
-    double maxS;
-    double maxC;
-    double maxCh;
+    double maxS,maxS_recv;
+    double maxC,maxC_recv;
+    double maxCh,maxCh_recv;
 
     timers["ceq"].reset();
 
@@ -211,11 +211,15 @@ void cart2d_func::compute() {
     Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 1, cd), Kokkos::Max<double>(maxCh));
     Kokkos::fence();
 
-    #ifdef HAVE_MPI
-      MPI_Allreduce(&maxS, &maxS, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-      MPI_Allreduce(&maxC, &maxC, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-      MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    #endif
+#ifdef HAVE_MPI
+    MPI_Allreduce(&maxS, &maxS_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxC, &maxC_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    MPI_Allreduce(&maxCh, &maxCh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+#endif
+
+    maxS=maxS_recv;
+    maxC=maxC_recv;
+    maxCh=maxCh_recv;
 
     double alpha = (cf.dx*cf.dx + cf.dy*cf.dy)/(maxCh+1.0e-6)*cf.alpha;
 
