@@ -312,10 +312,12 @@ void cart3d_func::postStep() {
 
     if (cf.ceq == 1) {
       double maxCh=0;
+      double maxCh_recv=0;
       Kokkos::parallel_reduce(cell_pol, maxCvar3D(var, 6), Kokkos::Max<double>(maxCh));
       #ifdef HAVE_MPI
-        MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+        MPI_Allreduce(&maxCh, &maxCh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
       #endif
+      maxCh = maxCh_recv;
       coff = cf.n_coff * maxCh;
     } else {
       coff = 0.0;

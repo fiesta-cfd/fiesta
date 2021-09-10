@@ -269,11 +269,12 @@ void cart2d_func::postStep() {
     policy_f cell_pol = policy_f({cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
 
     if (cf.ceq == 1) {
-      double maxCh;
+      double maxCh,maxCh_recv;
       Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 1, cd), Kokkos::Max<double>(maxCh));
       #ifdef HAVE_MPI
-        MPI_Allreduce(&maxCh, &maxCh, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+        MPI_Allreduce(&maxCh, &maxCh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
       #endif
+      maxCh=maxCh_recv;
       coff = cf.n_coff * maxCh;
     } else {
       coff = 0.0;
