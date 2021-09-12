@@ -19,6 +19,8 @@ cmake_minimum_required(VERSION 3.14)
 include(ExternalProject)
 include(FetchContent)
 
+
+
 # set project name and languages
 project(Fiesta CXX C Fortran)
 
@@ -227,6 +229,9 @@ if (Fiesta_BUILD_TESTS)
     if (NOT Fiesta_LITE)
         add_executable(halotest tests/halox.cpp src/cart3d.cpp)
         target_link_libraries(halotest PRIVATE Kokkos::kokkos FiestaCore)
-        add_test(NAME halotest COMMAND mpirun --oversubscribe -n 8 ./halotest)
+        #add_test(NAME host_halo_test COMMAND mpirun --oversubscribe -n 8 ./halotest 1)
+        #add_test(NAME gpu_aware_halo_test COMMAND mpirun --oversubscribe -n 8 ./halotest 2)
+        #add_test(NAME gpu_type_halo_test COMMAND mpirun --oversubscribe -n 8 ./halotest 3)
+        add_test(NAME ordered_gpu_aware_halo_test COMMAND mpirun --oversubscribe -n 8 ./halotest 4)
     endif()
 endif()

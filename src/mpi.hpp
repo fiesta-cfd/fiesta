@@ -35,7 +35,7 @@ class mpiHaloExchange {
 
     FS4D &deviceV;
     struct inputConfig &cf;
-    void haloExchange();
+    virtual void haloExchange();
 
     mpiHaloExchange(struct inputConfig &c, FS4D &v) : cf(c), deviceV(v) { }; 
 };
@@ -90,6 +90,26 @@ class copyHaloExchange : public packedHaloExchange
     virtual void unpackHalo();
 
     copyHaloExchange(inputConfig &c, FS4D &v);
+};
+
+class orderedHaloExchange : public mpiHaloExchange 
+{
+  public:
+    FS4D leftSend, leftRecv;
+    FS4D rightSend, rightRecv;
+    FS4D bottomSend, bottomRecv;
+    FS4D topSend, topRecv;
+    FS4D backSend, backRecv;
+    FS4D frontSend, frontRecv;
+
+    virtual void sendHalo(MPI_Request reqs[]);
+    virtual void receiveHalo(MPI_Request reqs[]);
+    virtual void unpackHalo();
+    virtual void haloExchange();
+    void pack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff);
+    void unpack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff);
+
+    orderedHaloExchange(inputConfig &c, FS4D &v);
 };
 #endif
 

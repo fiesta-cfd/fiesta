@@ -8,8 +8,9 @@
 #include "bc.hpp"
 #include <iostream>
 #include "log2.hpp"
+#include <cstdlib>
 
-int main() {
+int main(int argc, char* argv[]) {
   {
     struct inputConfig cf;
 
@@ -44,7 +45,7 @@ int main() {
     cf.M = {1.0};
     cf.mu = {1.0};
 
-    cf.mpiScheme = 2;
+    cf.mpiScheme = atoi(argv[1]);
 
     Kokkos::InitArguments kokkosArgs;
     kokkosArgs.ndevices = 1;
@@ -61,7 +62,7 @@ int main() {
     rk_func *f;
     f = new cart3d_func(cf);
 
-    cf.mpiScheme=1;
+    //cf.mpiScheme=4;
 
     Fiesta::Log::debug("AT C");
     //cf.m = std::make_shared<mpiBuffers>(cf);
@@ -74,6 +75,11 @@ int main() {
     else if (cf.mpiScheme == 3)
       //cf.m = new directHaloExchange(cf, f->var);
       cf.m = std::make_shared<directHaloExchange>(cf,f->var);
+    else if (cf.mpiScheme == 4)
+      //cf.m = new directHaloExchange(cf, f->var);
+      cf.m = std::make_shared<orderedHaloExchange>(cf,f->var);
+
+    Fiesta::Log::debug("MPI Scheme: {}",cf.mpiScheme);
 
     FS4DH varH = Kokkos::create_mirror_view(f->var);
 

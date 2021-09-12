@@ -285,6 +285,8 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
     cf.mpiScheme = 2;
   else if (mpi.compare("gpu-type") == 0)
     cf.mpiScheme = 3;
+  else if (mpi.compare("gpu-aware-ordered") == 0)
+    cf.mpiScheme = 4;
   else {
       printf("Invalid MPI communication scheme.\n");
       exit(EXIT_FAILURE);
