@@ -5,13 +5,18 @@ fiesta.progress_frequency = 10
 fiesta.status_frequency = 100
 
 fiesta.restart.path = "./restarts"
-fiesta.restart.frequency = 1000
+fiesta.restart.frequency = 100
+fiesta.restart.name = "restarts/restart-200.h5"
+fiesta.restart.enabled = true
+--fiesta.restart.reset = true
+--fiesta.time.start_index = 0
+--fiesta.time.start_time = 0e-6
 
 --MPI Options
 mpi = "gpu-aware"		      --Use CUDA-aware MPI
 
 --Gas Properties
-fiesta.R = 8.314462
+fiesta.eos.R = 8.314462
 fiesta.advection_scheme="weno5"
 
 fiesta.species={
@@ -21,19 +26,21 @@ fiesta.species={
 fiesta.ioviews =  {
     {name="sol",path="./solution",frequency=100},
     {name="center", path="./centerline", frequency=100,
-    start={51,51,74},limit={149,149,74},stride={2,2,1}}
+    start={11,11,24},limit={14,14,24},stride={2,2,1}}
+    --start={3,4,9},limit={17,17,9},stride={2,2,1}}
 }
 
 --Time
-fiesta.time.nt = 1000
+fiesta.time.nt = 200
 fiesta.time.dt = 1e-8
 
 Lx,Ly,Lz = 10.0, 10.0, 10.0
 fiesta.grid.type="cartesian"
 fiesta.grid.ndim = 3
-fiesta.grid.ni       = {150, 150, 150}
+fiesta.grid.ni       = {50, 50, 50}
 fiesta.grid.dx       = {Lx/fiesta.grid.ni[1], Ly/fiesta.grid.ni[2], Lz/fiesta.grid.ni[3]}
 fiesta.mpi.procs    = {2, 1, 1}
+fiesta.mpi.type = "gpu-aware-ordered"
 
 --Boundary Conditions (0 - Freeflow, 1 - Reflective)
 fiesta.bc.xmin = "reflective"
@@ -64,7 +71,7 @@ function fiesta.initial_conditions(x,y,z,v)
     --Air at 3000[k] 1000[kg/m^3]
     Ehot = 3000*Cv*1000.0
 
-    if rdist < 0.2 then
+    if rdist < 1.2 then
         --setup hot region
         if v==0 then return 0      end
         if v==1 then return 0      end

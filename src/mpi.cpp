@@ -33,6 +33,7 @@ void mpi_init(struct inputConfig &cf) {
   /* Get basic MPI parameters */
   MPI_Comm_size(MPI_COMM_WORLD, &cf.numProcs);
   MPI_Comm_rank(MPI_COMM_WORLD, &cf.rank);
+  Fiesta::Log::debug("MPI_INIT A");
 
   /* Create cartesian topology and get rank dimensions and neighbors */
   MPI_Cart_create(MPI_COMM_WORLD, 3, dims, periods, 0, &cf.comm);
@@ -41,6 +42,42 @@ void mpi_init(struct inputConfig &cf) {
   MPI_Cart_shift(cf.comm, 0, 1, &cf.xMinus, &cf.xPlus);
   MPI_Cart_shift(cf.comm, 1, 1, &cf.yMinus, &cf.yPlus);
   MPI_Cart_shift(cf.comm, 2, 1, &cf.zMinus, &cf.zPlus);
+  int idx=0;
+  int coordsN[3];
+  int rankN;  
+  bool validCoord;
+
+  Fiesta::Log::debug("MPI_INIT B");
+
+  for(int ih=-1;ih<2;++ih){
+    for(int jh=-1;jh<2;++jh){
+      for(int kh=-1;kh<2;++kh){
+        if(ih==0 && jh==0 && kh == 0) continue;
+        coordsN[0]=coords[0]+ih;
+        coordsN[1]=coords[1]+jh;
+        coordsN[2]=coords[2]+kh;
+
+        validCoord=true;
+        for (int d=0; d<3; ++d){
+          //if (coordsN[d] >= 0 && coordsN[d] < dims[d])
+          //  validCoord=true;
+          if (!periods[d] && (coordsN[d] >= dims[d] || coordsN[d] < 0))
+            validCoord=false;
+        }
+
+        if(validCoord){
+          MPI_Cart_rank(cf.comm,coordsN,&rankN);
+        }else
+          rankN = MPI_PROC_NULL;
+
+        cf.proc[idx]=rankN;
+
+        //Fiesta::Log::debug("Coords ({},{},{}): {} {} ",ih,jh,kh,idx,cf.proc[idx]);
+
+        idx+=1;
+      }
+    }
+  }
 
   /* Distribute grid cells to mpi ranks including uneven remainders */
   rem = cf.glbl_nci % cf.xProcs;
@@ -495,7 +532,6 @@ orderedHaloExchange::orderedHaloExchange(struct inputConfig &c, FS4D &v)
   backRecv   = Kokkos::View<double****,FS_LAYOUT>("backRecv",cf.ngi,cf.ngj,cf.ng,cf.nvt);
   frontSend  = Kokkos::View<double****,FS_LAYOUT>("frontSend",cf.ngi,cf.ngj,cf.ng,cf.nvt);
   frontRecv  = Kokkos::View<double****,FS_LAYOUT>("frontRecv",cf.ngi,cf.ngj,cf.ng,cf.nvt);
-  Fiesta::Log::debug("Ordered Halo Exchange Constructor");
 }
 
 void orderedHaloExchange::pack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff){
@@ -587,24 +623,129 @@ void orderedHaloExchange::haloExchange(){
     unpack(0,0,+1,deviceV,frontRecv);
     Kokkos::fence();
   }
-
-  //x
-  //pack
-  //recieve
-  //send
-  //wait
-  //unpack
-
-  //pack,send
-  //pack,send
-  //pack,send
-  //recieve
-  //recieve
-  //recieve
-  //wait
-  //unpack,unpack,unpack
 }
 
 void orderedHaloExchange::sendHalo(MPI_Request reqs[6]) {}
 void orderedHaloExchange::receiveHalo(MPI_Request reqs[6]) {}
 void orderedHaloExchange::unpackHalo(){}
+
+unorderedHaloExchange::unorderedHaloExchange(struct inputConfig &c, FS4D &v) 
+  : mpiHaloExchange(c, v) {
+
+  int si,sj,sk;
+  int idx=0;
+
+  for(int ih=-1;ih<2;++ih){
+    for(int jh=-1;jh<2;++jh){
+      for(int kh=-1;kh<2;++kh){
+        if(ih==0 && jh==0 && kh == 0) continue;
+        si=(ih!=0)*cf.ng+(ih==0)*cf.nci;
+        sj=(jh!=0)*cf.ng+(jh==0)*cf.ncj;
+        sk=(kh!=0)*cf.ng+(kh==0)*cf.nck;
+
+        sendBuffers[idx] = Kokkos::View<double****,FS_LAYOUT>("send",si,sj,sk,cf.nvt);
+        recvBuffers[idx] = Kokkos::View<double****,FS_LAYOUT>("recv",si,sj,sk,cf.nvt);
+        buffSize[idx] = si*sj*sk*cf.nvt;
+
+        idx += 1;
+      }
+    }
+  }
+}
+
+void unorderedHaloExchange::pack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff){
+  int si = (ih!=0)*cf.ng + (ih==0)*cf.nci; // (s)ize of send buffer
+  int sj = (jh!=0)*cf.ng + (jh==0)*cf.ncj;
+  int sk = (kh!=0)*cf.ng + (kh==0)*cf.nck;
+
+  int bi=(ih<0)*cf.ng + (ih>0)*cf.nci + (ih==0)*cf.ng;  //(b)eginning indexes for send buffer
+  int bj=(jh<0)*cf.ng + (jh>0)*cf.ncj + (jh==0)*cf.ng;
+  int bk=(kh<0)*cf.ng + (kh>0)*cf.nck + (kh==0)*cf.ng;
+
+  Kokkos::parallel_for(Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0,0,0,0}, {si,sj,sk,cf.nvt}),
+      KOKKOS_CLASS_LAMBDA(const int i, const int j, const int k, const int v){
+        buff(i, j, k, v) = var(bi+i, bj+j, bk+k, v);
+      });
+}
+
+void unorderedHaloExchange::unpack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff){
+  int si = (ih!=0)*cf.ng + (ih==0)*cf.nci; // (s)ize of send buffer
+  int sj = (jh!=0)*cf.ng + (jh==0)*cf.ncj;
+  int sk = (kh!=0)*cf.ng + (kh==0)*cf.nck;
+
+  int bi=(ih>0)*(cf.ngi-cf.ng)+(ih==0)*cf.ng;  //(b)eggining indexes for unpack location
+  int bj=(jh>0)*(cf.ngj-cf.ng)+(jh==0)*cf.ng;
+  int bk=(kh>0)*(cf.ngk-cf.ng)+(kh==0)*cf.ng;
+
+  Kokkos::parallel_for(Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0,0,0,0}, {si,sj,sk,cf.nvt}),
+    KOKKOS_CLASS_LAMBDA(const int i, const int j, const int k, const int v){
+      var(bi+i,bj+j,bk+k,v) = buff(i,j,k,v);
+    });
+  }
+
+void unorderedHaloExchange::haloExchange(){
+  int waitCount = 0;
+  int idx = 0;
+  int tag = 0;
+  MPI_Request reqs[52];
+  for (int i = 0; i < 52; i++) reqs[i] = MPI_REQUEST_NULL;
+
+  idx=0;
+  for(int ih=-1;ih<2;++ih){
+    for(int jh=-1;jh<2;++jh){
+      for(int kh=-1;kh<2;++kh){
+        if(ih==0 && jh==0 && kh == 0) continue;
+
+        tag=100*(ih+1)+10*(jh+1)+(kh+1);
+
+        //Fiesta::Log::debug("Recieve ({},{},{}): {}, {} {} - {}",ih,jh,kh,idx,waitCount,tag,buffSize[idx]);
+        MPI_Irecv(recvBuffers[idx].data(), buffSize[idx], MPI_DOUBLE, cf.proc[idx], tag,  cf.comm, &reqs[waitCount]);
+        waitCount += 1;
+        idx += 1;
+      }
+    }
+  }
+
+  idx=0;
+  for(int ih=-1;ih<2;++ih){
+    for(int jh=-1;jh<2;++jh){
+      for(int kh=-1;kh<2;++kh){
+        if(ih==0 && jh==0 && kh == 0) continue;
+
+        tag=100*(-ih+1)+10*(-jh+1)+(-kh+1);
+        //tag=100*(ih+1)+10*(jh+1)+(kh+1);
+
+        pack(ih,jh,kh,deviceV,sendBuffers[idx]);
+        Kokkos::fence();
+        //Fiesta::Log::debug("Send ({},{},{}): {} {} {} - {}",ih,jh,kh,idx,waitCount,tag,buffSize[idx]);
+        MPI_Isend(sendBuffers[idx].data(), buffSize[idx], MPI_DOUBLE, cf.proc[idx], tag,  cf.comm, &reqs[waitCount]);
+        waitCount += 1;
+        idx += 1;
+      }
+    }
+  }
+
+  MPI_Waitall(waitCount, reqs, MPI_STATUSES_IGNORE);
+  //MPI_Status stat[52];
+  //MPI_Waitall(waitCount, reqs, stat);
+  //for (int i=0; i<52; ++i)
+  //  Fiesta::Log::debugAll("{}",stat[i].MPI_ERROR);
+
+  idx=0;
+  for(int ih=-1;ih<2;++ih){
+    for(int jh=-1;jh<2;++jh){
+      for(int kh=-1;kh<2;++kh){
+        if(ih==0 && jh==0 && kh == 0) continue;
+
+        unpack(ih,jh,kh,deviceV,recvBuffers[idx]);
+        idx += 1;
+      }
+    }
+  }
+  Kokkos::fence();
+
+}
+
+void unorderedHaloExchange::sendHalo(MPI_Request reqs[6]) {}
+void unorderedHaloExchange::receiveHalo(MPI_Request reqs[6]) {}
+void unorderedHaloExchange::unpackHalo(){}
