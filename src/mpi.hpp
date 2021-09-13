@@ -112,6 +112,32 @@ class orderedHaloExchange : public mpiHaloExchange
     orderedHaloExchange(inputConfig &c, FS4D &v);
 };
 
+class orderedHostHaloExchange : public mpiHaloExchange 
+{
+  public:
+    FS4D leftSend, leftRecv;
+    FS4D rightSend, rightRecv;
+    FS4D bottomSend, bottomRecv;
+    FS4D topSend, topRecv;
+    FS4D backSend, backRecv;
+    FS4D frontSend, frontRecv;
+    FS4DH leftSend_H, leftRecv_H;
+    FS4DH rightSend_H, rightRecv_H;
+    FS4DH bottomSend_H, bottomRecv_H;
+    FS4DH topSend_H, topRecv_H;
+    FS4DH backSend_H, backRecv_H;
+    FS4DH frontSend_H, frontRecv_H;
+
+    virtual void sendHalo(MPI_Request reqs[]);
+    virtual void receiveHalo(MPI_Request reqs[]);
+    virtual void unpackHalo();
+    virtual void haloExchange();
+    void pack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff);
+    void unpack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff);
+
+    orderedHostHaloExchange(inputConfig &c, FS4D &v);
+};
+
 class unorderedHaloExchange : public mpiHaloExchange 
 {
   public:

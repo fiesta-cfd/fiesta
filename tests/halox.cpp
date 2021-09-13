@@ -75,6 +75,8 @@ int main(int argc, char* argv[]) {
       cf.m = std::make_shared<orderedHaloExchange>(cf,f->var);
     else if (cf.mpiScheme == 5)
       cf.m = std::make_shared<unorderedHaloExchange>(cf,f->var);
+    else if (cf.mpiScheme == 6)
+      cf.m = std::make_shared<orderedHostHaloExchange>(cf,f->var);
 
     Fiesta::Log::debug("MPI Scheme: {}",cf.mpiScheme);
 

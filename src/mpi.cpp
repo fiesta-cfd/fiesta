@@ -749,3 +749,137 @@ void unorderedHaloExchange::haloExchange(){
 void unorderedHaloExchange::sendHalo(MPI_Request reqs[6]) {}
 void unorderedHaloExchange::receiveHalo(MPI_Request reqs[6]) {}
 void unorderedHaloExchange::unpackHalo(){}
+
+orderedHostHaloExchange::orderedHostHaloExchange(struct inputConfig &c, FS4D &v) 
+  : mpiHaloExchange(c, v) {
+
+  leftSend   = Kokkos::View<double****,FS_LAYOUT>("leftSend",cf.ng,cf.ngj,cf.ngk,cf.nvt);
+  leftRecv   = Kokkos::View<double****,FS_LAYOUT>("leftRecv",cf.ng,cf.ngj,cf.ngk,cf.nvt);
+  rightSend  = Kokkos::View<double****,FS_LAYOUT>("rightSend",cf.ng,cf.ngj,cf.ngk,cf.nvt);
+  rightRecv  = Kokkos::View<double****,FS_LAYOUT>("rightRecv",cf.ng,cf.ngj,cf.ngk,cf.nvt);
+  bottomSend = Kokkos::View<double****,FS_LAYOUT>("bottomSend",cf.ngi,cf.ng,cf.ngk,cf.nvt);
+  bottomRecv = Kokkos::View<double****,FS_LAYOUT>("bottomRecv",cf.ngi,cf.ng,cf.ngk,cf.nvt);
+  topSend    = Kokkos::View<double****,FS_LAYOUT>("topSend",cf.ngi,cf.ng,cf.ngk,cf.nvt);
+  topRecv    = Kokkos::View<double****,FS_LAYOUT>("topRecv",cf.ngi,cf.ng,cf.ngk,cf.nvt);
+  backSend   = Kokkos::View<double****,FS_LAYOUT>("backSend",cf.ngi,cf.ngj,cf.ng,cf.nvt);
+  backRecv   = Kokkos::View<double****,FS_LAYOUT>("backRecv",cf.ngi,cf.ngj,cf.ng,cf.nvt);
+  frontSend  = Kokkos::View<double****,FS_LAYOUT>("frontSend",cf.ngi,cf.ngj,cf.ng,cf.nvt);
+  frontRecv  = Kokkos::View<double****,FS_LAYOUT>("frontRecv",cf.ngi,cf.ngj,cf.ng,cf.nvt);
+  leftSend_H   = Kokkos::create_mirror_view(leftSend);
+  leftRecv_H   = Kokkos::create_mirror_view(leftRecv);
+  rightSend_H  = Kokkos::create_mirror_view(rightSend);
+  rightRecv_H  = Kokkos::create_mirror_view(rightRecv);
+  bottomSend_H = Kokkos::create_mirror_view(bottomSend);
+  bottomRecv_H = Kokkos::create_mirror_view(bottomRecv);
+  topSend_H    = Kokkos::create_mirror_view(topSend);
+  topRecv_H    = Kokkos::create_mirror_view(topRecv);
+  backSend_H   = Kokkos::create_mirror_view(backSend);
+  backRecv_H   = Kokkos::create_mirror_view(backRecv);
+  frontSend_H  = Kokkos::create_mirror_view(frontSend);
+  frontRecv_H  = Kokkos::create_mirror_view(frontRecv);
+}
+
+void orderedHostHaloExchange::pack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff){
+  int si = (ih!=0)*cf.ng + (ih==0)*cf.ngi; // (s)ize of send buffer
+  int sj = (jh!=0)*cf.ng + (jh==0)*cf.ngj;
+  int sk = (kh!=0)*cf.ng + (kh==0)*cf.ngk;
+
+  int bi=(ih<0)*cf.ng + (ih>0)*cf.nci;  //(b)eginning indexes for send buffer
+  int bj=(jh<0)*cf.ng + (jh>0)*cf.ncj;
+  int bk=(kh<0)*cf.ng + (kh>0)*cf.nck;
+
+  Kokkos::parallel_for(Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0,0,0,0}, {si,sj,sk,cf.nvt}),
+      KOKKOS_CLASS_LAMBDA(const int i, const int j, const int k, const int v){
+        buff(i, j, k, v) = var(bi+i, bj+j, bk+k, v);
+      });
+}
+
+void orderedHostHaloExchange::unpack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff){
+  int si = (ih!=0)*cf.ng + (ih==0)*cf.ngi; // (s)ize of send buffer
+  int sj = (jh!=0)*cf.ng + (jh==0)*cf.ngj;
+  int sk = (kh!=0)*cf.ng + (kh==0)*cf.ngk;
+
+  int bi=(ih>0)*(cf.ngi-cf.ng);  //(b)eggining indexes for unpack location
+  int bj=(jh>0)*(cf.ngj-cf.ng);
+  int bk=(kh>0)*(cf.ngk-cf.ng);
+
+  Kokkos::parallel_for(Kokkos::MDRangePolicy<Kokkos::Rank<4>>({0,0,0,0}, {si,sj,sk,cf.nvt}),
+    KOKKOS_CLASS_LAMBDA(const int i, const int j, const int k, const int v){
+      var(bi+i,bj+j,bk+k,v) = buff(i,j,k,v);
+    });
+  }
+
+void orderedHostHaloExchange::haloExchange(){
+  int waitCount = 4;
+  int buffSize = 0;
+  MPI_Request reqs[waitCount];
+
+  //////// X
+  pack(-1,0,0,deviceV,leftSend);  // pack left face
+  pack(+1,0,0,deviceV,rightSend); // pack right face
+  Kokkos::fence();
+  Kokkos::deep_copy(leftSend_H, leftSend);
+  Kokkos::deep_copy(rightSend_H, rightSend);
+
+  waitCount=0;
+  buffSize=cf.ng*cf.ngj*cf.ngk*cf.nvt;
+  MPI_Irecv(leftRecv_H.data(),  buffSize, MPI_DOUBLE, cf.xMinus, FIESTA_FORWARD_TAG,  cf.comm, &reqs[waitCount++]);
+  MPI_Irecv(rightRecv_H.data(), buffSize, MPI_DOUBLE, cf.xPlus,  FIESTA_BACKWARD_TAG, cf.comm, &reqs[waitCount++]);
+  MPI_Isend(leftSend_H.data(),  buffSize, MPI_DOUBLE, cf.xMinus, FIESTA_BACKWARD_TAG, cf.comm, &reqs[waitCount++]);
+  MPI_Isend(rightSend_H.data(), buffSize, MPI_DOUBLE, cf.xPlus,  FIESTA_FORWARD_TAG,  cf.comm, &reqs[waitCount++]);
+  MPI_Waitall(waitCount, reqs, MPI_STATUSES_IGNORE);
+
+  Kokkos::deep_copy(leftRecv, leftRecv_H);
+  Kokkos::deep_copy(rightRecv, rightRecv_H);
+  unpack(-1,0,0,deviceV,leftRecv);
+  unpack(+1,0,0,deviceV,rightRecv);
+  Kokkos::fence();
+
+  //////// Y
+  pack(0,-1,0,deviceV,bottomSend);
+  pack(0,+1,0,deviceV,topSend);
+  Kokkos::fence();
+  Kokkos::deep_copy(bottomSend_H, bottomSend);
+  Kokkos::deep_copy(topSend_H, topSend);
+
+  waitCount=0;
+  buffSize=cf.ngi*cf.ng*cf.ngk*cf.nvt;
+  MPI_Irecv(bottomRecv_H.data(), buffSize, MPI_DOUBLE, cf.yMinus, FIESTA_FORWARD_TAG,  cf.comm, &reqs[waitCount++]);
+  MPI_Irecv(topRecv_H.data(),    buffSize, MPI_DOUBLE, cf.yPlus,  FIESTA_BACKWARD_TAG, cf.comm, &reqs[waitCount++]);
+  MPI_Isend(bottomSend_H.data(), buffSize, MPI_DOUBLE, cf.yMinus, FIESTA_BACKWARD_TAG, cf.comm, &reqs[waitCount++]);
+  MPI_Isend(topSend_H.data(),    buffSize, MPI_DOUBLE, cf.yPlus,  FIESTA_FORWARD_TAG,  cf.comm, &reqs[waitCount++]);
+  MPI_Waitall(waitCount, reqs, MPI_STATUSES_IGNORE);
+
+  Kokkos::deep_copy(bottomRecv, bottomRecv_H);
+  Kokkos::deep_copy(topRecv, topRecv_H);
+  unpack(0,-1,0,deviceV,bottomRecv);
+  unpack(0,+1,0,deviceV,topRecv);
+  Kokkos::fence();
+
+  //////// Z
+  if (cf.ndim == 3){
+    pack(0,0,-1,deviceV,backSend);
+    pack(0,0,+1,deviceV,frontSend);
+    Kokkos::fence();
+    Kokkos::deep_copy(backSend_H, backSend);
+    Kokkos::deep_copy(frontSend_H, frontSend);
+
+    waitCount=0;
+    buffSize=cf.ngi*cf.ngj*cf.ng*cf.nvt;
+    MPI_Irecv(backRecv_H.data(),  buffSize, MPI_DOUBLE, cf.zMinus, FIESTA_FORWARD_TAG,  cf.comm, &reqs[waitCount++]);
+    MPI_Irecv(frontRecv_H.data(), buffSize, MPI_DOUBLE, cf.zPlus,  FIESTA_BACKWARD_TAG, cf.comm, &reqs[waitCount++]);
+    MPI_Isend(backSend_H.data(),  buffSize, MPI_DOUBLE, cf.zMinus, FIESTA_BACKWARD_TAG, cf.comm, &reqs[waitCount++]);
+    MPI_Isend(frontSend_H.data(), buffSize, MPI_DOUBLE, cf.zPlus,  FIESTA_FORWARD_TAG,  cf.comm, &reqs[waitCount++]);
+    MPI_Waitall(waitCount, reqs, MPI_STATUSES_IGNORE);
+
+    Kokkos::deep_copy(backRecv, backRecv_H);
+    Kokkos::deep_copy(frontRecv, frontRecv_H);
+    unpack(0,0,-1,deviceV,backRecv);
+    unpack(0,0,+1,deviceV,frontRecv);
+    Kokkos::fence();
+  }
+}
+
+void orderedHostHaloExchange::sendHalo(MPI_Request reqs[6]) {}
+void orderedHostHaloExchange::receiveHalo(MPI_Request reqs[6]) {}
+void orderedHostHaloExchange::unpackHalo(){}

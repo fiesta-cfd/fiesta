@@ -106,6 +106,8 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
     cf.m = std::make_shared<orderedHaloExchange>(cf,f->var);
   else if (cf.mpiScheme == 5)
     cf.m = std::make_shared<unorderedHaloExchange>(cf,f->var);
+  else if (cf.mpiScheme == 6)
+    cf.m = std::make_shared<orderedHostHaloExchange>(cf,f->var);
 #endif
   //cf.w = std::make_shared<hdfWriter>(cf,f);
 
