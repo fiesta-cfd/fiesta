@@ -32,6 +32,11 @@ class mpiHaloExchange {
     virtual void sendHalo(MPI_Request reqs[]) = 0;
     virtual void receiveHalo(MPI_Request reqs[]) = 0;
     virtual void unpackHalo() { };
+    void packFace(std::vector<int> ion, FS4D &var, FS4D &buff);
+    void unpackFace(std::vector<int> ion, FS4D &var, FS4D &buff);
+
+    void pack(std::vector<int> ion, FS4D &var, FS4D &buff);
+    void unpack(std::vector<int> ion, FS4D &var, FS4D &buff);
 
     FS4D &deviceV;
     struct inputConfig &cf;
@@ -106,8 +111,8 @@ class orderedHaloExchange : public mpiHaloExchange
     virtual void receiveHalo(MPI_Request reqs[]);
     virtual void unpackHalo();
     virtual void haloExchange();
-    void pack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff);
-    void unpack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff);
+    //void pack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff);
+    //void unpack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff);
 
     orderedHaloExchange(inputConfig &c, FS4D &v);
 };
@@ -132,8 +137,8 @@ class orderedHostHaloExchange : public mpiHaloExchange
     virtual void receiveHalo(MPI_Request reqs[]);
     virtual void unpackHalo();
     virtual void haloExchange();
-    void pack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff);
-    void unpack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff);
+    //void pack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff);
+    //void unpack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff);
 
     orderedHostHaloExchange(inputConfig &c, FS4D &v);
 };
@@ -145,8 +150,8 @@ class unorderedHaloExchange : public mpiHaloExchange
     virtual void receiveHalo(MPI_Request reqs[]);
     virtual void unpackHalo();
     virtual void haloExchange();
-    void pack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff);
-    void unpack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff);
+    //void pack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff);
+    //void unpack(const int ih, const int jh, const int kh, FS4D &var, FS4D &buff);
 
     unorderedHaloExchange(inputConfig &c, FS4D &v);
   private:

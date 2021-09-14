@@ -387,16 +387,7 @@ TEST_CASE( "Periodic BC Test", "[periodic_bc]" ) {
 
 #ifdef HAVE_MPI
   cf.mpiScheme=1;
-  //cf.m = std::make_shared<mpiBuffers>(cf);
-  if (cf.mpiScheme == 1)
-    //cf.m = new copyHaloExchange(cf, f->var);
-    cf.m = std::make_shared<copyHaloExchange>(cf,f->var);
-  else if (cf.mpiScheme == 2)
-    //cf.m = new packedHaloExchange(cf, f->var);
-    cf.m = std::make_shared<packedHaloExchange>(cf,f->var);
-  else if (cf.mpiScheme == 3)
-    //cf.m = new directHaloExchange(cf, f->var);
-    cf.m = std::make_shared<directHaloExchange>(cf,f->var);
+  cf.m = std::make_shared<orderedHostHaloExchange>(cf,f->var);
 #endif
 
   FS4DH varH = Kokkos::create_mirror_view(f->var);
