@@ -1,4 +1,4 @@
-if (NOT Fiesta_LITE)
+if (NOT Fiesta_NO_MPI)
     if (NOT Fiesta_BUILD_HDF5)
         find_package(HDF5 QUIET COMPONENTS C)
         if (HDF5_FOUND)

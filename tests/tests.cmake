@@ -1,0 +1,23 @@
+add_subdirectory(catch2)
+add_executable(tests tests/test.cpp src/cart3d.cpp)
+if (NOT Fiesta_NO_MPI)
+    target_compile_definitions(tests     PRIVATE HAVE_MPI)
+endif()
+target_link_libraries(tests PRIVATE Catch2::Catch2WithMain Kokkos::kokkos FiestaCore)
+
+include(CTest)
+include(catch2/extras/Catch.cmake)
+catch_discover_tests(tests)
+
+if (NOT Fiesta_NO_MPI)
+    add_executable(halotest_unordered tests/halox_unordered.cpp src/cart3d.cpp)
+    target_link_libraries(halotest_unordered PRIVATE Kokkos::kokkos FiestaCore)
+    add_test(NAME unordered_host_copy_halo_test COMMAND mpirun --oversubscribe -n 8 ./halotest_unordered 1)
+    add_test(NAME unordered_gpu_aware_halo_test COMMAND mpirun --oversubscribe -n 8 ./halotest_unordered 2)
+    add_test(NAME unordered_gpu_type_halo_test COMMAND mpirun --oversubscribe -n 8 ./halotest_unordered 3)
+
+    add_executable(halotest_ordered tests/halox_ordered.cpp src/cart3d.cpp)
+    target_link_libraries(halotest_ordered PRIVATE Kokkos::kokkos FiestaCore)
+    add_test(NAME ordered_host_copy_halo_test COMMAND mpirun --oversubscribe -n 8 ./halotest_ordered 1)
+    add_test(NAME ordered_gpu_aware_halo_test COMMAND mpirun --oversubscribe -n 8 ./halotest_ordered 2)
+endif()
