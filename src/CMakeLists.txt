@@ -18,6 +18,7 @@ add_executable(fiesta ${FIESTA_SOURCES})
 target_link_libraries(FiestaCore
                       Kokkos::kokkos
                       ${HDF5_C_LIBRARIES}
+                      #HDF5::HDF5
                       ${LUA_LIBRARIES}
                       fmt::fmt
 )
@@ -38,23 +39,6 @@ target_compile_definitions(FiestaCore PUBLIC  FIESTA_BTIME="${BUILD_TIME}")
 set(DEV_MACRO "HAVE_${DEVICE}")
 target_compile_definitions(fiesta     PRIVATE ${DEV_MACRO})
 target_compile_definitions(FiestaCore PUBLIC  ${DEV_MACRO})
-
-#if(Fiesta_CUDA)
-#    target_compile_definitions(fiesta     PRIVATE HAVE_CUDA)
-#    target_compile_definitions(FiestaCore PUBLIC  HAVE_CUDA)
-#endif()
-#if(Fiesta_HIP)
-#    target_compile_definitions(fiesta     PRIVATE HAVE_HIP)
-#    target_compile_definitions(FiestaCore PUBLIC  HAVE_HIP)
-#endif()
-#if(Fiesta_OPENMP)
-#    target_compile_definitions(fiesta     PRIVATE HAVE_OPENMP)
-#    target_compile_definitions(FiestaCore PUBLIC  HAVE_OPENMP)
-#endif()
-#if(Fiesta_SERIAL)
-#    target_compile_definitions(fiesta     PRIVATE HAVE_SERIAL)
-#    target_compile_definitions(FiestaCore PUBLIC  HAVE_SERIAL)
-#endif()
 
 if(Fiesta_NO_MPI)
     target_compile_definitions(fiesta     PRIVATE HAVE_NOMPI)
