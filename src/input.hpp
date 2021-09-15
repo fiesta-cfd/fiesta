@@ -93,6 +93,7 @@ struct inputConfig {
   double *g_vec;
   double dt, dx, dy, dz;
   int xProcs, yProcs, zProcs, numProcs;
+  int proc[26];
   int xPlus, yPlus, zPlus;
   int xMinus, yMinus, zMinus;
   int rank;

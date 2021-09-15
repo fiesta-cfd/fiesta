@@ -96,14 +96,23 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
 //
 void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
 #ifdef HAVE_MPI
-  if (cf.mpiScheme == 1)
-    cf.m = std::make_shared<copyHaloExchange>(cf,f->var);
-  else if (cf.mpiScheme == 2)
-    cf.m = std::make_shared<packedHaloExchange>(cf,f->var);
-  else if (cf.mpiScheme == 3)
-    cf.m = std::make_shared<directHaloExchange>(cf,f->var);
-  else if (cf.mpiScheme == 4)
-    cf.m = std::make_shared<orderedHaloExchange>(cf,f->var);
+  if (cf.visc || cf.ceq){
+    if (cf.mpiScheme == 1)
+      cf.m = std::make_shared<orderedHaloExchange>(cf,f->var);
+    else if (cf.mpiScheme == 2)
+      cf.m = std::make_shared<orderedHostHaloExchange>(cf,f->var);
+    else{
+      Fiesta::Log::error("Invalid MPI type.  Only 'gpu-aware' and 'host' are available when viscosity or c-equations are enabled.");
+      exit(EXIT_FAILURE);
+    }
+  }else{
+    if (cf.mpiScheme == 1)
+      cf.m = std::make_shared<copyHaloExchange>(cf,f->var);
+    else if (cf.mpiScheme == 2)
+      cf.m = std::make_shared<packedHaloExchange>(cf,f->var);
+    else if (cf.mpiScheme == 3)
+      cf.m = std::make_shared<directHaloExchange>(cf,f->var);
+  }
 #endif
   //cf.w = std::make_shared<hdfWriter>(cf,f);
 

@@ -172,18 +172,18 @@ void applyBCs(struct inputConfig cf, class rk_func *f) {
   cf.m->haloExchange();
   f->timers["halo"].accumulate();
   f->timers["bc"].reset();
-  if (cf.xPer == 1 && cf.xProcs==1)
-    Kokkos::parallel_for(
-        policy_bl({0, 0, 0}, {cf.ngj, cf.ngk, cf.nvt}),
-        bc_xPer(cf.ng, cf.nci, f->var));
-  if (cf.yPer == 1 && cf.yProcs==1)
-    Kokkos::parallel_for(
-        policy_bl({0, 0, 0}, {cf.ngi, cf.ngk, cf.nvt}),
-        bc_yPer(cf.ng, cf.ncj, f->var));
-  if (cf.ndim == 3 && cf.zPer == 1 && cf.zProcs==1)
-    Kokkos::parallel_for(
-        policy_bl({0, 0, 0}, {cf.ngi, cf.ngj, cf.nvt}),
-        bc_zPer(cf.ng, cf.nck, f->var));
+//  if (cf.xPer == 1 && cf.xProcs==1)
+//    Kokkos::parallel_for(
+//        policy_bl({0, 0, 0}, {cf.ngj, cf.ngk, cf.nvt}),
+//        bc_xPer(cf.ng, cf.nci, f->var));
+//  if (cf.yPer == 1 && cf.yProcs==1)
+//    Kokkos::parallel_for(
+//        policy_bl({0, 0, 0}, {cf.ngi, cf.ngk, cf.nvt}),
+//        bc_yPer(cf.ng, cf.ncj, f->var));
+//  if (cf.ndim == 3 && cf.zPer == 1 && cf.zProcs==1)
+//    Kokkos::parallel_for(
+//        policy_bl({0, 0, 0}, {cf.ngi, cf.ngj, cf.nvt}),
+//        bc_zPer(cf.ng, cf.nck, f->var));
 #else
   f->timers["bc"].reset();
   if (cf.xPer == 1)

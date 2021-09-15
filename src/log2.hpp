@@ -52,6 +52,14 @@ namespace Fiesta {
         fmt::vprint(format,fmt::make_args_checked<Args...>(format,args...));
       }
     }
+
+    template<typename... Args> inline
+    void logRank(int ra, Colour color, std::string type, std::string logformat, Args&&... args){
+      if (rank==ra){
+        std::string format = fmt::format("{}[{: >12.5f}] {: >7} <{}>(: {}{}\n",(*c)(color),timer->seconds(),type,rank,logformat,(*c)(reset));
+        fmt::vprint(format,fmt::make_args_checked<Args...>(format,args...));
+      }
+    }
     
     template<typename... Args> inline
     void logAll(Colour color, std::string type, std::string logformat, Args&&... args){
@@ -99,6 +107,11 @@ namespace Fiesta {
     template<typename... Args> inline
     void debug(string format, Args&&... args) {
       if (verbosity>=5) log(magenta,"Debug",format,args...);
+    }
+
+    template<typename... Args> inline
+    void debugRank(int ra, string format, Args&&... args) {
+      if (verbosity>=5) logRank(ra,magenta,"Debug",format,args...);
     }
     
     template<typename... Args> inline

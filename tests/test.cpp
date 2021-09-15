@@ -26,9 +26,9 @@ rk_func * initTests(struct inputConfig& cf){
   cf.nj=4;
   cf.nk=4;
   cf.ng=3;
-  //cf.xPer=0;
-  //cf.yPer=0;
-  //cf.zPer=0;
+  cf.xPer=0;
+  cf.yPer=0;
+  cf.zPer=0;
   cf.nvt=5;
   cf.nv=5;
 
@@ -66,6 +66,7 @@ rk_func * initTests(struct inputConfig& cf){
   int temp_rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &temp_rank);
   Fiesta::Log::Logger(5,0,temp_rank);
+  Fiesta::Log::debug("TEST HAVE MPI");
 #else
   Fiesta::Log::Logger(5,0,0);
 #endif
@@ -73,6 +74,7 @@ rk_func * initTests(struct inputConfig& cf){
 
   Fiesta::Log::debug("AT A");
 #ifdef HAVE_MPI
+  Fiesta::Log::debug("TEST MPI INIT");
   mpi_init(cf);
 #endif
 
@@ -101,6 +103,7 @@ rk_func * initTests(struct inputConfig& cf){
 }
 
 TEST_CASE( "Outflow BC Test", "[outflow_bc]" ) {
+  std::cout << "BEGIN TEST INIT\n";
   struct inputConfig cf;
   cf.xPer=0;
   cf.yPer=0;
@@ -166,6 +169,7 @@ TEST_CASE( "Outflow BC Test", "[outflow_bc]" ) {
 }
 
 TEST_CASE( "Refelctive BC Test", "[reflective_bc]" ) {
+  std::cout << "BEGIN TEST INIT\n";
   struct inputConfig cf;
   cf.xPer=0;
   cf.yPer=0;
@@ -230,6 +234,7 @@ TEST_CASE( "Refelctive BC Test", "[reflective_bc]" ) {
 }
 
 TEST_CASE( "Hydrostatic BC Test", "[hydrostatic_bc]" ) {
+  std::cout << "BEGIN TEST INIT\n";
   {
   struct inputConfig cf;
   cf.xPer=0;
@@ -320,6 +325,7 @@ TEST_CASE( "Hydrostatic BC Test", "[hydrostatic_bc]" ) {
 }
 
 TEST_CASE( "Periodic BC Test", "[periodic_bc]" ) {
+  std::cout << "BEGIN TEST INIT\n";
   {
   struct inputConfig cf;
   cf.ndim=3;
@@ -365,11 +371,13 @@ TEST_CASE( "Periodic BC Test", "[periodic_bc]" ) {
   Kokkos::InitArguments kokkosArgs;
   kokkosArgs.ndevices = 1;
 #ifdef HAVE_MPI
+  std::cout << "TEST HAVE MPI\n";
   MPI_Init(NULL,NULL);
 #endif
   Kokkos::initialize(kokkosArgs);
 
 #ifdef HAVE_MPI
+  std::cout << "DOING MPI_INIT\n";
   mpi_init(cf);
 #endif
 
@@ -379,16 +387,7 @@ TEST_CASE( "Periodic BC Test", "[periodic_bc]" ) {
 
 #ifdef HAVE_MPI
   cf.mpiScheme=1;
-  //cf.m = std::make_shared<mpiBuffers>(cf);
-  if (cf.mpiScheme == 1)
-    //cf.m = new copyHaloExchange(cf, f->var);
-    cf.m = std::make_shared<copyHaloExchange>(cf,f->var);
-  else if (cf.mpiScheme == 2)
-    //cf.m = new packedHaloExchange(cf, f->var);
-    cf.m = std::make_shared<packedHaloExchange>(cf,f->var);
-  else if (cf.mpiScheme == 3)
-    //cf.m = new directHaloExchange(cf, f->var);
-    cf.m = std::make_shared<directHaloExchange>(cf,f->var);
+  cf.m = std::make_shared<orderedHostHaloExchange>(cf,f->var);
 #endif
 
   FS4DH varH = Kokkos::create_mirror_view(f->var);
