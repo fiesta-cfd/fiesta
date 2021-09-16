@@ -163,9 +163,9 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   L.get({"advection_scheme"}, scheme, std::string("weno5"));
   L.get({"grid","type"},   grid, std::string("cartesian"));
 
-  vector<double> dx;
+  //vector<double> dx;
   //L.getArray("dx",dx,cf.ndim);
-  L.get({"grid","dx"},dx,cf.ndim);
+  L.get({"grid","dx"},cf.dxvec,cf.ndim);
 
   vector<size_t> ni;
   //L.getArray("ni",ni,cf.ndim);
@@ -239,10 +239,10 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   }
   if (grid.compare("cartesian") == 0) {
     cf.grid = 0;
-    cf.dx=dx[0];
-    cf.dy=dx[1];
+    cf.dx=cf.dxvec[0];
+    cf.dy=cf.dxvec[1];
     if (cf.ndim == 3)
-      cf.dz=dx[2];
+      cf.dz=cf.dxvec[2];
   }
   if (grid.compare("terrain") == 0) {
     if (cf.ndim == 3){

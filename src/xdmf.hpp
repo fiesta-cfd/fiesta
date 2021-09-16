@@ -27,6 +27,6 @@
 
 using namespace std;
 void writeXMFDataItem(FILE*, string, int, vector<int> &);
-void writeXMF(string, string, double, int, size_t*, int, bool, vector<string>, vector<string>);
+void writeXMF(string, string, int, double, int, size_t*, vector<double>, vector<double>, int, bool, vector<string>, vector<string>);
 
 #endif
