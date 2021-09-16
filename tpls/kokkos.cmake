@@ -18,7 +18,10 @@ if (Fiesta_BUILD_KOKKOS)
     FetchContent_Declare(kokkos
         GIT_REPOSITORY https://github.com/kokkos/kokkos.git
         GIT_TAG 3.4.01
-     )
+        )
+
+    set(BUILD_TESTING OFF CACHE BOOL "")
+    set(Kokkos_CXX_STANDARD 17 STRING "")
     if (Fiesta_CUDA)
         set(Kokkos_ENABLE_CUDA ON CACHE BOOL "")
         set(Kokkos_ENABLE_CUDA_LAMBDA ON CACHE BOOL "")
