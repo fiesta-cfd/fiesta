@@ -1,3 +1,6 @@
+include(CTest)
+enable_testing()
+
 add_subdirectory(catch2)
 add_executable(tests tests/test.cpp src/cart3d.cpp)
 if (NOT Fiesta_NO_MPI)
@@ -5,7 +8,6 @@ if (NOT Fiesta_NO_MPI)
 endif()
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain Kokkos::kokkos FiestaCore)
 
-include(CTest)
 include(catch2/extras/Catch.cmake)
 catch_discover_tests(tests)
 

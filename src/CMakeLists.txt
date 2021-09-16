@@ -17,8 +17,8 @@ add_executable(fiesta ${FIESTA_SOURCES})
 #Link libraries
 target_link_libraries(FiestaCore
                       Kokkos::kokkos
-                      ${HDF5_C_LIBRARIES}
-                      #HDF5::HDF5
+                      #${HDF5_C_LIBRARIES}
+                      HDF5::HDF5
                       ${LUA_LIBRARIES}
                       fmt::fmt
 )

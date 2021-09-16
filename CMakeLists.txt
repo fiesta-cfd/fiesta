@@ -102,9 +102,9 @@ if (NOT Fiesta_NO_MPI)
     find_package(MPI QUIET REQUIRED)
 endif()
 include(tpls/kokkos.cmake)
-include(tpls/hdf5.cmake)
 include(tpls/lua.cmake)
 include(tpls/fmt.cmake)
+include(tpls/hdf5.cmake)
 
 #import FiestaCore and fiesta targetrs
 include_directories(src)
