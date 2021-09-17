@@ -39,6 +39,7 @@
 #include "gen3d.hpp"
 
 int main(int argc, char *argv[]) {
+  int exit_value=0;
   {
     // read input file and initialize configuration
     fsconf cf;
@@ -93,8 +94,10 @@ int main(int argc, char *argv[]) {
 
       Fiesta::checkIO(cf,f,t,cf.time,testblocks,myblock);
 
-      if (cf.exitFlag==1)
+      if (cf.exitFlag==1){
+        exit_value=1;
         break;
+      }
 
       f->preStep();
       rkAdvance(cf,f);
@@ -117,5 +120,5 @@ int main(int argc, char *argv[]) {
     Fiesta::reportTimers(cf,f);
   }
   Fiesta::finalize();
-  return 0;
+  return exit_value;
 }
