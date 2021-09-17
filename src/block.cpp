@@ -91,6 +91,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
     lElems*=lExt[i];
     lElemsG*=lExtG[i];
     gOrigin.push_back(gStart[i]*cf.dxvec[i]);
+    iodx.push_back(cf.dxvec[i]);
   }
 
   // allocate pack buffers
@@ -255,6 +256,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
       gExtG[i]=gMin;
 
       gOrigin.push_back(gStart[i]*cf.dxvec[i]);
+      iodx.push_back(cf.dxvec[i]*stride[i]);
     }
 #endif
   }
@@ -347,7 +349,7 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
 
   //Fiesta::Log::message("[{}] Writing '{}'",cf.t,xmfPath);
   if (myColor==1){
-    writeXMF(xmfPath, hdfName, cf.grid, time, cf.ndim, gExt.data(),gOrigin,cf.dxvec, cf.nvt, writeVarx,f->varNames,f->varxNames);
+    writeXMF(xmfPath, hdfName, cf.grid, time, cf.ndim, gExt.data(),gOrigin,iodx, cf.nvt, writeVarx,f->varNames,f->varxNames);
   }
 }
 

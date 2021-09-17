@@ -51,6 +51,7 @@ class blockWriter {
     std::vector<size_t> gExt;    // global extent
     std::vector<size_t> gExtG;   // global grid extent
     std::vector<size_t> stride;  // slice stride
+    std::vector<double> iodx;
 
     size_t freq;    // block write frequency
 
