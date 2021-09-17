@@ -292,7 +292,7 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
       }
       lua_pop(L,1);
 
-      blocks.push_back(blockWriter<float>(cf,f,myname,mypath,avg,frq,start,limit,stride));
+      blocks.push_back(blockWriter<float>(cf,f,myname,mypath,avg,frq,start,limit,stride,true));
       lua_pop(L,1);
     }
   }else{

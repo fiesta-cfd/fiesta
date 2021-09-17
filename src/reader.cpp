@@ -30,12 +30,12 @@
 #include "fiesta.hpp"
 
 void readRestart(struct inputConfig &cf, rk_func *f) {
-  if (cf.rank==0){
+//  if (cf.rank==0){
     if (!std::filesystem::exists(cf.restartName)){
       Fiesta::Log::error("Restart file '{}' does not exist.",cf.restartName);
       exit(EXIT_FAILURE);
     }
-  }
+//  }
 
   h5Writer<double> writer;
   writer.openRead(cf.restartName);
@@ -43,22 +43,25 @@ void readRestart(struct inputConfig &cf, rk_func *f) {
   size_t idx;
 
   auto readV = (double *)malloc(cf.ni * cf.nj * cf.nk * sizeof(double));
-  auto gridH = Kokkos::create_mirror_view(f->grid);
   auto varH = Kokkos::create_mirror_view(f->var);
 
   // read grid
-  for (int v=0; v<cf.ndim; ++v){
-    std::stringstream pathString;
-    pathString << "/Grid/Dimension" << v;
-    writer.read(pathString.str(), cf.ndim, cf.globalGridDims, cf.localGridDims, cf.subdomainOffset, readV);
-    for (int i = 0; i < cf.ni; ++i) {
-      for (int j = 0; j < cf.nj; ++j) {
-        for (int k = 0; k < cf.nk; ++k) {
-          idx = (cf.ni * cf.nj) * k + cf.ni * j + i;
-          gridH(i, j, k, v) = readV[idx];
+  if (cf.grid==1){
+    auto gridH = Kokkos::create_mirror_view(f->grid);
+    for (int v=0; v<cf.ndim; ++v){
+      std::stringstream pathString;
+      pathString << "/Grid/Dimension" << v;
+      writer.read(pathString.str(), cf.ndim, cf.globalGridDims, cf.localGridDims, cf.subdomainOffset, readV);
+      for (int i = 0; i < cf.ni; ++i) {
+        for (int j = 0; j < cf.nj; ++j) {
+          for (int k = 0; k < cf.nk; ++k) {
+            idx = (cf.ni * cf.nj) * k + cf.ni * j + i;
+            gridH(i, j, k, v) = readV[idx];
+          }
         }
       }
     }
+    Kokkos::deep_copy(f->grid,gridH);
   }
 
   // read cell data
@@ -81,6 +84,7 @@ void readRestart(struct inputConfig &cf, rk_func *f) {
       }
     }
   }
+  Kokkos::deep_copy(f->var,varH);
 
   std::string temp_title;
   int restart_version;
@@ -107,8 +111,6 @@ void readRestart(struct inputConfig &cf, rk_func *f) {
   Fiesta::Log::message("Restart Properties: t={} time={:.2g}",cf.tstart,cf.time);
   
   writer.close();
-  Kokkos::deep_copy(f->grid,gridH);
-  Kokkos::deep_copy(f->var,varH);
 }
 
 void readTerrain(struct inputConfig &cf, rk_func *f) {

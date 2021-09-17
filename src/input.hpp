@@ -92,6 +92,9 @@ struct inputConfig {
   double rhoRef;
   double *g_vec;
   double dt, dx, dy, dz;
+  std::vector<double> dxvec;
+  bool autoRestart;
+  std::string autoRestartName;
   int xProcs, yProcs, zProcs, numProcs;
   int proc[26];
   int xPlus, yPlus, zPlus;

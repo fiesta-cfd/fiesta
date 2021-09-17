@@ -40,8 +40,6 @@
 #include "buoyancy.hpp"
 
 cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
-  // Allocate all device variables here
-
   size_t memEstimate = 3*cf.nvt+6+3+6;
   if (cf.visc==1) memEstimate += 3+27;
   if (cf.ceq==1) memEstimate += 5+3+3;
@@ -54,7 +52,7 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   Fiesta::Log::message("Minimum device memory estimate: {:.2f}MiB",memEstimateMB);
   Fiesta::Log::message("Minimum device memory estimate: {}b",memEstimate);
 
-  grid    = FS4D("coords",    cf.ni,  cf.nj,  cf.nk,  3);      // Grid Coords
+  //grid    = FS4D("coords",    cf.ni,  cf.nj,  cf.nk,  3);      // Grid Coords
 
   var     = FS4D("var",       cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Primary Vars
   tmp1    = FS4D( "tmp1",     cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Temp Vars

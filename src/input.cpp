@@ -31,6 +31,7 @@
 #include <sys/stat.h>
 #include "log2.hpp"
 #include "bc.hpp"
+#include <filesystem>
 
 struct commandArgs getCommandlineOptions(int argc, char **argv){
   // create command argumet structure
@@ -157,15 +158,28 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   L.get({"restart","name"},    cf.restartName, std::string("restart-0000000.h5"));
   L.get({"restart","path"},    cf.pathName, std::string("."));
   L.get({"restart","reset"}, cf.restartReset, false);
+  L.get({"restart","auto"}, cf.autoRestart, false);
+  L.get({"restart","auto_name"}, cf.autoRestartName, std::string("restart-auto"));
+  if(cf.autoRestart){
+    cf.restart=true;
+    cf.restartName=format("{}/{}.h5",cf.pathName,cf.autoRestartName);
+    Fiesta::Log::debug("Auto Restart Name: '{}'",cf.restartName);
+    if (!std::filesystem::exists(cf.restartName)){
+      Fiesta::Log::warning("Auto Restart '{}' not found. Initiating fresh run.",cf.autoRestartName);
+      cf.restart=false;
+    }
+  }else{
+    cf.autoRestartName="restart";
+  }
 
   std::string scheme, grid, mpi;
   L.get({"mpi","type"}, mpi, std::string("host"));
   L.get({"advection_scheme"}, scheme, std::string("weno5"));
   L.get({"grid","type"},   grid, std::string("cartesian"));
 
-  vector<double> dx;
+  //vector<double> dx;
   //L.getArray("dx",dx,cf.ndim);
-  L.get({"grid","dx"},dx,cf.ndim);
+  L.get({"grid","dx"},cf.dxvec,cf.ndim);
 
   vector<size_t> ni;
   //L.getArray("ni",ni,cf.ndim);
@@ -239,10 +253,10 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   }
   if (grid.compare("cartesian") == 0) {
     cf.grid = 0;
-    cf.dx=dx[0];
-    cf.dy=dx[1];
+    cf.dx=cf.dxvec[0];
+    cf.dy=cf.dxvec[1];
     if (cf.ndim == 3)
-      cf.dz=dx[2];
+      cf.dz=cf.dxvec[2];
   }
   if (grid.compare("terrain") == 0) {
     if (cf.ndim == 3){
@@ -383,31 +397,33 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
 #ifndef HAVE_MPI
   cf.globalGridDims.push_back(cf.glbl_ni);
   cf.globalGridDims.push_back(cf.glbl_nj);
-  cf.globalGridDims.push_back(cf.glbl_nk);
   cf.globalCellDims.push_back(cf.glbl_nci);
   cf.globalCellDims.push_back(cf.glbl_ncj);
-  cf.globalCellDims.push_back(cf.glbl_nck);
   cf.localGridDims.push_back(cf.ni);
   cf.localGridDims.push_back(cf.nj);
-  cf.localGridDims.push_back(cf.nk);
   cf.localCellDims.push_back(cf.nci);
   cf.localCellDims.push_back(cf.ncj);
-  cf.localCellDims.push_back(cf.nck);
   cf.subdomainOffset.push_back(cf.iStart);
   cf.subdomainOffset.push_back(cf.jStart);
-  cf.subdomainOffset.push_back(cf.kStart);
+  if(cf.ndim==3){
+    cf.globalGridDims.push_back(cf.glbl_nk);
+    cf.globalCellDims.push_back(cf.glbl_nck);
+    cf.localGridDims.push_back(cf.nk);
+    cf.localCellDims.push_back(cf.nck);
+    cf.subdomainOffset.push_back(cf.kStart);
+  }
 #endif
 
   //return cf;
 }
 
 int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
-  //int ii,jj,kk;
   double x,y,z;
   FS4DH hostV = Kokkos::create_mirror_view(deviceV);
   FS4DH hostG = Kokkos::create_mirror_view(deviceG);
-
-  Kokkos::deep_copy(hostG,deviceG);
+  if(cf.grid!=0){
+    Kokkos::deep_copy(hostG,deviceG);
+  }
 
   luaReader L(cf.inputFname,"fiesta");
 
@@ -416,21 +432,29 @@ int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
       for (int k = cf.ng; k < cf.nck + cf.ng; ++k) {
         for (int j = cf.ng; j < cf.ncj + cf.ng; ++j) {
           for (int i = cf.ng; i < cf.nci + cf.ng; ++i) {
-            x = 0;
-            y = 0;
-            z = 0;
-            for (int ix=0; ix<2; ++ix){
-              for (int iy=0; iy<2; ++iy){
-                for (int iz=0; iz<2; ++iz){
-                  x += hostG(i+ix-cf.ng,j+iy-cf.ng,k+iz-cf.ng,0);
-                  y += hostG(i+ix-cf.ng,j+iy-cf.ng,k+iz-cf.ng,1);
-                  z += hostG(i+ix-cf.ng,j+iy-cf.ng,k+iz-cf.ng,2);
+            if(cf.grid==0){
+              // compute cell center coordintes for uniform grids
+              x=cf.dx*(i-cf.ng) + 0.5*cf.dx;
+              y=cf.dy*(j-cf.ng) + 0.5*cf.dy;
+              z=cf.dz*(k-cf.ng) + 0.5*cf.dz;
+            }else{
+              // average cell nodes to compute cell center coordinate for non-uniform grids
+              x = 0;
+              y = 0;
+              z = 0;
+              for (int ix=0; ix<2; ++ix){
+                for (int iy=0; iy<2; ++iy){
+                  for (int iz=0; iz<2; ++iz){
+                    x += hostG(i+ix-cf.ng,j+iy-cf.ng,k+iz-cf.ng,0);
+                    y += hostG(i+ix-cf.ng,j+iy-cf.ng,k+iz-cf.ng,1);
+                    z += hostG(i+ix-cf.ng,j+iy-cf.ng,k+iz-cf.ng,2);
+                  }
                 }
               }
+              x = x/8.0;
+              y = y/8.0;
+              z = z/8.0;
             }
-            x = x/8.0;
-            y = y/8.0;
-            z = z/8.0;
             hostV(i, j, k, v) = L.call("initial_conditions",4,x,y,z,(double)v);
           }
         }
@@ -438,16 +462,23 @@ int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
     } else {
       for (int j = cf.ng; j < cf.ncj + cf.ng; ++j) {
         for (int i = cf.ng; i < cf.nci + cf.ng; ++i) {
-            x = 0;
-            y = 0;
-            for (int ix=0; ix<2; ++ix){
-              for (int iy=0; iy<2; ++iy){
-                x += hostG(i+ix-cf.ng,j+iy-cf.ng,0,0);
-                y += hostG(i+ix-cf.ng,j+iy-cf.ng,0,1);
+            if(cf.grid==0){
+              // compute cell center coordintes for uniform grids
+              x=cf.dx*(i-cf.ng) + 0.5*cf.dx;
+              y=cf.dy*(j-cf.ng) + 0.5*cf.dy;
+            }else{
+              // average cell nodes to compute cell center coordinate for non-uniform grids
+              x = 0;
+              y = 0;
+              for (int ix=0; ix<2; ++ix){
+                for (int iy=0; iy<2; ++iy){
+                  x += hostG(i+ix-cf.ng,j+iy-cf.ng,0,0);
+                  y += hostG(i+ix-cf.ng,j+iy-cf.ng,0,1);
+                }
               }
+              x = x/4.0;
+              y = y/4.0;
             }
-            x = x/4.0;
-            y = y/4.0;
             hostV(i, j, 0, v) = L.call("initial_conditions",4,x,y,0.0,(double)v);
         }
       }
@@ -494,17 +525,6 @@ int loadGrid(struct inputConfig cf, FS4D &deviceV) {
     Kokkos::deep_copy(deviceV, hostV);
   } else if (cf.grid == 2) {
     cf.w->readTerrain(cf,deviceV);
-  } else {
-    for (int k = 0; k < cf.nk; ++k) {
-      for (int j = 0; j < cf.nj; ++j) {
-        for (int i = 0; i < cf.ni; ++i) {
-          hostV(i, j, k, 0) = (cf.iStart + i) * cf.dx;
-          hostV(i, j, k, 1) = (cf.jStart + j) * cf.dy;
-          hostV(i, j, k, 2) = (cf.kStart + k) * cf.dz;
-        }
-      }
-    }
-    Kokkos::deep_copy(deviceV, hostV);
   }
 
 

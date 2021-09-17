@@ -50,8 +50,8 @@ template <typename T>
 blockWriter<T>::blockWriter(){}
 
 template <typename T>
-blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, string path_, bool avg_, size_t frq_):
-  name(name_),path(path_),avg(avg_),freq(frq_){
+blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, string path_, bool avg_, size_t frq_, bool appStep_):
+  name(name_),path(path_),avg(avg_),freq(frq_),appStep(appStep_){
 
   if (cf.rank==0){
     if (!std::filesystem::exists(path)){
@@ -90,6 +90,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
 
     lElems*=lExt[i];
     lElemsG*=lExtG[i];
+    gOrigin.push_back(gStart[i]*cf.dxvec[i]);
   }
 
   // allocate pack buffers
@@ -104,8 +105,8 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
 
 template <typename T>
 blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, string path_, bool avg_, size_t frq_,
-  vector<size_t> start_, vector<size_t> end_, vector<size_t> stride_):
-  name(name_),path(path_),avg(avg_),freq(frq_),gStart(start_),gEnd(end_),stride(stride_){
+  vector<size_t> start_, vector<size_t> end_, vector<size_t> stride_, bool appStep_):
+  name(name_),path(path_),avg(avg_),freq(frq_),gStart(start_),gEnd(end_),stride(stride_),appStep(appStep_){
 
   for (int i=0; i<cf.ndim; ++i){
     if (gStart[i] > cf.globalCellDims[i]){
@@ -252,6 +253,8 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
 
       MPI_Allreduce(&gExtG[i],&gMin,1,MPI_INT,MPI_MIN,sliceComm);
       gExtG[i]=gMin;
+
+      gOrigin.push_back(gStart[i]*cf.dxvec[i]);
     }
 #endif
   }
@@ -268,8 +271,14 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
 
 template<typename T>
 void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double time) {
-  string baseFormat = format("{{}}-{{:0{}d}}",pad);
-  string blockBase = format(baseFormat,name,tdx);
+  string baseFormat,blockBase;
+  if(appStep){
+    baseFormat = format("{{}}-{{:0{}d}}",pad);
+    blockBase = format(baseFormat,name,tdx);
+  }else{
+    baseFormat = format("{{}}");
+    blockBase = format(baseFormat,name);
+  }
   string hdfName   = format("{}.h5",blockBase);
   string hdfPath   = format("{}/{}",path,hdfName);
   string xmfPath   = format("{}/{}.xmf",path,blockBase);
@@ -338,7 +347,7 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
 
   //Fiesta::Log::message("[{}] Writing '{}'",cf.t,xmfPath);
   if (myColor==1){
-    writeXMF(xmfPath, hdfName, time, cf.ndim, gExt.data(), cf.nvt, writeVarx,f->varNames,f->varxNames);
+    writeXMF(xmfPath, hdfName, cf.grid, time, cf.ndim, gExt.data(),gOrigin,cf.dxvec, cf.nvt, writeVarx,f->varNames,f->varxNames);
   }
 }
 

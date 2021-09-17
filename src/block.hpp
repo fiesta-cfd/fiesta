@@ -31,9 +31,9 @@ template <typename T>
 class blockWriter {
   public:
     blockWriter();
-    blockWriter(struct inputConfig&,rk_func*,std::string,std::string,bool,size_t);
+    blockWriter(struct inputConfig&,rk_func*,std::string,std::string,bool,size_t,bool);
     blockWriter(struct inputConfig&,rk_func*,std::string,std::string,bool,size_t,
-                                  std::vector<size_t>,std::vector<size_t>,std::vector<size_t>);
+                                  std::vector<size_t>,std::vector<size_t>,std::vector<size_t>,bool);
     void write(struct inputConfig cf, rk_func *f, int tdx, double time);
     size_t frq();
 
@@ -45,8 +45,9 @@ class blockWriter {
     std::vector<size_t> lExt;    // local extent
     std::vector<size_t> lExtG;   // local grid extent
     std::vector<size_t> lOffset; // local offset
-    std::vector<size_t> gStart;  // local starting index
-    std::vector<size_t> gEnd;    // local ending index
+    std::vector<double> gOrigin; // global origin of block
+    std::vector<size_t> gStart;  // global starting index
+    std::vector<size_t> gEnd;    // global ending index
     std::vector<size_t> gExt;    // global extent
     std::vector<size_t> gExtG;   // global grid extent
     std::vector<size_t> stride;  // slice stride
@@ -77,6 +78,8 @@ class blockWriter {
     std::string name;
     int pad;
     bool avg;
+
+    bool appStep;
 
     void write_h5(hid_t, std::string, int, std::vector<size_t>, std::vector<size_t>, std::vector<size_t>, std::vector<T>&);
 

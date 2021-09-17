@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
     // Initialize Simulation
     Fiesta::initializeSimulation(cf,f);
 
-    class blockWriter<double> myblock(cf, f, "restart", cf.pathName, false, cf.restart_freq);
+    class blockWriter<double> myblock(cf, f, cf.autoRestartName, cf.pathName, false, cf.restart_freq,!cf.autoRestart);
 
     std::vector<blockWriter<float> > testblocks;
     luaReader L(cf.inputFname,"fiesta");
