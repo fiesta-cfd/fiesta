@@ -106,7 +106,11 @@ void readRestart(struct inputConfig &cf, rk_func *f) {
     Fiesta::Log::message("Restart reset enabled, using index and time from input file.");
   }
 
-  cf.tend=cf.tstart+cf.nt;
+  if(cf.tinterval){
+    cf.tend=cf.tstart+cf.nt;
+  }else{
+    cf.nt=cf.tend-cf.tstart;
+  }
   cf.t=cf.tstart;
   Fiesta::Log::message("Restart Title: '{}'",temp_title);
   Fiesta::Log::message("Restart Properties: t={} time={:.2g}",cf.tstart,cf.time);

@@ -130,13 +130,24 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   // Required Parameters
   L.get({"title"}, cf.title);
 
-  L.get({"time","nt"},cf.nt);
+  L.get({"time","nt"},cf.nt,0);
   L.get({"time","dt"},cf.dt);
   L.get({"time","start_index"},   cf.tstart,  0);
   L.get({"time","start_time"},     cf.time,    0.0);
   // Calculate time indices
   cf.t = cf.tstart;
-  cf.tend = cf.tstart + cf.nt;
+  if(cf.nt==0){
+    cf.tinterval = false;
+    L.get({"time","tend"},cf.tend,0);
+    if(cf.tend==0){
+      Fiesta::Log::error("Must specify either 'fiesta.time.nt' or 'fiesta.time.tend'");
+      exit(EXIT_FAILURE);
+    }
+    cf.nt=cf.tend-cf.tstart;
+  }else{
+    cf.tinterval=true;
+    cf.tend = cf.tstart + cf.nt;
+  }
 
 
   // Defaultable Parameters
