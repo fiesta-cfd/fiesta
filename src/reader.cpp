@@ -30,12 +30,12 @@
 #include "fiesta.hpp"
 
 void readRestart(struct inputConfig &cf, rk_func *f) {
-//  if (cf.rank==0){
+  if (cf.rank==0){
     if (!std::filesystem::exists(cf.restartName)){
       Fiesta::Log::error("Restart file '{}' does not exist.",cf.restartName);
       exit(EXIT_FAILURE);
     }
-//  }
+  }
 
   h5Writer<double> writer;
   writer.openRead(cf.restartName);
@@ -107,6 +107,7 @@ void readRestart(struct inputConfig &cf, rk_func *f) {
   }
 
   cf.tend=cf.tstart+cf.nt;
+  cf.t=cf.tstart;
   Fiesta::Log::message("Restart Title: '{}'",temp_title);
   Fiesta::Log::message("Restart Properties: t={} time={:.2g}",cf.tstart,cf.time);
   

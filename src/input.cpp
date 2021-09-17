@@ -134,6 +134,9 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   L.get({"time","dt"},cf.dt);
   L.get({"time","start_index"},   cf.tstart,  0);
   L.get({"time","start_time"},     cf.time,    0.0);
+  // Calculate time indices
+  cf.t = cf.tstart;
+  cf.tend = cf.tstart + cf.nt;
 
 
   // Defaultable Parameters
@@ -154,7 +157,6 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   L.get({"terrain","name"}, cf.terrainName, std::string("terrain.h5"));
 
   L.get({"restart","enabled"}, cf.restart, false);
-  L.get({"restart","frequency"}, cf.restart_freq,0);
   L.get({"restart","name"},    cf.restartName, std::string("restart-0000000.h5"));
   L.get({"restart","path"},    cf.pathName, std::string("."));
   L.get({"restart","reset"}, cf.restartReset, false);
@@ -168,8 +170,10 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
       Fiesta::Log::warning("Auto Restart '{}' not found. Initiating fresh run.",cf.autoRestartName);
       cf.restart=false;
     }
+    L.get({"restart","frequency"}, cf.restart_freq,cf.tend);
   }else{
     cf.autoRestartName="restart";
+    L.get({"restart","frequency"}, cf.restart_freq,0);
   }
 
   std::string scheme, grid, mpi;
@@ -319,10 +323,6 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
     if (cf.ndim == 3)
       cf.dz = 1.0;
   }
-
-  // Calculate time indices
-  cf.t = cf.tstart;
-  cf.tend = cf.tstart + cf.nt;
 
 
   // Set defaults for 2d grids
