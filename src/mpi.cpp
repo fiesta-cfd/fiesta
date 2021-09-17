@@ -131,19 +131,21 @@ void mpi_init(struct inputConfig &cf){
   cf.zmp = coords[0];
   cf.globalGridDims.push_back(cf.glbl_ni);
   cf.globalGridDims.push_back(cf.glbl_nj);
-  cf.globalGridDims.push_back(cf.glbl_nk);
   cf.globalCellDims.push_back(cf.glbl_nci);
   cf.globalCellDims.push_back(cf.glbl_ncj);
-  cf.globalCellDims.push_back(cf.glbl_nck);
   cf.localGridDims.push_back(cf.ni);
   cf.localGridDims.push_back(cf.nj);
-  cf.localGridDims.push_back(cf.nk);
   cf.localCellDims.push_back(cf.nci);
   cf.localCellDims.push_back(cf.ncj);
-  cf.localCellDims.push_back(cf.nck);
   cf.subdomainOffset.push_back(cf.iStart);
   cf.subdomainOffset.push_back(cf.jStart);
-  cf.subdomainOffset.push_back(cf.kStart);
+  if(cf.ndim==3){
+    cf.globalGridDims.push_back(cf.glbl_nk);
+    cf.globalCellDims.push_back(cf.glbl_nck);
+    cf.localGridDims.push_back(cf.nk);
+    cf.localCellDims.push_back(cf.nck);
+    cf.subdomainOffset.push_back(cf.kStart);
+  }
 }
 
 void mpiHaloExchange::haloExchange(){

@@ -311,7 +311,7 @@ void h5Writer<T>::checkDataDimensions(hid_t filespace, int ndim, std::vector<hsi
   // check dimensions
   for (int d=0; d<ndim; ++d){
     if (dims[d] != dimsg[d]){
-      Fiesta::Log::error("Extents of restart file different than expected\n");
+      Fiesta::Log::error("Extents of restart file different than expected. (Got {} but expected {} in direction {}.)\n",dimsg[d],dims[d],d);
       exit (EXIT_FAILURE);
     }
   }

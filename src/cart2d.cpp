@@ -28,7 +28,6 @@
 std::map<string,int> varxIds;
 
 cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
-  grid  = FS4D("coords", cf.ni, cf.nj, cf.nk, 3);          // Grid Coords
   var   = FS4D("var", cf.ngi, cf.ngj, cf.ngk, cf.nvt);     // Primary Variables
   tmp1  = FS4D("tmp1", cf.ngi, cf.ngj, cf.ngk, cf.nvt);    // Temporary Array
   dvar  = FS4D("dvar", cf.ngi, cf.ngj, cf.ngk, cf.nvt);    // RHS Output
