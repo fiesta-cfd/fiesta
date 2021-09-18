@@ -66,9 +66,9 @@ int main(int argc, char* argv[]) {
 
     Fiesta::Log::debug("AT C");
     if (cf.mpiScheme == 1)
-      cf.m = std::make_shared<orderedHaloExchange>(cf,f->var);
-    else if (cf.mpiScheme == 2)
       cf.m = std::make_shared<orderedHostHaloExchange>(cf,f->var);
+    else if (cf.mpiScheme == 2)
+      cf.m = std::make_shared<orderedHaloExchange>(cf,f->var);
 
     Fiesta::Log::debug("MPI Scheme: {}",cf.mpiScheme);
 
