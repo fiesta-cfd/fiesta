@@ -102,6 +102,5 @@ int main(){
   MPI_Finalize();
 #endif
 
-
   return 0;
 }

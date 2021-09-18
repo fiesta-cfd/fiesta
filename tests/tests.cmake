@@ -12,7 +12,7 @@ if (NOT Fiesta_NO_MPI)
     foreach(test_name IN LISTS TEST_NAMES)
         add_executable(${test_name} tests/${test_name}.cpp tests/common/test.cpp src/cart3d.cpp)
         target_link_libraries(${test_name} PRIVATE Kokkos::kokkos FiestaCore)
-        add_test(NAME ${test_name} COMMAND ./tests/${test_name})
+        add_test(NAME ${test_name} COMMAND mpirun -n 1 ./tests/${test_name})
         set_target_properties( ${test_name}
             PROPERTIES
             ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
