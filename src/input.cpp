@@ -445,9 +445,9 @@ int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
           for (int i = cf.ng; i < cf.nci + cf.ng; ++i) {
             if(cf.grid==0){
               // compute cell center coordintes for uniform grids
-              x=cf.dx*(i-cf.ng) + 0.5*cf.dx;
-              y=cf.dy*(j-cf.ng) + 0.5*cf.dy;
-              z=cf.dz*(k-cf.ng) + 0.5*cf.dz;
+              x=cf.dx*(i-cf.ng+cf.subdomainOffset[0]) + 0.5*cf.dx;
+              y=cf.dy*(j-cf.ng+cf.subdomainOffset[1]) + 0.5*cf.dy;
+              z=cf.dz*(k-cf.ng+cf.subdomainOffset[2]) + 0.5*cf.dz;
             }else{
               // average cell nodes to compute cell center coordinate for non-uniform grids
               x = 0;
@@ -475,8 +475,8 @@ int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
         for (int i = cf.ng; i < cf.nci + cf.ng; ++i) {
             if(cf.grid==0){
               // compute cell center coordintes for uniform grids
-              x=cf.dx*(i-cf.ng) + 0.5*cf.dx;
-              y=cf.dy*(j-cf.ng) + 0.5*cf.dy;
+              x=cf.dx*(i-cf.ng+cf.subdomainOffset[0]) + 0.5*cf.dx;
+              y=cf.dy*(j-cf.ng+cf.subdomainOffset[1]) + 0.5*cf.dy;
             }else{
               // average cell nodes to compute cell center coordinate for non-uniform grids
               x = 0;
