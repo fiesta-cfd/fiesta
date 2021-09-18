@@ -288,8 +288,11 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
   Fiesta::Log::message("[{}] Writing '{}'",cf.t,hdfPath);
   fiestaTimer writeTimer = fiestaTimer();
 
-  if (myColor==1){
+#ifdef HAVE_MPI
+  MPI_Barrier(cf.comm);
+#endif
 
+  if (myColor==1){
     h5Writer<T> writer;
 #ifdef HAVE_MPI
     writer.open(sliceComm, MPI_INFO_NULL, hdfPath);
@@ -320,20 +323,24 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
     }
     writer.closeGroup();
 
-    writer.openGroup("/Properties");
-    writer.writeAttribute("time_index",tdx);
-    writer.writeAttribute("time",time);
-    writer.writeAttribute("title",cf.title);
-    writer.writeAttribute("fiesta_version",std::string(FIESTA_VERSION));
-    writer.writeAttribute("fiesta_options",std::string(FIESTA_OPTIONS));
-    writer.writeAttribute("fiesta_btime",std::string(FIESTA_BTIME));
-    writer.writeAttribute("restart_file_version",FIESTA_RESTART_VERSION);
-    writer.closeGroup();
+    if(cf.rank==0){
+      writer.openGroup("/Properties");
+      writer.writeAttribute("time_index",tdx);
+      writer.writeAttribute("time",time);
+      writer.writeAttribute("title",cf.title);
+      writer.writeAttribute("fiesta_version",std::string(FIESTA_VERSION));
+      writer.writeAttribute("fiesta_options",std::string(FIESTA_OPTIONS));
+      writer.writeAttribute("fiesta_btime",std::string(FIESTA_BTIME));
+      writer.writeAttribute("restart_file_version",FIESTA_RESTART_VERSION);
+      writer.closeGroup();
+    }
 
     writer.close();
   }
 
-  //MPI_Barrier(cf.comm);
+#ifdef HAVE_MPI
+  MPI_Barrier(cf.comm);
+#endif
 
   if (cf.rank==0){
     filesystem::path hdfFilePath{hdfPath};
