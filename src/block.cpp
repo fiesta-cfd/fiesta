@@ -52,6 +52,8 @@ blockWriter<T>::blockWriter(){}
 template <typename T>
 blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, string path_, bool avg_, size_t frq_, bool appStep_):
   name(name_),path(path_),avg(avg_),freq(frq_),appStep(appStep_){
+  sliceRank=MPI_PROC_NULL;
+  sliceSize=0;
 
   if (cf.rank==0){
     if (!std::filesystem::exists(path)){
@@ -71,6 +73,8 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   slicePresent=true;
 #ifdef HAVE_MPI
   MPI_Comm_split(cf.comm,myColor,cf.rank,&sliceComm);
+  MPI_Comm_rank(sliceComm, &sliceRank);
+  MPI_Comm_size(sliceComm, &sliceSize);
 #endif
 
   for (int i=0; i<cf.ndim; ++i){
@@ -102,12 +106,18 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   gridH = Kokkos::create_mirror_view(f->grid);
   varH = Kokkos::create_mirror_view(f->var);
   varxH = Kokkos::create_mirror_view(f->varx);
+
+  if(sliceRank==0)
+    Fiesta::Log::debugAll("name={}, rank={}, size={}",name,sliceRank,sliceSize);
 }
 
 template <typename T>
 blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, string path_, bool avg_, size_t frq_,
   vector<size_t> start_, vector<size_t> end_, vector<size_t> stride_, bool appStep_):
   name(name_),path(path_),avg(avg_),freq(frq_),gStart(start_),gEnd(end_),stride(stride_),appStep(appStep_){
+
+  sliceRank=MPI_PROC_NULL;
+  sliceSize=0;
 
   for (int i=0; i<cf.ndim; ++i){
     if (gStart[i] > cf.globalCellDims[i]){
@@ -194,6 +204,8 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
 #endif
 
   if (slicePresent){
+    MPI_Comm_rank(sliceComm, &sliceRank);
+    MPI_Comm_size(sliceComm, &sliceSize);
     for (int i=0; i<cf.ndim; ++i){
       offsetDelta=gStart[i]-cf.subdomainOffset[i]; //location of left edge of slice wrt left edge of subdomain
       if(offsetDelta > 0) lStart[i]=offsetDelta;   //if slice starts inside subdomain, set local start to slice edge
@@ -269,6 +281,8 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   gridH = Kokkos::create_mirror_view(f->grid);
   varH = Kokkos::create_mirror_view(f->var);
   varxH = Kokkos::create_mirror_view(f->varx);
+  if(sliceRank==0)
+    Fiesta::Log::debugAll("name={}, rank={}, size={}",name,sliceRank,sliceSize);
 }
 
 template<typename T>
@@ -288,9 +302,9 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
   Fiesta::Log::message("[{}] Writing '{}'",cf.t,hdfPath);
   fiestaTimer writeTimer = fiestaTimer();
 
-#ifdef HAVE_MPI
-  MPI_Barrier(cf.comm);
-#endif
+//#ifdef HAVE_MPI
+//  MPI_Barrier(cf.comm);
+//#endif
 
   if (myColor==1){
     h5Writer<T> writer;
@@ -300,42 +314,52 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
     writer.open(hdfPath);
 #endif
 
-    writer.openGroup("/Grid");
-    Kokkos::deep_copy(gridH,f->grid);
-    for (int vn=0; vn<cf.ndim; ++vn){
-      dataPack(cf.ndim, 0, lStart, lEndG, lExtG, stride, gridData, gridH,vn,false);
-      writer.write(format("Dimension{}",vn), cf.ndim, gExtG, lExtG, lOffset, gridData); 
+    if (cf.grid > 0){
+      Fiesta::Log::debug("Writing Grid");
+      writer.openGroup("/Grid");
+      Kokkos::deep_copy(gridH,f->grid);
+      for (int vn=0; vn<cf.ndim; ++vn){
+        Fiesta::Log::debug("        Dim: {}",vn);
+        dataPack(cf.ndim, 0, lStart, lEndG, lExtG, stride, gridData, gridH,vn,false);
+        writer.write(format("Dimension{}",vn), cf.ndim, gExtG, lExtG, lOffset, gridData); 
+      }
+      writer.closeGroup();
     }
-    writer.closeGroup();
 
     writer.openGroup("/Solution");
+    Fiesta::Log::debug("Writing Solution");
     Kokkos::deep_copy(varH,f->var);
     for (int vn=0; vn<cf.nvt; ++vn){
+      Fiesta::Log::debug("        Var: {}",vn);
       dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varH,vn,avg);
       writer.write(format("Variable{:02d}",vn), cf.ndim, gExt, lExt, lOffset, varData); 
     }
     if (writeVarx){
+      Fiesta::Log::debug("Writing Extra Variables");
       Kokkos::deep_copy(varxH,f->varx);
       for (size_t vn = 0; vn < f->varxNames.size(); ++vn) {
+        Fiesta::Log::debug("        Var: {}",vn+cf.nvt);
         dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varxH,vn,avg);
         writer.write(format("Variable{:02d}",vn+cf.nvt), cf.ndim, gExt, lExt, lOffset, varData); 
       }
     }
     writer.closeGroup();
 
-    if(cf.rank==0){
-      writer.openGroup("/Properties");
-      writer.writeAttribute("time_index",tdx);
-      writer.writeAttribute("time",time);
-      writer.writeAttribute("title",cf.title);
-      writer.writeAttribute("fiesta_version",std::string(FIESTA_VERSION));
-      writer.writeAttribute("fiesta_options",std::string(FIESTA_OPTIONS));
-      writer.writeAttribute("fiesta_btime",std::string(FIESTA_BTIME));
-      writer.writeAttribute("restart_file_version",FIESTA_RESTART_VERSION);
-      writer.closeGroup();
-    }
+    Fiesta::Log::debug("Writing Properties");
+    writer.openGroup("/Properties");
+    writer.writeAttribute("time_index",tdx);
+    writer.writeAttribute("time",time);
+    writer.writeAttribute("title",cf.title);
+    writer.writeAttribute("fiesta_version",std::string(FIESTA_VERSION));
+    writer.writeAttribute("fiesta_options",std::string(FIESTA_OPTIONS));
+    writer.writeAttribute("fiesta_btime",std::string(FIESTA_BTIME));
+    writer.writeAttribute("restart_file_version",FIESTA_RESTART_VERSION);
+    writer.closeGroup();
 
     writer.close();
+//#ifdef HAVE_MPI
+//    MPI_Barrier(sliceComm);
+//#endif
   }
 
 #ifdef HAVE_MPI

@@ -240,7 +240,6 @@ BCType parseBC(std::string name){
   name.erase(std::remove(name.begin(),name.end(),'-'),name.end());
   name.erase(std::remove(name.begin(),name.end(),'_'),name.end());
   name.erase(std::remove(name.begin(),name.end(),' '),name.end());
-  Fiesta::Log::debugWarning("NAME: {} to {}",oldname,name);
 
   if(name.compare("outflow")==0)
     return BCType::outflow;

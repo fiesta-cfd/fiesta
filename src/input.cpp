@@ -292,8 +292,6 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   // Close Lua File
   L.close();
 
-  Fiesta::Log::debug("BCs: L{} R{} B{} T{} H{} F{}",cf.bcL,cf.bcR,cf.bcB,cf.bcT,cf.bcH,cf.bcF);
-
   // Save input file name
   cf.inputFname = cargs.fileName;
 

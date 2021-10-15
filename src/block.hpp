@@ -62,6 +62,8 @@ class blockWriter {
 
 #ifdef HAVE_MPI
     MPI_Comm sliceComm;
+    int sliceRank; 
+    int sliceSize;
 #endif
     int myColor;
 

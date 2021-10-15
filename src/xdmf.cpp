@@ -71,20 +71,20 @@ void writeXMF(string fname, string hname, int gridType, double time,
           fprintf(xmf, "     <Topology TopologyType=\"2DCORECTMesh\" Dimensions=\"%zu %zu\"/>\n", dims[0]+1, dims[1]+1);
           fprintf(xmf, "     <Geometry GeometryType=\"ORIGIN_DXDY\">\n");
           fprintf(xmf, "       <DataItem Name=\"Origin\" Dimensions=\"2\" NumberType=\"Float\" Precision=\"4\" Format=\"XML\">\n");
-          fprintf(xmf, "            %f %f\n",origin[0],origin[1]);
+          fprintf(xmf, "            %f %f\n",origin[1],origin[0]);
           fprintf(xmf, "       </DataItem>\n");
           fprintf(xmf, "       <DataItem Name=\"Spacing\" Dimensions=\"2\" NumberType=\"Float\" Precision=\"4\" Format=\"XML\">\n");
-          fprintf(xmf, "            %f %f\n",dx[0],dx[1]);
+          fprintf(xmf, "            %f %f\n",dx[1],dx[0]);
           fprintf(xmf, "       </DataItem>\n");
           fprintf(xmf, "     </Geometry>\n");
         }else{
           fprintf(xmf, "     <Topology TopologyType=\"3DCORECTMesh\" Dimensions=\"%zu %zu %zu\"/>\n", dims[0]+1, dims[1]+1, dims[2]+1);
           fprintf(xmf, "     <Geometry GeometryType=\"ORIGIN_DXDYDZ\">\n");
           fprintf(xmf, "       <DataItem Name=\"Origin\" Dimensions=\"3\" NumberType=\"Float\" Precision=\"4\" Format=\"XML\">\n");
-          fprintf(xmf, "            %f %f %f\n",origin[0],origin[1],origin[2]);
+          fprintf(xmf, "            %f %f %f\n",origin[2],origin[1],origin[0]);
           fprintf(xmf, "       </DataItem>\n");
           fprintf(xmf, "       <DataItem Name=\"Spacing\" Dimensions=\"3\" NumberType=\"Float\" Precision=\"4\" Format=\"XML\">\n");
-          fprintf(xmf, "            %f %f %f\n",dx[0],dx[1],dx[2]);
+          fprintf(xmf, "            %f %f %f\n",dx[2],dx[1],dx[0]);
           fprintf(xmf, "       </DataItem>\n");
           fprintf(xmf, "     </Geometry>\n");
         }

@@ -286,12 +286,12 @@ struct calculateCeqFaces {
         }
       }
     }
-    varx(i,j,k,12)=mFlux(0,0,i,j,k,2);
-    varx(i,j,k,13)=mFlux(1,1,i,j,k,2);
-    varx(i,j,k,14)=mFlux(2,2,i,j,k,2);
-    varx(i,j,k,15)=mFlux(1,2,i,j,k,2);
-    varx(i,j,k,16)=mFlux(0,2,i,j,k,2);
-    varx(i,j,k,17)=mFlux(0,1,i,j,k,2);
+    //varx(i,j,k,12)=mFlux(0,0,i,j,k,2);
+    //varx(i,j,k,13)=mFlux(1,1,i,j,k,2);
+    //varx(i,j,k,14)=mFlux(2,2,i,j,k,2);
+    //varx(i,j,k,15)=mFlux(1,2,i,j,k,2);
+    //varx(i,j,k,16)=mFlux(0,2,i,j,k,2);
+    //varx(i,j,k,17)=mFlux(0,1,i,j,k,2);
   }
 };
 
@@ -360,7 +360,7 @@ struct applyCeq {
         }
       }
       dvar(i,j,k,w) += diffu;
-      varx(i,j,k,9+w) = diffu;
+      //varx(i,j,k,9+w) = diffu;
     }
   }
 };

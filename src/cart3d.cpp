@@ -108,27 +108,27 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   varxNames.push_back("Pressure");  //3
   varxNames.push_back("Temperature");  //4
   varxNames.push_back("Total Density");  //5
-  //if (cf.noise){
-    varxNames.push_back("Noise_c");  //6
-    varxNames.push_back("Noise_I");  //7
-    varxNames.push_back("Noise_d");  //8
-  //}
-  //if (cf.ceq){
-    varxNames.push_back("dcu");  //9
-    varxNames.push_back("dcv");  //10
-    varxNames.push_back("dcw");  //11
-    varxNames.push_back("M11");  //12
-    varxNames.push_back("M22");  //13
-    varxNames.push_back("M33");  //14
-    varxNames.push_back("M23");  //15
-    varxNames.push_back("M13");  //16
-    varxNames.push_back("M12");  //17
-  //}
-  varxNames.push_back("d_adv_v");  //18
-  varxNames.push_back("d_adv_e");  //19
-  varxNames.push_back("d_press_v"); //20
-  varxNames.push_back("d_buoy_v");  //21
-  varxNames.push_back("d_buoy_e");  //22
+  // //if (cf.noise){
+  //   varxNames.push_back("Noise_c");  //6
+  //   varxNames.push_back("Noise_I");  //7
+  //   varxNames.push_back("Noise_d");  //8
+  // //}
+  // //if (cf.ceq){
+  //   varxNames.push_back("dcu");  //9
+  //   varxNames.push_back("dcv");  //10
+  //   varxNames.push_back("dcw");  //11
+  //   varxNames.push_back("M11");  //12
+  //   varxNames.push_back("M22");  //13
+  //   varxNames.push_back("M33");  //14
+  //   varxNames.push_back("M23");  //15
+  //   varxNames.push_back("M13");  //16
+  //   varxNames.push_back("M12");  //17
+  // //}
+  // varxNames.push_back("d_adv_v");  //18
+  // varxNames.push_back("d_adv_e");  //19
+  // varxNames.push_back("d_press_v"); //20
+  // varxNames.push_back("d_buoy_v");  //21
+  // varxNames.push_back("d_buoy_e");  //22
 
   // Create Secondary Variable Array
   varx = FS4D("varx",cf.ngi,cf.ngj,cf.ngk,varxNames.size());

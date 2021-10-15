@@ -287,7 +287,7 @@ struct applyCeq2D {
       diffu += (m(1,1,i,j,w)-m(1,1,i,j-1,w))/dy;
 
       dvar(i,j,0,w)+=diffu;
-      varx(i,j,0,5+w)=diffu;
+      //varx(i,j,0,5+w)=diffu;
     }
   }
 };

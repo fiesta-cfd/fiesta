@@ -118,14 +118,14 @@ struct detectNoise3D {
       
     } // end noise detected
 
-    if(v==1)
-    for (idx=-1;idx<2;++idx){
-      for (jdx=-1;jdx<2;++jdx){
-        for (kdx=-1;kdx<2;++kdx){
-          varx(i+idx,j+jdx,k+kdx,6)=c;
-        }
-      }
-    }
+    //if(v==1)
+    //for (idx=-1;idx<2;++idx){
+    //  for (jdx=-1;jdx<2;++jdx){
+    //    for (kdx=-1;kdx<2;++kdx){
+    //      varx(i+idx,j+jdx,k+kdx,6)=c;
+    //    }
+    //  }
+    //}
 
   }
 };
@@ -160,10 +160,10 @@ struct removeNoise3D {
     dnoise = dt*(dx*dx+dy*dy+dz*dz)*noise(i,j,k)*lap;
     var(i,j,k,v) += dnoise;
 
-    if(v==1){
-      varx(i,j,k,7) = noise(i,j,k);
-      varx(i,j,k,8) = dnoise;
-    }
+    //if(v==1){
+    //  varx(i,j,k,7) = noise(i,j,k);
+    //  varx(i,j,k,8) = dnoise;
+    //}
   }
 };
 
@@ -220,11 +220,11 @@ struct detectNoise2D {
               noise(i+idx,j+jdx)=1;
       }
     }
-    for (int idx=-1;idx<2;++idx)
-      for (int jdx=-1;jdx<2;++jdx){
-        varx(i+idx,j+jdx,0,7)=noise(i+idx,j+jdx);
-        varx(i+idx,j+jdx,0,8)=c;
-      }
+    //for (int idx=-1;idx<2;++idx)
+    //  for (int jdx=-1;jdx<2;++jdx){
+    //    varx(i+idx,j+jdx,0,7)=noise(i+idx,j+jdx);
+    //    varx(i+idx,j+jdx,0,8)=c;
+    //  }
   }
 };
 
@@ -256,7 +256,7 @@ struct removeNoise2D {
     double dvar = dt * (dx * dx + dy * dy) * noise(i, j) *
                        ((rgrad - lgrad) / dx + (tgrad - bgrad) / dy);
     var(i,j,0,v) += dvar;
-    varx(i,j,0,9) = dvar;
+    //varx(i,j,0,9) = dvar;
   }
 };
 #endif

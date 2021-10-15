@@ -65,7 +65,7 @@ struct applyPressureGradient3D {
     dvar(i, j, k, 1) = dvar(i, j, k, 1) - dyp;
     dvar(i, j, k, 2) = dvar(i, j, k, 2) - dzp;
 
-    varx(i,j,k,20) = -dyp;
+    //varx(i,j,k,20) = -dyp;
 
   }
 };

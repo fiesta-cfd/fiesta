@@ -40,8 +40,8 @@ struct computeBuoyancy3D {
       double f = -g * rhop;
       dvar(i, j, k, 1) += f;
       dvar(i, j, k, 3) += v * f;
-      varx(i,j,k,21) = f;
-      varx(i,j,k,22) = v*f;
+      //varx(i,j,k,21) = f;
+      //varx(i,j,k,22) = v*f;
     //}
   }
 };

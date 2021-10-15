@@ -53,10 +53,10 @@ struct advect3D {
                    (wenoy(i, j, k) - wenoy(i, j - 1, k)) +
                    (wenoz(i, j, k) - wenoz(i, j, k - 1)));
     dvar(i, j, k, v) = res;
-    if (v==1)
-      varx(i,j,k,18) = res;
-    if (v==3)
-      varx(i,j,k,19) = res;
+    //if (v==1)
+    //  varx(i,j,k,18) = res;
+    //if (v==3)
+    //  varx(i,j,k,19) = res;
   }
 };
 

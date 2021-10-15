@@ -41,6 +41,7 @@ void h5Writer<T>::open(MPI_Comm comm, MPI_Info info, std::string fname){
   H5Pset_fapl_mpio(pid, comm, info);
   file_id = H5Fcreate(fname.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, pid);
   H5Pclose(pid);
+  MPI_Barrier(comm);
 }
 #else
 template <typename T>

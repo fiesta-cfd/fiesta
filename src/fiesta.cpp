@@ -82,7 +82,6 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
   // perform domain decomposition
   Fiesta::Log::message("Initializing MPI Setup");
   mpi_init(cf);
-  Fiesta::Log::debugAll("Subdomain Dimensions=({},{},{}), Offset=({},{},{})",cf.nci,cf.ncj,cf.nck,cf.subdomainOffset[0],cf.subdomainOffset[1],cf.subdomainOffset[2]);
   MPI_Barrier(cf.comm);
 #endif
   Fiesta::Log::message("Printing Configuration");
