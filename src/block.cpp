@@ -109,6 +109,8 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
 
   if(sliceRank==0)
     Fiesta::Log::debugAll("name={}, rank={}, size={}",name,sliceRank,sliceSize);
+
+  chunkable = cf.chunkable;
 }
 
 template <typename T>
@@ -283,6 +285,8 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   varxH = Kokkos::create_mirror_view(f->varx);
   if(sliceRank==0)
     Fiesta::Log::debugAll("name={}, rank={}, size={}",name,sliceRank,sliceSize);
+
+  chunkable=false;
 }
 
 template<typename T>
@@ -321,7 +325,7 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
       for (int vn=0; vn<cf.ndim; ++vn){
         Fiesta::Log::debug("        Dim: {}",vn);
         dataPack(cf.ndim, 0, lStart, lEndG, lExtG, stride, gridData, gridH,vn,false);
-        writer.write(format("Dimension{}",vn), cf.ndim, gExtG, lExtG, lOffset, gridData); 
+        writer.write(format("Dimension{}",vn), cf.ndim, gExtG, lExtG, lOffset, gridData, chunkable); 
       }
       writer.closeGroup();
     }
@@ -332,7 +336,7 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
     for (int vn=0; vn<cf.nvt; ++vn){
       Fiesta::Log::debug("        Var: {}",vn);
       dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varH,vn,avg);
-      writer.write(format("Variable{:02d}",vn), cf.ndim, gExt, lExt, lOffset, varData); 
+      writer.write(format("Variable{:02d}",vn), cf.ndim, gExt, lExt, lOffset, varData, chunkable); 
     }
     if (writeVarx){
       Fiesta::Log::debug("Writing Extra Variables");
@@ -340,7 +344,7 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
       for (size_t vn = 0; vn < f->varxNames.size(); ++vn) {
         Fiesta::Log::debug("        Var: {}",vn+cf.nvt);
         dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varxH,vn,avg);
-        writer.write(format("Variable{:02d}",vn+cf.nvt), cf.ndim, gExt, lExt, lOffset, varData); 
+        writer.write(format("Variable{:02d}",vn+cf.nvt), cf.ndim, gExt, lExt, lOffset, varData, chunkable); 
       }
     }
     writer.closeGroup();

@@ -84,6 +84,9 @@ void mpi_init(struct inputConfig &cf){
 
   /* Distribute grid cells to mpi ranks including uneven remainders */
   rem = cf.glbl_nci % cf.xProcs;
+  cf.chunkable=false;
+  if(rem==0)
+    cf.chunkable=true;
   cf.nci = floor(cf.glbl_nci / cf.xProcs);
   if (coords[0] < rem) {
     cf.nci = cf.nci + 1;
@@ -96,6 +99,10 @@ void mpi_init(struct inputConfig &cf){
   cf.ngi = cf.nci + 2 * cf.ng;
 
   rem = cf.glbl_ncj % cf.yProcs;
+  if(rem==0 && cf.chunkable)
+    cf.chunkable=true;
+  else
+    cf.chunkable=false;
   cf.ncj = floor(cf.glbl_ncj / cf.yProcs);
   if (coords[1] < rem) {
     cf.ncj = cf.ncj + 1;
@@ -115,6 +122,10 @@ void mpi_init(struct inputConfig &cf){
     cf.nk = 1;
   } else {
     rem = cf.glbl_nck % cf.zProcs;
+    if(rem==0 && cf.chunkable)
+      cf.chunkable=true;
+    else
+      cf.chunkable=false;
     cf.nck = floor(cf.glbl_nck / cf.zProcs);
     if (coords[2] < rem) {
       cf.nck = cf.nck + 1;

@@ -53,6 +53,8 @@ class blockWriter {
     std::vector<size_t> stride;  // slice stride
     std::vector<double> iodx;
 
+    bool chunkable;
+
     size_t freq;    // block write frequency
 
     bool writeVarx;

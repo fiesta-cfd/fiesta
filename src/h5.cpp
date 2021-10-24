@@ -68,7 +68,8 @@ void h5Writer<T>::close(){
 // writer function for hdf5
 template <typename T>
 void h5Writer<T>::write(std::string dname, int ndim,
-  std::vector<size_t> in_dims_global, std::vector<size_t> in_dims_local, std::vector<size_t> in_offset, std::vector<T>& data){
+  std::vector<size_t> in_dims_global, std::vector<size_t> in_dims_local, std::vector<size_t> in_offset, std::vector<T>& data, bool chunkable){
+  
 
   std::vector<hsize_t> gdims(ndim,0);
   std::vector<hsize_t> ldims(ndim,0);
@@ -80,12 +81,19 @@ void h5Writer<T>::write(std::string dname, int ndim,
   std::reverse_copy(in_offset.begin(),in_offset.end(),offset.begin());
 
   // identifiers
-  hid_t filespace, memspace, dset_id, plist_id, dtype_id;
+  hid_t filespace, memspace, dset_id, plist_id, dtype_id, dcpl_id;
 
   // get type id
   if (std::is_same<T,double>::value) dtype_id = H5T_NATIVE_DOUBLE;
   if (std::is_same<T,float>::value) dtype_id = H5T_NATIVE_FLOAT;
   if (std::is_same<T,int>::value) dtype_id = H5T_NATIVE_INT;
+
+  if (chunkable){
+    dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
+    H5Pset_chunk(dcpl_id,ndim,ldims.data());
+  }else{
+    dcpl_id = H5P_DEFAULT;
+  }
 
   // create global filespace and local memoryspace
   filespace = H5Screate_simple(ndim, gdims.data(), NULL);
@@ -93,7 +101,7 @@ void h5Writer<T>::write(std::string dname, int ndim,
 
   // create dataset
   dset_id = H5Dcreate(group_id, dname.c_str(), dtype_id, filespace,
-                                        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+                                        H5P_DEFAULT, dcpl_id, H5P_DEFAULT);
 
   H5Sclose(filespace);
 

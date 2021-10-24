@@ -117,6 +117,7 @@ struct inputConfig {
   std::string pathName;
   int tstart, tend;
   bool tinterval;
+  bool chunkable;
   double time;
   int st;
   bool ceq,noise;

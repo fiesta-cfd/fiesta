@@ -57,6 +57,8 @@ void printConfig(struct inputConfig cf) {
     string keyValue    = format("{: >8}{{: <24}}{}{{}}{}\n","",k(magenta),k(reset));
     string keyEnabled  = format("{: >8}{{: <24}}{}enabled{}\n","",k(green),k(reset));
     string keyDisabled = format("{: >8}{{: <24}}{}disabled{}\n","",k(yellow),k(reset));
+    string keyYes      = format("{: >8}{{: <24}}{}yes{}\n","",k(green),k(reset));
+    string keyNo       = format("{: >8}{{: <24}}{}no{}\n","",k(yellow),k(reset));
     string keyTupleInt = format("{: >8}{{: <24}}({}{{}}{},{}{{}}{},{}{{}}{})\n","",
                        k(magenta),k(reset),k(magenta),k(reset),k(magenta),k(reset));
     string keyTupleGen = format("{: >8}{{: <24}}({}{{:.3g}}{},{}{{:.3g}}{},{}{{:.3g}}{})\n","",
@@ -118,6 +120,9 @@ void printConfig(struct inputConfig cf) {
 
     if (cf.buoyancy) cout << format(keyEnabled,"Buoyancy:");
     else cout << format(keyDisabled,"Buoyancy:");
+
+    if (cf.chunkable) cout << format(keyYes,"Chunkable:");
+    else cout << format(keyNo,"Chunkable:");
   
     cout << format(keyValue,"Number of species:",cf.ns);
     string val = format("{}{{}}{}",k(magenta),k(reset));
