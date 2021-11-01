@@ -68,7 +68,10 @@ void h5Writer<T>::close(){
 // writer function for hdf5
 template <typename T>
 void h5Writer<T>::write(std::string dname, int ndim,
-  std::vector<size_t> in_dims_global, std::vector<size_t> in_dims_local, std::vector<size_t> in_offset, std::vector<T>& data, bool chunkable){
+  std::vector<size_t> in_dims_global, std::vector<size_t> in_dims_local, std::vector<size_t> in_offset,
+  std::vector<T>& data,
+  bool chunkable,
+  bool compress){
   
 
   std::vector<hsize_t> gdims(ndim,0);
@@ -82,6 +85,7 @@ void h5Writer<T>::write(std::string dname, int ndim,
 
   // identifiers
   hid_t filespace, memspace, dset_id, plist_id, dtype_id, dcpl_id;
+  unsigned szip_options_mask, szip_pixels_per_block;
 
   // get type id
   if (std::is_same<T,double>::value) dtype_id = H5T_NATIVE_DOUBLE;
@@ -91,6 +95,11 @@ void h5Writer<T>::write(std::string dname, int ndim,
   if (chunkable){
     dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
     H5Pset_chunk(dcpl_id,ndim,ldims.data());
+    if(compress){
+      szip_options_mask=H5_SZIP_NN_OPTION_MASK;
+      szip_pixels_per_block=32;
+      H5Pset_szip (dcpl_id, szip_options_mask, szip_pixels_per_block);
+    }
   }else{
     dcpl_id = H5P_DEFAULT;
   }

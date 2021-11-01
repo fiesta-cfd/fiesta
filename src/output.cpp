@@ -121,8 +121,11 @@ void printConfig(struct inputConfig cf) {
     if (cf.buoyancy) cout << format(keyEnabled,"Buoyancy:");
     else cout << format(keyDisabled,"Buoyancy:");
 
-    if (cf.chunkable) cout << format(keyYes,"Chunkable:");
-    else cout << format(keyNo,"Chunkable:");
+    if (cf.chunkable) cout << format(keyYes,"HDF5 Chunks:");
+    else cout << format(keyEnabled,"HDF5 Chunks:");
+
+    if (cf.compressible) cout << format(keyYes,"HDF5 Compression:");
+    else cout << format(keyDisabled,"HDF5 Compression:");
   
     cout << format(keyValue,"Number of species:",cf.ns);
     string val = format("{}{{}}{}",k(magenta),k(reset));

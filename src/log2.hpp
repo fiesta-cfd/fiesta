@@ -123,6 +123,11 @@ namespace Fiesta {
     void info(string format, Args&&... args) {
       if (verbosity>=4) log(none,"Info",format,args...);
     }
+
+    template<typename... Args> inline
+    void infoWarning(string format, Args&&... args) {
+      if (verbosity>=4) log(yellow,"Info",format,args...);
+    }
     
     template<typename... Args> inline
     void message(string format, Args&&... args) {

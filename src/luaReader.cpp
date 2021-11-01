@@ -61,6 +61,8 @@ luaReader::luaReader(std::string f_, std::string r_):filename(f_),root(r_){
   lua_newtable(L);
   lua_setfield(L,-2,"mpi");
   lua_newtable(L);
+  lua_setfield(L,-2,"hdf5");
+  lua_newtable(L);
   lua_setfield(L,-2,"eos");
   lua_newtable(L);
   lua_setfield(L,-2,"progress");
@@ -93,9 +95,9 @@ void luaReader::get(std::initializer_list<string> keys, T& n){
   }
   if (found){
     getValue<T>(n);
-    Fiesta::Log::debug("Found {}={}",fullkey,n);
+    Fiesta::Log::info("LUA READER: Found {}={}",fullkey,n);
   }else{
-    Fiesta::Log::error("Could not find required parameter '{}' in '{}'",fullkey,filename);
+    Fiesta::Log::error("LUA READER: Could not find required parameter '{}' in '{}'",fullkey,filename);
     exit(EXIT_FAILURE);
   }
   lua_settop(L,top);
@@ -122,9 +124,9 @@ void luaReader::get(std::initializer_list<string> keys, T& n, T d){
   }
   if (found){
     getValue<T>(n);
-    Fiesta::Log::debug("Found {}={}",fullkey,n);
+    Fiesta::Log::info("LUA READER: Found {}={}",fullkey,n);
   }else{
-    Fiesta::Log::debugWarning("Could not find '{}' setting default ({})",fullkey,d);
+    Fiesta::Log::infoWarning("LUA READER: Could not find '{}' setting default ({})",fullkey,d);
     n=d;
   }
   lua_settop(L,top);
@@ -150,9 +152,9 @@ void luaReader::get(std::initializer_list<string> keys, vector<T>& v, int n){
   }
   if (found){
     getArray<T>(v,n);
-    Fiesta::Log::debug("Found {}",fullkey);
+    Fiesta::Log::info("LUA READER: Found {}",fullkey);
   }else{
-    Fiesta::Log::error("Could not find required parameter '{}' in '{}'",fullkey,filename);
+    Fiesta::Log::error("LUA READER: Could not find required parameter '{}' in '{}'",fullkey,filename);
     exit(EXIT_FAILURE);
   }
   lua_settop(L,top);
@@ -208,6 +210,7 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
   size_t numElems;
   size_t numBlocks;
   size_t frq,avg;
+  bool defaultable=false;
 
   lua_getglobal(L,root.c_str());
   lua_getfield(L, -1, "ioviews");
@@ -218,7 +221,7 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
 
   if (lua_istable(L,-1)){
     numBlocks=lua_rawlen(L,-1);
-    for (int i=0; i<numBlocks; ++i){
+    for (size_t i=0; i<numBlocks; ++i){
       string myname,mypath;
       vector<size_t> start,limit,stride;
       lua_pushnumber(L,i+1);
@@ -249,7 +252,7 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
       lua_getfield(L,-1,"start");
       if (lua_istable(L,-1)){
         numElems = lua_rawlen(L,-1);
-        for(int j=0;j<numElems; ++j){
+        for(size_t j=0;j<numElems; ++j){
           lua_pushnumber(L,j+1);
           lua_gettable(L,-2);
           start.push_back((size_t)lua_tonumberx(L, -1, &isnum)-1);
@@ -258,41 +261,51 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
       }else{
         for (int j=0; j<ndim; ++j)
           start.push_back(0);
+        defaultable = true;
       }
       lua_pop(L,1);
 
       lua_getfield(L,-1,"limit");
       if (lua_istable(L,-1)){
         numElems = lua_rawlen(L,-1);
-        for(int j=0;j<numElems; ++j){
+        for(size_t j=0;j<numElems; ++j){
           lua_pushnumber(L,j+1);
           lua_gettable(L,-2);
           limit.push_back((size_t)lua_tonumberx(L, -1, &isnum)-1);
           lua_pop(L,1);
         }
+        defaultable &= false;
       }else{
-          limit.push_back(cf.glbl_nci-1);
-          limit.push_back(cf.glbl_ncj-1);
-          if (ndim > 2) limit.push_back(cf.glbl_nck-1);
+        limit.push_back(cf.glbl_nci-1);
+        limit.push_back(cf.glbl_ncj-1);
+        if (ndim > 2)
+          limit.push_back(cf.glbl_nck-1);
+        defaultable &= true;
       }
       lua_pop(L,1);
 
       lua_getfield(L,-1,"stride");
       if (lua_istable(L,-1)){
         numElems = lua_rawlen(L,-1);
-        for(int j=0;j<numElems; ++j){
+        for(size_t j=0;j<numElems; ++j){
           lua_pushnumber(L,j+1);
           lua_gettable(L,-2);
           stride.push_back((size_t)lua_tonumberx(L, -1, &isnum));
           lua_pop(L,1);
         }
+        defaultable &= false;
       }else{
         for (int j=0; j<ndim; ++j)
           stride.push_back(1);
+        defaultable &= true;
       }
       lua_pop(L,1);
 
-      blocks.push_back(blockWriter<float>(cf,f,myname,mypath,avg,frq,start,limit,stride,true));
+      if (defaultable)
+        blocks.push_back(blockWriter<float>(cf,f,myname,mypath,avg,frq,true));
+      else
+        blocks.push_back(blockWriter<float>(cf,f,myname,mypath,avg,frq,start,limit,stride,true));
+
       lua_pop(L,1);
     }
   }else{

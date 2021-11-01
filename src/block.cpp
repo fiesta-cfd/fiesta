@@ -108,7 +108,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   varxH = Kokkos::create_mirror_view(f->varx);
 
   if(sliceRank==0)
-    Fiesta::Log::debugAll("name={}, rank={}, size={}",name,sliceRank,sliceSize);
+    Fiesta::Log::debugAll("IO VIEW: name={}, rank={}, size={}, chunkable={} compressible={}",name,sliceRank,sliceSize,cf.chunkable,cf.compressible);
 
   chunkable = cf.chunkable;
 }
@@ -284,9 +284,10 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   varH = Kokkos::create_mirror_view(f->var);
   varxH = Kokkos::create_mirror_view(f->varx);
   if(sliceRank==0)
-    Fiesta::Log::debugAll("name={}, rank={}, size={}",name,sliceRank,sliceSize);
+    Fiesta::Log::debugAll("IO VIEW: name={}, rank={}, size={}, start={}, end={}, stride={}, extent={}",name,sliceRank,sliceSize,gStart,gEnd,stride,gExt);
 
   chunkable=false;
+  Fiesta::Log::warning("Chunking it not supported for IO views with strides.  Chunking will be disabled for {}.",name);
 }
 
 template<typename T>
@@ -306,9 +307,9 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
   Fiesta::Log::message("[{}] Writing '{}'",cf.t,hdfPath);
   fiestaTimer writeTimer = fiestaTimer();
 
-//#ifdef HAVE_MPI
-//  MPI_Barrier(cf.comm);
-//#endif
+  //#ifdef HAVE_MPI
+  //  MPI_Barrier(cf.comm);
+  //#endif
 
   if (myColor==1){
     h5Writer<T> writer;
@@ -319,37 +320,30 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
 #endif
 
     if (cf.grid > 0){
-      Fiesta::Log::debug("Writing Grid");
       writer.openGroup("/Grid");
       Kokkos::deep_copy(gridH,f->grid);
       for (int vn=0; vn<cf.ndim; ++vn){
-        Fiesta::Log::debug("        Dim: {}",vn);
         dataPack(cf.ndim, 0, lStart, lEndG, lExtG, stride, gridData, gridH,vn,false);
-        writer.write(format("Dimension{}",vn), cf.ndim, gExtG, lExtG, lOffset, gridData, chunkable); 
+        writer.write(format("Dimension{}",vn), cf.ndim, gExtG, lExtG, lOffset, gridData, chunkable, cf.compressible); 
       }
       writer.closeGroup();
     }
 
     writer.openGroup("/Solution");
-    Fiesta::Log::debug("Writing Solution");
     Kokkos::deep_copy(varH,f->var);
     for (int vn=0; vn<cf.nvt; ++vn){
-      Fiesta::Log::debug("        Var: {}",vn);
       dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varH,vn,avg);
-      writer.write(format("Variable{:02d}",vn), cf.ndim, gExt, lExt, lOffset, varData, chunkable); 
+      writer.write(format("Variable{:02d}",vn), cf.ndim, gExt, lExt, lOffset, varData, chunkable, cf.compressible); 
     }
     if (writeVarx){
-      Fiesta::Log::debug("Writing Extra Variables");
       Kokkos::deep_copy(varxH,f->varx);
       for (size_t vn = 0; vn < f->varxNames.size(); ++vn) {
-        Fiesta::Log::debug("        Var: {}",vn+cf.nvt);
         dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varxH,vn,avg);
-        writer.write(format("Variable{:02d}",vn+cf.nvt), cf.ndim, gExt, lExt, lOffset, varData, chunkable); 
+        writer.write(format("Variable{:02d}",vn+cf.nvt), cf.ndim, gExt, lExt, lOffset, varData, chunkable, cf.compressible); 
       }
     }
     writer.closeGroup();
 
-    Fiesta::Log::debug("Writing Properties");
     writer.openGroup("/Properties");
     writer.writeAttribute("time_index",tdx);
     writer.writeAttribute("time",time);
@@ -361,9 +355,9 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
     writer.closeGroup();
 
     writer.close();
-//#ifdef HAVE_MPI
-//    MPI_Barrier(sliceComm);
-//#endif
+    //#ifdef HAVE_MPI
+    //    MPI_Barrier(sliceComm);
+    //#endif
   }
 
 #ifdef HAVE_MPI
@@ -395,18 +389,18 @@ void blockWriter<T>::dataPack(int ndim, int ng, const vector<size_t>& start, con
   double mean;
 
   if (ndim==3){
-    for (int i = start[0]; i < end[0]+1; i+=stride[0]) {
-      for (int j = start[1]; j < end[1]+1; j+=stride[1]) {
-        for (int k = start[2]; k < end[2]+1; k+=stride[2]) {
+    for (size_t i = start[0]; i < end[0]+1; i+=stride[0]) {
+      for (size_t j = start[1]; j < end[1]+1; j+=stride[1]) {
+        for (size_t k = start[2]; k < end[2]+1; k+=stride[2]) {
           ii=(i-start[0])/stride[0];
           jj=(j-start[1])/stride[1];
           kk=(k-start[2])/stride[2];
           idx = (extent[0] * extent[1]) * kk + extent[0] * jj + ii;
           if (average){
             mean=0.0;
-            for (int ia=0; ia<stride[0]; ++ia){
-              for (int ja=0; ja<stride[1]; ++ja){
-                for (int ka=0; ka<stride[2]; ++ka){
+            for (size_t ia=0; ia<stride[0]; ++ia){
+              for (size_t ja=0; ja<stride[1]; ++ja){
+                for (size_t ka=0; ka<stride[2]; ++ka){
                   mean += source (i+ia+ng,j+ja+ng,k+ka+ng,vn);
                 }
               }
@@ -419,15 +413,15 @@ void blockWriter<T>::dataPack(int ndim, int ng, const vector<size_t>& start, con
       }
     }
   }else{
-    for (int i = start[0]; i < end[0]+1; i+=stride[0]) {
-      for (int j = start[1]; j < end[1]+1; j+=stride[1]) {
+    for (size_t i = start[0]; i < end[0]+1; i+=stride[0]) {
+      for (size_t j = start[1]; j < end[1]+1; j+=stride[1]) {
         ii=(i-start[0])/stride[0];
         jj=(j-start[1])/stride[1];
         idx = extent[0] * jj + ii;
         if (average){
           mean=0.0;
-          for (int ia=0; ia<stride[0]; ++ia){
-            for (int ja=0; ja<stride[1]; ++ja){
+          for (size_t ia=0; ia<stride[0]; ++ia){
+            for (size_t ja=0; ja<stride[1]; ++ja){
               mean += source (i+ia+ng,j+ja+ng,0,vn);
             }
           }

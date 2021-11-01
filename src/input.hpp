@@ -118,6 +118,7 @@ struct inputConfig {
   int tstart, tend;
   bool tinterval;
   bool chunkable;
+  bool compressible;
   double time;
   int st;
   bool ceq,noise;

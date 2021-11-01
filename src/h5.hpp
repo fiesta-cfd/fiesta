@@ -38,7 +38,7 @@ class h5Writer {
 
     void close();
 
-    void write(std::string, int, std::vector<size_t>, std::vector<size_t>, std::vector<size_t>, std::vector<T>&, bool);
+    void write(std::string, int, std::vector<size_t>, std::vector<size_t>, std::vector<size_t>, std::vector<T>&, bool, bool);
 
     template<typename S>
     void writeAttribute(std::string, S data);

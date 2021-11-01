@@ -44,7 +44,7 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
   cArgs.colorFlag = 0;
   cArgs.numDevices = 1;
   cArgs.numThreads = 1;
-  cArgs.verbosity = 4;
+  cArgs.verbosity = 3;
 
   // create options
   static struct option long_options[] = {
@@ -80,7 +80,7 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
       if (optarg)
         cArgs.verbosity = atoi(optarg);
       else
-        cArgs.verbosity = 4;
+        cArgs.verbosity = 3;
       break;
     case 'V':
       cArgs.versionFlag = 1;
@@ -189,6 +189,14 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
 
   std::string scheme, grid, mpi;
   L.get({"mpi","type"}, mpi, std::string("host"));
+  L.get({"hdf5","chunk"}, cf.chunkable, false);
+  L.get({"hdf5","compress"}, cf.compressible, false);
+
+  if (!cf.chunkable && cf.compressible){
+    cf.compressible = false;
+    Fiesta::Log::warning("HDF5 Compression requires chunking.  Disabling.");
+  }
+
   L.get({"advection_scheme"}, scheme, std::string("weno5"));
   L.get({"grid","type"},   grid, std::string("cartesian"));
 
