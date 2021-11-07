@@ -235,8 +235,8 @@ void cart2d_func::compute() {
 void cart2d_func::postStep() {
   bool varsxNeeded=false;
 
-  if ( (cf.write_freq >0) && (cf.t % cf.write_freq == 0) ) varsxNeeded=true;
-  if ( (cf.stat_freq  >0) && (cf.t % cf.stat_freq  == 0) ) varsxNeeded=true;
+  if ( (cf.write_freq >0) && ((cf.t+1) % cf.write_freq == 0) ) varsxNeeded=true;
+  if ( (cf.stat_freq  >0) && ((cf.t+1) % cf.stat_freq  == 0) ) varsxNeeded=true;
 
   // compute secondary variables
   if (varsxNeeded){

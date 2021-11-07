@@ -270,8 +270,8 @@ void cart3d_func::postStep() {
   //for (auto& block : cf.ioblocks)
   //  if( (block.frq() > 0) && (cf.t % block.frq() == 0) ) varsxNeeded=true;
 
-  if ( (cf.write_freq >0) && (cf.t % cf.write_freq == 0) ) varsxNeeded=true;
-  if ( (cf.stat_freq  >0) && (cf.t % cf.stat_freq  == 0) ) varsxNeeded=true;
+  if ( (cf.write_freq >0) && ((cf.t+1) % cf.write_freq == 0) ) varsxNeeded=true;
+  if ( (cf.stat_freq  >0) && ((cf.t+1) % cf.stat_freq  == 0) ) varsxNeeded=true;
 
   if (varsxNeeded){
     timers["calcSecond"].reset();
