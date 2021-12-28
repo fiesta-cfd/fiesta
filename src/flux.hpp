@@ -243,8 +243,8 @@ struct computeFluxQuick2D {
   }
 };
 
-struct calculateFluxesG {
-  FS4D var;
+struct weno3D {
+  FS4D dvar,var;
   FS3D p;
   FS3D rho;
   FS4D vel;
@@ -255,10 +255,10 @@ struct calculateFluxesG {
   int v;
   double eps = 0.000001;
 
-  calculateFluxesG(FS4D var_, FS3D p_, FS3D rho_, FS4D u_, FS3D fluxx_,
-                   FS3D fluxy_, FS3D fluxz_, double dx_, double dy_, double dz_, int v_)
-      : var(var_), p(p_), rho(rho_), vel(u_), fluxx(fluxx_), fluxy(fluxy_),
-        fluxz(fluxz_), dx(dx_), dy(dy_), dz(dz_), v(v_) {}
+  weno3D(FS4D dvar_, FS4D var_, FS3D p_, FS3D rho_, FS4D u_,
+                   double dx_, double dy_, double dz_, int v_)
+      : dvar(dvar_), var(var_), p(p_), rho(rho_), vel(u_),
+        dx(dx_), dy(dy_), dz(dz_), v(v_) {}
 
   KOKKOS_INLINE_FUNCTION
   double weno(double f1, double f2, double f3, double f4, double f5) const {
@@ -289,7 +289,7 @@ struct calculateFluxesG {
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
 
-    double ur, vr, wr, f1, f2, f3, f4, f5;
+    double ur, vr, wr, f1, f2, f3, f4, f5, flux;
 
     ur = (-vel(i+2,j,k,0) + 7.0*vel(i+1,j,k,0) + 7.0*vel(i,j,k,0) - vel(i-1,j,k,0))/12.0;
     if (ur < 0.0) {
@@ -305,7 +305,10 @@ struct calculateFluxesG {
       f4 = var(i + 1, j, k, v) + (v == 3) * p(i + 1, j, k);
       f5 = var(i + 2, j, k, v) + (v == 3) * p(i + 2, j, k);
     }
-    fluxx(i, j, k) = ur * weno(f1,f2,f3,f4,f5)/dx;
+    /* fluxx(i, j, k) = ur * weno(f1,f2,f3,f4,f5)/dx; */
+    flux = ur * weno(f1,f2,f3,f4,f5)/dx;
+    dvar(i,j,k,v) -= flux;
+    dvar(i+1,j,k,v) += flux;
 
     vr = (-vel(i,j+2,k,1) + 7.0*vel(i,j+1,k,1) + 7.0*vel(i,j,k,1) - vel(i,j-1,k,1))/12.0;
     if (vr < 0.0) {
@@ -321,7 +324,10 @@ struct calculateFluxesG {
       f4 = var(i, j + 1, k, v) + (v == 3) * p(i, j + 1, k);
       f5 = var(i, j + 2, k, v) + (v == 3) * p(i, j + 2, k);
     }
-    fluxy(i, j, k) = vr * weno(f1,f2,f3,f4,f5)/dy;
+    /* fluxy(i, j, k) = vr * weno(f1,f2,f3,f4,f5)/dy; */
+    flux = vr * weno(f1,f2,f3,f4,f5)/dy;
+    dvar(i,j,k,v) -= flux;
+    dvar(i,j+1,k,v) += flux;
 
     wr = (-vel(i,j,k+2,2) + 7.0*vel(i,j,k+1,2) + 7.0*vel(i,j,k,2) - vel(i,j,k-1,2))/12.0;
     if (wr < 0.0) {
@@ -337,7 +343,10 @@ struct calculateFluxesG {
       f4 = var(i, j, k + 1, v) + (v == 3) * p(i, j, k + 1);
       f5 = var(i, j, k + 2, v) + (v == 3) * p(i, j, k + 2);
     }
-    fluxz(i, j, k) = wr * weno(f1,f2,f3,f4,f5)/dz;
+    /* fluxz(i, j, k) = wr * weno(f1,f2,f3,f4,f5)/dz; */
+    flux = wr * weno(f1,f2,f3,f4,f5)/dz;
+    dvar(i,j,k,v) -= flux;
+    dvar(i,j,k+1,v) += flux;
   }
 };
 #endif

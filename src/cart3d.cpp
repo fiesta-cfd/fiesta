@@ -17,6 +17,7 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include "Kokkos_Parallel.hpp"
 #include "kokkosTypes.hpp"
 #include <cassert>
 #include "input.hpp"
@@ -63,9 +64,9 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   rho     = FS3D("rho",       cf.ngi, cf.ngj, cf.ngk);         // Total Density
   vel     = FS4D("vel",       cf.ngi, cf.ngj, cf.ngk,3);         // Total Density
 
-  fluxx   = FS3D( "fluxx",    cf.ngi, cf.ngj, cf.ngk);    // Advective Fluxes X
-  fluxy   = FS3D( "fluxy",    cf.ngi, cf.ngj, cf.ngk);    // Advective Fluxes Y
-  fluxz   = FS3D( "fluxz",    cf.ngi, cf.ngj, cf.ngk);    // Advective Fluxes Z
+  /* fluxx   = FS3D( "fluxx",    cf.ngi, cf.ngj, cf.ngk);    // Advective Fluxes X */
+  /* fluxy   = FS3D( "fluxy",    cf.ngi, cf.ngj, cf.ngk);    // Advective Fluxes Y */
+  /* fluxz   = FS3D( "fluxz",    cf.ngi, cf.ngj, cf.ngk);    // Advective Fluxes Z */
 
   if (cf.visc == 1) {
     qx      = FS3D( "qx",       cf.ngi, cf.ngj, cf.ngk);         // Heat Flux X
@@ -207,13 +208,11 @@ void cart3d_func::compute() {
   Kokkos::fence();
   timers["calcSecond"].accumulate();
 
-  for (int v = 0; v < cf.nv; ++v) {
-    timers["flux"].reset();
-    Kokkos::parallel_for(weno_pol, calculateFluxesG(var, p, rho, vel, fluxx, fluxy, fluxz, cf.dx, cf.dy, cf.dz, v));
-    Kokkos::parallel_for(cell_pol, advect3D(dvar, varx, fluxx, fluxy, fluxz, v));
-    Kokkos::fence();
-    timers["flux"].accumulate();
-  }
+  timers["flux"].reset();
+  for (int v = 0; v < cf.nv; ++v)
+    Kokkos::parallel_for(weno_pol, weno3D(dvar, var, p, rho, vel, cf.dx, cf.dy, cf.dz, v));
+  Kokkos::fence();
+  timers["flux"].accumulate();
 
   timers["pressgrad"].reset();
   Kokkos::parallel_for(cell_pol, applyPressureGradient3D(dvar, varx, p, cd));
