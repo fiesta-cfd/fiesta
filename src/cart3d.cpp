@@ -17,7 +17,6 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "Kokkos_Parallel.hpp"
 #include "kokkosTypes.hpp"
 #include <cassert>
 #include "input.hpp"
@@ -32,7 +31,6 @@
 #include "secondary.hpp"
 #include "velocity.hpp"
 #include "flux.hpp"
-#include "advect.hpp"
 #include "presgrad.hpp"
 #include "block.hpp"
 #include "ceq3d.hpp"
@@ -107,27 +105,6 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   varxNames.push_back("Pressure");  //3
   varxNames.push_back("Temperature");  //4
   varxNames.push_back("Total Density");  //5
-  // //if (cf.noise){
-  //   varxNames.push_back("Noise_c");  //6
-  //   varxNames.push_back("Noise_I");  //7
-  //   varxNames.push_back("Noise_d");  //8
-  // //}
-  // //if (cf.ceq){
-  //   varxNames.push_back("dcu");  //9
-  //   varxNames.push_back("dcv");  //10
-  //   varxNames.push_back("dcw");  //11
-  //   varxNames.push_back("M11");  //12
-  //   varxNames.push_back("M22");  //13
-  //   varxNames.push_back("M33");  //14
-  //   varxNames.push_back("M23");  //15
-  //   varxNames.push_back("M13");  //16
-  //   varxNames.push_back("M12");  //17
-  // //}
-  // varxNames.push_back("d_adv_v");  //18
-  // varxNames.push_back("d_adv_e");  //19
-  // varxNames.push_back("d_press_v"); //20
-  // varxNames.push_back("d_buoy_v");  //21
-  // varxNames.push_back("d_buoy_e");  //22
 
   // Create Secondary Variable Array
   varx = FS4D("varx",cf.ngi,cf.ngj,cf.ngk,varxNames.size());
@@ -178,6 +155,8 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
     sdx += 3;
   }
   Kokkos::deep_copy(cd, hostcd); // copy congifuration array to device
+
+  dxmag = cf.dx*cf.dx + cf.dy*cf.dy + cf.dz*cf.dz;
 };
 
 void cart3d_func::preSim() {
@@ -192,6 +171,14 @@ void cart3d_func::preSim() {
 }
 
 void cart3d_func::preStep() {
+}
+
+template<typename T>
+double fsMax(MPI_Comm comm, policy_f3 &pol, T func){
+    double localmax, max;
+    Kokkos::parallel_reduce(pol, func, Kokkos::Max<double>(localmax));
+    MPI_Allreduce(&localmax, &max, 1, MPI_DOUBLE, MPI_MAX, comm);
+    return max;
 }
 
 void cart3d_func::compute() {
@@ -226,30 +213,15 @@ void cart3d_func::compute() {
 
   if (cf.ceq) {
     timers["ceq"].reset();
-    double maxS,maxS_recv;
-    double maxC,maxC_recv;
-    double maxCh,maxCh_recv;
-    double dxmag,alpha;
+    double maxS,maxC,maxCh,alpha;
 
     Kokkos::parallel_for(cell_pol, calculateRhoGrad(var, vel, rho, gradRho, cf.dx, cf.dy, cf.dz));
 
-    Kokkos::parallel_reduce(cell_pol, maxWaveSpeed(var,p,rho,cd), Kokkos::Max<double>(maxS));
-    Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+0), Kokkos::Max<double>(maxC));
-    Kokkos::parallel_reduce(cell_pol, maxGradFunctor(var, cf.nv+1), Kokkos::Max<double>(maxCh));
-#ifdef HAVE_MPI
-    MPI_Allreduce(&maxS, &maxS_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxC,  &maxC_recv,  1, MPI_DOUBLE, MPI_MAX, cf.comm);
-    MPI_Allreduce(&maxCh, &maxCh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-#endif
-    maxS=maxS_recv;
-    maxC=maxC_recv;
-    maxCh=maxCh_recv;
+    maxS  = fsMax(cf.comm, cell_pol, maxWaveSpeed(var,p,rho,cd));
+    maxC  = fsMax(cf.comm, cell_pol, maxGradFunctor(var, cf.nv+0));
+    maxCh = fsMax(cf.comm, cell_pol, maxGradFunctor(var, cf.nv+1));
 
-    dxmag = cf.dx*cf.dx + cf.dy*cf.dy + cf.dz*cf.dz;
     alpha = (dxmag / (maxCh+1.0e-6)) * cf.alpha;
-
-    if ( (cf.stat_freq  >0) && (cf.t % cf.stat_freq  == 0) )
-      Fiesta::Log::debug("alpha={} maxCh={} maxS={}",alpha,maxCh,maxS);
 
     Kokkos::parallel_for(cell_pol, updateCeq(dvar, var, varx, gradRho, maxS, cd, cf.kap, cf.eps));
     Kokkos::parallel_for(weno_pol, calculateCeqFaces(var, varx, rho, mFlux, alpha, cf.nv));

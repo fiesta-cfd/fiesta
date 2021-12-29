@@ -53,6 +53,7 @@ public:
   FS6D mFlux;
   FS3D_I noise;
   FS1D cd; // Device configuration array
+  double dxmag;
 };
 
 #endif
