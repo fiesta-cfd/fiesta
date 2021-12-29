@@ -174,10 +174,12 @@ void cart3d_func::preStep() {
 }
 
 template<typename T>
-double fsMax(MPI_Comm comm, policy_f3 &pol, T func){
+double fsMax(const struct inputConfig &cf, policy_f3 &pol, T func){
     double localmax, max;
     Kokkos::parallel_reduce(pol, func, Kokkos::Max<double>(localmax));
-    MPI_Allreduce(&localmax, &max, 1, MPI_DOUBLE, MPI_MAX, comm);
+    #ifdef HAVE_MPI
+      MPI_Allreduce(&localmax, &max, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+    #endif
     return max;
 }
 
@@ -217,9 +219,9 @@ void cart3d_func::compute() {
 
     Kokkos::parallel_for(cell_pol, calculateRhoGrad(var, vel, rho, gradRho, cf.dx, cf.dy, cf.dz));
 
-    maxS  = fsMax(cf.comm, cell_pol, maxWaveSpeed(var,p,rho,cd));
-    maxC  = fsMax(cf.comm, cell_pol, maxGradFunctor(var, cf.nv+0));
-    maxCh = fsMax(cf.comm, cell_pol, maxGradFunctor(var, cf.nv+1));
+    maxS  = fsMax(cf, cell_pol, maxWaveSpeed(var,p,rho,cd));
+    maxC  = fsMax(cf, cell_pol, maxGradFunctor(var, cf.nv+0));
+    maxCh = fsMax(cf, cell_pol, maxGradFunctor(var, cf.nv+1));
 
     alpha = (dxmag / (maxCh+1.0e-6)) * cf.alpha;
 
