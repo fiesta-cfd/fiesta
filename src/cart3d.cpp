@@ -41,19 +41,21 @@
 #include "buoyancy.hpp"
 
 cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
-  size_t memEstimate = 3*cf.nvt+6+3+6;
-  if (cf.visc==1) memEstimate += 3+27;
-  if (cf.ceq==1) memEstimate += 5+3+3;
+  size_t memEstimate = 3*cf.nvt+6;
+  if (cf.visc==1) memEstimate += 30;
+  if (cf.ceq==1) memEstimate += 11;
 
   memEstimate *= (cf.ngi*cf.ngj*cf.ngk);
   memEstimate += 3*(cf.ni+cf.nj+cf.nk);
   memEstimate *= 8;  // 8 bytes per double
   double memEstimateMB = memEstimate/(1048576.0);
+  double memEstGlobalMB = 0.0;
 
-  Fiesta::Log::message("Minimum device memory estimate: {:.2f}MiB",memEstimateMB);
-  Fiesta::Log::message("Minimum device memory estimate: {}b",memEstimate);
+#ifdef HAVE_MPI
+  MPI_Allreduce(&memEstimateMB, &memEstGlobalMB, 1, MPI_DOUBLE, MPI_SUM, cf.comm);
+#endif
 
-  //grid    = FS4D("coords",    cf.ni,  cf.nj,  cf.nk,  3);      // Grid Coords
+  Fiesta::Log::message("Minimum device memory estimate: {:.2f}MiB",memEstGlobalMB);
 
   var     = FS4D("var",       cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Primary Vars
   tmp1    = FS4D( "tmp1",     cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Temp Vars
@@ -63,10 +65,6 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   T       = FS3D("T",         cf.ngi, cf.ngj, cf.ngk);         // Temperature
   rho     = FS3D("rho",       cf.ngi, cf.ngj, cf.ngk);         // Total Density
   vel     = FS4D("vel",       cf.ngi, cf.ngj, cf.ngk,3);         // Total Density
-
-  /* fluxx   = FS3D( "fluxx",    cf.ngi, cf.ngj, cf.ngk);    // Advective Fluxes X */
-  /* fluxy   = FS3D( "fluxy",    cf.ngi, cf.ngj, cf.ngk);    // Advective Fluxes Y */
-  /* fluxz   = FS3D( "fluxz",    cf.ngi, cf.ngj, cf.ngk);    // Advective Fluxes Z */
 
   if (cf.visc == 1) {
     qx      = FS3D( "qx",       cf.ngi, cf.ngj, cf.ngk);         // Heat Flux X
