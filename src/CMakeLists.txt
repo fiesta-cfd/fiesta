@@ -20,6 +20,7 @@ target_link_libraries(FiestaCore
     HDF5::HDF5
     ${LUA_LIBRARIES}
     fmt::fmt
+    $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:-lstdc++fs>
     )
 
 if (NOT Fiesta_NO_MPI)
