@@ -47,8 +47,8 @@ void rkAdvance(struct inputConfig &cf, class rk_func *f){
       KOKKOS_LAMBDA(const int i, const int j, const int k) {
         for (int v=0; v<nvt; ++v){
           mytmp(i, j, k, v) = myvar(i, j, k, v);
-          myvar(i, j, k, v) = myvar(i, j, k, v) + 0.5 * dt * mydvar(i, j, k, v);
-          mydvar(i,j,k,v) = 0;
+          myvar(i, j, k, v) =
+            myvar(i, j, k, v) + 0.5 * dt * mydvar(i, j, k, v);
         }
       });
   Kokkos::fence();
@@ -72,7 +72,6 @@ void rkAdvance(struct inputConfig &cf, class rk_func *f){
       KOKKOS_LAMBDA(const int i, const int j, const int k) {
         for (int v=0; v<nvt; ++v){
           myvar(i, j, k, v) = mytmp(i, j, k, v) + dt * mydvar(i, j, k, v);
-          mydvar(i,j,k,v) = 0;
         }
       });
   Kokkos::fence();

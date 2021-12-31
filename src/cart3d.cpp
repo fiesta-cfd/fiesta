@@ -31,6 +31,7 @@
 #include "secondary.hpp"
 #include "velocity.hpp"
 #include "flux.hpp"
+#include "advect.hpp"
 #include "presgrad.hpp"
 #include "block.hpp"
 #include "ceq3d.hpp"
@@ -63,6 +64,10 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   T       = FS3D("T",         cf.ngi, cf.ngj, cf.ngk);         // Temperature
   rho     = FS3D("rho",       cf.ngi, cf.ngj, cf.ngk);         // Total Density
   vel     = FS4D("vel",       cf.ngi, cf.ngj, cf.ngk,3);         // Total Density
+
+  fluxx   = FS3D( "fluxx",    cf.ngi, cf.ngj, cf.ngk);    // Advective Fluxes X
+  fluxy   = FS3D( "fluxy",    cf.ngi, cf.ngj, cf.ngk);    // Advective Fluxes Y
+  fluxz   = FS3D( "fluxz",    cf.ngi, cf.ngj, cf.ngk);    // Advective Fluxes Z
 
   if (cf.visc == 1) {
     qx      = FS3D( "qx",       cf.ngi, cf.ngj, cf.ngk);         // Heat Flux X
@@ -195,11 +200,13 @@ void cart3d_func::compute() {
   Kokkos::fence();
   timers["calcSecond"].accumulate();
 
-  timers["flux"].reset();
-  for (int v = 0; v < cf.nv; ++v)
-    Kokkos::parallel_for(weno_pol, weno3D(dvar, var, p, rho, vel, cf.dx, cf.dy, cf.dz, v));
-  Kokkos::fence();
-  timers["flux"].accumulate();
+  for (int v = 0; v < cf.nv; ++v) {
+    timers["flux"].reset();
+    Kokkos::parallel_for(weno_pol, calculateFluxesG(var, p, rho, vel, fluxx, fluxy, fluxz, cf.dx, cf.dy, cf.dz, v));
+    Kokkos::parallel_for(cell_pol, advect3D(dvar, varx, fluxx, fluxy, fluxz, v));
+    Kokkos::fence();
+    timers["flux"].accumulate();
+  }
 
   timers["pressgrad"].reset();
   Kokkos::parallel_for(cell_pol, applyPressureGradient3D(dvar, varx, p, cd));
@@ -215,12 +222,13 @@ void cart3d_func::compute() {
 
   if (cf.ceq) {
     timers["ceq"].reset();
-    double maxS,maxC,maxCh,alpha;
+    double maxS,maxCh,alpha;
+    /* double maxC; */
 
     Kokkos::parallel_for(cell_pol, calculateRhoGrad(var, vel, rho, gradRho, cf.dx, cf.dy, cf.dz));
 
     maxS  = fsMax(cf, cell_pol, maxWaveSpeed(var,p,rho,cd));
-    maxC  = fsMax(cf, cell_pol, maxGradFunctor(var, cf.nv+0));
+    /* maxC  = fsMax(cf, cell_pol, maxGradFunctor(var, cf.nv+0)); */
     maxCh = fsMax(cf, cell_pol, maxGradFunctor(var, cf.nv+1));
 
     alpha = (dxmag / (maxCh+1.0e-6)) * cf.alpha;
