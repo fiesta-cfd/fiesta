@@ -31,7 +31,7 @@
 #include "pretty.hpp"
 #include "log2.hpp"
 
-using namespace std;
+using std::cout;
 
 struct maxVarFunctor2d {
   FS4D var;
@@ -134,6 +134,7 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, fies
     cout << fmt::format("{: >8}ETR:       {}{}{}\n","", c(magenta),etrf,c(reset));
 
     cout << fmt::format("{: <8}{: <16}{: >11}{: >11}\n","","","Min","Max");
+    cout << std::flush;
   }
 
   // var
@@ -180,6 +181,7 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, fies
         smax = format("{}{:>11.2e}{}",c(magenta),max[v],c(reset));
 
       cout << fmt::format("{: >8}{: <16}{: >11}{: >11}\n","",f->varNames[v],smin,smax);
+      cout << std::flush;
     }
   }
 
@@ -227,6 +229,7 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, fies
         smax = format("{}{:>11.2e}{}",c(magenta),max[v],c(reset));
 
       cout << fmt::format("{: >8}{: <16}{: >11}{: >11}\n","",f->varxNames[v],smin,smax);
+      cout << std::flush;
     }
   }
 }

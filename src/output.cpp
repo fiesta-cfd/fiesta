@@ -29,7 +29,7 @@
 #include "pretty.hpp"
 #include "fmt/core.h"
 
-using namespace std;
+using std::cout;
 using fmt::format;
 
 void printSplash(int cm) {
@@ -46,7 +46,7 @@ void printSplash(int cm) {
   cout << format("{: <12}{}'{}'{}\n","Version:",   k(blue),FIESTA_VERSION,k(reset));
   cout << format("{: <12}{}'{}'{}\n","Build Type:",k(blue),FIESTA_OPTIONS,k(reset));
   cout << format("{: <12}{}'{}'{}\n","Build Time:",k(blue),FIESTA_BTIME  ,k(reset));
-  cout << "\n";
+  cout << std::endl;
 }
 
 void printConfig(struct inputConfig cf) {
@@ -135,4 +135,5 @@ void printConfig(struct inputConfig cf) {
           format(val,cf.M[s]),
           format(val,cf.mu[s]));
   }
+  cout << std::flush;
 }

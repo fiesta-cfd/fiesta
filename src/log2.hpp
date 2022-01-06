@@ -50,6 +50,7 @@ namespace Fiesta {
       if (rank==0){
         std::string format = fmt::format("{}[{: >12.5f}] {: >7}: {}{}\n",(*c)(color),timer->seconds(),type,logformat,(*c)(reset));
         fmt::vprint(format,fmt::make_args_checked<Args...>(format,args...));
+        std::cout << std::flush;
       }
     }
 
@@ -58,6 +59,7 @@ namespace Fiesta {
       if (rank==ra){
         std::string format = fmt::format("{}[{: >12.5f}] {: >7} <{}>(: {}{}\n",(*c)(color),timer->seconds(),type,rank,logformat,(*c)(reset));
         fmt::vprint(format,fmt::make_args_checked<Args...>(format,args...));
+        std::cout << std::flush;
       }
     }
     
