@@ -105,10 +105,12 @@ include(tpls/kokkos.cmake)
 include(tpls/lua.cmake)
 include(tpls/fmt.cmake)
 include(tpls/hdf5.cmake)
+include(tpls/yogrt.cmake)
 
 #import FiestaCore and fiesta targetrs
 include_directories(src)
 add_subdirectory(src)
+add_dependencies(FiestaCore ${YOGRT_PREFIX})
 
 # import tests
 if (Fiesta_BUILD_TESTS)

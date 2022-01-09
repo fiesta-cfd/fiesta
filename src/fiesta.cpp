@@ -40,6 +40,7 @@
 #include "log2.hpp"
 #include <iostream>
 #include "reader.hpp"
+#include "yogrt.h"
 
 using namespace std;
 
@@ -198,6 +199,22 @@ void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time,vect
       cf.restartFlag=1;
     }
   }
+
+  // Check Time-Remaining and Write Flag Restart
+  if (cf.rank==0)
+    if(yogrt_remaining() < cf.restartTime){
+      cf.restartFlag = 1;
+      cf.exitFlag = 1;
+
+      #ifdef HAVE_MPI
+      int glblRestartFlag=0;
+      int glblExitFlag=0;
+      MPI_Allreduce(&cf.restartFlag,&glblRestartFlag,1,MPI_INT,MPI_MAX,cf.comm);
+      cf.restartFlag=glblRestartFlag;
+      MPI_Allreduce(&cf.exitFlag,&glblExitFlag,1,MPI_INT,MPI_MAX,cf.comm);
+      cf.exitFlag=glblExitFlag;
+      #endif
+    }
 
   // Write restart file if necessary
   if (cf.restartFlag==1){

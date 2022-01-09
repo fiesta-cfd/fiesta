@@ -173,6 +173,7 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   L.get({"restart","reset"}, cf.restartReset, false);
   L.get({"restart","auto"}, cf.autoRestart, false);
   L.get({"restart","auto_name"}, cf.autoRestartName, std::string("restart-auto"));
+  L.get({"restart","time"}, cf.restartTime, 0);
   if(cf.autoRestart){
     cf.restart=true;
     cf.restartName=format("{}/{}.h5",cf.pathName,cf.autoRestartName);

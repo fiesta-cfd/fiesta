@@ -114,6 +114,7 @@ struct inputConfig {
   bool restart;
   std::string restartName;
   bool restartReset;
+  int restartTime;
   std::string pathName;
   int tstart, tend;
   bool tinterval;

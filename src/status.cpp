@@ -30,6 +30,8 @@
 #include "fmt/core.h"
 #include "pretty.hpp"
 #include "log2.hpp"
+#include "yogrt.h"
+#include <limits>
 
 using std::cout;
 
@@ -132,6 +134,14 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, fies
     else
       etrf = "?";
     cout << fmt::format("{: >8}ETR:       {}{}{}\n","", c(magenta),etrf,c(reset));
+
+    int tremain = yogrt_remaining();
+    if (tremain == std::numeric_limits<int>::max())
+      cout << fmt::format("{: >8}Time Left: {}inf{}\n","", c(magenta),c(reset));
+    else
+      cout << fmt::format("{: >8}Time Left: {}{}s{}\n","", c(magenta),tremain,c(reset));
+
+
 
     cout << fmt::format("{: <8}{: <16}{: >11}{: >11}\n","","","Min","Max");
     cout << std::flush;

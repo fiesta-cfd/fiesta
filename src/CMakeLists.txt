@@ -19,6 +19,7 @@ target_link_libraries(FiestaCore
     Kokkos::kokkos
     HDF5::HDF5
     ${LUA_LIBRARIES}
+    ${YOGRT_LIBS}
     fmt::fmt
     $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:-lstdc++fs>
     )
