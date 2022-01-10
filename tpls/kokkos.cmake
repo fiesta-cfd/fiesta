@@ -17,7 +17,7 @@ if (Fiesta_BUILD_KOKKOS)
 
     FetchContent_Declare(kokkos
         GIT_REPOSITORY https://github.com/kokkos/kokkos.git
-        GIT_TAG 3.4.01
+        GIT_TAG 3.5.00
         )
 
     set(BUILD_TESTING OFF CACHE BOOL "")
