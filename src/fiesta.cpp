@@ -205,7 +205,7 @@ void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time,vect
     if(yogrt_remaining() < cf.restartTimeRemaining){
       cf.restartFlag = 1;
       cf.exitFlag = 1;
-      Fiesta::Log::error("Time remaining less than {}s.  Writing restart and exiting after timestep {}.",cf.restartTimeRemaining,cf.t);
+      Fiesta::Log::error("Time remaining is less than {}s:  Writing restart and exiting after timestep {}.",cf.restartTimeRemaining,cf.t);
     }
   }
 
