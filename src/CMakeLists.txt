@@ -57,3 +57,15 @@ endif()
 # set install destination
 install(TARGETS fiesta RUNTIME DESTINATION)
 install(TARGETS FiestaCore RUNTIME DESTINATION)
+
+
+add_executable(fsclean 
+    fsclean.cpp log2.cpp
+    )
+target_link_libraries(fsclean
+    Kokkos::kokkos
+    ${LUA_LIBRARIES}
+    fmt::fmt
+    $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:-lstdc++fs>
+    )
+install(TARGETS fsclean RUNTIME DESTINATION)
