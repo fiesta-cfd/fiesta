@@ -59,13 +59,13 @@ install(TARGETS fiesta RUNTIME DESTINATION)
 install(TARGETS FiestaCore RUNTIME DESTINATION)
 
 
-add_executable(fsclean 
-    fsclean.cpp log2.cpp
+add_executable(fclean 
+    fclean.cpp log2.cpp
     )
-target_link_libraries(fsclean
+target_link_libraries(fclean
     Kokkos::kokkos
     ${LUA_LIBRARIES}
     fmt::fmt
     $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:-lstdc++fs>
     )
-install(TARGETS fsclean RUNTIME DESTINATION)
+install(TARGETS fclean RUNTIME DESTINATION)
