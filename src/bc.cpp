@@ -250,7 +250,7 @@ BCType parseBC(std::string name){
   else if(name.compare("hydrostatic")==0)
     return BCType::hydrostatic;
   else{
-    Fiesta::Log::error("Unknown boundary condition '{}'",oldname);
+    Log::error("Unknown boundary condition '{}'",oldname);
     exit(EXIT_FAILURE);
   }
 }

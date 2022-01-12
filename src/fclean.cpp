@@ -51,7 +51,7 @@ int main(int argc, char **argv){
   else if (copt.compare("auto") == 0 && isatty(fileno(stdout)))
       colorFlag = true;
 
-  Fiesta::Log::Logger(verbosity,colorFlag,0);
+  Log::Logger(verbosity,colorFlag,0);
 
   std::string filename{"fiesta.lua"};
   std::string root{"fiesta"};
@@ -103,7 +103,7 @@ int main(int argc, char **argv){
   lua_getglobal(L,root.c_str());
   lua_getfield(L, -1, "ioviews");
   if(lua_isnoneornil(L,-1)){
-    Fiesta::Log::error("Could not find {}.ioviews in '{}'",root,filename);
+    Log::error("Could not find {}.ioviews in '{}'",root,filename);
     exit(EXIT_FAILURE);
   }
 
@@ -123,22 +123,22 @@ int main(int argc, char **argv){
     dcount = 0;
     for(auto const& de : std::filesystem::directory_iterator{rpath}){
       if (std::regex_match(de.path().c_str(),std::regex(rpattern))){
-        Fiesta::Log::warning("Deleting '{}'.",de.path().c_str());
+        Log::warning("Deleting '{}'.",de.path().c_str());
         std::filesystem::remove(de);
         dcount+=1;
       }
     }
-    Fiesta::Log::message("Deleted {} restart files.",dcount);
+    Log::message("Deleted {} restart files.",dcount);
     if (std::filesystem::is_empty(rpath)){
       std::filesystem::remove(rpath);
-      Fiesta::Log::warning("Removing empty restart directory '{}'.",rpath);
+      Log::warning("Removing empty restart directory '{}'.",rpath);
     }else{
-      Fiesta::Log::error("Restart directory '{}' is not empty.  Skipping.",rpath);
+      Log::error("Restart directory '{}' is not empty.  Skipping.",rpath);
     }
   }
 
   lua_settop(L,top);
-  Fiesta::Log::debug("Found Restart Path: '{}'",rpath);
+  Log::debug("Found Restart Path: '{}'",rpath);
 
   if (lua_istable(L,-1)){
     numBlocks=lua_rawlen(L,-1);
@@ -165,17 +165,17 @@ int main(int argc, char **argv){
       if (std::filesystem::exists(mypath)){
         for(auto const& de : std::filesystem::directory_iterator{mypath}){
           if (std::regex_match(de.path().c_str(),std::regex(mypattern))){
-            Fiesta::Log::warning("Deleting '{}'.",de.path().c_str());
+            Log::warning("Deleting '{}'.",de.path().c_str());
             std::filesystem::remove(de);
             dcount += 1;
           }
         }
-        Fiesta::Log::message("Deleted {} '{}' files.",dcount,myname);
+        Log::message("Deleted {} '{}' files.",dcount,myname);
         if (std::filesystem::is_empty(mypath)){
           std::filesystem::remove(mypath);
-          Fiesta::Log::warning("Removing empty '{}' directory '{}'.",myname,mypath);
+          Log::warning("Removing empty '{}' directory '{}'.",myname,mypath);
         }else{
-          Fiesta::Log::error("'{}' directory '{}' is not empty.  Skipping.",myname,mypath);
+          Log::error("'{}' directory '{}' is not empty.  Skipping.",myname,mypath);
         }
       }
 

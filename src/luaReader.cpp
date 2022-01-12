@@ -95,9 +95,9 @@ void luaReader::get(std::initializer_list<std::string> keys, T& n){
   }
   if (found){
     getValue<T>(n);
-    Fiesta::Log::info("LUA READER: Found {}={}",fullkey,n);
+    Log::info("LUA READER: Found {}={}",fullkey,n);
   }else{
-    Fiesta::Log::error("LUA READER: Could not find required parameter '{}' in '{}'",fullkey,filename);
+    Log::error("LUA READER: Could not find required parameter '{}' in '{}'",fullkey,filename);
     exit(EXIT_FAILURE);
   }
   lua_settop(L,top);
@@ -124,9 +124,9 @@ void luaReader::get(std::initializer_list<std::string> keys, T& n, T d){
   }
   if (found){
     getValue<T>(n);
-    Fiesta::Log::info("LUA READER: Found {}={}",fullkey,n);
+    Log::info("LUA READER: Found {}={}",fullkey,n);
   }else{
-    Fiesta::Log::infoWarning("LUA READER: Could not find '{}' setting default ({})",fullkey,d);
+    Log::infoWarning("LUA READER: Could not find '{}' setting default ({})",fullkey,d);
     n=d;
   }
   lua_settop(L,top);
@@ -152,9 +152,9 @@ void luaReader::get(std::initializer_list<std::string> keys, vector<T>& v, int n
   }
   if (found){
     getArray<T>(v,n);
-    Fiesta::Log::info("LUA READER: Found {}",fullkey);
+    Log::info("LUA READER: Found {}",fullkey);
   }else{
-    Fiesta::Log::error("LUA READER: Could not find required parameter '{}' in '{}'",fullkey,filename);
+    Log::error("LUA READER: Could not find required parameter '{}' in '{}'",fullkey,filename);
     exit(EXIT_FAILURE);
   }
   lua_settop(L,top);
@@ -166,7 +166,7 @@ void luaReader::getSpeciesData(struct inputConfig& cf){
   lua_getglobal(L,root.c_str());
   lua_getfield(L, -1, "species");
   if(lua_isnoneornil(L,-1)){
-    Fiesta::Log::error("Could not find {}.species in '{}'",root,filename);
+    Log::error("Could not find {}.species in '{}'",root,filename);
     exit(EXIT_FAILURE);
   }
 
@@ -215,7 +215,7 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
   lua_getglobal(L,root.c_str());
   lua_getfield(L, -1, "ioviews");
   if(lua_isnoneornil(L,-1)){
-    Fiesta::Log::error("Could not find {}.ioviews in '{}'",root,filename);
+    Log::error("Could not find {}.ioviews in '{}'",root,filename);
     exit(EXIT_FAILURE);
   }
 
@@ -318,7 +318,7 @@ double luaReader::call(std::string f, int n, ...){
   lua_getglobal(L,root.c_str());
   lua_getfield(L, -1, f.c_str());
   if(lua_isnoneornil(L,-1)){
-    Fiesta::Log::error("Could not find {}.{} in '{}'",root,f,filename);
+    Log::error("Could not find {}.{} in '{}'",root,f,filename);
     exit(EXIT_FAILURE);
   }
   int isnum;

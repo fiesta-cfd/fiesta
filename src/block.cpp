@@ -57,7 +57,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
 
   if (cf.rank==0){
     if (!std::filesystem::exists(path)){
-      Fiesta::Log::message("Creating directory: '{}'",path);
+      Log::message("Creating directory: '{}'",path);
       std::filesystem::create_directories(path);
     }
   }
@@ -108,7 +108,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   varxH = Kokkos::create_mirror_view(f->varx);
 
   if(sliceRank==0)
-    Fiesta::Log::debugAll("IO VIEW: name={}, rank={}, size={}, chunkable={} compressible={}",name,sliceRank,sliceSize,cf.chunkable,cf.compressible);
+    Log::debugAll("IO VIEW: name={}, rank={}, size={}, chunkable={} compressible={}",name,sliceRank,sliceSize,cf.chunkable,cf.compressible);
 
   chunkable = cf.chunkable;
 }
@@ -123,27 +123,27 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
 
   for (int i=0; i<cf.ndim; ++i){
     if (gStart[i] > cf.globalCellDims[i]){
-      Fiesta::Log::error("Starting index of ioview '{}' exceeds domain bounds.",name);
+      Log::error("Starting index of ioview '{}' exceeds domain bounds.",name);
       exit(EXIT_FAILURE);
     }
 
     if (gEnd[i] > cf.globalCellDims[i]){
-      Fiesta::Log::error("Ending index of ioview '{}' exceeds domain bounds.",name);
+      Log::error("Ending index of ioview '{}' exceeds domain bounds.",name);
       exit(EXIT_FAILURE);
     }
 
     if (gStart[i] > gEnd[i]){
-      Fiesta::Log::error("Sarting index of ioview '{}' exceeds ending index.",name);
+      Log::error("Sarting index of ioview '{}' exceeds ending index.",name);
       exit(EXIT_FAILURE);
     }
 
     if (stride[i] > 4){
-      Fiesta::Log::error("Stride of ioview '{}' exceeds 4.",name);
+      Log::error("Stride of ioview '{}' exceeds 4.",name);
       exit(EXIT_FAILURE);
     }
 
     if (gEnd[i] > gStart[i] && gEnd[i]-gStart[i] < stride[i]){
-      Fiesta::Log::error("Stride of ioview '{}' exceeds view dimensions.",name);
+      Log::error("Stride of ioview '{}' exceeds view dimensions.",name);
       exit(EXIT_FAILURE);
     }
 
@@ -154,7 +154,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
 
   if (cf.rank==0){
     if (!std::filesystem::exists(path)){
-      Fiesta::Log::message("Creating directory: '{}'",path);
+      Log::message("Creating directory: '{}'",path);
       std::filesystem::create_directories(path);
     }
   }
@@ -284,10 +284,10 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   varH = Kokkos::create_mirror_view(f->var);
   varxH = Kokkos::create_mirror_view(f->varx);
   if(sliceRank==0)
-    Fiesta::Log::debugAll("IO VIEW: name={}, rank={}, size={}, start={}, end={}, stride={}, extent={}",name,sliceRank,sliceSize,gStart,gEnd,stride,gExt);
+    Log::debugAll("IO VIEW: name={}, rank={}, size={}, start={}, end={}, stride={}, extent={}",name,sliceRank,sliceSize,gStart,gEnd,stride,gExt);
 
   chunkable=false;
-  Fiesta::Log::warning("Chunking it not supported for IO views with strides.  Chunking will be disabled for {}.",name);
+  Log::warning("Chunking it not supported for IO views with strides.  Chunking will be disabled for {}.",name);
 }
 
 template<typename T>
@@ -304,7 +304,7 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
   string hdfPath   = format("{}/{}",path,hdfName);
   string xmfPath   = format("{}/{}.xmf",path,blockBase);
   
-  Fiesta::Log::message("[{}] Writing '{}'",cf.t,hdfPath);
+  Log::message("[{}] Writing '{}'",cf.t,hdfPath);
   fiestaTimer writeTimer = fiestaTimer();
 
   //#ifdef HAVE_MPI
@@ -371,12 +371,12 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
     double frate = (fsize/1048576.0)/ftime;
 
     if (fsize > 1073741824)
-      Fiesta::Log::message("[{}] '{}': {:.2f} GiB in {:.2f}s ({:.2f} MiB/s)",cf.t,hdfPath,fsize/1073741824.0,ftime,frate);  //divide by bytes per GiB (1024*1024*1024)
+      Log::message("[{}] '{}': {:.2f} GiB in {:.2f}s ({:.2f} MiB/s)",cf.t,hdfPath,fsize/1073741824.0,ftime,frate);  //divide by bytes per GiB (1024*1024*1024)
     else
-      Fiesta::Log::message("[{}] '{}': {:.2f} MiB in {:.2f}s ({:.2f} MiB/s)",cf.t,hdfPath,fsize/1048576.0,ftime,frate);     //divide by bytes per MiB (1024*1024)
+      Log::message("[{}] '{}': {:.2f} MiB in {:.2f}s ({:.2f} MiB/s)",cf.t,hdfPath,fsize/1048576.0,ftime,frate);     //divide by bytes per MiB (1024*1024)
   }
 
-  //Fiesta::Log::message("[{}] Writing '{}'",cf.t,xmfPath);
+  //Log::message("[{}] Writing '{}'",cf.t,xmfPath);
   if (myColor==1){
     writeXMF(xmfPath, hdfName, cf.grid, time, cf.ndim, gExt.data(),gOrigin,iodx, cf.nvt, writeVarx,f->varNames,f->varxNames);
   }

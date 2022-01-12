@@ -32,7 +32,7 @@
 void readRestart(struct inputConfig &cf, rk_func *f) {
   if (cf.rank==0){
     if (!std::filesystem::exists(cf.restartName)){
-      Fiesta::Log::error("Restart file '{}' does not exist.",cf.restartName);
+      Log::error("Restart file '{}' does not exist.",cf.restartName);
       exit(EXIT_FAILURE);
     }
   }
@@ -91,7 +91,7 @@ void readRestart(struct inputConfig &cf, rk_func *f) {
 
   writer.readAttribute("restart_file_version",restart_version);
   if(restart_version != FIESTA_RESTART_VERSION){
-    Fiesta::Log::error("Cannot read restart file '{}' with version {}. Only version {} files are readable by Fiesta version {}",
+    Log::error("Cannot read restart file '{}' with version {}. Only version {} files are readable by Fiesta version {}",
         cf.restartName,restart_version,FIESTA_RESTART_VERSION,FIESTA_VERSION);
     exit(EXIT_FAILURE);
   }
@@ -103,7 +103,7 @@ void readRestart(struct inputConfig &cf, rk_func *f) {
     writer.readAttribute("time_index",cf.tstart);
     writer.readAttribute("time",cf.time);
   }else{
-    Fiesta::Log::message("Restart reset enabled, using index and time from input file.");
+    Log::message("Restart reset enabled, using index and time from input file.");
   }
 
   if(cf.tinterval){
@@ -112,8 +112,8 @@ void readRestart(struct inputConfig &cf, rk_func *f) {
     cf.nt=cf.tend-cf.tstart;
   }
   cf.t=cf.tstart;
-  Fiesta::Log::message("Restart Title: '{}'",temp_title);
-  Fiesta::Log::message("Restart Properties: t={} time={:.2g}",cf.tstart,cf.time);
+  Log::message("Restart Title: '{}'",temp_title);
+  Log::message("Restart Properties: t={} time={:.2g}",cf.tstart,cf.time);
   
   writer.close();
 }

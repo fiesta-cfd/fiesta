@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
     L.close();
  
     // Pre Simulation
-    Fiesta::Log::message("Executing pre-simulation hook");
+    Log::message("Executing pre-simulation hook");
     applyBCs(cf, f);
     f->preSim();
 
@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
     cf.simTimer.reset();
 
     // Main time loop
-    Fiesta::Log::message("Beginning Main Time Loop");
+    Log::message("Beginning Main Time Loop");
     for (int t = cf.tstart; t < cf.tend+1; ++t) {
       Fiesta::collectSignals(cf);
 
@@ -106,17 +106,17 @@ int main(int argc, char *argv[]) {
       cf.time += cf.dt;
       cf.t = t + 1;
     }
-    Fiesta::Log::message("Simulation complete!");
+    Log::message("Simulation complete!");
  
     // Post Simulation
-    Fiesta::Log::message("Executing post-simulation hook");
+    Log::message("Executing post-simulation hook");
     f->postSim();
 
 
     // Stop Timers and Report
     cf.simTimer.stop();
     cf.totalTimer.stop();
-    Fiesta::Log::message("Reporting Timers:");
+    Log::message("Reporting Timers:");
     Fiesta::reportTimers(cf,f);
   }
   Fiesta::finalize();

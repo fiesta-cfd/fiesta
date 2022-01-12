@@ -63,10 +63,10 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
 
   if (temp_rank == 0) printSplash(cArgs.colorFlag);
 
-  Fiesta::Log::Logger(cArgs.verbosity,cArgs.colorFlag,temp_rank);
+  Log::Logger(cArgs.verbosity,cArgs.colorFlag,temp_rank);
 
   // Initialize Kokkos
-  Fiesta::Log::message("Initializing Kokkos");
+  Log::message("Initializing Kokkos");
   Kokkos::InitArguments kokkosArgs;
 #ifdef HAVE_CUDA
   kokkosArgs.ndevices = cArgs.numDevices;
@@ -76,16 +76,16 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
   Kokkos::initialize(kokkosArgs);
 
   // Execute lua script and get input parameters
-  Fiesta::Log::message("Executing Lua Input Script");
+  Log::message("Executing Lua Input Script");
   executeConfiguration(cf,cArgs);
 
 #ifdef HAVE_MPI
   // perform domain decomposition
-  Fiesta::Log::message("Initializing MPI Setup");
+  Log::message("Initializing MPI Setup");
   mpi_init(cf);
   MPI_Barrier(cf.comm);
 #endif
-  Fiesta::Log::message("Printing Configuration");
+  Log::message("Printing Configuration");
   printConfig(cf);
 
   return cf;
@@ -102,7 +102,7 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
     else if (cf.mpiScheme == 2)
       cf.m = std::make_shared<orderedHostHaloExchange>(cf,f->var);
     else{
-      Fiesta::Log::error("Invalid MPI type.  Only 'gpu-aware' and 'host' are available when viscosity or c-equations are enabled.");
+      Log::error("Invalid MPI type.  Only 'gpu-aware' and 'host' are available when viscosity or c-equations are enabled.");
       exit(EXIT_FAILURE);
     }
   }else{
@@ -120,18 +120,18 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
   // If not restarting, generate initial conditions and grid
   if (cf.restart == 0) {
     // Generate Grid Coordinates
-    Fiesta::Log::message("Generating grid");
+    Log::message("Generating grid");
     cf.gridTimer.start();
     loadGrid(cf, f->grid);
     cf.gridTimer.stop();
-    Fiesta::Log::message("Grid generated in: {}",cf.gridTimer.get());
+    Log::message("Grid generated in: {}",cf.gridTimer.get());
 
     // Generate Initial Conditions
-    Fiesta::Log::message("Generating initial conditions");
+    Log::message("Generating initial conditions");
     cf.loadTimer.start();
     loadInitialConditions(cf, f->var, f->grid);
     cf.loadTimer.stop();
-    Fiesta::Log::message("Initial conditions generated in: {}",cf.loadTimer.get());
+    Log::message("Initial conditions generated in: {}",cf.loadTimer.get());
 
     // cf.writeTimer.start();
     // // Write initial solution file
@@ -150,16 +150,16 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
     // cf.writeTimer.stop();
   }else{ // If Restarting, Load Restart File
     cf.writeTimer.start();
-    Fiesta::Log::message("Loading restart file:");
+    Log::message("Loading restart file:");
     cf.loadTimer.reset();
     readRestart(cf, f);
     cf.loadTimer.stop();
-    Fiesta::Log::message("Loaded restart data in: {}",cf.loadTimer.get());
+    Log::message("Loaded restart data in: {}",cf.loadTimer.get());
   }
 
   if (cf.rank==0){
     if (!std::filesystem::exists(cf.pathName)){
-      Fiesta::Log::message("Creating directory: '{}'",cf.pathName);
+      Log::message("Creating directory: '{}'",cf.pathName);
       std::filesystem::create_directories(cf.pathName);
     }
   }
@@ -171,7 +171,7 @@ void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time,vect
   if (cf.rank == 0) {
     if (cf.out_freq > 0)
       if (t % cf.out_freq == 0)
-        Fiesta::Log::info("[{}] Timestep {} of {}. Simulation Time: {:.2e}s",t,t,cf.tend,time);
+        Log::info("[{}] Timestep {} of {}. Simulation Time: {:.2e}s",t,t,cf.tend,time);
   }
 
   // Print status check if necessary
@@ -205,7 +205,7 @@ void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time,vect
     if(yogrt_remaining() < cf.restartTimeRemaining){
       cf.restartFlag = 1;
       cf.exitFlag = 1;
-      Fiesta::Log::error("Time remaining is less than {}s:  Writing restart and exiting after timestep {}.",cf.restartTimeRemaining,cf.t);
+      Log::error("Time remaining is less than {}s:  Writing restart and exiting after timestep {}.",cf.restartTimeRemaining,cf.t);
     }
   }
 
@@ -255,11 +255,11 @@ void Fiesta::collectSignals(struct inputConfig &cf){
 #endif
 
   if (cf.restartFlag && cf.exitFlag)
-      Fiesta::Log::warning("Recieved SIGURG:  Writing restart and exiting after timestep {}.",cf.t);
+      Log::warning("Recieved SIGURG:  Writing restart and exiting after timestep {}.",cf.t);
   else if (cf.restartFlag)
-      Fiesta::Log::message("Recieved SIGUSR1:  Writing restart after timestep {}.",cf.t);
+      Log::message("Recieved SIGUSR1:  Writing restart after timestep {}.",cf.t);
   else if (cf.exitFlag)
-      Fiesta::Log::error("Recieved SIGTERM:  Exiting after timestep {}.",cf.t);
+      Log::error("Recieved SIGTERM:  Exiting after timestep {}.",cf.t);
 }
 
 void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){

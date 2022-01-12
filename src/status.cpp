@@ -122,7 +122,7 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, fies
   string smin,smax;
 
   if (cf.rank == 0) {
-    Fiesta::Log::message("[{}] Reporting Status",cf.t);
+    Log::message("[{}] Reporting Status",cf.t);
     cout << fmt::format("{: >8}Timestep:  {}{}{}/{}{}{} ({}{:.0f}%{})\n","",
         c(magenta),cf.t,c(reset),c(magenta),cf.tend,c(reset),c(green),100.0*(double)cf.t/(double)cf.tend,c(reset));
     cout << fmt::format("{: >8}Sim Time:  {}{:.2g}{}s\n","",c(magenta),cf.time,c(reset));

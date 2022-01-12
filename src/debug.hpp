@@ -20,6 +20,6 @@
 #ifndef LSDEBUG_H
 #define LSDEBUG_H
 #include "log2.hpp"
-#define MYDBG Fiesta::Log::debug("IN: '{}' at '{}'",__FILE__, __LINE__);
-#define MYDBGALL Fiesta::Log::debugAll("IN: '{}' at '{}'",__FILE__, __LINE__);
+#define MYDBG Log::debug("IN: '{}' at '{}'",__FILE__, __LINE__);
+#define MYDBGALL Log::debugAll("IN: '{}' at '{}'",__FILE__, __LINE__);
 #endif

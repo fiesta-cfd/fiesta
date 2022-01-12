@@ -115,10 +115,10 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
 
 inputConfig::~inputConfig(){}
 
-//int Fiesta::Log::verbosity;
-//ansiColors *Fiesta::Log::c;
-//int Fiesta::Log::rank;
-//Kokkos::Timer *Fiesta::Log::timer;
+//int Log::verbosity;
+//ansiColors *Log::c;
+//int Log::rank;
+//Kokkos::Timer *Log::timer;
 
 void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   cf.colorFlag = cargs.colorFlag;
@@ -140,7 +140,7 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
     cf.tinterval = false;
     L.get({"time","tend"},cf.tend,0);
     if(cf.tend==0){
-      Fiesta::Log::error("Must specify either 'fiesta.time.nt' or 'fiesta.time.tend'");
+      Log::error("Must specify either 'fiesta.time.nt' or 'fiesta.time.tend'");
       exit(EXIT_FAILURE);
     }
     cf.nt=cf.tend-cf.tstart;
@@ -177,9 +177,9 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   if(cf.autoRestart){
     cf.restart=true;
     cf.restartName=format("{}/{}.h5",cf.pathName,cf.autoRestartName);
-    Fiesta::Log::debug("Auto Restart Name: '{}'",cf.restartName);
+    Log::debug("Auto Restart Name: '{}'",cf.restartName);
     if (!std::filesystem::exists(cf.restartName)){
-      Fiesta::Log::warning("Auto Restart '{}' not found. Initiating fresh run.",cf.autoRestartName);
+      Log::warning("Auto Restart '{}' not found. Initiating fresh run.",cf.autoRestartName);
       cf.restart=false;
     }
     L.get({"restart","frequency"}, cf.restart_freq,cf.tend);
@@ -195,7 +195,7 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
 
   if (!cf.chunkable && cf.compressible){
     cf.compressible = false;
-    Fiesta::Log::warning("HDF5 Compression requires chunking.  Disabling.");
+    Log::warning("HDF5 Compression requires chunking.  Disabling.");
   }
 
   L.get({"advection_scheme"}, scheme, std::string("weno5"));

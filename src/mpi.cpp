@@ -37,7 +37,7 @@ void mpi_init(struct inputConfig &cf){
   /* Get basic MPI parameters */
   MPI_Comm_size(MPI_COMM_WORLD, &cf.numProcs);
   MPI_Comm_rank(MPI_COMM_WORLD, &cf.rank);
-  Fiesta::Log::debug("MPI_INIT A");
+  Log::debug("MPI_INIT A");
 
   /* Create cartesian topology and get rank dimensions and neighbors */
   MPI_Cart_create(MPI_COMM_WORLD, 3, dims, periods, 0, &cf.comm);
@@ -51,7 +51,7 @@ void mpi_init(struct inputConfig &cf){
   int rankN;  
   bool validCoord;
 
-  Fiesta::Log::debug("MPI_INIT B");
+  Log::debug("MPI_INIT B");
 
   for(int ih=-1;ih<2;++ih){
     for(int jh=-1;jh<2;++jh){
@@ -76,7 +76,7 @@ void mpi_init(struct inputConfig &cf){
 
         cf.proc[idx]=rankN;
 
-        //Fiesta::Log::debug("Coords ({},{},{}): {} {} ",ih,jh,kh,idx,cf.proc[idx]);
+        //Log::debug("Coords ({},{},{}): {} {} ",ih,jh,kh,idx,cf.proc[idx]);
 
         idx+=1;
       }
@@ -159,7 +159,7 @@ void mpi_init(struct inputConfig &cf){
     cf.subdomainOffset.push_back(cf.kStart);
   }
   if (cf.chunkable && !chunkable){
-    Fiesta::Log::warning("Grid and procs do not support chunking, disabling. (Grid must be evenly divisible by procs to enable chunking.)");
+    Log::warning("Grid and procs do not support chunking, disabling. (Grid must be evenly divisible by procs to enable chunking.)");
   }
   cf.chunkable=cf.chunkable && chunkable;
 }
@@ -610,7 +610,7 @@ void unorderedHaloExchange::haloExchange(){
 
         tag=100*(ih+1)+10*(jh+1)+(kh+1);
 
-        //Fiesta::Log::debug("Recieve ({},{},{}): {}, {} {} - {}",ih,jh,kh,idx,waitCount,tag,buffSize[idx]);
+        //Log::debug("Recieve ({},{},{}): {}, {} {} - {}",ih,jh,kh,idx,waitCount,tag,buffSize[idx]);
         MPI_Irecv(recvBuffers[idx].data(), buffSize[idx], MPI_DOUBLE, cf.proc[idx], tag,  cf.comm, &reqs[waitCount]);
         waitCount += 1;
         idx += 1;
@@ -629,7 +629,7 @@ void unorderedHaloExchange::haloExchange(){
 
         pack({ih,jh,kh},deviceV,sendBuffers[idx]);
         Kokkos::fence();
-        //Fiesta::Log::debug("Send ({},{},{}): {} {} {} - {}",ih,jh,kh,idx,waitCount,tag,buffSize[idx]);
+        //Log::debug("Send ({},{},{}): {} {} {} - {}",ih,jh,kh,idx,waitCount,tag,buffSize[idx]);
         MPI_Isend(sendBuffers[idx].data(), buffSize[idx], MPI_DOUBLE, cf.proc[idx], tag,  cf.comm, &reqs[waitCount]);
         waitCount += 1;
         idx += 1;
@@ -641,7 +641,7 @@ void unorderedHaloExchange::haloExchange(){
   //MPI_Status stat[52];
   //MPI_Waitall(waitCount, reqs, stat);
   //for (int i=0; i<52; ++i)
-  //  Fiesta::Log::debugAll("{}",stat[i].MPI_ERROR);
+  //  Log::debugAll("{}",stat[i].MPI_ERROR);
 
   idx=0;
   for(int ih=-1;ih<2;++ih){

@@ -207,7 +207,7 @@ void h5Writer<T>::read(std::string path, int ndim, std::vector<size_t> in_dims_g
   std::reverse_copy(in_dims_local.begin(),in_dims_local.end(),ldims.begin());
   std::reverse_copy(in_offset.begin(),in_offset.end(),offset.begin());
 
-  //Fiesta::Log::debugAll("{} {} {}",gdims,ldims,offset);
+  //Log::debugAll("{} {} {}",gdims,ldims,offset);
 
   // identifiers
   hid_t dset_id, filespace, memspace, dtype_id;
@@ -319,7 +319,7 @@ void h5Writer<T>::checkDataDimensions(hid_t filespace, int ndim, std::vector<hsi
   // get and check rank
   rank      = H5Sget_simple_extent_ndims(filespace);
   if (ndim != rank){
-    Fiesta::Log::error("Expected {}D restart but found {}D restart.",ndim,rank);
+    Log::error("Expected {}D restart but found {}D restart.",ndim,rank);
     exit(EXIT_FAILURE);
   }
 
@@ -329,7 +329,7 @@ void h5Writer<T>::checkDataDimensions(hid_t filespace, int ndim, std::vector<hsi
   // check dimensions
   for (int d=0; d<ndim; ++d){
     if (dims[d] != dimsg[d]){
-      Fiesta::Log::error("Extents of restart file different than expected. (Got {} but expected {} in direction {}.)\n",dimsg[d],dims[d],d);
+      Log::error("Extents of restart file different than expected. (Got {} but expected {} in direction {}.)\n",dimsg[d],dims[d],d);
       exit (EXIT_FAILURE);
     }
   }

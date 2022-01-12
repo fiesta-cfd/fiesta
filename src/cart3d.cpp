@@ -54,7 +54,7 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   MPI_Allreduce(&memEstimateMB, &memEstGlobalMB, 1, MPI_DOUBLE, MPI_SUM, cf.comm);
 #endif
 
-  Fiesta::Log::message("Minimum device memory estimate: {:.2f}MiB",memEstGlobalMB);
+  Log::message("Minimum device memory estimate: {:.2f}MiB",memEstGlobalMB);
 
   var     = FS4D("var",       cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Primary Vars
   tmp1    = FS4D( "tmp1",     cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Temp Vars

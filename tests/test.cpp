@@ -65,24 +65,24 @@ rk_func * initTests(struct inputConfig& cf){
   MPI_Init(NULL,NULL);
   int temp_rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &temp_rank);
-  Fiesta::Log::Logger(5,0,temp_rank);
-  Fiesta::Log::debug("TEST HAVE MPI");
+  Log::Logger(5,0,temp_rank);
+  Log::debug("TEST HAVE MPI");
 #else
-  Fiesta::Log::Logger(5,0,0);
+  Log::Logger(5,0,0);
 #endif
   Kokkos::initialize(kokkosArgs);
 
-  Fiesta::Log::debug("AT A");
+  Log::debug("AT A");
 #ifdef HAVE_MPI
-  Fiesta::Log::debug("TEST MPI INIT");
+  Log::debug("TEST MPI INIT");
   mpi_init(cf);
 #endif
 
-  Fiesta::Log::debug("AT B");
+  Log::debug("AT B");
   rk_func *f;
   f = new cart3d_func(cf);
 
-  Fiesta::Log::debug("AT C");
+  Log::debug("AT C");
 
 #ifdef HAVE_MPI
   cf.mpiScheme=1;
@@ -98,7 +98,7 @@ rk_func * initTests(struct inputConfig& cf){
     cf.m = std::make_shared<directHaloExchange>(cf,f->var);
 #endif
 
-  Fiesta::Log::debug("AT D");
+  Log::debug("AT D");
   return f;
 }
 

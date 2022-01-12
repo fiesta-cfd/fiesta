@@ -52,19 +52,19 @@ int main(int argc, char* argv[]) {
     MPI_Init(NULL,NULL);
     int temp_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &temp_rank);
-    Fiesta::Log::Logger(5,0,temp_rank);
+    Log::Logger(5,0,temp_rank);
     Kokkos::initialize(kokkosArgs);
 
-    Fiesta::Log::debug("AT A");
+    Log::debug("AT A");
     mpi_init(cf);
 
-    Fiesta::Log::debug("AT B");
+    Log::debug("AT B");
     rk_func *f;
     f = new cart3d_func(cf);
 
     //cf.mpiScheme=4;
 
-    Fiesta::Log::debug("AT C");
+    Log::debug("AT C");
     if (cf.mpiScheme == 1)
       cf.m = std::make_shared<copyHaloExchange>(cf,f->var);
     else if (cf.mpiScheme == 2)
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
     else if (cf.mpiScheme == 3)
       cf.m = std::make_shared<directHaloExchange>(cf,f->var);
 
-    Fiesta::Log::debug("MPI Scheme: {}",cf.mpiScheme);
+    Log::debug("MPI Scheme: {}",cf.mpiScheme);
 
     FS4DH varH = Kokkos::create_mirror_view(f->var);
 
@@ -86,20 +86,20 @@ int main(int argc, char* argv[]) {
         for (int k=3;k<6;++k)
           varH(i,j,k,0) = cf.rank;
 
-    Fiesta::Log::debug("varH(0,0,0,0)={}",varH(0,0,0,0));
-    Fiesta::Log::debug("varH(1,1,1,0)={}",varH(1,1,1,0));
-    Fiesta::Log::debug("varH(2,2,2,0)={}",varH(2,2,2,0));
+    Log::debug("varH(0,0,0,0)={}",varH(0,0,0,0));
+    Log::debug("varH(1,1,1,0)={}",varH(1,1,1,0));
+    Log::debug("varH(2,2,2,0)={}",varH(2,2,2,0));
 
-    Fiesta::Log::debug("varH(6,6,6,0)={}",varH(6,6,6,0));
-    Fiesta::Log::debug("varH(7,7,7,0)={}",varH(7,7,7,0));
-    Fiesta::Log::debug("varH(8,8,8,0)={}",varH(8,8,8,0));
+    Log::debug("varH(6,6,6,0)={}",varH(6,6,6,0));
+    Log::debug("varH(7,7,7,0)={}",varH(7,7,7,0));
+    Log::debug("varH(8,8,8,0)={}",varH(8,8,8,0));
 
     Kokkos::deep_copy(f->var,varH);
     applyBCs(cf,f);
     Kokkos::deep_copy(varH,f->var);
 
-    //Fiesta::Log::debugAll("{} {} {} {} {} {}",cf.xMinus,cf.xPlus,cf.yMinus,cf.yPlus,cf.zMinus,cf.zPlus);
-    //Fiesta::Log::debugAll("cf.ngi={}, cf.ngj={}, cf.ngk={}",cf.ngi,cf.ngj,cf.ngk);
+    //Log::debugAll("{} {} {} {} {} {}",cf.xMinus,cf.xPlus,cf.yMinus,cf.yPlus,cf.zMinus,cf.zPlus);
+    //Log::debugAll("cf.ngi={}, cf.ngj={}, cf.ngk={}",cf.ngi,cf.ngj,cf.ngk);
 
     if (cf.rank==0){
       // neighbors
