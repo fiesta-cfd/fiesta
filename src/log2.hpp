@@ -20,130 +20,164 @@
 #ifndef LOG2_HPP
 #define LOG2_HPP
 
-#include "Kokkos_Core.hpp"
 #include <iostream>
-#include <string>
-#include <iomanip>
-#include <locale>
-#include "unistd.h"
-#include <sstream>
-#include <fstream>
-#include <ctime>
 #include <chrono>
-#include <algorithm>
+#include <string>
 #include "fmt/core.h"
 #include "fmt/ranges.h"
-#include "pretty.hpp"
 
 using fmt::format;
 
 namespace Fiesta {
   namespace Log {
 
-    extern int verbosity;
-    extern ansiColors *c;
-    extern int rank;
-    extern Kokkos::Timer *timer;
-    
+    inline int& verbosity(){
+      static int verb = 5;
+      return verb;
+    }
+
+    inline int& rank(){
+      static int rk = 0;
+      return rk;
+    }
+
+    inline bool& colorable(){
+      static bool co = false;
+      return co;
+    }
+
+    inline double timer(){
+      static std::chrono::high_resolution_clock::time_point m_old = std::chrono::high_resolution_clock::now();
+      std::chrono::high_resolution_clock::time_point m_new = std::chrono::high_resolution_clock::now();
+      return std::chrono::duration_cast<std::chrono::duration<double>>(m_new - m_old).count();
+    }
+
+    enum Colors { red, green, yellow, blue, magenta, cyan, reset, none};
+    inline std::string getColor(const Colors color){
+      if (colorable()){
+        switch (color) {
+        case red:
+          return "\033[0;31m";
+        case green:
+          return "\033[0;32m";
+        case yellow:
+          return "\033[0;33m";
+        case blue:
+          return "\033[0;34m";
+        case magenta:
+          return "\033[0;35m";
+        case cyan:
+          return "\033[0;36m";
+        case reset:
+          return "\033[0m";
+        case none:
+          return "\033[0m";
+        default:
+          return "\033[0m";
+        }
+      }else{
+        return "";
+      }
+    }
+
     template<typename... Args> inline
-    void log(Colour color, std::string type, std::string logformat, Args&&... args){
-      if (rank==0){
-        std::string format = fmt::format("{}[{: >12.5f}] {: >7}: {}{}\n",(*c)(color),timer->seconds(),type,logformat,(*c)(reset));
+    void log(Colors color, std::string type, std::string logformat, Args&&... args){
+      if (rank()==0){
+        std::string format = fmt::format("{}[{: >12.5f}] {: >7}: {}{}\n",getColor(color),timer(),type,logformat,getColor(reset));
         fmt::vprint(format,fmt::make_args_checked<Args...>(format,args...));
         std::cout << std::flush;
       }
     }
 
     template<typename... Args> inline
-    void logRank(int ra, Colour color, std::string type, std::string logformat, Args&&... args){
-      if (rank==ra){
-        std::string format = fmt::format("{}[{: >12.5f}] {: >7} <{}>(: {}{}\n",(*c)(color),timer->seconds(),type,rank,logformat,(*c)(reset));
+    void logrank(int ra, Colors color, std::string type, std::string logformat, Args&&... args){
+      if (rank()==ra){
+        std::string format = fmt::format("{}[{: >12.5f}] {: >7} <{}>(: {}{}\n",getColor(color),timer(),type,rank(),logformat,getColor(reset));
         fmt::vprint(format,fmt::make_args_checked<Args...>(format,args...));
         std::cout << std::flush;
       }
     }
     
     template<typename... Args> inline
-    void logAll(Colour color, std::string type, std::string logformat, Args&&... args){
-      std::string format = fmt::format("{}[{: >12.5f}] {: >7} <{}>: {}{}\n",(*c)(color),timer->seconds(),type,rank,logformat,(*c)(reset));
+    void logAll(Colors color, std::string type, std::string logformat, Args&&... args){
+      std::string format = fmt::format("{}[{: >12.5f}] {: >7} <{}>: {}{}\n",getColor(color),timer(),type,rank(),logformat,getColor(reset));
       fmt::vprint(format,fmt::make_args_checked<Args...>(format,args...));
     }
     
     inline
-    void print(std::string header, std::string message, Colour color){
-      if (rank==0){
-        fmt::print("{}[{: >12.5f}] {: >7}: {}{}\n",(*c)(color),timer->seconds(),header,message,(*c)(reset));
+    void print(std::string header, std::string message, Colors color){
+      if (rank()==0){
+        fmt::print("{}[{: >12.5f}] {: >7}: {}{}\n",getColor(color),timer(),header,message,getColor(reset));
       }
     }
     
     inline
-    string getTime(){
+    std::string getTime(){
       auto currentTime = std::chrono::system_clock::now();
       time_t end_time = std::chrono::system_clock::to_time_t(currentTime);
-      string message = ctime(&end_time);
+      std::string message = ctime(&end_time);
       message.erase(remove(message.begin(), message.end(), '\n'), message.end());
       return message;
     }
     
     inline
     void Logger(int v, int c_, int r){
-      timer = new Kokkos::Timer();
-      c = new ansiColors(c_);
-      verbosity=v;
-      rank=r;
+      colorable() = bool(c_);
+      verbosity()=v;
+      rank()=r;
     
       print("Logger",format("Log started {}",getTime()),green);
-      print("Logger",format("Log Level {}",verbosity),green);
+      print("Logger",format("Log Level {}",verbosity()),green);
     }
     
     template<typename... Args> inline
-    void debugAll(string format, Args&&... args) {
-      if (verbosity>=5) logAll(magenta,"Debug",format,args...);
+    void debugAll(std::string format, Args&&... args) {
+      if (verbosity()>=5) logAll(magenta,"Debug",format,args...);
     }
     
     template<typename... Args> inline
-    void infoAll(string format, Args&&... args) {
-      if (verbosity>=4) logAll(none,"Info",format,args...);
+    void infoAll(std::string format, Args&&... args) {
+      if (verbosity()>=4) logAll(none,"Info",format,args...);
     }
     
     template<typename... Args> inline
-    void debug(string format, Args&&... args) {
-      if (verbosity>=5) log(magenta,"Debug",format,args...);
+    void debug(std::string format, Args&&... args) {
+      if (verbosity()>=5) log(magenta,"Debug",format,args...);
     }
 
     template<typename... Args> inline
-    void debugRank(int ra, string format, Args&&... args) {
-      if (verbosity>=5) logRank(ra,magenta,"Debug",format,args...);
+    void debugrank(int ra, std::string format, Args&&... args) {
+      if (verbosity()>=5) logrank(ra,magenta,"Debug",format,args...);
     }
     
     template<typename... Args> inline
-    void debugWarning(string format, Args&&... args) {
-      if (verbosity>=5) log(yellow,"Debug",format,args...);
+    void debugWarning(std::string format, Args&&... args) {
+      if (verbosity()>=5) log(yellow,"Debug",format,args...);
     }
 
     template<typename... Args> inline
-    void info(string format, Args&&... args) {
-      if (verbosity>=4) log(none,"Info",format,args...);
+    void info(std::string format, Args&&... args) {
+      if (verbosity()>=4) log(none,"Info",format,args...);
     }
 
     template<typename... Args> inline
-    void infoWarning(string format, Args&&... args) {
-      if (verbosity>=4) log(yellow,"Info",format,args...);
+    void infoWarning(std::string format, Args&&... args) {
+      if (verbosity()>=4) log(yellow,"Info",format,args...);
     }
     
     template<typename... Args> inline
-    void message(string format, Args&&... args) {
-      if (verbosity>=3) log(blue,"Message",format,args...);
+    void message(std::string format, Args&&... args) {
+      if (verbosity()>=3) log(blue,"Message",format,args...);
     }
     
     template<typename... Args> inline
-    void warning(string format, Args&&... args) {
-      if (verbosity>=2) log(yellow,"Warning",format,args...);
+    void warning(std::string format, Args&&... args) {
+      if (verbosity()>=2) log(yellow,"Warning",format,args...);
     }
     
     template<typename... Args> inline
-    void error(string format, Args&&... args) {
-      if (verbosity>=1) log(red,"Error",format,args...);
+    void error(std::string format, Args&&... args) {
+      if (verbosity()>=1) log(red,"Error",format,args...);
     }
   }
 }

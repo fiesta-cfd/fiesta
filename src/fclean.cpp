@@ -19,7 +19,7 @@ void error(lua_State *L, const char *fmt, ...) {
 
 int main(int argc, char **argv){
   int verbosity = 4;
-  int color = 0;
+  bool colorFlag = false;
   static struct option long_options[] = {
       {"verbosity", optional_argument, NULL, 'v'},
       {"color", optional_argument, NULL, 'c'},
@@ -45,15 +45,13 @@ int main(int argc, char **argv){
         break;
     }
   }
+  colorFlag = false;
+  if (copt.compare("on") == 0)
+    colorFlag = true;
+  else if (copt.compare("auto") == 0 && isatty(fileno(stdout)))
+      colorFlag = true;
 
-  if (copt.compare("off") == 0)
-    color = 0;
-  else if (copt.compare("on") == 0)
-    color = 1;
-  else if (copt.compare("auto") == 0)
-    color = 2;
-
-  Fiesta::Log::Logger(verbosity,color,0);
+  Fiesta::Log::Logger(verbosity,colorFlag,0);
 
   std::string filename{"fiesta.lua"};
   std::string root{"fiesta"};
@@ -109,7 +107,7 @@ int main(int argc, char **argv){
     exit(EXIT_FAILURE);
   }
 
-  string rpath;
+  std::string rpath;
   int top=lua_gettop(L);
   lua_getglobal(L,root.c_str());
   lua_getfield(L,-1,"restart");
@@ -121,7 +119,7 @@ int main(int argc, char **argv){
   }
 
   if (std::filesystem::exists(rpath)){
-    string rpattern = fmt::format(".*/restart-(\\d+|auto)\\.(h5|xmf)");
+    std::string rpattern = fmt::format(".*/restart-(\\d+|auto)\\.(h5|xmf)");
     dcount = 0;
     for(auto const& de : std::filesystem::directory_iterator{rpath}){
       if (std::regex_match(de.path().c_str(),std::regex(rpattern))){
@@ -130,7 +128,7 @@ int main(int argc, char **argv){
         dcount+=1;
       }
     }
-    Fiesta::Log::message("Deleted '{}' files.",dcount);
+    Fiesta::Log::message("Deleted {} restart files.",dcount);
     if (std::filesystem::is_empty(rpath)){
       std::filesystem::remove(rpath);
       Fiesta::Log::warning("Removing empty restart directory '{}'.",rpath);
@@ -145,7 +143,7 @@ int main(int argc, char **argv){
   if (lua_istable(L,-1)){
     numBlocks=lua_rawlen(L,-1);
     for (size_t i=0; i<numBlocks; ++i){
-      string myname,mypath;
+      std::string myname,mypath;
       std::vector<size_t> start,limit,stride;
       lua_pushnumber(L,i+1);
       lua_gettable(L,-2);
@@ -161,7 +159,7 @@ int main(int argc, char **argv){
         mypath.assign("./");
       }
 
-      string mypattern = fmt::format(".*/{}-\\d+\\.(h5|xmf)",myname);
+      std::string mypattern = fmt::format(".*/{}-\\d+\\.(h5|xmf)",myname);
 
       dcount = 0;
       if (std::filesystem::exists(mypath)){
@@ -172,7 +170,7 @@ int main(int argc, char **argv){
             dcount += 1;
           }
         }
-        Fiesta::Log::message("Deleted '{}' files.",dcount);
+        Fiesta::Log::message("Deleted {} '{}' files.",dcount,myname);
         if (std::filesystem::is_empty(mypath)){
           std::filesystem::remove(mypath);
           Fiesta::Log::warning("Removing empty '{}' directory '{}'.",myname,mypath);

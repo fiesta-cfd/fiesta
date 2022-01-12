@@ -29,6 +29,7 @@
 #include "luaReader.hpp"
 #include <sys/types.h>
 #include <sys/stat.h>
+#include "unistd.h"
 #include "log2.hpp"
 #include "bc.hpp"
 #include <filesystem>
@@ -88,12 +89,11 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
     }
   }
 
-  if (copt.compare("off") == 0)
-    cArgs.colorFlag = 0;
-  else if (copt.compare("on") == 0)
-    cArgs.colorFlag = 1;
-  else if (copt.compare("auto") == 0)
-    cArgs.colorFlag = 2;
+  cArgs.colorFlag = false;
+  if (copt.compare("on") == 0)
+    cArgs.colorFlag = true;
+  else if (copt.compare("auto") == 0 && isatty(fileno(stdout)))
+      cArgs.colorFlag = true;
 
   if (optind < argc)
     cArgs.fileName = std::string(argv[optind]);

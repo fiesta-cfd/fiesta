@@ -77,13 +77,13 @@ luaReader::luaReader(std::string f_, std::string r_):filename(f_),root(r_){
 
 // get required
 template<class T>
-void luaReader::get(std::initializer_list<string> keys, T& n){
+void luaReader::get(std::initializer_list<std::string> keys, T& n){
   bool found=true;
   int top=lua_gettop(L);
 
   lua_getglobal(L,root.c_str());
 
-  string fullkey=root;
+  std::string fullkey=root;
   for (auto key : keys) fullkey=fmt::format("{}.{}",fullkey,key);
 
   for (auto key : keys){
@@ -105,10 +105,10 @@ void luaReader::get(std::initializer_list<string> keys, T& n){
 
 // get with default
 template<class T>
-void luaReader::get(std::initializer_list<string> keys, T& n, T d){
+void luaReader::get(std::initializer_list<std::string> keys, T& n, T d){
   bool found=true;
 
-  string fullkey=root;
+  std::string fullkey=root;
   for (auto key : keys) fullkey=fmt::format("{}.{}",fullkey,key);
 
   int top=lua_gettop(L);
@@ -134,13 +134,13 @@ void luaReader::get(std::initializer_list<string> keys, T& n, T d){
 
 // get array
 template<class T>
-void luaReader::get(std::initializer_list<string> keys, vector<T>& v, int n){
+void luaReader::get(std::initializer_list<std::string> keys, vector<T>& v, int n){
   bool found=true;
   int top=lua_gettop(L);
 
   lua_getglobal(L,root.c_str());
 
-  string fullkey=root;
+  std::string fullkey=root;
   for (auto key : keys) fullkey=fmt::format("{}.{}",fullkey,key);
 
   for (auto key : keys){
@@ -222,7 +222,7 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
   if (lua_istable(L,-1)){
     numBlocks=lua_rawlen(L,-1);
     for (size_t i=0; i<numBlocks; ++i){
-      string myname,mypath;
+      std::string myname,mypath;
       vector<size_t> start,limit,stride;
       lua_pushnumber(L,i+1);
       lua_gettable(L,-2);
@@ -314,7 +314,7 @@ void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<
 }
 
 // Call lua function from c (takes integer arguments and returns a double)
-double luaReader::call(string f, int n, ...){
+double luaReader::call(std::string f, int n, ...){
   lua_getglobal(L,root.c_str());
   lua_getfield(L, -1, f.c_str());
   if(lua_isnoneornil(L,-1)){
@@ -368,7 +368,7 @@ void luaReader::getValue(bool& n){
 }
  
 template<>
-void luaReader::getValue(string& n){
+void luaReader::getValue(std::string& n){
   if (lua_isstring(L,-1)){
     n = lua_tostring(L, -1);
   }
@@ -414,7 +414,7 @@ void luaReader::getArray(vector<size_t>& out, int n){
 }
 
 // check if key is defined in lua file
-bool luaReader::undefined(string key){
+bool luaReader::undefined(std::string key){
   lua_getglobal(L, key.c_str());
   if (lua_isnoneornil(L,-1)){
     lua_pop(L, 1);
@@ -434,16 +434,16 @@ void luaReader::error(lua_State *L, const char *fmt, ...) {
 }
 
 // explicit instantiation
-template void luaReader::get<string>(std::initializer_list<string>,string&);
-template void luaReader::get<int>(std::initializer_list<string>,int&);
-template void luaReader::get<double>(std::initializer_list<string>,double&);
-template void luaReader::get<bool>(std::initializer_list<string>,bool&);
+template void luaReader::get<std::string>(std::initializer_list<std::string>,std::string&);
+template void luaReader::get<int>(std::initializer_list<std::string>,int&);
+template void luaReader::get<double>(std::initializer_list<std::string>,double&);
+template void luaReader::get<bool>(std::initializer_list<std::string>,bool&);
 // explicit instantiation
-template void luaReader::get<string>(std::initializer_list<string>,string&,string);
-template void luaReader::get<int>(std::initializer_list<string>,int&,int);
-template void luaReader::get<double>(std::initializer_list<string>,double&,double);
-template void luaReader::get<bool>(std::initializer_list<string>,bool&,bool);
+template void luaReader::get<std::string>(std::initializer_list<std::string>,std::string&,std::string);
+template void luaReader::get<int>(std::initializer_list<std::string>,int&,int);
+template void luaReader::get<double>(std::initializer_list<std::string>,double&,double);
+template void luaReader::get<bool>(std::initializer_list<std::string>,bool&,bool);
 // explicit instantiation
-template void luaReader::get<int>(std::initializer_list<string>,vector<int>&,int);
-template void luaReader::get<double>(std::initializer_list<string>,vector<double>&,int);
-template void luaReader::get<size_t>(std::initializer_list<string>,vector<size_t>&,int);
+template void luaReader::get<int>(std::initializer_list<std::string>,vector<int>&,int);
+template void luaReader::get<double>(std::initializer_list<std::string>,vector<double>&,int);
+template void luaReader::get<size_t>(std::initializer_list<std::string>,vector<size_t>&,int);

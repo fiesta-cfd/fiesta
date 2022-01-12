@@ -71,7 +71,8 @@ struct inputConfig {
   std::shared_ptr<class Logger> log;
   //std::vector<blockWriter<float> > ioblocks;
 
-  int colorFlag,timeFormat;
+  bool colorFlag;
+  int timeFormat;
   std::string inputFname;
   std::string title;
   std::string terrainName;

@@ -1,5 +1,5 @@
 set(FIESTA_LIB_SOURCES
-     rk.cpp fiesta.cpp luaReader.cpp bc.cpp log2.cpp reader.cpp
+     rk.cpp fiesta.cpp luaReader.cpp bc.cpp reader.cpp
      status.cpp timer.cpp input.cpp output.cpp h5.cpp
      rkfunction.cpp writer.cpp xdmf.cpp block.cpp
 )
@@ -60,7 +60,7 @@ install(TARGETS FiestaCore RUNTIME DESTINATION)
 
 
 add_executable(fclean 
-    fclean.cpp log2.cpp
+    fclean.cpp
     )
 target_link_libraries(fclean
     Kokkos::kokkos
