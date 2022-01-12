@@ -111,7 +111,7 @@ bool isConcern(double val){
         return false;
 }
 
-void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, fiestaTimer &wall, fiestaTimer &sim) {
+void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, Timer::fiestaTimer &wall, Timer::fiestaTimer &sim) {
   double max[f->varxNames.size()];
   double min[f->varxNames.size()];
 #ifdef HAVE_MPI
@@ -130,7 +130,7 @@ void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, fies
     double etr = cf.nt*sim.check()/(cf.t-1-cf.tstart)-sim.check();
     string etrf;
     if (etr >= 0)
-      etrf = wall.formatTime(etr);
+      etrf = Timer::format(etr);
     else
       etrf = "?";
     cout << fmt::format("{: >8}ETR:       {}{}{}\n","", c(magenta),etrf,c(reset));

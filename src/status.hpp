@@ -28,6 +28,6 @@
 #include <iostream>
 
 void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
-                                         fiestaTimer &wall, fiestaTimer &sim);
+                                         Timer::fiestaTimer &wall, Timer::fiestaTimer &sim);
 
 #endif

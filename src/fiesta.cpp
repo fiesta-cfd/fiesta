@@ -264,14 +264,14 @@ void Fiesta::collectSignals(struct inputConfig &cf){
 
 void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
   // Sort computer timers
-  typedef std::function<bool(std::pair<std::string, fiestaTimer>,
-                             std::pair<std::string, fiestaTimer>)>
+  typedef std::function<bool(std::pair<std::string, Timer::fiestaTimer>,
+                             std::pair<std::string, Timer::fiestaTimer>)>
       Comparator;
-  Comparator compFunctor = [](std::pair<std::string, fiestaTimer> elem1,
-                              std::pair<std::string, fiestaTimer> elem2) {
+  Comparator compFunctor = [](std::pair<std::string, Timer::fiestaTimer> elem1,
+                              std::pair<std::string, Timer::fiestaTimer> elem2) {
     return elem1.second.get() > elem2.second.get();
   };
-  std::set<std::pair<std::string, fiestaTimer>, Comparator> stmr(
+  std::set<std::pair<std::string, Timer::fiestaTimer>, Comparator> stmr(
       f->timers.begin(), f->timers.end(), compFunctor);
 
   if (cf.rank==0){

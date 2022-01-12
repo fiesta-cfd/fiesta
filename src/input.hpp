@@ -58,12 +58,12 @@ double getglobdbl(lua_State *L, const char *var);
 // configuration structure
 struct inputConfig {
   ~inputConfig();
-  fiestaTimer totalTimer;
-  fiestaTimer initTimer;
-  fiestaTimer simTimer;
-  fiestaTimer loadTimer;
-  fiestaTimer gridTimer;
-  fiestaTimer writeTimer;
+  Timer::fiestaTimer totalTimer;
+  Timer::fiestaTimer initTimer;
+  Timer::fiestaTimer simTimer;
+  Timer::fiestaTimer loadTimer;
+  Timer::fiestaTimer gridTimer;
+  Timer::fiestaTimer writeTimer;
 
   std::shared_ptr<class writer> w;
   std::shared_ptr<class mpiHaloExchange> m;

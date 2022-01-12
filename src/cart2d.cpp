@@ -110,26 +110,26 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
   Kokkos::deep_copy(cd, hostcd); // copy congifuration array to device
 
   // Create Simulation )timers
-  timers["advect"] = fiestaTimer("Advection Term Calculation");
-  timers["pressgrad"] = fiestaTimer("Pressure Gradient Calculation");
-  timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
-  timers["solWrite"] = fiestaTimer("Solution Write Time");
-  timers["resWrite"] = fiestaTimer("Restart Write Time");
-  timers["statCheck"] = fiestaTimer("Status Check");
-  timers["rk"] = fiestaTimer("Runge Stage Update");
-  timers["halo"] = fiestaTimer("Halo Exchanges");
-  timers["bc"] = fiestaTimer("Boundary Conditions");
+  timers["advect"] = Timer::fiestaTimer("Advection Term Calculation");
+  timers["pressgrad"] = Timer::fiestaTimer("Pressure Gradient Calculation");
+  timers["calcSecond"] = Timer::fiestaTimer("Secondary Variable Calculation");
+  timers["solWrite"] = Timer::fiestaTimer("Solution Write Time");
+  timers["resWrite"] = Timer::fiestaTimer("Restart Write Time");
+  timers["statCheck"] = Timer::fiestaTimer("Status Check");
+  timers["rk"] = Timer::fiestaTimer("Runge Stage Update");
+  timers["halo"] = Timer::fiestaTimer("Halo Exchanges");
+  timers["bc"] = Timer::fiestaTimer("Boundary Conditions");
   if (cf.buoyancy) {
-    timers["buoyancy"] = fiestaTimer("Buoyancy Term");
+    timers["buoyancy"] = Timer::fiestaTimer("Buoyancy Term");
   }
   if (cf.visc) {
-    timers["visc"] = fiestaTimer("Viscous Term Calculation");
+    timers["visc"] = Timer::fiestaTimer("Viscous Term Calculation");
   }
   if (cf.ceq) {
-    timers["ceq"] = fiestaTimer("C-Equation");
+    timers["ceq"] = Timer::fiestaTimer("C-Equation");
   }
   if (cf.noise) {
-    timers["noise"] = fiestaTimer("Noise Removal");
+    timers["noise"] = Timer::fiestaTimer("Noise Removal");
   }
 };
 

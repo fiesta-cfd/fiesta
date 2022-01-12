@@ -78,18 +78,18 @@ gen2d_func::gen2d_func(struct inputConfig &cf_) : rk_func(cf_) {
   varx  = FS4D("varx", cf.ngi, cf.ngj, cf.ngk, varxNames.size()); // Extra Vars
 
   // Create Timers
-  timers["flux"] = fiestaTimer("Flux Calculation");
-  timers["pressgrad"] = fiestaTimer("Pressure Gradient Calculation");
-  timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
-  timers["solWrite"] = fiestaTimer("Solution Write Time");
-  timers["resWrite"] = fiestaTimer("Restart Write Time");
-  timers["statCheck"] = fiestaTimer("Status Check");
-  timers["rk"] = fiestaTimer("Runge Stage Update");
-  timers["halo"] = fiestaTimer("Halo Exchanges");
-  timers["bc"] = fiestaTimer("Boundary Conditions");
-  timers["calcMetrics"] = fiestaTimer("Metric Calculations");
+  timers["flux"] = Timer::fiestaTimer("Flux Calculation");
+  timers["pressgrad"] = Timer::fiestaTimer("Pressure Gradient Calculation");
+  timers["calcSecond"] = Timer::fiestaTimer("Secondary Variable Calculation");
+  timers["solWrite"] = Timer::fiestaTimer("Solution Write Time");
+  timers["resWrite"] = Timer::fiestaTimer("Restart Write Time");
+  timers["statCheck"] = Timer::fiestaTimer("Status Check");
+  timers["rk"] = Timer::fiestaTimer("Runge Stage Update");
+  timers["halo"] = Timer::fiestaTimer("Halo Exchanges");
+  timers["bc"] = Timer::fiestaTimer("Boundary Conditions");
+  timers["calcMetrics"] = Timer::fiestaTimer("Metric Calculations");
   if (cf.noise == 1) {
-    timers["noise"] = fiestaTimer("Noise Removal");
+    timers["noise"] = Timer::fiestaTimer("Noise Removal");
   }
 
   ghostPol = policy_f({0, 0}, {cf.ngi, cf.ngj});

@@ -45,14 +45,14 @@ public:
   // virtual void compute(const FS4D & mvar, FS4D & mdvar) = 0;
 
   FS4D var;
-  std::vector<string> varNames;
+  std::vector<std::string> varNames;
   FS4D varx;
-  std::vector<string> varxNames;
+  std::vector<std::string> varxNames;
   FS4D dvar;
   FS4D tmp1;
   FS4D grid;
 
-  std::map<std::string, fiestaTimer> timers;
+  std::map<std::string, Timer::fiestaTimer> timers;
   policy_f ghostPol = policy_f({0, 0}, {1, 1});
   policy_f cellPol = policy_f({0, 0}, {1, 1});
   policy_f facePol = policy_f({0, 0}, {1, 1});

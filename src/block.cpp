@@ -305,7 +305,7 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
   string xmfPath   = format("{}/{}.xmf",path,blockBase);
   
   Log::message("[{}] Writing '{}'",cf.t,hdfPath);
-  fiestaTimer writeTimer = fiestaTimer();
+  Timer::fiestaTimer writeTimer = Timer::fiestaTimer();
 
   //#ifdef HAVE_MPI
   //  MPI_Barrier(cf.comm);

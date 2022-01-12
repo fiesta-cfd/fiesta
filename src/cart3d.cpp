@@ -115,28 +115,28 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   varx = FS4D("varx",cf.ngi,cf.ngj,cf.ngk,varxNames.size());
 
   // Create Timers
-  timers["flux"] = fiestaTimer("Flux Calculation");
-  timers["pressgrad"] = fiestaTimer("Pressure Gradient Calculation");
-  timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
-  timers["solWrite"] = fiestaTimer("Solution Write Time");
-  timers["resWrite"] = fiestaTimer("Restart Write Time");
-  timers["statCheck"] = fiestaTimer("Status Check");
-  timers["rk"] = fiestaTimer("Runge Stage Update");
-  timers["halo"] = fiestaTimer("Halo Exchanges");
-  timers["bc"] = fiestaTimer("Boundary Conditions");
+  timers["flux"] = Timer::fiestaTimer("Flux Calculation");
+  timers["pressgrad"] = Timer::fiestaTimer("Pressure Gradient Calculation");
+  timers["calcSecond"] = Timer::fiestaTimer("Secondary Variable Calculation");
+  timers["solWrite"] = Timer::fiestaTimer("Solution Write Time");
+  timers["resWrite"] = Timer::fiestaTimer("Restart Write Time");
+  timers["statCheck"] = Timer::fiestaTimer("Status Check");
+  timers["rk"] = Timer::fiestaTimer("Runge Stage Update");
+  timers["halo"] = Timer::fiestaTimer("Halo Exchanges");
+  timers["bc"] = Timer::fiestaTimer("Boundary Conditions");
   if (cf.visc == 1) {
-    timers["stress"] = fiestaTimer("Stress Tensor Computation");
-    timers["qflux"] = fiestaTimer("Heat Flux Calculation");
-    timers["visc"] = fiestaTimer("Viscous Term Calculation");
+    timers["stress"] = Timer::fiestaTimer("Stress Tensor Computation");
+    timers["qflux"] = Timer::fiestaTimer("Heat Flux Calculation");
+    timers["visc"] = Timer::fiestaTimer("Viscous Term Calculation");
   }
   if (cf.ceq) {
-    timers["ceq"] = fiestaTimer("C-Equation");
+    timers["ceq"] = Timer::fiestaTimer("C-Equation");
   }
   if (cf.noise) {
-    timers["noise"] = fiestaTimer("Noise Filter");
+    timers["noise"] = Timer::fiestaTimer("Noise Filter");
   }
   if (cf.buoyancy) {
-    timers["buoyancy"] = fiestaTimer("Buoyancy Term");
+    timers["buoyancy"] = Timer::fiestaTimer("Buoyancy Term");
   }
 
   // Create and copy minimal configuration array for data needed
