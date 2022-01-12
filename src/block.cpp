@@ -333,13 +333,13 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
     Kokkos::deep_copy(varH,f->var);
     for (int vn=0; vn<cf.nvt; ++vn){
       dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varH,vn,avg);
-      writer.write(format("Variable{:02d}",vn), cf.ndim, gExt, lExt, lOffset, varData, chunkable, cf.compressible); 
+      writer.write(f->varNames[vn], cf.ndim, gExt, lExt, lOffset, varData, chunkable, cf.compressible); 
     }
     if (writeVarx){
       Kokkos::deep_copy(varxH,f->varx);
       for (size_t vn = 0; vn < f->varxNames.size(); ++vn) {
         dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varxH,vn,avg);
-        writer.write(format("Variable{:02d}",vn+cf.nvt), cf.ndim, gExt, lExt, lOffset, varData, chunkable, cf.compressible); 
+        writer.write(f->varxNames[vn], cf.ndim, gExt, lExt, lOffset, varData, chunkable, cf.compressible); 
       }
     }
     writer.closeGroup();

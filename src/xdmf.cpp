@@ -25,6 +25,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <fmt/core.h>
 #include "xdmf.hpp"
 
 using namespace std;
@@ -119,26 +120,18 @@ void writeXMF(string fname, string hname, int gridType, double time,
     else
       fprintf(xmf, "      <DataItem Dimensions=\"%zu %zu %zu 3\" Function=\"JOIN($0,$1,$2)\" " "ItemType=\"Function\">\n", dims[0], dims[1],dims[2]);
 
-    for (int d=0; d<ndim; ++d){
-      path.str("");
-      path << hname << ":/Solution/Variable" << setw(2) << setfill('0') << d;
-      writeXMFDataItem(xmf, path.str(), ndim, dims);
-    }
+    writeXMFDataItem(xmf, fmt::format("{}:/Solution/{}",hname,vNames[0]), ndim, dims);
+    if (ndim >= 1) writeXMFDataItem(xmf, fmt::format("{}:/Solution/{}",hname,vNames[1]), ndim, dims);
+    if (ndim >= 2) writeXMFDataItem(xmf, fmt::format("{}:/Solution/{}",hname,vNames[2]), ndim, dims);
+
     fprintf(xmf, "      </DataItem>\n");
     fprintf(xmf, "     </Attribute>\n");
 
     // Other Variables
-    fprintf(xmf, "     <Attribute Name=\"Energy\" AttributeType=\"Scalar\" " "Center=\"Cell\">\n");
-    path.str("");
-    path << hname << ":/Solution/Variable" << setw(2) << setfill('0') << ndim;
-    writeXMFDataItem(xmf, path.str(), ndim, dims);
-    fprintf(xmf, "     </Attribute>\n");
 
-    for (int var = ndim+1; var < nvt; ++var) {
+    for (int var = ndim; var < nvt; ++var) {
       fprintf(xmf, "     <Attribute Name=\"%s\" AttributeType=\"Scalar\" " "Center=\"Cell\">\n",vNames[var].c_str());
-      path.str("");
-      path << hname << ":/Solution/Variable" << setw(2) << setfill('0') << var;
-      writeXMFDataItem(xmf, path.str(), ndim, dims);
+      writeXMFDataItem(xmf, fmt::format("{}:/Solution/{}",hname,vNames[var]), ndim, dims);
       fprintf(xmf, "     </Attribute>\n");
     }
 
@@ -152,20 +145,16 @@ void writeXMF(string fname, string hname, int gridType, double time,
       else
         fprintf(xmf, "      <DataItem Dimensions=\"%zu %zu %zu 3\" Function=\"JOIN($0,$1,$2)\" " "ItemType=\"Function\">\n", dims[0], dims[1],dims[2]);
 
-      for (int d=0; d<ndim; ++d){
-        path.str("");
-        path << hname << ":/Solution/Variable" << setw(2) << setfill('0') << nvt+d;
-        writeXMFDataItem(xmf, path.str(), ndim, dims);
-      }
+      writeXMFDataItem(xmf, fmt::format("{}:/Solution/{}",hname,vxNames[0]), ndim, dims);
+      if (ndim >= 1) writeXMFDataItem(xmf, fmt::format("{}:/Solution/{}",hname,vxNames[1]), ndim, dims);
+      if (ndim >= 2) writeXMFDataItem(xmf, fmt::format("{}:/Solution/{}",hname,vxNames[2]), ndim, dims);
       fprintf(xmf, "      </DataItem>\n");
       fprintf(xmf, "     </Attribute>\n");
 
       // Other Extra Variables
       for (size_t var = ndim; var < vxNames.size(); ++var) {
         fprintf(xmf, "     <Attribute Name=\"%s\" AttributeType=\"Scalar\" " "Center=\"Cell\">\n",vxNames[var].c_str());
-        path.str("");
-        path << hname << ":/Solution/Variable" << setw(2) << setfill('0') << var+nvt;
-        writeXMFDataItem(xmf, path.str(), ndim, dims);
+        writeXMFDataItem(xmf, fmt::format("{}:/Solution/{}",hname,vxNames[var]), ndim, dims);
         fprintf(xmf, "     </Attribute>\n");
       }
     }
