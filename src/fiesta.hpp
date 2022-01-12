@@ -27,7 +27,7 @@
 #include <vector>
 #include "block.hpp"
 
-#define FIESTA_RESTART_VERSION 1
+#define FIESTA_RESTART_VERSION 2
 
 namespace Fiesta {
     struct inputConfig initialize(struct inputConfig&,int, char **);

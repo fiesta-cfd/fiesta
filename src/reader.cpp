@@ -28,6 +28,7 @@
 #include "debug.hpp"
 #include <filesystem>
 #include "fiesta.hpp"
+#include <fmt/core.h>
 
 void readRestart(struct inputConfig &cf, rk_func *f) {
   if (cf.rank==0){
@@ -41,6 +42,7 @@ void readRestart(struct inputConfig &cf, rk_func *f) {
   writer.openRead(cf.restartName);
 
   size_t idx;
+  std::string path;
 
   auto readV = (double *)malloc(cf.ni * cf.nj * cf.nk * sizeof(double));
   auto varH = Kokkos::create_mirror_view(f->var);
@@ -49,9 +51,8 @@ void readRestart(struct inputConfig &cf, rk_func *f) {
   if (cf.grid==1){
     auto gridH = Kokkos::create_mirror_view(f->grid);
     for (int v=0; v<cf.ndim; ++v){
-      std::stringstream pathString;
-      pathString << "/Grid/Dimension" << v;
-      writer.read(pathString.str(), cf.ndim, cf.globalGridDims, cf.localGridDims, cf.subdomainOffset, readV);
+      path = fmt::format("/Grid/Dimension{}",v);
+      writer.read(path, cf.ndim, cf.globalGridDims, cf.localGridDims, cf.subdomainOffset, readV);
       for (int i = 0; i < cf.ni; ++i) {
         for (int j = 0; j < cf.nj; ++j) {
           for (int k = 0; k < cf.nk; ++k) {
@@ -69,9 +70,8 @@ void readRestart(struct inputConfig &cf, rk_func *f) {
   if (cf.ndim == 3) koffset = cf.ng;
   else koffset = 0;
   for (int v=0; v<cf.nvt; ++v){
-    std::stringstream pathString;
-    pathString << "/Solution/Variable" << setw(2) << setfill('0') << v;
-    writer.read(pathString.str(), cf.ndim, cf.globalCellDims, cf.localCellDims, cf.subdomainOffset, readV);
+    path = fmt::format("/Solution/{}",f->varNames[v]);
+    writer.read(path, cf.ndim, cf.globalCellDims, cf.localCellDims, cf.subdomainOffset, readV);
     for (int k = koffset; k < cf.nck + koffset; ++k) {
       for (int j = cf.ng; j < cf.ncj + cf.ng; ++j) {
         for (int i = cf.ng; i < cf.nci + cf.ng; ++i) {
