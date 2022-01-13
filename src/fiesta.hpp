@@ -42,7 +42,7 @@ namespace Fiesta {
     void initializeSimulation(struct inputConfig&, std::unique_ptr<class rk_func>&);
     void initializeSimulation(Simulation &sim);
     void reportTimers(struct inputConfig&, std::unique_ptr<class rk_func>&);
-    void checkIO(struct inputConfig&, std::unique_ptr<class rk_func>&, int, double,std::vector<blockWriter<float> >&,std::unique_ptr<blockWriter<double>>&);
+    void checkIO(Simulation &sim, size_t t);
     //void finalize(struct inputConfig &);
     void step(Simulation &sim, size_t t);
     void collectSignals(struct inputConfig &cf);

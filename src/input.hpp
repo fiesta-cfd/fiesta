@@ -134,6 +134,7 @@ struct inputConfig {
   int verbosity;
   int restartFlag;
   int exitFlag;
+  bool ioThisStep;
 
   std::vector<size_t> globalGridDims;
   std::vector<size_t> globalCellDims;

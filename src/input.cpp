@@ -432,7 +432,7 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   }
 #endif
 
-  //return cf;
+  cf.ioThisStep = false;
 }
 
 int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {

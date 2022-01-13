@@ -177,47 +177,47 @@ void Fiesta::initializeSimulation(Simulation &sim){
 }
 
 // Write solutions, restarts and status checks
-void Fiesta::checkIO(struct inputConfig &cf, std::unique_ptr<class rk_func>&f, int t, double time,vector<blockWriter<float> >& ioblocks, std::unique_ptr<blockWriter<double>>& rsblock){
-  collectSignals(cf);
+void Fiesta::checkIO(Simulation &sim, size_t t){
+  collectSignals(sim.cf);
   // Print current time step
-  if (cf.rank == 0) {
-    if (cf.out_freq > 0)
-      if (t % cf.out_freq == 0)
-        Log::info("[{}] Timestep {} of {}. Simulation Time: {:.2e}s",t,t,cf.tend,time);
+  if (sim.cf.rank == 0) {
+    if (sim.cf.out_freq > 0)
+      if (t % sim.cf.out_freq == 0)
+        Log::info("[{}] Timestep {} of {}. Simulation Time: {:.2e}s",t,t,sim.cf.tend,sim.cf.time);
   }
 
   // Print status check if necessary
-  if (cf.stat_freq > 0) {
-    if (t % cf.stat_freq == 0) {
-      f->timers["statCheck"].reset();
-      statusCheck(cf.colorFlag, cf, f, time, cf.totalTimer, cf.simTimer);
-      f->timers["statCheck"].accumulate();
+  if (sim.cf.stat_freq > 0) {
+    if (t % sim.cf.stat_freq == 0) {
+      sim.f->timers["statCheck"].reset();
+      statusCheck(sim.cf.colorFlag, sim.cf, sim.f, sim.cf.time, sim.cf.totalTimer, sim.cf.simTimer);
+      sim.f->timers["statCheck"].accumulate();
     }
   }
 
   // Write solution file if necessary
-  if (cf.write_freq > 0) {
-    if (t % cf.write_freq == 0) {
-      f->timers["solWrite"].reset();
-      cf.w->writeSolution(cf, f, t, time);
+  if (sim.cf.write_freq > 0) {
+    if (t % sim.cf.write_freq == 0) {
+      sim.f->timers["solWrite"].reset();
+      sim.cf.w->writeSolution(sim.cf, sim.f, t, sim.cf.time);
       Kokkos::fence();
-      f->timers["solWrite"].accumulate();
+      sim.f->timers["solWrite"].accumulate();
     }
   }
 
   // Check Restart Frequency
-  if (cf.restart_freq > 0 && t > cf.tstart) {
-    if (t % cf.restart_freq == 0) {
-      cf.restartFlag=1;
+  if (sim.cf.restart_freq > 0 && t > sim.cf.tstart) {
+    if (t % sim.cf.restart_freq == 0) {
+      sim.cf.restartFlag=1;
     }
   }
 
   // Check Time-Remaining and Flag Restart
-  if (cf.rank==0){
-    if(yogrt_remaining() < cf.restartTimeRemaining){
-      cf.restartFlag = 1;
-      cf.exitFlag = 1;
-      Log::error("Time remaining is less than {}s:  Writing restart and exiting after timestep {}.",cf.restartTimeRemaining,cf.t);
+  if (sim.cf.rank==0){
+    if(yogrt_remaining() < sim.cf.restartTimeRemaining){
+      sim.cf.restartFlag = 1;
+      sim.cf.exitFlag = 1;
+      Log::error("Time remaining is less than {}s:  Writing restart and exiting after timestep {}.",sim.cf.restartTimeRemaining,sim.cf.t);
     }
   }
 
@@ -225,31 +225,35 @@ void Fiesta::checkIO(struct inputConfig &cf, std::unique_ptr<class rk_func>&f, i
   {
   int glblRestartFlag=0;
   int glblExitFlag=0;
-  MPI_Allreduce(&cf.restartFlag,&glblRestartFlag,1,MPI_INT,MPI_MAX,cf.comm);
-  cf.restartFlag=glblRestartFlag;
-  MPI_Allreduce(&cf.exitFlag,&glblExitFlag,1,MPI_INT,MPI_MAX,cf.comm);
-  cf.exitFlag=glblExitFlag;
+  MPI_Allreduce(&sim.cf.restartFlag,&glblRestartFlag,1,MPI_INT,MPI_MAX,sim.cf.comm);
+  sim.cf.restartFlag=glblRestartFlag;
+  MPI_Allreduce(&sim.cf.exitFlag,&glblExitFlag,1,MPI_INT,MPI_MAX,sim.cf.comm);
+  sim.cf.exitFlag=glblExitFlag;
   }
   #endif
 
   // Write restart file if necessary
-  if (cf.restartFlag==1){
-    f->timers["resWrite"].reset();
-    //cf.w->writeRestart(cf, f, t, time);
-    rsblock->write(cf,f,t,time);
+  if (sim.cf.restartFlag==1){
+    sim.f->timers["resWrite"].reset();
+    //sim.cf.w->writeRestart(sim.cf, f, t, time);
+    sim.restartview->write(sim.cf,sim.f,t,sim.cf.time);
     Kokkos::fence();
-    f->timers["resWrite"].accumulate();
-    cf.restartFlag=0;
+    sim.f->timers["resWrite"].accumulate();
+    sim.cf.restartFlag=0;
   }
 
   // Write solution blocks
-  for (auto& block : ioblocks){
+  for (auto& block : sim.ioviews){
     if(block.frq() > 0){
       if (t % block.frq() == 0) {
-        f->timers["solWrite"].reset();
-        block.write(cf,f,t,time);
-        f->timers["solWrite"].accumulate();
+        sim.f->timers["solWrite"].reset();
+        block.write(sim.cf,sim.f,t,sim.cf.time);
+        sim.f->timers["solWrite"].accumulate();
       }
+    }
+    sim.cf.ioThisStep = false;
+    if (t % block.frq() == 0){
+      sim.cf.ioThisStep = true;
     }
   }
 }

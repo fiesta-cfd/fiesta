@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
     Log::message("Beginning Main Time Loop");
     sim.cf.simTimer.start();
     for (int t = sim.cf.tstart; t < sim.cf.tend+1; ++t) {
-      Fiesta::checkIO(sim.cf,sim.f,t,sim.cf.time,sim.ioviews,sim.restartview);
+      Fiesta::checkIO(sim,t);
 
       if (sim.cf.exitFlag==1){
         exit_value=1;

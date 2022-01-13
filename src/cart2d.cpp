@@ -237,6 +237,7 @@ void cart2d_func::postStep() {
 
   if ( (cf.write_freq >0) && ((cf.t+1) % cf.write_freq == 0) ) varsxNeeded=true;
   if ( (cf.stat_freq  >0) && ((cf.t+1) % cf.stat_freq  == 0) ) varsxNeeded=true;
+  if (cf.ioThisStep) varsxNeeded = true;
 
   // compute secondary variables
   if (varsxNeeded){
