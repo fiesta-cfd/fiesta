@@ -37,6 +37,7 @@ class rk_func {
 public:
   rk_func(struct inputConfig &cf_);
   //rk_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_);
+  virtual ~rk_func() = default;
 
   virtual void compute() = 0;
   virtual void preStep() = 0;
@@ -53,7 +54,6 @@ public:
   FS4D tmp1;
   FS4D grid;
 
-  std::vector<blockWriter<float> > ioviews;
   std::map<std::string, Timer::fiestaTimer> timers;
   policy_f ghostPol = policy_f({0, 0}, {1, 1});
   policy_f cellPol = policy_f({0, 0}, {1, 1});

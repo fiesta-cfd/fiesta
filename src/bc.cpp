@@ -162,7 +162,7 @@ struct bc_zPer {
   }
 };
 
-void applyBCs(struct inputConfig cf, class rk_func *f) {
+void applyBCs(struct inputConfig cf, class std::unique_ptr<class rk_func>&f) {
 
   typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_bl;
   typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_bl4;

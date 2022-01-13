@@ -32,16 +32,16 @@
 
 namespace Fiesta {
     struct inputConfig initialize(struct inputConfig&,int, char **);
-    void initializeSimulation(struct inputConfig&, rk_func*);
-    void reportTimers(struct inputConfig&, rk_func*);
-    void checkIO(struct inputConfig&, rk_func*, int, double,std::vector<blockWriter<float> >&,blockWriter<double>&);
+    void initializeSimulation(struct inputConfig&, std::unique_ptr<class rk_func>&);
+    void reportTimers(struct inputConfig&, std::unique_ptr<class rk_func>&);
+    void checkIO(struct inputConfig&, std::unique_ptr<class rk_func>&, int, double,std::vector<blockWriter<float> >&,std::unique_ptr<blockWriter<double>>&);
     //void finalize(struct inputConfig &);
     void collectSignals(struct inputConfig &cf);
     void finalize();
     int fiestaTest(int,int);
 
     struct Simulation {
-      std::unique_ptr<rk_func> f;
+      std::unique_ptr<class rk_func> f;
       std::unique_ptr<blockWriter<double>> restartview;
       std::vector<blockWriter<float>> ioviews;
       fsconf cf;

@@ -23,6 +23,6 @@
 #include "input.hpp"
 #include "rkfunction.hpp"
 
-void rkAdvance(struct inputConfig&, class rk_func*);
+void rkAdvance(struct inputConfig&, class std::unique_ptr<class rk_func>&);
 
 #endif

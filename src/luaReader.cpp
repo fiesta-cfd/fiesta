@@ -205,7 +205,7 @@ void luaReader::getSpeciesData(struct inputConfig& cf){
   lua_pop(L,1);
 }
 
-void luaReader::getIOBlock(struct inputConfig& cf, rk_func* f, int ndim, vector<blockWriter<float> >& blocks){
+void luaReader::getIOBlock(struct inputConfig& cf, std::unique_ptr<class rk_func>& f, int ndim, vector<blockWriter<float> >& blocks){
   int isnum;
   size_t numElems;
   size_t numBlocks;

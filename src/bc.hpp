@@ -19,6 +19,7 @@
 #ifndef BC_H
 #define BC_H
 
+#include "rkfunction.hpp"
 #include "Kokkos_Core.hpp"
 #include "kokkosTypes.hpp"
 #include "input.hpp"
@@ -28,7 +29,7 @@
 #endif
 
 enum class BCType {outflow,reflective,noslip,hydrostatic};
-void applyBCs(struct inputConfig cf, class rk_func *f);
+void applyBCs(struct inputConfig cf, std::unique_ptr<class rk_func>&f);
 BCType parseBC(std::string name);
 
 #endif

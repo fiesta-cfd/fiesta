@@ -111,7 +111,7 @@ bool isConcern(double val){
         return false;
 }
 
-void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time, Timer::fiestaTimer &wall, Timer::fiestaTimer &sim) {
+void statusCheck(int cFlag, struct inputConfig cf, std::unique_ptr<class rk_func>&f, double time, Timer::fiestaTimer &wall, Timer::fiestaTimer &sim) {
   double max[f->varxNames.size()];
   double min[f->varxNames.size()];
 #ifdef HAVE_MPI

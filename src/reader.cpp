@@ -30,7 +30,7 @@
 #include "fiesta.hpp"
 #include <fmt/core.h>
 
-void readRestart(struct inputConfig &cf, rk_func *f) {
+void readRestart(struct inputConfig &cf, std::unique_ptr<class rk_func>&f) {
   if (cf.rank==0){
     if (!std::filesystem::exists(cf.restartName)){
       Log::error("Restart file '{}' does not exist.",cf.restartName);
@@ -118,7 +118,7 @@ void readRestart(struct inputConfig &cf, rk_func *f) {
   writer.close();
 }
 
-void readTerrain(struct inputConfig &cf, rk_func *f) {
+void readTerrain(struct inputConfig &cf, std::unique_ptr<class rk_func>&f) {
   h5Writer<double> writer;
   writer.openRead(cf.restartName);
 

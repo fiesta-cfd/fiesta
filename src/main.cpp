@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
     Fiesta::Simulation sim;
 
     // Choose Module
-    /* rk_func *f; */
+    /* std::unique_ptr<class rk_func>&f; */
     if (cf.ndim == 3){
       if (cf.grid > 0){
         sim.f = std::make_unique<gen3d_func>(cf);

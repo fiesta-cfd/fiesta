@@ -51,7 +51,7 @@ template <typename T>
 blockWriter<T>::blockWriter(){}
 
 template <typename T>
-blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, string path_, bool avg_, size_t frq_, bool appStep_):
+blockWriter<T>::blockWriter(struct inputConfig& cf, std::unique_ptr<class rk_func>& f, string name_, string path_, bool avg_, size_t frq_, bool appStep_):
   name(name_), path(path_), avg(avg_), freq(frq_), appStep(appStep_),
   gStart(std::vector<size_t>(cf.ndim,0)),
   gExt(cf.globalCellDims),
@@ -113,7 +113,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
 }
 
 template <typename T>
-blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, string path_, bool avg_, size_t frq_,
+blockWriter<T>::blockWriter(struct inputConfig& cf, std::unique_ptr<class rk_func>& f, string name_, string path_, bool avg_, size_t frq_,
   vector<size_t> start_, vector<size_t> end_, vector<size_t> stride_, bool appStep_):
   name(name_),path(path_),avg(avg_),freq(frq_),
   gStart(start_),
@@ -294,7 +294,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
 }
 
 template<typename T>
-void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double time) {
+void blockWriter<T>::write(struct inputConfig cf, std::unique_ptr<class rk_func>&f, int tdx, double time) {
   string baseFormat,blockBase;
   if(appStep){
     baseFormat = format("{{}}-{{:0{}d}}",pad);

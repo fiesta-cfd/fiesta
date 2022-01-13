@@ -17,15 +17,15 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include "rkfunction.hpp"
 #include "rk.hpp"
 #include "kokkosTypes.hpp"
 #include "Kokkos_Core.hpp"
 #include "debug.hpp"
 #include "input.hpp"
-#include "rkfunction.hpp"
 #include "bc.hpp"
 
-void rkAdvance(struct inputConfig &cf, class rk_func *f){
+void rkAdvance(struct inputConfig &cf, class std::unique_ptr<class rk_func>&f){
   typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_1;
   // apply boundary conditions
   applyBCs(cf, f);

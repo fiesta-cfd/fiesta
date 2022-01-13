@@ -20,10 +20,10 @@
 #ifndef WRITER_H
 #define WRITER_H
 
+#include "rkfunction.hpp"
 #include "Kokkos_Core.hpp"
 #include "kokkosTypes.hpp"
 #include "input.hpp"
-#include "rkfunction.hpp"
 #include "timer.hpp"
 #include <map>
 #include <string>
@@ -40,9 +40,9 @@ public:
   //virtual void writeSPGrid(struct inputConfig cf, const FS4D gridD,
   //                         const char *fname) = 0;
 
-  virtual void writeSolution(struct inputConfig cf, class rk_func *f, int tdx,
+  virtual void writeSolution(struct inputConfig cf, std::unique_ptr<class rk_func>&f, int tdx,
                              double time) = 0;
-  virtual void writeRestart(struct inputConfig cf, class rk_func *f, int tdx,
+  virtual void writeRestart(struct inputConfig cf, std::unique_ptr<class rk_func>&f, int tdx,
                             double time) = 0;
 
   virtual void readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD) = 0;

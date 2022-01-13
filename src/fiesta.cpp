@@ -94,7 +94,7 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
 //
 // Initialize the simulation and load initial data
 //
-void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
+void Fiesta::initializeSimulation(struct inputConfig &cf, std::unique_ptr<class rk_func>&f){
 #ifdef HAVE_MPI
   if (cf.visc || cf.ceq){
     if (cf.mpiScheme == 1)
@@ -166,7 +166,7 @@ void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
 }
 
 // Write solutions, restarts and status checks
-void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time,vector<blockWriter<float> >& ioblocks, blockWriter<double>& rsblock){
+void Fiesta::checkIO(struct inputConfig &cf, std::unique_ptr<class rk_func>&f, int t, double time,vector<blockWriter<float> >& ioblocks, std::unique_ptr<blockWriter<double>>& rsblock){
   // Print current time step
   if (cf.rank == 0) {
     if (cf.out_freq > 0)
@@ -224,7 +224,7 @@ void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time,vect
   if (cf.restartFlag==1){
     f->timers["resWrite"].reset();
     //cf.w->writeRestart(cf, f, t, time);
-    rsblock.write(cf,f,t,time);
+    rsblock->write(cf,f,t,time);
     Kokkos::fence();
     f->timers["resWrite"].accumulate();
     cf.restartFlag=0;
@@ -262,7 +262,7 @@ void Fiesta::collectSignals(struct inputConfig &cf){
       Log::error("Recieved SIGTERM:  Exiting after timestep {}.",cf.t);
 }
 
-void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
+void Fiesta::reportTimers(struct inputConfig &cf, std::unique_ptr<class rk_func>&f){
   // Sort computer timers
   typedef std::function<bool(std::pair<std::string, Timer::fiestaTimer>,
                              std::pair<std::string, Timer::fiestaTimer>)>

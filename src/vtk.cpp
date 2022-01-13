@@ -45,12 +45,12 @@ void serialVTKWriter::writeGrid(struct inputConfig cf, const FS4D gridD,
 void serialVTKWriter::writeSPGrid(struct inputConfig cf, const FS4D gridD,
                                   const char *fname) {}
 
-void serialVTKWriter::writeRestart(struct inputConfig cf, rk_func *f, int tdx,
+void serialVTKWriter::writeRestart(struct inputConfig cf, std::unique_ptr<class rk_func>&f, int tdx,
                                    double time) {}
 
 // void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const
 // FS4D deviceV, int tdx, double time){
-void serialVTKWriter::writeSolution(struct inputConfig cf, rk_func *mod,
+void serialVTKWriter::writeSolution(struct inputConfig cf, std::unique_ptr<class rk_func>&mod,
                                     int tdx, double time) {
 
   Kokkos::deep_copy(varH, mod->var);

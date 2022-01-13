@@ -40,7 +40,7 @@ public:
   void getArray(std::vector<T>&,int);
 
   void getSpeciesData(struct inputConfig&);
-  void getIOBlock(struct inputConfig&, rk_func*, int, vector<blockWriter<float>>&);
+  void getIOBlock(struct inputConfig&, std::unique_ptr<class rk_func>&, int, vector<blockWriter<float>>&);
 
   template <class T>
   void get(std::initializer_list<string> keys, T& n);
