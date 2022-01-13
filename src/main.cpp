@@ -53,36 +53,39 @@ int main(int argc, char *argv[]) {
     cf.totalTimer.start();
     cf.initTimer.start();
 
+    Fiesta::Simulation sim;
+
     // Choose Module
-    rk_func *f;
+    /* rk_func *f; */
     if (cf.ndim == 3){
       if (cf.grid > 0){
-        f = new gen3d_func(cf);
+        sim.f = std::make_unique<gen3d_func>(cf);
       }else{
-        f = new cart3d_func(cf);
+        sim.f = std::make_unique<cart3d_func>(cf);
       }
     }else{
       if (cf.grid > 0){
-        f = new gen2d_func(cf);
+        sim.f = std::make_unique<gen2d_func>(cf);
       }else{
-        f = new cart2d_func(cf);
+        sim.f = std::make_unique<cart2d_func>(cf);
       }
     }
  
     // Initialize Simulation
-    Fiesta::initializeSimulation(cf,f);
+    Fiesta::initializeSimulation(cf,sim.f);
 
-    class blockWriter<double> myblock(cf, f, cf.autoRestartName, cf.pathName, false, cf.restart_freq,!cf.autoRestart);
+    /* class blockWriter<double> myblock(cf, sim.f, cf.autoRestartName, cf.pathName, false, cf.restart_freq,!cf.autoRestart); */
+    sim.restartview = std::make_unique<blockWriter<double>>(cf, sim.f, cf.autoRestartName, cf.pathName, false, cf.restart_freq,!cf.autoRestart);
 
-    std::vector<blockWriter<float> > testblocks;
+    /* std::vector<blockWriter<float> > testblocks; */
     luaReader L(cf.inputFname,"fiesta");
-    L.getIOBlock(cf,f,cf.ndim,testblocks);
+    L.getIOBlock(cf,sim.f,cf.ndim,sim.ioviews);
     L.close();
  
     // Pre Simulation
     Log::message("Executing pre-simulation hook");
-    applyBCs(cf, f);
-    f->preSim();
+    applyBCs(cf, sim.f);
+    sim.f->preSim();
 
     cf.initTimer.stop();
     cf.simTimer.reset();
@@ -92,16 +95,16 @@ int main(int argc, char *argv[]) {
     for (int t = cf.tstart; t < cf.tend+1; ++t) {
       Fiesta::collectSignals(cf);
 
-      Fiesta::checkIO(cf,f,t,cf.time,testblocks,myblock);
+      Fiesta::checkIO(cf,sim.f,t,cf.time,sim.ioviews,sim.restartview);
 
       if (cf.exitFlag==1){
         exit_value=1;
         break;
       }
 
-      f->preStep();
-      rkAdvance(cf,f);
-      f->postStep();
+      sim.f->preStep();
+      rkAdvance(cf,sim.f);
+      sim.f->postStep();
 
       cf.time += cf.dt;
       cf.t = t + 1;
@@ -110,14 +113,14 @@ int main(int argc, char *argv[]) {
  
     // Post Simulation
     Log::message("Executing post-simulation hook");
-    f->postSim();
+    sim.f->postSim();
 
 
     // Stop Timers and Report
     cf.simTimer.stop();
     cf.totalTimer.stop();
     Log::message("Reporting Timers:");
-    Fiesta::reportTimers(cf,f);
+    Fiesta::reportTimers(cf,sim.f);
   }
   Fiesta::finalize();
   return exit_value;

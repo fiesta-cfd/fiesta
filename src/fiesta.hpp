@@ -20,12 +20,13 @@
 #ifndef FIESTA2_HPP
 #define FIESTA2_HPP
 
-#include "input.hpp"
-#include "writer.hpp"
 #include "rkfunction.hpp"
+#include "writer.hpp"
+#include "input.hpp"
 #include <iostream>
 #include <vector>
 #include "block.hpp"
+#include <memory>
 
 #define FIESTA_RESTART_VERSION 2
 
@@ -38,6 +39,13 @@ namespace Fiesta {
     void collectSignals(struct inputConfig &cf);
     void finalize();
     int fiestaTest(int,int);
+
+    struct Simulation {
+      std::unique_ptr<rk_func> f;
+      std::unique_ptr<blockWriter<double>> restartview;
+      std::vector<blockWriter<float>> ioviews;
+      fsconf cf;
+    };
 };
 
 #endif

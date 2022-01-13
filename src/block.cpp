@@ -29,6 +29,7 @@
 #include <iomanip>
 #include <string>
 #include <vector>
+#include <numeric>
 #include "xdmf.hpp"
 #include "timer.hpp"
 #include "fmt/core.h"
@@ -51,9 +52,33 @@ blockWriter<T>::blockWriter(){}
 
 template <typename T>
 blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, string path_, bool avg_, size_t frq_, bool appStep_):
-  name(name_),path(path_),avg(avg_),freq(frq_),appStep(appStep_){
-  sliceRank=MPI_PROC_NULL;
-  sliceSize=0;
+  name(name_), path(path_), avg(avg_), freq(frq_), appStep(appStep_),
+  gStart(std::vector<size_t>(cf.ndim,0)),
+  gExt(cf.globalCellDims),
+  gEnd(cf.globalCellDims),
+  gExtG(cf.globalCellDims),
+  lStart(std::vector<size_t>(cf.ndim,0)),
+  lExt(cf.localCellDims),
+  lEndG(cf.localCellDims),
+  lEnd(cf.localCellDims),
+  lExtG(cf.localCellDims),
+  lOffset(cf.subdomainOffset),
+  stride(std::vector<size_t>(cf.ndim,1)),
+  gOrigin(cf.dxvec),
+  iodx(cf.dxvec)
+  {
+
+  // initialize parameters
+  myColor=1;
+  slicePresent=true;
+  writeVarx=false;
+  pad = (int)log10(cf.tend) + 1;
+  chunkable = cf.chunkable;
+#ifdef HAVE_MPI
+  sliceComm = cf.comm;
+  sliceRank = cf.rank;
+  sliceSize = cf.numProcs;
+#endif
 
   if (cf.rank==0){
     if (!std::filesystem::exists(path)){
@@ -62,41 +87,16 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
     }
   }
 
-  pad = (int)log10(cf.tend) + 1;
-
-  writeVarx=false;
-
-  // initialize parameters
-  lElems=1;
-  lElemsG=1;
-  myColor=1;
-  slicePresent=true;
-#ifdef HAVE_MPI
-  MPI_Comm_split(cf.comm,myColor,cf.rank,&sliceComm);
-  MPI_Comm_rank(sliceComm, &sliceRank);
-  MPI_Comm_size(sliceComm, &sliceSize);
-#endif
-
   for (int i=0; i<cf.ndim; ++i){
-    gStart.push_back(0);
-    gEnd.push_back(cf.globalCellDims[i]-1);
-    gExt.push_back(cf.globalCellDims[i]);
-    gExtG.push_back(cf.globalCellDims[i]+1);
-    stride.push_back(1);
-
-    lStart.push_back(0);
-    lEnd.push_back(cf.localCellDims[i]-1);
-    lEndG.push_back(cf.localCellDims[i]);
-    lExt.push_back(cf.localCellDims[i]);
-    lExtG.push_back(cf.localCellDims[i]+1);
-
-    lOffset.push_back(cf.subdomainOffset[i]);
-
-    lElems*=lExt[i];
-    lElemsG*=lExtG[i];
-    gOrigin.push_back(gStart[i]*cf.dxvec[i]);
-    iodx.push_back(cf.dxvec[i]);
+    gEnd[i] -= 1;
+    gExtG[i] += 1;
+    lEnd[i] -= 1;
+    lExtG[i] += 1;
+    gOrigin[i] *= gStart[i];
   }
+
+  lElems  = std::accumulate(lExt.begin(), lExt.end(), 1, std::multiplies<int>());
+  lElemsG = std::accumulate(lExtG.begin(), lExtG.end(), 1, std::multiplies<int>());
 
   // allocate pack buffers
   fill_n(back_inserter(varData),lElems,0.0);
@@ -110,13 +110,16 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
   if(sliceRank==0)
     Log::debugAll("IO VIEW: name={}, rank={}, size={}, chunkable={} compressible={}",name,sliceRank,sliceSize,cf.chunkable,cf.compressible);
 
-  chunkable = cf.chunkable;
 }
 
 template <typename T>
 blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, string path_, bool avg_, size_t frq_,
   vector<size_t> start_, vector<size_t> end_, vector<size_t> stride_, bool appStep_):
-  name(name_),path(path_),avg(avg_),freq(frq_),gStart(start_),gEnd(end_),stride(stride_),appStep(appStep_){
+  name(name_),path(path_),avg(avg_),freq(frq_),
+  gStart(start_),
+  gEnd(end_),
+  stride(stride_),
+  appStep(appStep_){
 
   sliceRank=MPI_PROC_NULL;
   sliceSize=0;
@@ -274,7 +277,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, rk_func* f, string name_, st
     }
 #endif
   }
-  
+ 
   // allocate pack buffers
   fill_n(back_inserter(varData),lElems,0.0);
   fill_n(back_inserter(gridData),lElemsG,0.0);
@@ -303,7 +306,7 @@ void blockWriter<T>::write(struct inputConfig cf, rk_func *f, int tdx, double ti
   string hdfName   = format("{}.h5",blockBase);
   string hdfPath   = format("{}/{}",path,hdfName);
   string xmfPath   = format("{}/{}.xmf",path,blockBase);
-  
+ 
   Log::message("[{}] Writing '{}'",cf.t,hdfPath);
   Timer::fiestaTimer writeTimer = Timer::fiestaTimer();
 

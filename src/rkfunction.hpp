@@ -30,6 +30,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include "block.hpp"
 
 class rk_func {
 
@@ -52,6 +53,7 @@ public:
   FS4D tmp1;
   FS4D grid;
 
+  std::vector<blockWriter<float> > ioviews;
   std::map<std::string, Timer::fiestaTimer> timers;
   policy_f ghostPol = policy_f({0, 0}, {1, 1});
   policy_f cellPol = policy_f({0, 0}, {1, 1});
