@@ -29,7 +29,8 @@
 #endif
 
 enum class BCType {outflow,reflective,noslip,hydrostatic};
-void applyBCs(struct inputConfig cf, std::unique_ptr<class rk_func>&f);
+/* void applyBCs(struct inputConfig cf, std::unique_ptr<class rk_func>&f); */
+void applyBCs(struct inputConfig cf, class rk_func *f);
 BCType parseBC(std::string name);
 
 #endif

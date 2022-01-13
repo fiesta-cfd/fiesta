@@ -27,9 +27,6 @@
 
 void rkAdvance(struct inputConfig &cf, class std::unique_ptr<class rk_func>&f){
   typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_1;
-  // apply boundary conditions
-  applyBCs(cf, f);
-
   // First Stage Compute
   f->compute();
 
@@ -54,14 +51,10 @@ void rkAdvance(struct inputConfig &cf, class std::unique_ptr<class rk_func>&f){
   Kokkos::fence();
   f->timers["rk"].accumulate();
 
-  // apply boundary conditions
-  applyBCs(cf, f);
-
   // Second stage compute
   f->compute();
 
   // assign temporary variables
-  // mytmp = f->tmp1;
   myvar = f->var;
   mydvar = f->dvar;
 

@@ -41,12 +41,10 @@
 #include <iostream>
 #include "reader.hpp"
 #include "yogrt.h"
+#include "signal.hpp"
+#include "rk.hpp"
 
 using namespace std;
-
-int Fiesta::fiestaTest(int a, int b){
-    return a + b;
-}
 
 //
 // Initialize Fiesta and fill configuration structure with input file variables
@@ -88,85 +86,99 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
   Log::message("Printing Configuration");
   printConfig(cf);
 
+  // create signal handler
+  class fiestaSignalHandler *signalHandler = 0;
+  signalHandler = signalHandler->getInstance(cf);
+  signalHandler->registerSignals();
+
   return cf;
 }
 
 //
 // Initialize the simulation and load initial data
 //
-void Fiesta::initializeSimulation(struct inputConfig &cf, std::unique_ptr<class rk_func>&f){
+/* void Fiesta::initializeSimulation(struct inputConfig &cf, std::unique_ptr<class rk_func>&f){ */
+void Fiesta::initializeSimulation(Simulation &sim){
 #ifdef HAVE_MPI
-  if (cf.visc || cf.ceq){
-    if (cf.mpiScheme == 1)
-      cf.m = std::make_shared<orderedHaloExchange>(cf,f->var);
-    else if (cf.mpiScheme == 2)
-      cf.m = std::make_shared<orderedHostHaloExchange>(cf,f->var);
+  if (sim.cf.visc || sim.cf.ceq){
+    if (sim.cf.mpiScheme == 1)
+      sim.cf.m = std::make_shared<orderedHaloExchange>(sim.cf,sim.f->var);
+    else if (sim.cf.mpiScheme == 2)
+      sim.cf.m = std::make_shared<orderedHostHaloExchange>(sim.cf,sim.f->var);
     else{
       Log::error("Invalid MPI type.  Only 'gpu-aware' and 'host' are available when viscosity or c-equations are enabled.");
       exit(EXIT_FAILURE);
     }
   }else{
-    if (cf.mpiScheme == 1)
-      cf.m = std::make_shared<copyHaloExchange>(cf,f->var);
-    else if (cf.mpiScheme == 2)
-      cf.m = std::make_shared<packedHaloExchange>(cf,f->var);
-    else if (cf.mpiScheme == 3)
-      cf.m = std::make_shared<directHaloExchange>(cf,f->var);
+    if (sim.cf.mpiScheme == 1)
+      sim.cf.m = std::make_shared<copyHaloExchange>(sim.cf,sim.f->var);
+    else if (sim.cf.mpiScheme == 2)
+      sim.cf.m = std::make_shared<packedHaloExchange>(sim.cf,sim.f->var);
+    else if (sim.cf.mpiScheme == 3)
+      sim.cf.m = std::make_shared<directHaloExchange>(sim.cf,sim.f->var);
   }
 #endif
-  //cf.w = std::make_shared<hdfWriter>(cf,f);
+  //sim.cf.w = std::make_shared<hdfWriter>(sim.cf,f);
 
 
   // If not restarting, generate initial conditions and grid
-  if (cf.restart == 0) {
+  if (sim.cf.restart == 0) {
     // Generate Grid Coordinates
     Log::message("Generating grid");
-    cf.gridTimer.start();
-    loadGrid(cf, f->grid);
-    cf.gridTimer.stop();
-    Log::message("Grid generated in: {}",cf.gridTimer.get());
+    sim.cf.gridTimer.start();
+    loadGrid(sim.cf, sim.f->grid);
+    sim.cf.gridTimer.stop();
+    Log::message("Grid generated in: {}",sim.cf.gridTimer.get());
 
     // Generate Initial Conditions
     Log::message("Generating initial conditions");
-    cf.loadTimer.start();
-    loadInitialConditions(cf, f->var, f->grid);
-    cf.loadTimer.stop();
-    Log::message("Initial conditions generated in: {}",cf.loadTimer.get());
+    sim.cf.loadTimer.start();
+    loadInitialConditions(sim.cf, sim.f->var, sim.f->grid);
+    sim.cf.loadTimer.stop();
+    Log::message("Initial conditions generated in: {}",sim.cf.loadTimer.get());
 
-    // cf.writeTimer.start();
+    // sim.cf.writeTimer.start();
     // // Write initial solution file
-    // if (cf.write_freq > 0) {
-    //   f->timers["solWrite"].reset();
-    //   cf.w->writeSolution(cf, f, 0, 0.00);
-    //   f->timers["solWrite"].accumulate();
+    // if (sim.cf.write_freq > 0) {
+    //   sim.f->timers["solWrite"].reset();
+    //   sim.cf.w->writeSolution(sim.cf, f, 0, 0.00);
+    //   sim.f->timers["solWrite"].accumulate();
     // }
 
     // // Write Initial Restart File
-    // if (cf.restart_freq > 0) {
-    //   f->timers["resWrite"].reset();
-    //   cf.w->writeRestart(cf, f, 0, 0.00);
-    //   f->timers["resWrite"].accumulate();
+    // if (sim.cf.restart_freq > 0) {
+    //   sim.f->timers["resWrite"].reset();
+    //   sim.cf.w->writeRestart(sim.cf, f, 0, 0.00);
+    //   sim.f->timers["resWrite"].accumulate();
     // }
-    // cf.writeTimer.stop();
+    // sim.cf.writeTimer.stop();
   }else{ // If Restarting, Load Restart File
-    cf.writeTimer.start();
+    sim.cf.writeTimer.start();
     Log::message("Loading restart file:");
-    cf.loadTimer.reset();
-    readRestart(cf, f);
-    cf.loadTimer.stop();
-    Log::message("Loaded restart data in: {}",cf.loadTimer.get());
+    sim.cf.loadTimer.reset();
+    readRestart(sim.cf, sim.f);
+    sim.cf.loadTimer.stop();
+    Log::message("Loaded restart data in: {}",sim.cf.loadTimer.get());
   }
 
-  if (cf.rank==0){
-    if (!std::filesystem::exists(cf.pathName)){
-      Log::message("Creating directory: '{}'",cf.pathName);
-      std::filesystem::create_directories(cf.pathName);
+  if (sim.cf.rank==0){
+    if (!std::filesystem::exists(sim.cf.pathName)){
+      Log::message("Creating directory: '{}'",sim.cf.pathName);
+      std::filesystem::create_directories(sim.cf.pathName);
     }
   }
+
+  sim.restartview = std::make_unique<blockWriter<double>>(sim.cf, sim.f, sim.cf.autoRestartName, sim.cf.pathName, false, sim.cf.restart_freq,!sim.cf.autoRestart);
+
+  luaReader L(sim.cf.inputFname,"fiesta");
+  L.getIOBlock(sim.cf,sim.f,sim.cf.ndim,sim.ioviews);
+  L.close();
+
 }
 
 // Write solutions, restarts and status checks
 void Fiesta::checkIO(struct inputConfig &cf, std::unique_ptr<class rk_func>&f, int t, double time,vector<blockWriter<float> >& ioblocks, std::unique_ptr<blockWriter<double>>& rsblock){
+  collectSignals(cf);
   // Print current time step
   if (cf.rank == 0) {
     if (cf.out_freq > 0)
@@ -263,6 +275,7 @@ void Fiesta::collectSignals(struct inputConfig &cf){
 }
 
 void Fiesta::reportTimers(struct inputConfig &cf, std::unique_ptr<class rk_func>&f){
+  Log::message("Reporting Timers:");
   // Sort computer timers
   typedef std::function<bool(std::pair<std::string, Timer::fiestaTimer>,
                              std::pair<std::string, Timer::fiestaTimer>)>
@@ -296,6 +309,15 @@ void Fiesta::reportTimers(struct inputConfig &cf, std::unique_ptr<class rk_func>
     for (auto tmr : stmr)
       cout << format(timerFormat,c(reset),tmr.second.describe(),tmr.second.get());
   }
+}
+
+void Fiesta::step(Simulation &sim, size_t t){
+      sim.f->preStep();
+      rkAdvance(sim.cf,sim.f);
+      sim.f->postStep();
+
+      sim.cf.time += sim.cf.dt;
+      sim.cf.t = t + 1;
 }
  
 // clean up kokkos and mpi

@@ -165,6 +165,7 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
 };
 
 void cart3d_func::preSim() {
+  applyBCs(cf,this);
   policy_f3 ghost_pol = policy_f3({0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk});
 
   timers["calcSecond"].reset();
@@ -176,6 +177,7 @@ void cart3d_func::preSim() {
 }
 
 void cart3d_func::preStep() {
+  applyBCs(cf,this);
 }
 
 template<typename T>

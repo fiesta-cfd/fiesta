@@ -17,19 +17,7 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "kokkosTypes.hpp"
-#include "input.hpp"
-#include "rkfunction.hpp"
 #include "fiesta.hpp"
-#include "rk.hpp"
-#include "bc.hpp"
-#include "debug.hpp"
-#include "log.hpp"
-#include "block.hpp"
-#include "signal.hpp"
-
-#include <vector>
-#include "luaReader.hpp"
 #include "log2.hpp"
 
 // Compute Objects
@@ -42,85 +30,52 @@ int main(int argc, char *argv[]) {
   int exit_value=0;
   {
     // read input file and initialize configuration
-    fsconf cf;
-    Fiesta::initialize(cf,argc,argv);
-
-    // create signal handler
-    class fiestaSignalHandler *signalHandler = 0;
-    signalHandler = signalHandler->getInstance(cf);
-    signalHandler->registerSignals();
-
-    cf.totalTimer.start();
-    cf.initTimer.start();
-
     Fiesta::Simulation sim;
+    Fiesta::initialize(sim.cf,argc,argv);
 
+    sim.cf.totalTimer.start();
+    sim.cf.initTimer.start();
+ 
     // Choose Module
-    /* std::unique_ptr<class rk_func>&f; */
-    if (cf.ndim == 3){
-      if (cf.grid > 0){
-        sim.f = std::make_unique<gen3d_func>(cf);
-      }else{
-        sim.f = std::make_unique<cart3d_func>(cf);
-      }
+    if (sim.cf.ndim == 3){
+      if (sim.cf.grid > 0)
+        sim.f = std::make_unique<gen3d_func>(sim.cf);
+      else
+        sim.f = std::make_unique<cart3d_func>(sim.cf);
     }else{
-      if (cf.grid > 0){
-        sim.f = std::make_unique<gen2d_func>(cf);
-      }else{
-        sim.f = std::make_unique<cart2d_func>(cf);
-      }
+      if (sim.cf.grid > 0)
+        sim.f = std::make_unique<gen2d_func>(sim.cf);
+      else
+        sim.f = std::make_unique<cart2d_func>(sim.cf);
     }
- 
-    // Initialize Simulation
-    Fiesta::initializeSimulation(cf,sim.f);
 
-    /* class blockWriter<double> myblock(cf, sim.f, cf.autoRestartName, cf.pathName, false, cf.restart_freq,!cf.autoRestart); */
-    sim.restartview = std::make_unique<blockWriter<double>>(cf, sim.f, cf.autoRestartName, cf.pathName, false, cf.restart_freq,!cf.autoRestart);
+    Fiesta::initializeSimulation(sim);
 
-    /* std::vector<blockWriter<float> > testblocks; */
-    luaReader L(cf.inputFname,"fiesta");
-    L.getIOBlock(cf,sim.f,cf.ndim,sim.ioviews);
-    L.close();
- 
-    // Pre Simulation
     Log::message("Executing pre-simulation hook");
-    applyBCs(cf, sim.f);
     sim.f->preSim();
 
-    cf.initTimer.stop();
-    cf.simTimer.reset();
+    sim.cf.initTimer.stop();
 
-    // Main time loop
     Log::message("Beginning Main Time Loop");
-    for (int t = cf.tstart; t < cf.tend+1; ++t) {
-      Fiesta::collectSignals(cf);
+    sim.cf.simTimer.start();
+    for (int t = sim.cf.tstart; t < sim.cf.tend+1; ++t) {
+      Fiesta::checkIO(sim.cf,sim.f,t,sim.cf.time,sim.ioviews,sim.restartview);
 
-      Fiesta::checkIO(cf,sim.f,t,cf.time,sim.ioviews,sim.restartview);
-
-      if (cf.exitFlag==1){
+      if (sim.cf.exitFlag==1){
         exit_value=1;
         break;
       }
 
-      sim.f->preStep();
-      rkAdvance(cf,sim.f);
-      sim.f->postStep();
-
-      cf.time += cf.dt;
-      cf.t = t + 1;
+      Fiesta::step(sim,t);
     }
+    sim.cf.simTimer.stop();
     Log::message("Simulation complete!");
  
-    // Post Simulation
     Log::message("Executing post-simulation hook");
     sim.f->postSim();
 
-
-    // Stop Timers and Report
-    cf.simTimer.stop();
-    cf.totalTimer.stop();
-    Log::message("Reporting Timers:");
-    Fiesta::reportTimers(cf,sim.f);
+    sim.cf.totalTimer.stop();
+    Fiesta::reportTimers(sim.cf,sim.f);
   }
   Fiesta::finalize();
   return exit_value;
