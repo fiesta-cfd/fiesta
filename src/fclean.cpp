@@ -4,6 +4,7 @@
 #include <regex>
 #include <fmt/core.h>
 #include <getopt.h>
+#include <unistd.h>
 
 #include "lua.hpp"
 #include "log2.hpp"
