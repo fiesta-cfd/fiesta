@@ -107,8 +107,8 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, std::unique_ptr<class rk_fun
   varH = Kokkos::create_mirror_view(f->var);
   varxH = Kokkos::create_mirror_view(f->varx);
 
-  if(sliceRank==0)
-    Log::debugAll("IO VIEW: name={}, rank={}, size={}, chunkable={} compressible={}",name,sliceRank,sliceSize,cf.chunkable,cf.compressible);
+  // if(sliceRank==0)
+  //   Log::debugAll("IO VIEW: name={}, rank={}, size={}, chunkable={} compressible={}",name,sliceRank,sliceSize,cf.chunkable,cf.compressible);
 
 }
 
@@ -121,8 +121,10 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, std::unique_ptr<class rk_fun
   stride(stride_),
   appStep(appStep_){
 
+#ifdef HAVE_MPI
   sliceRank=MPI_PROC_NULL;
   sliceSize=0;
+#endif
 
   for (int i=0; i<cf.ndim; ++i){
     if (gStart[i] > cf.globalCellDims[i]){
@@ -209,8 +211,10 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, std::unique_ptr<class rk_fun
 #endif
 
   if (slicePresent){
+#ifdef HAVE_MPI
     MPI_Comm_rank(sliceComm, &sliceRank);
     MPI_Comm_size(sliceComm, &sliceSize);
+#endif
     for (int i=0; i<cf.ndim; ++i){
       offsetDelta=gStart[i]-cf.subdomainOffset[i]; //location of left edge of slice wrt left edge of subdomain
       if(offsetDelta > 0) lStart[i]=offsetDelta;   //if slice starts inside subdomain, set local start to slice edge
@@ -286,8 +290,8 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, std::unique_ptr<class rk_fun
   gridH = Kokkos::create_mirror_view(f->grid);
   varH = Kokkos::create_mirror_view(f->var);
   varxH = Kokkos::create_mirror_view(f->varx);
-  if(sliceRank==0)
-    Log::debugAll("IO VIEW: name={}, rank={}, size={}, start={}, end={}, stride={}, extent={}",name,sliceRank,sliceSize,gStart,gEnd,stride,gExt);
+  /* if(sliceRank==0) */
+  /*   Log::debugAll("IO VIEW: name={}, rank={}, size={}, start={}, end={}, stride={}, extent={}",name,sliceRank,sliceSize,gStart,gEnd,stride,gExt); */
 
   chunkable=false;
   Log::warning("Chunking it not supported for IO views with strides.  Chunking will be disabled for {}.",name);
