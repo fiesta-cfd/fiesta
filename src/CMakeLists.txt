@@ -54,6 +54,11 @@ if(Fiesta_ENABLE_DEBUG)
     target_compile_definitions(FiestaCore PUBLIC  DEBUG)
 endif()
 
+if(Fiesta_SINGLE_PRECISION)
+    target_compile_definitions(fiesta     PRIVATE HAVE_SINGLE)
+    target_compile_definitions(FiestaCore PUBLIC  HAVE_SINGLE)
+endif()
+
 # set install destination
 install(TARGETS fiesta RUNTIME DESTINATION)
 install(TARGETS FiestaCore RUNTIME DESTINATION)

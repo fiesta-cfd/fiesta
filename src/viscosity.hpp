@@ -27,24 +27,24 @@ struct calculateStressTensor2dv {
   FS4D stressx;
   FS4D stressy;
   FS3D vel;
-  Kokkos::View<double *> cd;
+  Kokkos::View<FSCAL *> cd;
 
   calculateStressTensor2dv(FS4D var_, FS2D rho_, FS3D v_, FS4D strx_,
-                           FS4D stry_, Kokkos::View<double *> cd_)
+                           FS4D stry_, Kokkos::View<FSCAL *> cd_)
       : var(var_), rho(rho_), vel(v_), stressx(strx_), stressy(stry_), cd(cd_) {}
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j) const {
     int ns = (int)cd(0);
-    double dx = cd(1);
-    double dy = cd(2);
-    // double mu1 = 2.928e-5;
-    // double mu2 = 1.610e-5;
-    double dudx, dvdy, dudy, dvdx;
+    FSCAL dx = cd(1);
+    FSCAL dy = cd(2);
+    // FSCAL mu1 = 2.928e-5;
+    // FSCAL mu2 = 1.610e-5;
+    FSCAL dudx, dvdy, dudy, dvdx;
 
-    //  double muij = 0.0;
-    //  double muip = 0.0;
-    //  double mujp = 0.0;
+    //  FSCAL muij = 0.0;
+    //  FSCAL muip = 0.0;
+    //  FSCAL mujp = 0.0;
 
     // for (int s = 0; s < ns; ++s) {
     //   muij += var(i, j, 0, 3 + s) * cd(6 + 3 * s + 2) / rho(i, j);
@@ -52,14 +52,14 @@ struct calculateStressTensor2dv {
     //   mujp += var(i, j + 1, 0, 3 + s) * cd(6 + 3 * s + 2) / rho(i, j + 1);
     // }
 
-    // // double muij = (var(i,j,0,3)*mu1 + var(i,j,0,4)*mu2)/rho(i,j);
-    // // double muip = (var(i+1,j,0,3)*mu1 + var(i+1,j,0,4)*mu2)/rho(i+1,j);
-    // // double mujp = (var(i,j+1,0,3)*mu1 + var(i,j+1,0,4)*mu2)/rho(i,j+1);
+    // // FSCAL muij = (var(i,j,0,3)*mu1 + var(i,j,0,4)*mu2)/rho(i,j);
+    // // FSCAL muip = (var(i+1,j,0,3)*mu1 + var(i+1,j,0,4)*mu2)/rho(i+1,j);
+    // // FSCAL mujp = (var(i,j+1,0,3)*mu1 + var(i,j+1,0,4)*mu2)/rho(i,j+1);
 
-    // double mur = (muip + muij) / 2;
-    // double mut = (mujp + muij) / 2;
-    double mur = 2.928e-5;
-    double mut = 2.928e-5;
+    // FSCAL mur = (muip + muij) / 2;
+    // FSCAL mut = (mujp + muij) / 2;
+    FSCAL mur = 2.928e-5;
+    FSCAL mut = 2.928e-5;
 
     // xface
     dudx = (vel(i+1,j,0) -vel(i,j,0))/dx;
@@ -113,18 +113,18 @@ struct calculateHeatFlux2dv {
   FS2D qx;
   FS2D qy;
   FS2D T;
-  Kokkos::View<double *> cd;
+  Kokkos::View<FSCAL *> cd;
 
-  double k = 0.026;
+  FSCAL k = 0.026;
 
   calculateHeatFlux2dv(FS4D var_, FS2D rho_, FS2D T_, FS2D qx_, FS2D qy_,
-                       Kokkos::View<double *> cd_)
+                       Kokkos::View<FSCAL *> cd_)
       : var(var_), rho(rho_), T(T_), qx(qx_), qy(qy_), cd(cd_) {}
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j) const {
-    double dx = cd(1);
-    double dy = cd(2);
+    FSCAL dx = cd(1);
+    FSCAL dy = cd(2);
 
     qx(i, j) = -k * (T(i + 1, j) - T(i, j)) / dx;
     qy(i, j) = -k * (T(i, j + 1) - T(i, j)) / dy;
@@ -144,28 +144,28 @@ struct applyViscousTerm2dv {
   FS2D qy;
   FS4D stressx;
   FS4D stressy;
-  Kokkos::View<double *> cd;
+  Kokkos::View<FSCAL *> cd;
 
   applyViscousTerm2dv(FS4D dvar_, FS4D var_, FS2D rho_, FS3D vel_, FS4D strx_, FS4D stry_,
-                      FS2D qx_, FS2D qy_, Kokkos::View<double *> cd_)
+                      FS2D qx_, FS2D qy_, Kokkos::View<FSCAL *> cd_)
       : dvar(dvar_), var(var_), rho(rho_), vel(vel_), stressx(strx_), stressy(stry_),
         qx(qx_), qy(qy_), cd(cd_) {}
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j) const {
-    double dx = cd(1);
-    double dy = cd(2);
-    double a, b, c1, c2;
+    FSCAL dx = cd(1);
+    FSCAL dy = cd(2);
+    FSCAL a, b, c1, c2;
 
-    double ur = (vel(i+1,j,0)+vel(i,j,0))/2.0;
-    double ul = (vel(i-1,j,0)+vel(i,j,0))/2.0;
-    double vr = (vel(i+1,j,1)+vel(i,j,1))/2.0;
-    double vl = (vel(i-1,j,1)+vel(i,j,1))/2.0;
+    FSCAL ur = (vel(i+1,j,0)+vel(i,j,0))/2.0;
+    FSCAL ul = (vel(i-1,j,0)+vel(i,j,0))/2.0;
+    FSCAL vr = (vel(i+1,j,1)+vel(i,j,1))/2.0;
+    FSCAL vl = (vel(i-1,j,1)+vel(i,j,1))/2.0;
 
-    double ut = (vel(i,j+1,0)+vel(i,j,0))/2.0;
-    double ub = (vel(i,j-1,0)+vel(i,j,0))/2.0;
-    double vt = (vel(i,j+1,1)+vel(i,j,1))/2.0;
-    double vb = (vel(i,j-1,1)+vel(i,j,1))/2.0;
+    FSCAL ut = (vel(i,j+1,0)+vel(i,j,0))/2.0;
+    FSCAL ub = (vel(i,j-1,0)+vel(i,j,0))/2.0;
+    FSCAL vt = (vel(i,j+1,1)+vel(i,j,1))/2.0;
+    FSCAL vb = (vel(i,j-1,1)+vel(i,j,1))/2.0;
 
     a = (stressx(i,j,0,0) - stressx(i-1,j,0,0)) / dx +
         (stressy(i,j,0,1) - stressy(i,j-1,0,1)) / dy;

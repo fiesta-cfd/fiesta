@@ -168,7 +168,7 @@ void Fiesta::initializeSimulation(Simulation &sim){
     }
   }
 
-  sim.restartview = std::make_unique<blockWriter<double>>(sim.cf, sim.f, sim.cf.autoRestartName, sim.cf.pathName, false, sim.cf.restart_freq,!sim.cf.autoRestart);
+  sim.restartview = std::make_unique<blockWriter<FSCAL>>(sim.cf, sim.f, sim.cf.autoRestartName, sim.cf.pathName, false, sim.cf.restart_freq,!sim.cf.autoRestart);
 
   luaReader L(sim.cf.inputFname,"fiesta");
   L.getIOBlock(sim.cf,sim.f,sim.cf.ndim,sim.ioviews);

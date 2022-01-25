@@ -27,6 +27,7 @@
 #include <vector>
 #include <fmt/core.h>
 #include "xdmf.hpp"
+#include "kokkosTypes.hpp"
 
 using namespace std;
 
@@ -40,8 +41,8 @@ void writeXMFDataItem(FILE* xmf, string path, int ndim, size_t *dims){
   fprintf(xmf, "        %s\n", path.c_str());
   fprintf(xmf, "       </DataItem>\n");
 }
-void writeXMF(string fname, string hname, int gridType, double time,
-               int ndim, size_t *in_dims, vector<double> origin, vector<double> dx, int nvt, bool writeVarx,
+void writeXMF(string fname, string hname, int gridType, FSCAL time,
+               int ndim, size_t *in_dims, vector<FSCAL> origin, vector<FSCAL> dx, int nvt, bool writeVarx,
                vector<string> vNames, vector<string> vxNames ){
 
     size_t gdims[ndim];

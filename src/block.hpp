@@ -34,7 +34,7 @@ class blockWriter {
     blockWriter(struct inputConfig&,std::unique_ptr<class rk_func>&,std::string,std::string,bool,size_t,bool);
     blockWriter(struct inputConfig&,std::unique_ptr<class rk_func>&,std::string,std::string,bool,size_t,
                                   std::vector<size_t>,std::vector<size_t>,std::vector<size_t>,bool);
-    void write(struct inputConfig cf, std::unique_ptr<class rk_func>&f, int tdx, double time);
+    void write(struct inputConfig cf, std::unique_ptr<class rk_func>&f, int tdx, FSCAL time);
     size_t frq();
 
   private:
@@ -45,13 +45,13 @@ class blockWriter {
     std::vector<size_t> lExt;    // local extent
     std::vector<size_t> lExtG;   // local grid extent
     std::vector<size_t> lOffset; // local offset
-    std::vector<double> gOrigin; // global origin of block
+    std::vector<FSCAL> gOrigin; // global origin of block
     std::vector<size_t> gStart;  // global starting index
     std::vector<size_t> gEnd;    // global ending index
     std::vector<size_t> gExt;    // global extent
     std::vector<size_t> gExtG;   // global grid extent
     std::vector<size_t> stride;  // slice stride
-    std::vector<double> iodx;
+    std::vector<FSCAL> iodx;
 
     bool chunkable;
 

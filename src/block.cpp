@@ -294,7 +294,7 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, std::unique_ptr<class rk_fun
 }
 
 template<typename T>
-void blockWriter<T>::write(struct inputConfig cf, std::unique_ptr<class rk_func>&f, int tdx, double time) {
+void blockWriter<T>::write(struct inputConfig cf, std::unique_ptr<class rk_func>&f, int tdx, FSCAL time) {
   string baseFormat,blockBase;
   if(appStep){
     baseFormat = format("{{}}-{{:0{}d}}",pad);
@@ -370,8 +370,8 @@ void blockWriter<T>::write(struct inputConfig cf, std::unique_ptr<class rk_func>
   if (cf.rank==0){
     filesystem::path hdfFilePath{hdfPath};
     auto fsize = filesystem::file_size(hdfFilePath);
-    double ftime = writeTimer.check();
-    double frate = (fsize/1048576.0)/ftime;
+    FSCAL ftime = writeTimer.check();
+    FSCAL frate = (fsize/1048576.0)/ftime;
 
     if (fsize > 1073741824)
       Log::message("[{}] '{}': {:.2f} GiB in {:.2f}s ({:.2f} MiB/s)",cf.t,hdfPath,fsize/1073741824.0,ftime,frate);  //divide by bytes per GiB (1024*1024*1024)
@@ -389,7 +389,7 @@ template<typename T>
 void blockWriter<T>::dataPack(int ndim, int ng, const vector<size_t>& start, const vector<size_t>& end, const vector<size_t>& extent, const vector<size_t>& stride, vector<T>& dest, const FS4DH& source, const int vn, const bool average){
   int ii,jj,kk;
   int idx;
-  double mean;
+  FSCAL mean;
 
   if (ndim==3){
     for (size_t i = start[0]; i < end[0]+1; i+=stride[0]) {

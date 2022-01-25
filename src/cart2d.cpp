@@ -197,17 +197,17 @@ void cart2d_func::compute() {
   }
 
   if (cf.ceq) {
-    double maxS,maxS_recv;
-    double maxC,maxC_recv;
-    double maxCh,maxCh_recv;
+    FSCAL maxS,maxS_recv;
+    FSCAL maxC,maxC_recv;
+    FSCAL maxCh,maxCh_recv;
 
     timers["ceq"].reset();
 
     Kokkos::parallel_for(cell_pol, calculateRhoGrad2D(var, vel, rho, gradRho, cf.dx, cf.dy));
 
-    Kokkos::parallel_reduce(cell_pol, maxWaveSpeed2D(var, p, rho, cd), Kokkos::Max<double>(maxS));
-    Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 0, cd), Kokkos::Max<double>(maxC));
-    Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 1, cd), Kokkos::Max<double>(maxCh));
+    Kokkos::parallel_reduce(cell_pol, maxWaveSpeed2D(var, p, rho, cd), Kokkos::Max<FSCAL>(maxS));
+    Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 0, cd), Kokkos::Max<FSCAL>(maxC));
+    Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 1, cd), Kokkos::Max<FSCAL>(maxCh));
     Kokkos::fence();
 
 #ifdef HAVE_MPI
@@ -220,7 +220,7 @@ void cart2d_func::compute() {
     maxC=maxC_recv;
     maxCh=maxCh_recv;
 
-    double alpha = (cf.dx*cf.dx + cf.dy*cf.dy)/(maxCh+1.0e-6)*cf.alpha;
+    FSCAL alpha = (cf.dx*cf.dx + cf.dy*cf.dy)/(maxCh+1.0e-6)*cf.alpha;
 
     Kokkos::parallel_for(cell_pol, updateCeq2D(dvar, var, gradRho, maxS, cd, cf.kap, cf.eps));
     Kokkos::parallel_for(face_pol, computeCeqFlux2D(var, m, rho, alpha, cf.nv, maxCh));
@@ -253,7 +253,7 @@ void cart2d_func::postStep() {
   if (cf.noise == 1) {
     int M = 0;
     int N = 0;
-    double coff;
+    FSCAL coff;
 
     if ((cf.nci + 1) % 2 == 0)
       M = (cf.nci + 1) / 2;
@@ -269,8 +269,8 @@ void cart2d_func::postStep() {
     policy_f cell_pol = policy_f({cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
 
     if (cf.ceq == 1) {
-      double maxCh,maxCh_recv;
-      Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 1, cd), Kokkos::Max<double>(maxCh));
+      FSCAL maxCh,maxCh_recv;
+      Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 1, cd), Kokkos::Max<FSCAL>(maxCh));
       #ifdef HAVE_MPI
         MPI_Allreduce(&maxCh, &maxCh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
       #endif

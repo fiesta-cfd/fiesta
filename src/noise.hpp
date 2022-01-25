@@ -27,12 +27,12 @@ struct detectNoise3D {
   FS4D var,varx;
   FS3D_I noise;
   int v;
-  double dh;
-  double coff;
-  Kokkos::View<double *> cd;
+  FSCAL dh;
+  FSCAL coff;
+  Kokkos::View<FSCAL *> cd;
 
-  detectNoise3D(FS4D var_, FS4D varx_, FS3D_I n_, double dh_, double c_,
-                Kokkos::View<double *> cd_, int v_)
+  detectNoise3D(FS4D var_, FS4D varx_, FS3D_I n_, FSCAL dh_, FSCAL c_,
+                Kokkos::View<FSCAL *> cd_, int v_)
       : var(var_), varx(varx_), noise(n_), dh(dh_), coff(c_), cd(cd_), v(v_) {}
 
   KOKKOS_INLINE_FUNCTION
@@ -41,9 +41,9 @@ struct detectNoise3D {
     int nv = (int)cd(0) + 4;
     int ng = (int)cd(5);
 
-    double dx = cd(1);
-    double dy = cd(2);
-    double dz = cd(3);
+    FSCAL dx = cd(1);
+    FSCAL dy = cd(2);
+    FSCAL dz = cd(3);
 
     int i = 2 * ii + ng;
     int j = 2 * jj + ng;
@@ -53,9 +53,9 @@ struct detectNoise3D {
     int jdx=0;
     int kdx=0;
 
-    double a = sqrt(165.0 * dx * dy * dz)/15840.0;
+    FSCAL a = sqrt(165.0 * dx * dy * dz)/15840.0;
 
-    double c = -a*(
+    FSCAL c = -a*(
                //  2.0*var(i-1,j+1,k+1,v) +   3.0*var(i,j+1,k+1,v) + 2.0*var(i+1,j+1,k+1,v)
                //+ 3.0*var(i-1,j  ,k+1,v) +   6.0*var(i,j  ,k+1,v) + 3.0*var(i+1,j  ,k+1,v)
                //+ 2.0*var(i-1,j-1,k+1,v) +   3.0*var(i,j-1,k+1,v) + 2.0*var(i+1,j-1,k+1,v)
@@ -81,7 +81,7 @@ struct detectNoise3D {
                + 2.0*var(i-1,j-1,k-1,v) +   2.0*var(i,j-1,k-1,v) + 2.0*var(i+1,j-1,k-1,v)
                );
 
-    double cref = dh * sqrt(dx*dy*dz/12.0);
+    FSCAL cref = dh * sqrt(dx*dy*dz/12.0);
 
     for (idx=-1;idx<2;++idx){
       for (jdx=-1;jdx<2;++jdx){
@@ -135,12 +135,12 @@ struct removeNoise3D {
   FS4D var;
   FS4D varx;
   FS3D_I noise;
-  double dt;
-  Kokkos::View<double *> cd;
+  FSCAL dt;
+  Kokkos::View<FSCAL *> cd;
   int v;
 
-  removeNoise3D(FS4D dvar_, FS4D var_, FS4D varx_, FS3D_I n_, double dt_,
-                Kokkos::View<double *> cd_, int v_)
+  removeNoise3D(FS4D dvar_, FS4D var_, FS4D varx_, FS3D_I n_, FSCAL dt_,
+                Kokkos::View<FSCAL *> cd_, int v_)
       : dvar(dvar_), var(var_), varx(varx_), noise(n_), dt(dt_), cd(cd_), v(v_) {}
 
   KOKKOS_INLINE_FUNCTION
@@ -148,10 +148,10 @@ struct removeNoise3D {
 
     int ng = (int)cd(5);
 
-    double dx = cd(1);
-    double dy = cd(2);
-    double dz = cd(3);
-    double lap,dnoise;
+    FSCAL dx = cd(1);
+    FSCAL dy = cd(2);
+    FSCAL dz = cd(3);
+    FSCAL lap,dnoise;
 
     lap = (var(i-1,j,k,v)-2*var(i,j,k,v)+var(i+1,j,k,v))/(dx*dx)
         + (var(i,j-1,k,v)-2*var(i,j,k,v)+var(i,j+1,k,v))/(dy*dy)
@@ -173,12 +173,12 @@ struct detectNoise2D {
   FS4D var,varx;
   FS2D_I noise;
   int v;
-  double dh;
-  double coff;
-  Kokkos::View<double *> cd;
+  FSCAL dh;
+  FSCAL coff;
+  Kokkos::View<FSCAL *> cd;
 
-  detectNoise2D(FS4D var_, FS4D varx_, FS2D_I n_, double dh_, double c_,
-                Kokkos::View<double *> cd_, int v_)
+  detectNoise2D(FS4D var_, FS4D varx_, FS2D_I n_, FSCAL dh_, FSCAL c_,
+                Kokkos::View<FSCAL *> cd_, int v_)
       : var(var_), varx(varx_), noise(n_), dh(dh_), coff(c_), cd(cd_), v(v_) {}
 
   KOKKOS_INLINE_FUNCTION
@@ -187,22 +187,22 @@ struct detectNoise2D {
     int nv = (int)cd(0) + 3;
     int ng = (int)cd(5);
 
-    double dx = cd(1);
-    double dy = cd(2);
+    FSCAL dx = cd(1);
+    FSCAL dy = cd(2);
 
     int i = 2 * ii + ng;
     int j = 2 * jj + ng;
 
-    double a = sqrt(6.0 * dx * dy);
+    FSCAL a = sqrt(6.0 * dx * dy);
 
-    double c =
+    FSCAL c =
         -(a / 192.0) * (var(i - 1, j + 1, 0, v) + 2 * var(i, j + 1, 0, v) +
                         var(i + 1, j + 1, 0, v) + 2 * var(i - 1, j, 0, v) -
                         12 * var(i, j, 0, v) + 2 * var(i + 1, j, 0, v) +
                         var(i - 1, j - 1, 0, v) + 2 * var(i, j - 1, 0, v) +
                         var(i + 1, j - 1, 0, v));
 
-    double cref = dh * a / 16.0;
+    FSCAL cref = dh * a / 16.0;
 
     for (int idx=-1;idx<2;++idx)
       for (int jdx=-1;jdx<2;++jdx)
@@ -233,11 +233,11 @@ struct removeNoise2D {
   FS4D var,varx;
   FS2D_I noise;
   int v;
-  double dt;
-  Kokkos::View<double *> cd;
+  FSCAL dt;
+  Kokkos::View<FSCAL *> cd;
 
-  removeNoise2D(FS4D dvar_, FS4D var_, FS4D varx_, FS2D_I n_, double dt_,
-                Kokkos::View<double *> cd_, int v_)
+  removeNoise2D(FS4D dvar_, FS4D var_, FS4D varx_, FS2D_I n_, FSCAL dt_,
+                Kokkos::View<FSCAL *> cd_, int v_)
       : dvar(dvar_), var(var_), varx(varx_), noise(n_), dt(dt_), cd(cd_), v(v_) {}
 
   KOKKOS_INLINE_FUNCTION
@@ -245,15 +245,15 @@ struct removeNoise2D {
 
     int ng = (int)cd(5);
 
-    double dx = cd(1);
-    double dy = cd(2);
+    FSCAL dx = cd(1);
+    FSCAL dy = cd(2);
 
-    double lgrad = (var(i, j, 0, v) - var(i - 1, j, 0, v)) / dx;
-    double rgrad = (var(i + 1, j, 0, v) - var(i, j, 0, v)) / dx;
-    double bgrad = (var(i, j, 0, v) - var(i, j - 1, 0, v)) / dy;
-    double tgrad = (var(i, j + 1, 0, v) - var(i, j, 0, v)) / dy;
+    FSCAL lgrad = (var(i, j, 0, v) - var(i - 1, j, 0, v)) / dx;
+    FSCAL rgrad = (var(i + 1, j, 0, v) - var(i, j, 0, v)) / dx;
+    FSCAL bgrad = (var(i, j, 0, v) - var(i, j - 1, 0, v)) / dy;
+    FSCAL tgrad = (var(i, j + 1, 0, v) - var(i, j, 0, v)) / dy;
 
-    double dvar = dt * (dx * dx + dy * dy) * noise(i, j) *
+    FSCAL dvar = dt * (dx * dx + dy * dy) * noise(i, j) *
                        ((rgrad - lgrad) / dx + (tgrad - bgrad) / dy);
     var(i,j,0,v) += dvar;
     //varx(i,j,0,9) = dvar;

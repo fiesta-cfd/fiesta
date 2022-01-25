@@ -34,8 +34,8 @@ void rkAdvance(struct inputConfig &cf, class std::unique_ptr<class rk_func>&f){
   FS4D mytmp = f->tmp1;
   FS4D myvar = f->var;
   FS4D mydvar = f->dvar;
-  double dt = cf.dt;
-  double nvt = cf.nvt;
+  FSCAL dt = cf.dt;
+  FSCAL nvt = cf.nvt;
 
   // First stage update
   f->timers["rk"].reset();

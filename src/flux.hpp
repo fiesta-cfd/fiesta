@@ -27,16 +27,16 @@ struct computeFluxWeno2D {
   FS2D fluxx;
   FS2D fluxy;
   int v;
-  double dx,dy;
-  double eps=1e-6;
+  FSCAL dx,dy;
+  FSCAL eps=1e-6;
 
   computeFluxWeno2D(FS4D var_, FS2D p_, FS2D r_, FS3D u_, FS2D fx_, FS2D fy_,
-                    double dx_, double dy_, int v_)
+                    FSCAL dx_, FSCAL dy_, int v_)
       : var(var_), p(p_), rho(r_), vel(u_), fluxx(fx_), fluxy(fy_), dx(dx_), dy(dy_), v(v_) {}
 
   KOKKOS_INLINE_FUNCTION
-  double weno(double f1, double f2, double f3, double f4, double f5) const {
-    double b1, b2, b3, w1, w2, w3, p1, p2, p3, a1, a2;
+  FSCAL weno(FSCAL f1, FSCAL f2, FSCAL f3, FSCAL f4, FSCAL f5) const {
+    FSCAL b1, b2, b3, w1, w2, w3, p1, p2, p3, a1, a2;
     a1 = f1 - 2.0 * f2 + f3;
     a2 = f1 - 4.0 * f2 + 3.0 * f3;
     b1 = (13.0 / 12.0) * a1 * a1 + (0.25) * a2 * a2;
@@ -63,7 +63,7 @@ struct computeFluxWeno2D {
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j) const {
 
-    double ur, vr, f1, f2, f3, f4, f5;
+    FSCAL ur, vr, f1, f2, f3, f4, f5;
 
     // get x velocity at right face
     ur = ( -vel(i+2,j,0) + 7.0*vel(i+1,j,0) + 7.0*vel(i,j,0) - vel(i-1,j,0) )/12.0;
@@ -110,20 +110,20 @@ struct computeFluxCentered2D {
   FS2D rho;
   FS2D fluxx;
   FS2D fluxy;
-  Kokkos::View<double *> cd;
+  Kokkos::View<FSCAL *> cd;
   int v;
 
   computeFluxCentered2D(FS4D var_, FS2D p_, FS2D rho_, FS2D fx_, FS2D fy_,
-                        Kokkos::View<double *> cd_, int v_)
+                        Kokkos::View<FSCAL *> cd_, int v_)
       : var(var_), p(p_), rho(rho_), fluxx(fx_), fluxy(fy_), cd(cd_), v(v_) {}
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j) const {
 
-    double dx = cd(1);
-    double dy = cd(2);
-    double ur, vr, x1, y1;
-    double px, py;
+    FSCAL dx = cd(1);
+    FSCAL dy = cd(2);
+    FSCAL ur, vr, x1, y1;
+    FSCAL px, py;
     ur = 0.0;
     vr = 0.0;
     x1 = 0.0;
@@ -171,12 +171,12 @@ struct computeFluxQuick2D {
   FS2D rho;
   FS2D fluxx;
   FS2D fluxy;
-  Kokkos::View<double *> cd;
+  Kokkos::View<FSCAL *> cd;
   int v;
-  double eps = 0.000001;
+  FSCAL eps = 0.000001;
 
   computeFluxQuick2D(FS4D var_, FS2D p_, FS2D rho_, FS2D fluxx_, FS2D fluxy_,
-                     Kokkos::View<double *> cd_, int v_)
+                     Kokkos::View<FSCAL *> cd_, int v_)
       : var(var_), p(p_), rho(rho_), fluxx(fluxx_), fluxy(fluxy_), cd(cd_),
         v(v_) {}
 
@@ -184,9 +184,9 @@ struct computeFluxQuick2D {
   void operator()(const int i, const int j) const {
 
     int ns = (int)cd(0);
-    double ur, vr, w, f1, f2, f3;
-    double dx = cd(1);
-    double dy = cd(2);
+    FSCAL ur, vr, w, f1, f2, f3;
+    FSCAL dx = cd(1);
+    FSCAL dy = cd(2);
 
     // calculate cell face velocities (in positive direction) with 4th order
     // interpolation velocity is momentum divided by total density
@@ -251,18 +251,18 @@ struct calculateFluxesG {
   FS3D fluxx;
   FS3D fluxy;
   FS3D fluxz;
-  double dx,dy,dz;
+  FSCAL dx,dy,dz;
   int v;
-  double eps = 0.000001;
+  FSCAL eps = 0.000001;
 
   calculateFluxesG(FS4D var_, FS3D p_, FS3D rho_, FS4D u_, FS3D fluxx_,
-                   FS3D fluxy_, FS3D fluxz_, double dx_, double dy_, double dz_, int v_)
+                   FS3D fluxy_, FS3D fluxz_, FSCAL dx_, FSCAL dy_, FSCAL dz_, int v_)
       : var(var_), p(p_), rho(rho_), vel(u_), fluxx(fluxx_), fluxy(fluxy_),
         fluxz(fluxz_), dx(dx_), dy(dy_), dz(dz_), v(v_) {}
 
   KOKKOS_INLINE_FUNCTION
-  double weno(double f1, double f2, double f3, double f4, double f5) const {
-    double b1, b2, b3, w1, w2, w3, p1, p2, p3, a1, a2;
+  FSCAL weno(FSCAL f1, FSCAL f2, FSCAL f3, FSCAL f4, FSCAL f5) const {
+    FSCAL b1, b2, b3, w1, w2, w3, p1, p2, p3, a1, a2;
     a1 = f1 - 2.0 * f2 + f3;
     a2 = f1 - 4.0 * f2 + 3.0 * f3;
     b1 = (13.0 / 12.0) * a1 * a1 + (0.25) * a2 * a2;
@@ -289,7 +289,7 @@ struct calculateFluxesG {
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
 
-    double ur, vr, wr, f1, f2, f3, f4, f5;
+    FSCAL ur, vr, wr, f1, f2, f3, f4, f5;
 
     ur = (-vel(i+2,j,k,0) + 7.0*vel(i+1,j,k,0) + 7.0*vel(i,j,k,0) - vel(i-1,j,k,0))/12.0;
     if (ur < 0.0) {

@@ -27,7 +27,7 @@
 #include <iomanip>
 #include <iostream>
 
-void statusCheck(int cFlag, struct inputConfig cf, std::unique_ptr<class rk_func>&f, double time,
+void statusCheck(int cFlag, struct inputConfig cf, std::unique_ptr<class rk_func>&f, FSCAL time,
                                          Timer::fiestaTimer &wall, Timer::fiestaTimer &sim);
 
 #endif

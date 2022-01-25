@@ -33,7 +33,7 @@
 namespace Fiesta {
     struct Simulation {
       std::unique_ptr<class rk_func> f;
-      std::unique_ptr<blockWriter<double>> restartview;
+      std::unique_ptr<blockWriter<FSCAL>> restartview;
       std::vector<blockWriter<float>> ioviews;
       fsconf cf;
     };

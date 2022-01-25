@@ -46,9 +46,9 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
 
   memEstimate *= (cf.ngi*cf.ngj*cf.ngk);
   memEstimate += 3*(cf.ni+cf.nj+cf.nk);
-  memEstimate *= 8;  // 8 bytes per double
-  double memEstimateMB = memEstimate/(1048576.0);
-  double memEstGlobalMB = 0.0;
+  memEstimate *= 8;  // 8 bytes per FSCAL
+  FSCAL memEstimateMB = memEstimate/(1048576.0);
+  FSCAL memEstGlobalMB = 0.0;
 
 #ifdef HAVE_MPI
   MPI_Allreduce(&memEstimateMB, &memEstGlobalMB, 1, MPI_DOUBLE, MPI_SUM, cf.comm);
@@ -181,9 +181,9 @@ void cart3d_func::preStep() {
 }
 
 template<typename T>
-double fsMax(const struct inputConfig &cf, policy_f3 &pol, T func){
-    double localmax, max;
-    Kokkos::parallel_reduce(pol, func, Kokkos::Max<double>(localmax));
+FSCAL fsMax(const struct inputConfig &cf, policy_f3 &pol, T func){
+    FSCAL localmax, max;
+    Kokkos::parallel_reduce(pol, func, Kokkos::Max<FSCAL>(localmax));
     #ifdef HAVE_MPI
       MPI_Allreduce(&localmax, &max, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
     #endif
@@ -224,8 +224,8 @@ void cart3d_func::compute() {
 
   if (cf.ceq) {
     timers["ceq"].reset();
-    double maxS,maxCh,alpha;
-    /* double maxC; */
+    FSCAL maxS,maxCh,alpha;
+    /* FSCAL maxC; */
 
     Kokkos::parallel_for(cell_pol, calculateRhoGrad(var, vel, rho, gradRho, cf.dx, cf.dy, cf.dz));
 
@@ -270,7 +270,7 @@ void cart3d_func::postStep() {
     int M = 0;
     int N = 0;
     int L = 0;
-    double coff;
+    FSCAL coff;
 
     if ((cf.nci + 1) % 2 == 0)
       M = (cf.nci + 1) / 2;
@@ -291,9 +291,9 @@ void cart3d_func::postStep() {
     policy_f3 cell_pol = policy_f3({cf.ng, cf.ng, cf.ng}, {cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
 
     if (cf.ceq == 1) {
-      double maxCh=0;
-      double maxCh_recv=0;
-      Kokkos::parallel_reduce(cell_pol, maxCvar3D(var, 6), Kokkos::Max<double>(maxCh));
+      FSCAL maxCh=0;
+      FSCAL maxCh_recv=0;
+      Kokkos::parallel_reduce(cell_pol, maxCvar3D(var, 6), Kokkos::Max<FSCAL>(maxCh));
       #ifdef HAVE_MPI
         MPI_Allreduce(&maxCh, &maxCh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
       #endif

@@ -38,13 +38,13 @@ void readRestart(struct inputConfig &cf, std::unique_ptr<class rk_func>&f) {
     }
   }
 
-  h5Writer<double> writer;
+  h5Writer<FSCAL> writer;
   writer.openRead(cf.restartName);
 
   size_t idx;
   std::string path;
 
-  auto readV = (double *)malloc(cf.ni * cf.nj * cf.nk * sizeof(double));
+  auto readV = (FSCAL *)malloc(cf.ni * cf.nj * cf.nk * sizeof(FSCAL));
   auto varH = Kokkos::create_mirror_view(f->var);
 
   // read grid
@@ -119,10 +119,10 @@ void readRestart(struct inputConfig &cf, std::unique_ptr<class rk_func>&f) {
 }
 
 void readTerrain(struct inputConfig &cf, std::unique_ptr<class rk_func>&f) {
-  h5Writer<double> writer;
+  h5Writer<FSCAL> writer;
   writer.openRead(cf.restartName);
 
-  auto readV = (double *)malloc(cf.ni * cf.nj * sizeof(double));
+  auto readV = (FSCAL *)malloc(cf.ni * cf.nj * sizeof(FSCAL));
   auto gridH = Kokkos::create_mirror_view(f->grid);
 
   std::vector<size_t> gridDims,offset,gridCount;
@@ -134,7 +134,7 @@ void readTerrain(struct inputConfig &cf, std::unique_ptr<class rk_func>&f) {
   gridCount.push_back(cf.localGridDims[1]);
 
   size_t idx,ii,jj,kk;
-  double h, dz;
+  FSCAL h, dz;
 
   // read grid
   writer.read("Height", 2, cf.globalCellDims, cf.localCellDims, cf.subdomainOffset, readV);

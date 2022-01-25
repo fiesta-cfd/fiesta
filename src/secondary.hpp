@@ -72,9 +72,9 @@ public:
 
     int ns = (int)cd(0);
     int nv = (int)cd(4);
-    double gamma, gammas, Rs;
-    double Cp = 0;
-    double Cv = 0;
+    FSCAL gamma, gammas, Rs;
+    FSCAL Cp = 0;
+    FSCAL Cv = 0;
 
     rho(i, j) = 0.0;
 
@@ -119,9 +119,9 @@ struct calculateRhoPT3D {
 
     int ns = (int)cd(0);
     int nv = (int)cd(4);
-    double gamma, gammas, Rs;
-    double Cp = 0;
-    double Cv = 0;
+    FSCAL gamma, gammas, Rs;
+    FSCAL Cp = 0;
+    FSCAL Cv = 0;
 
     rho(i, j, k) = 0.0;
 

@@ -45,8 +45,8 @@ public:
   template <class T>
   void get(std::initializer_list<string> keys, T& n);
 
-  template <class T>
-  void get(std::initializer_list<string> keys, T& n,T d);
+  template <class T, class S>
+  void get(std::initializer_list<string> keys, T& n, S d);
 
   template <class T>
   void get(std::initializer_list<string> keys, std::vector<T>& v, int n);
@@ -54,7 +54,7 @@ public:
   template <class T>
   void getValue(T& n);
 
-  double call(std::string, int ,...);
+  FSCAL call(std::string, int ,...);
 
 private:
   lua_State *L;
@@ -68,7 +68,7 @@ private:
 
   bool getBool(std::string);
   int getInt(std::string);
-  double getDouble(std::string);
+  FSCAL getDouble(std::string);
   std::string getString(std::string);
 
 };

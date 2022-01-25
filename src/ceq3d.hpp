@@ -26,19 +26,19 @@ struct maxWaveSpeed {
   FS4D var;
   FS3D p;
   FS3D rho;
-  Kokkos::View<double *> cd;
+  Kokkos::View<FSCAL *> cd;
 
-  maxWaveSpeed(FS4D var_, FS3D p_, FS3D rho_, Kokkos::View<double *> cd_)
+  maxWaveSpeed(FS4D var_, FS3D p_, FS3D rho_, Kokkos::View<FSCAL *> cd_)
       : var(var_), p(p_), rho(rho_), cd(cd_) {}
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j, const int k, double &lmax) const {
+  void operator()(const int i, const int j, const int k, FSCAL &lmax) const {
     int ns = (int)cd(0);
-    double gamma, gammas, Rs;
-    double Cp = 0;
-    double Cv = 0;
+    FSCAL gamma, gammas, Rs;
+    FSCAL Cp = 0;
+    FSCAL Cv = 0;
 
-    double a, s;
+    FSCAL a, s;
 
     for (int s = 0; s < ns; ++s) {
       gammas = cd(6 + 3 * s);
@@ -70,9 +70,9 @@ struct maxCvar3D {
       : dvar(dvar_), v(v_) {}
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j, const int k, double &lmax) const {
+  void operator()(const int i, const int j, const int k, FSCAL &lmax) const {
 
-    double s = abs(dvar(i, j, k, v));
+    FSCAL s = abs(dvar(i, j, k, v));
 
     if (s > lmax)
       lmax = s;
@@ -86,7 +86,7 @@ struct maxGradFunctor {
   maxGradFunctor(FS4D gradRho_, int n_) : gradRho(gradRho_), n(n_) {}
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j, const int k, double &lmax) const {
+  void operator()(const int i, const int j, const int k, FSCAL &lmax) const {
     if (abs(gradRho(i, j, k, n)) > lmax)
       lmax = abs(gradRho(i, j, k, n));
   }
@@ -96,72 +96,72 @@ struct calculateRhoGrad {
   FS4D var,vel;
   FS3D rho;
   FS4D gradRho;
-  double dx,dy,dz;
+  FSCAL dx,dy,dz;
 
   calculateRhoGrad(FS4D var_, FS4D vel_, FS3D rho_, FS4D gradRho_,
-                   double dx_, double dy_, double dz_)
+                   FSCAL dx_, FSCAL dy_, FSCAL dz_)
       : var(var_), vel(vel_), rho(rho_), gradRho(gradRho_), dx(dx_), dy(dy_), dz(dz_) {}
 
   // central difference scheme for 1st derivative in 2d on three index variable 
   KOKKOS_INLINE_FUNCTION
-  //double deriv24d(const FS4D &var,
-  double derivVel(
+  //FSCAL deriv24d(const FS4D &var,
+  FSCAL derivVel(
       const int i, const int j, const int k,
       const int ih, const int jh, const int kh,
-      const int v, const double d) const {
+      const int v, const FSCAL d) const {
     return (vel(i-2*ih,j-2*jh,k-2*kh,v) - 8.0*vel(i-ih,j-jh,k-kh,v)
         + 8.0*vel(i+ih,j+jh,k+kh,v) - vel(i+2*ih,j+2*jh,k+2*kh,v)) / (12.0*d);
   }
 
   // central difference scheme for 1st derivative in 2d on two index variable 
   KOKKOS_INLINE_FUNCTION
-  double derivRho(
+  FSCAL derivRho(
       const int i, const int j, const int k,
       const int ih, const int jh, const int kh,
-      const double d) const {
+      const FSCAL d) const {
     return (rho(i-2*ih,j-2*jh,k-2*kh) - 8.0*rho(i-ih,j-jh,k-kh)
         + 8.0*rho(i+ih,j+jh,k+kh) - rho(i+2*ih,j+2*jh,k+2*kh)) / (12.0*d);
   }
 
   // central difference scheme for 1st derivative of specific internal energy
   KOKKOS_INLINE_FUNCTION
-  double derivEnergy(
+  FSCAL derivEnergy(
       const int i, const int j, const int k,
       const int ih, const int jh, const int kh,
-      const double d) const {
+      const FSCAL d) const {
     return (nrg(i-2*ih,j-2*jh,k-2*kh) - 8.0*nrg(i-ih,j-jh,k-kh)
         + 8.0*nrg(i+ih,j+jh,k+kh) - nrg(i+2*ih,j+2*jh,k+2*kh)) / (12.0*d);
   }
 
   // convert total energy to specific internal energy (TE-KE)/rho
   KOKKOS_INLINE_FUNCTION
-  double nrg( const int i, const int j, const int k) const {
+  FSCAL nrg( const int i, const int j, const int k) const {
     return var(i,j,k,3)/rho(i,j,k)
       -0.5*rho(i,j,k)*(vel(i,j,k,0)*vel(i,j,k,0) + vel(i,j,k,1)*vel(i,j,k,1) + vel(i,j,k,2)*vel(i,j,k,2));
   }
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
-    double dxr = derivRho(i,j,k,1,0,0,dx);
-    double dyr = derivRho(i,j,k,0,1,0,dy);
-    double dzr = derivRho(i,j,k,0,0,1,dz);
+    FSCAL dxr = derivRho(i,j,k,1,0,0,dx);
+    FSCAL dyr = derivRho(i,j,k,0,1,0,dy);
+    FSCAL dzr = derivRho(i,j,k,0,0,1,dz);
 
-    double dxe = derivEnergy(i,j,k,1,0,0,dx);
-    double dye = derivEnergy(i,j,k,0,1,0,dy);
-    double dze = derivEnergy(i,j,k,0,0,1,dz);
+    FSCAL dxe = derivEnergy(i,j,k,1,0,0,dx);
+    FSCAL dye = derivEnergy(i,j,k,0,1,0,dy);
+    FSCAL dze = derivEnergy(i,j,k,0,0,1,dz);
 
-    double dxu = derivVel(i,j,k,1,0,0,0,dx);
-    double dyv = derivVel(i,j,k,0,1,0,1,dy);
-    double dzw = derivVel(i,j,k,0,0,1,2,dz);
+    FSCAL dxu = derivVel(i,j,k,1,0,0,0,dx);
+    FSCAL dyv = derivVel(i,j,k,0,1,0,1,dy);
+    FSCAL dzw = derivVel(i,j,k,0,0,1,2,dz);
 
-    double n1 = dxr;
-    double n2 = dyr;
-    double n3 = dzr;
+    FSCAL n1 = dxr;
+    FSCAL n2 = dyr;
+    FSCAL n3 = dzr;
 
-    double rgrad = sqrt(dxr*dxr + dyr*dyr + dzr*dzr);
-    double divu = dxu + dyv + dzw;
+    FSCAL rgrad = sqrt(dxr*dxr + dyr*dyr + dzr*dzr);
+    FSCAL divu = dxu + dyv + dzw;
 
-    double dnednr = (n1*dxe + n2*dye + n3*dze)*(n1*dxr + n2*dyr + n3*dzr);
+    FSCAL dnednr = (n1*dxe + n2*dye + n3*dze)*(n1*dxr + n2*dyr + n3*dzr);
 
     // compression switch
     int indicator = 0;
@@ -191,27 +191,27 @@ struct updateCeq {
   FS4D var;
   FS4D varx;
   FS4D gradRho;
-  double maxS, kap, eps;
-  Kokkos::View<double *> cd;
+  FSCAL maxS, kap, eps;
+  Kokkos::View<FSCAL *> cd;
 
-  updateCeq(FS4D dvar_, FS4D var_, FS4D varx_, FS4D gradRho_, double maxS_,
-            Kokkos::View<double *> cd_, double kap_, double eps_)
+  updateCeq(FS4D dvar_, FS4D var_, FS4D varx_, FS4D gradRho_, FSCAL maxS_,
+            Kokkos::View<FSCAL *> cd_, FSCAL kap_, FSCAL eps_)
       : dvar(dvar_), var(var_), varx(varx_), gradRho(gradRho_), maxS(maxS_), cd(cd_),
         kap(kap_), eps(eps_) {}
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
-    double dx = cd(1);
-    double dy = cd(2);
-    double dz = cd(3);
+    FSCAL dx = cd(1);
+    FSCAL dy = cd(2);
+    FSCAL dz = cd(3);
 
     int nv = (int)cd(0) + 4;
     int nc = nv;
 
-    double lap;
+    FSCAL lap;
 
     // average cell size
-    double dxmag = sqrt(dx*dx + dy*dy + dz*dz);
+    FSCAL dxmag = sqrt(dx*dx + dy*dy + dz*dz);
 
     for (int n = 0; n < 5; ++n) {
       lap = (var(i-1,j,k,nc+n)-2*var(i,j,k,nc+n)+var(i+1,j,k,nc+n))/dx
@@ -227,19 +227,19 @@ struct calculateCeqFaces {
   FS4D var,varx;
   FS3D rho;
   FS6D mFlux;
-  double alpha;
+  FSCAL alpha;
   int nv;
 
-  calculateCeqFaces(FS4D var_, FS4D varx_, FS3D rho_, FS6D mFlux_, double a_, int nv_)
+  calculateCeqFaces(FS4D var_, FS4D varx_, FS3D rho_, FS6D mFlux_, FSCAL a_, int nv_)
       : var(var_), varx(varx_), rho(rho_), mFlux(mFlux_), alpha(a_), nv(nv_){}
 
   KOKKOS_INLINE_FUNCTION
-  double interpolateRho(const int i, const int j, const int k, const int ih, const int jh, const int kh) const {
+  FSCAL interpolateRho(const int i, const int j, const int k, const int ih, const int jh, const int kh) const {
     return ( rho(i,j,k) + rho(i+ih,j+jh,k+kh) )/2.0;
   }
 
   KOKKOS_INLINE_FUNCTION
-  double interpolateC(const int i, const int j, const int k, const int ih, const int jh, const int kh, const int v) const {
+  FSCAL interpolateC(const int i, const int j, const int k, const int ih, const int jh, const int kh, const int v) const {
     return ( var(i,j,k,nv+v) + var(i+ih,j+jh,k+kh,nv+v) )/2.0;
   }
 
@@ -249,9 +249,9 @@ struct calculateCeqFaces {
     int jp = 0;
     int kp = 0;
 
-    double r,chat,cn[3];
+    FSCAL r,chat,cn[3];
 
-    double M,cmag;
+    FSCAL M,cmag;
 
     // for each direction (i=0, j=1, k=2)
     for (int face = 0; face < 3; ++face) {
@@ -277,7 +277,7 @@ struct calculateCeqFaces {
       cmag += cn[2]*cn[2];
 
       for (int dir = 0; dir < 3; ++dir) {
-        double dirac = 0.0;
+        FSCAL dirac = 0.0;
         if (face == dir)
           dirac = 1.0;
         M=dirac - (cn[face]*cn[dir])/cmag;
@@ -298,9 +298,9 @@ struct calculateCeqFaces {
 struct calculateCeqGrads {
   FS4D vel;
   FS6D mFlux;
-  double dx,dy,dz;
+  FSCAL dx,dy,dz;
 
-  calculateCeqGrads(FS4D vel_, FS6D mFlux_, double dx_, double dy_, double dz_)
+  calculateCeqGrads(FS4D vel_, FS6D mFlux_, FSCAL dx_, FSCAL dy_, FSCAL dz_)
       : vel(vel_), mFlux(mFlux_), dx(dx_), dy(dy_), dz(dz_){}
 
   KOKKOS_INLINE_FUNCTION
@@ -334,16 +334,16 @@ struct calculateCeqGrads {
 struct applyCeq {
   FS4D dvar,varx;
   FS6D mFlux;
-  double dx,dy,dz;
+  FSCAL dx,dy,dz;
 
-  applyCeq(FS4D dvar_, FS4D varx_, FS6D mFlux_, double dx_, double dy_, double dz_)
+  applyCeq(FS4D dvar_, FS4D varx_, FS6D mFlux_, FSCAL dx_, FSCAL dy_, FSCAL dz_)
       : dvar(dvar_), varx(varx_), mFlux(mFlux_), dx(dx_), dy(dy_), dz(dz_) {}
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
-    double diffu;
+    FSCAL diffu;
     int ih, jh, kh;
-    double d[3];
+    FSCAL d[3];
     d[0]=dx;
     d[1]=dy;
     d[2]=dz;

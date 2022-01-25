@@ -52,8 +52,8 @@ int getglobbool(lua_State *L, const char *var);
 // Lua get integer value
 int getglobint(lua_State *L, const char *var);
 
-// Lua get double value
-double getglobdbl(lua_State *L, const char *var);
+// Lua get FSCAL value
+FSCAL getglobdbl(lua_State *L, const char *var);
 
 // configuration structure
 struct inputConfig {
@@ -81,19 +81,19 @@ struct inputConfig {
   int glbl_ni, glbl_nj, glbl_nk;
   int glbl_nci, glbl_ncj, glbl_nck;
   std::vector<std::string> speciesName;
-  std::vector<double> gamma;
-  std::vector<double> M;
-  std::vector<double> mu;
+  std::vector<FSCAL> gamma;
+  std::vector<FSCAL> M;
+  std::vector<FSCAL> mu;
 
-  double R;
+  FSCAL R;
   int scheme;
   bool visc;
   bool buoyancy;
-  double gAccel;
-  double rhoRef;
-  double *g_vec;
-  double dt, dx, dy, dz;
-  std::vector<double> dxvec;
+  FSCAL gAccel;
+  FSCAL rhoRef;
+  FSCAL *g_vec;
+  FSCAL dt, dx, dy, dz;
+  std::vector<FSCAL> dxvec;
   bool autoRestart;
   std::string autoRestartName;
   int xProcs, yProcs, zProcs, numProcs;
@@ -121,16 +121,16 @@ struct inputConfig {
   bool tinterval;
   bool chunkable;
   bool compressible;
-  double time;
+  FSCAL time;
   int st;
   bool ceq,noise;
-  double kap, eps, alpha, beta, betae;
+  FSCAL kap, eps, alpha, beta, betae;
   BCType bcL, bcR, bcB, bcT, bcH, bcF;
-  double n_dh, n_coff, n_eta;
+  FSCAL n_dh, n_coff, n_eta;
   int n_nt,n_mode;
   int t;
   int grid;
-  double h, tdx, tdy;
+  FSCAL h, tdx, tdy;
   int verbosity;
   int restartFlag;
   int exitFlag;

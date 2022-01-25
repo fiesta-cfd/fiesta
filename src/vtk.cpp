@@ -36,8 +36,8 @@ serialVTKWriter::serialVTKWriter(struct inputConfig cf, FS4D gridD, FS4D varD) {
   varH = Kokkos::create_mirror_view(varD);
 }
 
-// struct inputConfig writeGrid(struct inputConfig cf, double *x, double *y,
-// double *z,const char * fname){
+// struct inputConfig writeGrid(struct inputConfig cf, FSCAL *x, FSCAL *y,
+// FSCAL *z,const char * fname){
 void serialVTKWriter::writeGrid(struct inputConfig cf, const FS4D gridD,
                                 const char *fname) {}
 // struct inputConfig writeSPGrid(struct inputConfig cf, float *x, float *y,
@@ -46,12 +46,12 @@ void serialVTKWriter::writeSPGrid(struct inputConfig cf, const FS4D gridD,
                                   const char *fname) {}
 
 void serialVTKWriter::writeRestart(struct inputConfig cf, std::unique_ptr<class rk_func>&f, int tdx,
-                                   double time) {}
+                                   FSCAL time) {}
 
 // void writeSolution(struct inputConfig cf, float *x, float *y, float *z, const
-// FS4D deviceV, int tdx, double time){
+// FS4D deviceV, int tdx, FSCAL time){
 void serialVTKWriter::writeSolution(struct inputConfig cf, std::unique_ptr<class rk_func>&mod,
-                                    int tdx, double time) {
+                                    int tdx, FSCAL time) {
 
   Kokkos::deep_copy(varH, mod->var);
   Kokkos::deep_copy(gridH, mod->grid);
@@ -74,12 +74,12 @@ void serialVTKWriter::writeSolution(struct inputConfig cf, std::unique_ptr<class
   // f << "ASCII\nDATASET STRUCTURED_GRID" << endl;
   // if (cf.ndim == 3){
   f << "DIMENSIONS " << cf.ni << " " << cf.nj << " " << cf.nk << endl;
-  f << "POINTS " << cf.ni * cf.nj * cf.nk << " double" << endl;
+  f << "POINTS " << cf.ni * cf.nj * cf.nk << " FSCAL" << endl;
   for (int k = 0; k < cf.nk; k++) {
     for (int j = 0; j < cf.nj; j++) {
       for (int i = 0; i < cf.ni; i++) {
         for (int v = 0; v < 3; v++) {
-          char data[8], *pDouble = (char *)(double *)(&gridH(i, j, k, v));
+          char data[8], *pDouble = (char *)(FSCAL *)(&gridH(i, j, k, v));
           for (int b = 0; b < 8; ++b)
             data[b] = pDouble[7 - b];
           f.write(data, 8);
@@ -102,28 +102,28 @@ void serialVTKWriter::writeSolution(struct inputConfig cf, std::unique_ptr<class
   int ncells = cf.nci * cf.ncj * cf.nck;
   f << "CELL_DATA " << ncells << endl;
   f << "FIELD FieldData 1" << endl;
-  f << "Variables " << cf.nv << " " << ncells << " double" << endl;
+  f << "Variables " << cf.nv << " " << ncells << " FSCAL" << endl;
   for (int k = 0; k < cf.nck; k++) {
     for (int j = 0; j < cf.ncj; j++) {
       for (int i = 0; i < cf.nci; i++) {
         for (int v = 0; v < cf.nv; v++) {
           if (cf.ndim == 3) {
-            char data[8], *pDouble = (char *)(double *)(&varH(
+            char data[8], *pDouble = (char *)(FSCAL *)(&varH(
                               i + cf.ng, j + cf.ng, k + cf.ng, v));
             for (int b = 0; b < 8; ++b)
               data[b] = pDouble[7 - b];
             f.write(data, 8);
-            // f.write((char*)&varH(i+cf.ng,j+cf.ng,k+cf.ng,v),sizeof(double));
+            // f.write((char*)&varH(i+cf.ng,j+cf.ng,k+cf.ng,v),sizeof(FSCAL));
             // f << setprecision(6) << scientific <<
             // varH(i+cf.ng,j+cf.ng,k+cf.ng,v) << " ";
           } else {
             char data[8],
                 *pDouble =
-                    (char *)(double *)(&varH(i + cf.ng, j + cf.ng, k, v));
+                    (char *)(FSCAL *)(&varH(i + cf.ng, j + cf.ng, k, v));
             for (int b = 0; b < 8; ++b)
               data[b] = pDouble[7 - b];
             f.write(data, 8);
-            // f.write((char*)&varH(i+cf.ng,j+cf.ng,k,v),sizeof(double));
+            // f.write((char*)&varH(i+cf.ng,j+cf.ng,k,v),sizeof(FSCAL));
             // f << setprecision(6) << scientific << varH(i+cf.ng,j+cf.ng,k,v)
             // << " ";
           }

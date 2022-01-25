@@ -201,7 +201,7 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   L.get({"advection_scheme"}, scheme, std::string("weno5"));
   L.get({"grid","type"},   grid, std::string("cartesian"));
 
-  //vector<double> dx;
+  //vector<FSCAL> dx;
   //L.getArray("dx",dx,cf.ndim);
   L.get({"grid","dx"},cf.dxvec,cf.ndim);
 
@@ -436,7 +436,7 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
 }
 
 int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
-  double x,y,z;
+  FSCAL x,y,z;
   FS4DH hostV = Kokkos::create_mirror_view(deviceV);
   FS4DH hostG = Kokkos::create_mirror_view(deviceG);
   if(cf.grid!=0){
@@ -473,7 +473,7 @@ int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
               y = y/8.0;
               z = z/8.0;
             }
-            hostV(i, j, k, v) = L.call("initial_conditions",4,x,y,z,(double)v);
+            hostV(i, j, k, v) = L.call("initial_conditions",4,x,y,z,(FSCAL)v);
           }
         }
       }
@@ -497,7 +497,7 @@ int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
               x = x/4.0;
               y = y/4.0;
             }
-            hostV(i, j, 0, v) = L.call("initial_conditions",4,x,y,0.0,(double)v);
+            hostV(i, j, 0, v) = L.call("initial_conditions",4,x,y,0.0,(FSCAL)v);
         }
       }
     }
@@ -534,7 +534,7 @@ int loadGrid(struct inputConfig cf, FS4D &deviceV) {
             ii = cf.iStart + i;
             jj = cf.jStart + j;
             kk = cf.kStart + k;
-            hostV(i, j, k, v) = L.call("initialize_grid",4,(double)ii,(double)jj,(double)kk,(double)v);
+            hostV(i, j, k, v) = L.call("initialize_grid",4,(FSCAL)ii,(FSCAL)jj,(FSCAL)kk,(FSCAL)v);
           }
         }
       }

@@ -50,7 +50,7 @@ struct bc_gen {
     }
 
     if (type == BCType::reflective){
-      double reflect=1.0;
+      FSCAL reflect=1.0;
       for (int v=0; v<nv; ++v){
         reflect=1.0;
         if(ihat != 0 && v==0) reflect=-1.0;
@@ -64,7 +64,7 @@ struct bc_gen {
 
     if (type == BCType::hydrostatic){
       // Do normal reflection first (to get momentums and other variables)
-      double reflect=1.0;
+      FSCAL reflect=1.0;
       for (int v=0; v<nv; ++v){
         reflect=1.0;
         if(ihat != 0 && v==0) reflect=-1.0;
@@ -90,9 +90,9 @@ struct bc_gen {
         i2= ig-2*ihat;
         j2= jg-2*jhat;
         k2= kg-2*khat;
-        double ke=0;
-        double ke1=0;
-        double ke2=0;
+        FSCAL ke=0;
+        FSCAL ke1=0;
+        FSCAL ke2=0;
 
         //compute kinetic energies
         for (int d=0; d<ndim; ++d){
@@ -106,9 +106,9 @@ struct bc_gen {
 
         u(ig,jg,kg,edx)= 2*(u(i1,j1,k1,edx)-ke1) - (u(i2,j2,k2,edx)-ke2) + ke;
 
-        //double ke = 0.5*(u(ig,jg,kg,0)*u(ig,jg,kg,0) + u(ig,jg,kg,1)*u(ig,jg,kg,1) + u(ig,jg,kg,2)*u(ig,jg,kg,2))/u(ig,jg,kg,4);
-        //double ke1= 0.5*(u(i1,j1,k1,0)*u(i1,j1,k1,0) + u(i1,j1,k1,1)*u(i1,j1,k1,1) + u(i1,j1,k1,2)*u(i1,j1,k1,2))/u(i1,j1,k1,4);
-        //double ke2= 0.5*(u(i2,j2,k2,0)*u(i2,j2,k2,0) + u(i2,j2,k2,1)*u(i2,j2,k2,1) + u(i2,j2,k2,2)*u(i2,j2,k2,2))/u(i2,j2,k2,4);
+        //FSCAL ke = 0.5*(u(ig,jg,kg,0)*u(ig,jg,kg,0) + u(ig,jg,kg,1)*u(ig,jg,kg,1) + u(ig,jg,kg,2)*u(ig,jg,kg,2))/u(ig,jg,kg,4);
+        //FSCAL ke1= 0.5*(u(i1,j1,k1,0)*u(i1,j1,k1,0) + u(i1,j1,k1,1)*u(i1,j1,k1,1) + u(i1,j1,k1,2)*u(i1,j1,k1,2))/u(i1,j1,k1,4);
+        //FSCAL ke2= 0.5*(u(i2,j2,k2,0)*u(i2,j2,k2,0) + u(i2,j2,k2,1)*u(i2,j2,k2,1) + u(i2,j2,k2,2)*u(i2,j2,k2,2))/u(i2,j2,k2,4);
 
         // extrapolate pressure
         //u(ig,jg,kg,3)= 2*(u(i1,j1,k1,3)-ke1) - (u(i2,j2,k2,3)-ke2) + ke;

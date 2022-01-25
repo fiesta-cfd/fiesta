@@ -27,6 +27,7 @@
 #include <algorithm>
 #include "log2.hpp"
 #include "debug.hpp"
+#include "kokkosTypes.hpp"
 
 // open and hdf5 file for writing
 template <typename T>
@@ -88,7 +89,7 @@ void h5Writer<T>::write(std::string dname, int ndim,
   unsigned szip_options_mask, szip_pixels_per_block;
 
   // get type id
-  if (std::is_same<T,double>::value) dtype_id = H5T_NATIVE_DOUBLE;
+  if (std::is_same<T,FSCAL>::value) dtype_id = H5T_NATIVE_DOUBLE;
   if (std::is_same<T,float>::value) dtype_id = H5T_NATIVE_FLOAT;
   if (std::is_same<T,int>::value) dtype_id = H5T_NATIVE_INT;
 
@@ -142,7 +143,7 @@ void h5Writer<T>::writeAttribute(std::string name, S data){
   hid_t dspace_id, att_id, dtype_id;
   //bool stringAttribute;
 
-  if (std::is_same<S,double>::value) dtype_id = H5T_NATIVE_DOUBLE;
+  if (std::is_same<S,FSCAL>::value) dtype_id = H5T_NATIVE_DOUBLE;
   if (std::is_same<S,float>::value) dtype_id = H5T_NATIVE_FLOAT;
   if (std::is_same<S,int>::value) dtype_id = H5T_NATIVE_INT;
   //if (std::is_same<S,std::string>::value) stringAttribute=true;
@@ -214,7 +215,7 @@ void h5Writer<T>::read(std::string path, int ndim, std::vector<size_t> in_dims_g
   //herr_t status;
 
   // get hd5 datatype
-  if (std::is_same<T,double>::value) dtype_id = H5T_NATIVE_DOUBLE;
+  if (std::is_same<T,FSCAL>::value) dtype_id = H5T_NATIVE_DOUBLE;
   if (std::is_same<T,float>::value) dtype_id = H5T_NATIVE_FLOAT;
   if (std::is_same<T,int>::value) dtype_id = H5T_NATIVE_INT;
 
@@ -245,7 +246,7 @@ template <typename S>
 void h5Writer<T>::readAttribute(std::string name, S& data){
   hid_t gpid,att_id,dtype_id;
 
-  if (std::is_same<S,double>::value) dtype_id = H5T_NATIVE_DOUBLE;
+  if (std::is_same<S,FSCAL>::value) dtype_id = H5T_NATIVE_DOUBLE;
   if (std::is_same<S,float>::value) dtype_id = H5T_NATIVE_FLOAT;
   if (std::is_same<S,int>::value) dtype_id = H5T_NATIVE_INT;
 
@@ -339,17 +340,17 @@ template class h5Writer<float>;
 template class h5Writer<double>;
 
 template void h5Writer<float>::writeAttribute<int>(std::string,int);
-template void h5Writer<float>::writeAttribute<double>(std::string,double);
+template void h5Writer<float>::writeAttribute<FSCAL>(std::string,FSCAL);
 //template void h5Writer<float>::writeAttribute<std::string>(std::string,std::string);
 
 template void h5Writer<double>::writeAttribute<int>(std::string,int);
-template void h5Writer<double>::writeAttribute<double>(std::string,double);
-//template void h5Writer<double>::writeAttribute<std::string>(std::string,std::string);
+template void h5Writer<double>::writeAttribute<FSCAL>(std::string,FSCAL);
+//template void h5Writer<FSCAL>::writeAttribute<std::string>(std::string,std::string);
 
 template void h5Writer<float>::readAttribute<int>(std::string,int&);
-template void h5Writer<float>::readAttribute<double>(std::string,double&);
+template void h5Writer<float>::readAttribute<FSCAL>(std::string,FSCAL&);
 //template void h5Writer<float>::readAttribute<std::string>(std::string,std::string&);
 
 template void h5Writer<double>::readAttribute<int>(std::string,int&);
-template void h5Writer<double>::readAttribute<double>(std::string,double&);
-//template void h5Writer<double>::readAttribute<std::string>(std::string,std::string&);
+template void h5Writer<double>::readAttribute<FSCAL>(std::string,FSCAL&);
+//template void h5Writer<FSCAL>::readAttribute<std::string>(std::string,std::string&);

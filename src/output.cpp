@@ -88,6 +88,12 @@ void printConfig(struct inputConfig cf) {
   
     if (cf.stat_freq > 0) cout << format(keyValue,"Status frequency:",cf.stat_freq);
     else cout << format(keyDisabled,"Status reports:");
+
+#ifdef HAVE_SINGLE
+    cout << format(keyString,"Precision:","single");
+#else
+    cout << format(keyString,"Precision:","double");
+#endif
   
     cout << format(keyValue,"Number of Processes:",cf.numProcs);
     cout << format(keyTupleInt,"MPI Discretization:",cf.xProcs,cf.yProcs,cf.zProcs);

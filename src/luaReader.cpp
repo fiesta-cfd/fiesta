@@ -104,8 +104,8 @@ void luaReader::get(std::initializer_list<std::string> keys, T& n){
 }
 
 // get with default
-template<class T>
-void luaReader::get(std::initializer_list<std::string> keys, T& n, T d){
+template<class T, class S>
+void luaReader::get(std::initializer_list<std::string> keys, T& n, S d){
   bool found=true;
 
   std::string fullkey=root;
@@ -313,8 +313,8 @@ void luaReader::getIOBlock(struct inputConfig& cf, std::unique_ptr<class rk_func
   }
 }
 
-// Call lua function from c (takes integer arguments and returns a double)
-double luaReader::call(std::string f, int n, ...){
+// Call lua function from c (takes integer arguments and returns a FSCAL)
+FSCAL luaReader::call(std::string f, int n, ...){
   lua_getglobal(L,root.c_str());
   lua_getfield(L, -1, f.c_str());
   if(lua_isnoneornil(L,-1)){
@@ -325,8 +325,8 @@ double luaReader::call(std::string f, int n, ...){
 
   va_list ap;
   va_start(ap, n);
-  double v;
-  double z;
+  FSCAL v;
+  FSCAL z;
   for(int i=0; i<n; ++i) {
     v = va_arg(ap, double);
     lua_pushnumber(L, v);
@@ -335,7 +335,7 @@ double luaReader::call(std::string f, int n, ...){
 
   if (lua_pcall(L, n, 1, 0) != LUA_OK)
     error(L, "error running function '%s': %s\n",f.c_str(),lua_tostring(L, -1));
-  z = (double)lua_tonumberx(L, -1, &isnum);
+  z = (FSCAL)lua_tonumberx(L, -1, &isnum);
   if (!isnum)
     error(L, "function '%s' should return a number\n",f.c_str());
   lua_pop(L, 1);
@@ -350,10 +350,10 @@ void luaReader::close(){
 }
 
 // Private Methods
-template<>
-void luaReader::getValue(double& n){
+template<class T>
+void luaReader::getValue(T& n){
   int isnum;
-  n=(double)lua_tonumberx(L,-1,&isnum);
+  n=(T)lua_tonumberx(L,-1,&isnum);
 }
 
 template<>
@@ -374,14 +374,14 @@ void luaReader::getValue(std::string& n){
   }
 }
 
-template<>
-void luaReader::getArray(vector<double>& out, int n){
+template<class T>
+void luaReader::getArray(vector<T>& out, int n){
   int isnum;
   //lua_getglobal(L, key.c_str());
   for (int i=0; i < n; ++i) {
     lua_pushnumber(L, i + 1);
     lua_gettable(L, -2);
-    out.push_back((double)lua_tonumberx(L, -1, &isnum));
+    out.push_back((T)lua_tonumberx(L, -1, &isnum));
     lua_pop(L, 1);
   }
   //lua_pop(L,1);
@@ -437,13 +437,17 @@ void luaReader::error(lua_State *L, const char *fmt, ...) {
 template void luaReader::get<std::string>(std::initializer_list<std::string>,std::string&);
 template void luaReader::get<int>(std::initializer_list<std::string>,int&);
 template void luaReader::get<double>(std::initializer_list<std::string>,double&);
+template void luaReader::get<float>(std::initializer_list<std::string>,float&);
 template void luaReader::get<bool>(std::initializer_list<std::string>,bool&);
 // explicit instantiation
-template void luaReader::get<std::string>(std::initializer_list<std::string>,std::string&,std::string);
-template void luaReader::get<int>(std::initializer_list<std::string>,int&,int);
-template void luaReader::get<double>(std::initializer_list<std::string>,double&,double);
-template void luaReader::get<bool>(std::initializer_list<std::string>,bool&,bool);
+template void luaReader::get<std::string,std::string>(std::initializer_list<std::string>,std::string&,std::string);
+template void luaReader::get<int,int>(std::initializer_list<std::string>,int&,int);
+template void luaReader::get<double,double>(std::initializer_list<std::string>,double&,double);
+template void luaReader::get<float,double>(std::initializer_list<std::string>,float&,double);
+template void luaReader::get<float,float>(std::initializer_list<std::string>,float&,float);
+template void luaReader::get<bool,bool>(std::initializer_list<std::string>,bool&,bool);
 // explicit instantiation
 template void luaReader::get<int>(std::initializer_list<std::string>,vector<int>&,int);
 template void luaReader::get<double>(std::initializer_list<std::string>,vector<double>&,int);
+template void luaReader::get<float>(std::initializer_list<std::string>,vector<float>&,int);
 template void luaReader::get<size_t>(std::initializer_list<std::string>,vector<size_t>&,int);

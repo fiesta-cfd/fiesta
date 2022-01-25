@@ -49,7 +49,7 @@ struct advect3D {
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
 
-    double res = -((wenox(i, j, k) - wenox(i - 1, j, k)) +
+    FSCAL res = -((wenox(i, j, k) - wenox(i - 1, j, k)) +
                    (wenoy(i, j, k) - wenoy(i, j - 1, k)) +
                    (wenoz(i, j, k) - wenoz(i, j, k - 1)));
     dvar(i, j, k, v) = res;

@@ -150,7 +150,7 @@ void gen2d_func::postStep() {
   if (cf.noise == 1) {
     int M = 0;
     int N = 0;
-    double coff;
+    FSCAL coff;
 
     if ((cf.nci - 1) % 2 == 0)
       M = (cf.nci - 1) / 2;
@@ -199,14 +199,14 @@ void gen2d_func::preSim() {
 
 #ifdef HAVE_MPI
   // mpi exchange of metrics
-  ls = Kokkos::View<double ****, FS_LAYOUT>("leftSend", cf.ng, cf.ngj, 2, 2);
-  lr = Kokkos::View<double ****, FS_LAYOUT>("leftRecv", cf.ng, cf.ngj, 2, 2);
-  rs = Kokkos::View<double ****, FS_LAYOUT>("rightSend", cf.ng, cf.ngj, 2, 2);
-  rr = Kokkos::View<double ****, FS_LAYOUT>("rightRecv", cf.ng, cf.ngj, 2, 2);
-  bs = Kokkos::View<double ****, FS_LAYOUT>("bottomSend", cf.ngi, cf.ng, 2, 2);
-  br = Kokkos::View<double ****, FS_LAYOUT>("bottomRecv", cf.ngi, cf.ng, 2, 2);
-  ts = Kokkos::View<double ****, FS_LAYOUT>("topSend", cf.ngi, cf.ng, 2, 2);
-  tr = Kokkos::View<double ****, FS_LAYOUT>("topRecv", cf.ngi, cf.ng, 2, 2);
+  ls = Kokkos::View<FSCAL ****, FS_LAYOUT>("leftSend", cf.ng, cf.ngj, 2, 2);
+  lr = Kokkos::View<FSCAL ****, FS_LAYOUT>("leftRecv", cf.ng, cf.ngj, 2, 2);
+  rs = Kokkos::View<FSCAL ****, FS_LAYOUT>("rightSend", cf.ng, cf.ngj, 2, 2);
+  rr = Kokkos::View<FSCAL ****, FS_LAYOUT>("rightRecv", cf.ng, cf.ngj, 2, 2);
+  bs = Kokkos::View<FSCAL ****, FS_LAYOUT>("bottomSend", cf.ngi, cf.ng, 2, 2);
+  br = Kokkos::View<FSCAL ****, FS_LAYOUT>("bottomRecv", cf.ngi, cf.ng, 2, 2);
+  ts = Kokkos::View<FSCAL ****, FS_LAYOUT>("topSend", cf.ngi, cf.ng, 2, 2);
+  tr = Kokkos::View<FSCAL ****, FS_LAYOUT>("topRecv", cf.ngi, cf.ng, 2, 2);
 
   lsH = Kokkos::create_mirror_view(ls);
   lrH = Kokkos::create_mirror_view(lr);

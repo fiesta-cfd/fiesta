@@ -36,7 +36,7 @@ class rk_func {
 
 public:
   rk_func(struct inputConfig &cf_);
-  //rk_func(struct inputConfig &cf_, Kokkos::View<double *> &cd_);
+  //rk_func(struct inputConfig &cf_, Kokkos::View<FSCAL *> &cd_);
   virtual ~rk_func() = default;
 
   virtual void compute() = 0;

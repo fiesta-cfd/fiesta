@@ -41,24 +41,24 @@ public:
   //                         const char *fname) = 0;
 
   virtual void writeSolution(struct inputConfig cf, std::unique_ptr<class rk_func>&f, int tdx,
-                             double time) = 0;
+                             FSCAL time) = 0;
   virtual void writeRestart(struct inputConfig cf, std::unique_ptr<class rk_func>&f, int tdx,
-                            double time) = 0;
+                            FSCAL time) = 0;
 
   virtual void readSolution(struct inputConfig cf, FS4D &gridD, FS4D &varD) = 0;
   virtual void readTerrain(struct inputConfig cf, FS4D &gridD) = 0;
 
   // protected:
-  //    double *xdp;
-  //    double *ydp;
-  //    double *zdp;
+  //    FSCAL *xdp;
+  //    FSCAL *ydp;
+  //    FSCAL *zdp;
   //    float *xsp;
   //    float *ysp;
   //    float *zsp;
   //
-  //    double *v;
+  //    FSCAL *v;
   //    float *vsp;
-  //    double *readV;
+  //    FSCAL *readV;
   //
   //    FS4DH gridH;
   //    FS4DH varH;
