@@ -17,11 +17,12 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include "kokkosTypes.hpp"
+
 #ifndef VISCOSOTY_HPP
 #define VISCOSOTY_HPP
 
 struct calculateStressTensor2dv {
-
   FS4D var;
   FS2D rho;
   FS4D stressx;
@@ -106,8 +107,8 @@ struct calculateStressTensor2dv {
     //     stressy(i,j,0,0),stressy(i,j,1,1),stressy(i,j,0,1));
   }
 };
-struct calculateHeatFlux2dv {
 
+struct calculateHeatFlux2dv {
   FS4D var;
   FS2D rho;
   FS2D qx;
@@ -135,7 +136,6 @@ struct calculateHeatFlux2dv {
 };
 
 struct applyViscousTerm2dv {
-
   FS4D dvar;
   FS4D var;
   FS2D rho;
@@ -195,6 +195,162 @@ struct applyViscousTerm2dv {
 
     // if (i == 2000)
     //    printf("%f, %f, %f\n",a1,a2,a3);
+  }
+};
+
+struct calculateStressTensor3dv {
+  FS4D var;
+  FS3D rho;
+  FS5D stressx;
+  FS5D stressy;
+  FS5D stressz;
+  FS4D vel;
+  Kokkos::View<FSCAL *> cd;
+
+  calculateStressTensor3dv(FS4D var_, FS3D rho_, FS4D v_, FS5D strx_,
+                           FS5D stry_, FS5D strz_, Kokkos::View<FSCAL *> cd_)
+      : var(var_), rho(rho_), vel(v_), stressx(strx_), stressy(stry_), stressz(strz_), cd(cd_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j, const int k) const {
+    int ns = (int)cd(0);
+    FSCAL dx = cd(1);
+    FSCAL dy = cd(2);
+    FSCAL dz = cd(3);
+    FSCAL dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz;
+
+    FSCAL mur = 2.928e-5;
+    FSCAL mut = 2.928e-5;
+
+    // xface
+    dudx = (vel(i+1,j,k,0) -vel(i,j,k,0))/dx;
+    dvdx = (vel(i+1,j,k,1) -vel(i,j,k,1))/dx;
+    dwdx = (vel(i+1,j,k,2) -vel(i,j,k,2))/dx;
+
+    dudy = ( (vel(i+1,j+1,k,0)+vel(i,j+1,k,0)) - (vel(i+1,j-1,k,0)+vel(i,j-1,k,0)) ) / (4*dy);
+    dvdy = ( (vel(i+1,j+1,k,1)+vel(i,j+1,k,1)) - (vel(i+1,j-1,k,1)+vel(i,j-1,k,1)) ) / (4*dy);
+    dwdy = ( (vel(i+1,j+1,k,2)+vel(i,j+1,k,2)) - (vel(i+1,j-1,k,2)+vel(i,j-1,k,2)) ) / (4*dy);
+
+    dudz = ( (vel(i+1,j,k+1,0)+vel(i,j,k+1,0)) - (vel(i+1,j,k-1,0)+vel(i,j,k-1,0)) ) / (4*dz);
+    dvdz = ( (vel(i+1,j,k+1,1)+vel(i,j,k+1,1)) - (vel(i+1,j,k-1,1)+vel(i,j,k-1,1)) ) / (4*dz);
+    dwdz = ( (vel(i+1,j,k+1,2)+vel(i,j,k+1,2)) - (vel(i+1,j,k-1,2)+vel(i,j,k-1,2)) ) / (4*dz);
+
+    stressx(i, j, k, 0, 0) = (2.0 / 3.0) * mur * (2.0 * dudx - dvdy);
+    stressx(i, j, k, 1, 1) = (2.0 / 3.0) * mur * (2.0 * dvdy - dudx);
+    stressx(i, j, k, 0, 1) = mur * (dudy + dvdx);
+    stressx(i, j, k, 1, 0) = stressx(i, j, k, 0, 1);
+
+    // yface
+    dudx = ( (vel(i+1,j+1,k,0)+vel(i+1,j,k,0)) - (vel(i-1,j+1,k,0)+vel(i-1,j,k,0)) ) / (4*dx);
+    dvdx = ( (vel(i+1,j+1,k,1)+vel(i+1,j,k,1)) - (vel(i-1,j+1,k,1)+vel(i-1,j,k,1)) ) / (4*dx);
+    dwdx = ( (vel(i+1,j+1,k,2)+vel(i+1,j,k,2)) - (vel(i-1,j+1,k,2)+vel(i-1,j,k,2)) ) / (4*dx);
+
+    dudy = (vel(i,j+1,k,0) -vel(i,j,k,0))/dy;
+    dvdy = (vel(i,j+1,k,1) -vel(i,j,k,1))/dy;
+    dwdy = (vel(i,j+1,k,2) -vel(i,j,k,2))/dy;
+
+    dudz = ( (vel(i,j+1,k+1,0)+vel(i,j,k+1,0)) - (vel(i,j+1,k-1,0)+vel(i,j,k-1,0)) ) / (4*dz);
+    dvdz = ( (vel(i,j+1,k+1,1)+vel(i,j,k+1,1)) - (vel(i,j+1,k-1,1)+vel(i,j,k-1,1)) ) / (4*dz);
+    dwdz = ( (vel(i,j+1,k+1,2)+vel(i,j,k+1,2)) - (vel(i,j+1,k-1,2)+vel(i,j,k-1,2)) ) / (4*dz);
+
+    stressy(i, j, k, 0, 0) = (2.0 / 3.0) * mut * (2.0 * dudx - dvdy);
+    stressy(i, j, k, 1, 1) = (2.0 / 3.0) * mut * (2.0 * dvdy - dudx);
+    stressy(i, j, k, 0, 1) = mut * (dudy + dvdx);
+    stressy(i, j, k, 1, 0) = stressy(i, j, k, 0, 1);
+
+    // zface
+    dudx = ( (vel(i+1,j,k+1,0)+vel(i+1,j,k,0)) - (vel(i-1,j,k+1,0)+vel(i-1,j,k,0)) ) / (4*dx);
+    dvdx = ( (vel(i+1,j,k+1,1)+vel(i+1,j,k,1)) - (vel(i-1,j,k+1,1)+vel(i-1,j,k,1)) ) / (4*dx);
+    dwdx = ( (vel(i+1,j,k+1,2)+vel(i+1,j,k,2)) - (vel(i-1,j,k+1,2)+vel(i-1,j,k,2)) ) / (4*dx);
+
+    dudy = ( (vel(i,j+1,k+1,0)+vel(i,j+1,k,0)) - (vel(i,j-1,k+1,0)+vel(i,j-1,k,0)) ) / (4*dy);
+    dvdy = ( (vel(i,j+1,k+1,1)+vel(i,j+1,k,1)) - (vel(i,j-1,k+1,1)+vel(i,j-1,k,1)) ) / (4*dy);
+    dwdy = ( (vel(i,j+1,k+1,2)+vel(i,j+1,k,2)) - (vel(i,j-1,k+1,2)+vel(i,j-1,k,2)) ) / (4*dy);
+
+    dudz = (vel(i,j,k+1,0) -vel(i,j,k,0))/dz;
+    dvdz = (vel(i,j,k+1,1) -vel(i,j,k,1))/dz;
+    dwdz = (vel(i,j,k+1,2) -vel(i,j,k,2))/dz;
+    
+
+    stressz(i, j, k, 0, 0) = (2.0 / 3.0) * mut * (2.0 * dudx - dvdy);
+    stressz(i, j, k, 1, 1) = (2.0 / 3.0) * mut * (2.0 * dvdy - dudx);
+    stressz(i, j, k, 0, 1) = mut * (dudy + dvdx);
+    stressz(i, j, k, 1, 0) = stressz(i, j, k, 0, 1);
+  }
+};
+struct calculateHeatFlux3dv {
+  FS4D var;
+  FS2D rho;
+  FS2D qx;
+  FS2D qy;
+  FS2D T;
+  Kokkos::View<FSCAL *> cd;
+
+  FSCAL k = 0.026;
+
+  calculateHeatFlux3dv(FS4D var_, FS2D rho_, FS2D T_, FS2D qx_, FS2D qy_,
+                       Kokkos::View<FSCAL *> cd_)
+      : var(var_), rho(rho_), T(T_), qx(qx_), qy(qy_), cd(cd_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j) const {
+    FSCAL dx = cd(1);
+    FSCAL dy = cd(2);
+
+    qx(i, j) = -k * (T(i + 1, j) - T(i, j)) / dx;
+    qy(i, j) = -k * (T(i, j + 1) - T(i, j)) / dy;
+  }
+};
+
+struct applyViscousTerm3dv {
+  FS4D dvar;
+  FS4D var;
+  FS2D rho;
+  FS3D vel;
+  FS2D qx;
+  FS2D qy;
+  FS4D stressx;
+  FS4D stressy;
+  Kokkos::View<FSCAL *> cd;
+
+  applyViscousTerm3dv(FS4D dvar_, FS4D var_, FS2D rho_, FS3D vel_, FS4D strx_, FS4D stry_,
+                      FS2D qx_, FS2D qy_, Kokkos::View<FSCAL *> cd_)
+      : dvar(dvar_), var(var_), rho(rho_), vel(vel_), stressx(strx_), stressy(stry_),
+        qx(qx_), qy(qy_), cd(cd_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j) const {
+    FSCAL dx = cd(1);
+    FSCAL dy = cd(2);
+    FSCAL a, b, c1, c2;
+
+    FSCAL ur = (vel(i+1,j,0)+vel(i,j,0))/2.0;
+    FSCAL ul = (vel(i-1,j,0)+vel(i,j,0))/2.0;
+    FSCAL vr = (vel(i+1,j,1)+vel(i,j,1))/2.0;
+    FSCAL vl = (vel(i-1,j,1)+vel(i,j,1))/2.0;
+
+    FSCAL ut = (vel(i,j+1,0)+vel(i,j,0))/2.0;
+    FSCAL ub = (vel(i,j-1,0)+vel(i,j,0))/2.0;
+    FSCAL vt = (vel(i,j+1,1)+vel(i,j,1))/2.0;
+    FSCAL vb = (vel(i,j-1,1)+vel(i,j,1))/2.0;
+
+    a = (stressx(i,j,0,0) - stressx(i-1,j,0,0)) / dx +
+        (stressy(i,j,0,1) - stressy(i,j-1,0,1)) / dy;
+
+    b = (stressx(i,j,1,0) - stressx(i-1,j,1,0)) / dx +
+        (stressy(i,j,1,1) - stressy(i,j-1,1,1)) / dy;
+
+    c1 = (ur*stressx(i,j,0,0) - ul*stressx(i-1,j,0,0)) / dx +
+         (vr*stressx(i,j,0,1) - vl*stressx(i-1,j,0,1)) / dx +
+
+         (ut*stressy(i,j,1,0) - ub*stressy(i,j-1,1,0)) / dy +
+         (vt*stressy(i,j,1,1) - vb*stressy(i,j-1,1,1)) / dy;
+
+    c2 = ( qx(i,j)-qx(i-1,j) )/dx + ( qy(i,j)-qy(i,j-1) )/dy;
+
+    dvar(i, j, 0, 0) = dvar(i, j, 0, 0) + a;
+    dvar(i, j, 0, 1) = dvar(i, j, 0, 1) + b;
+    dvar(i, j, 0, 2) = dvar(i, j, 0, 2) + c1 - c2;
   }
 };
 #endif
