@@ -219,8 +219,7 @@ struct calculateStressTensor3dv {
     FSCAL dz = cd(3);
     FSCAL dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz;
 
-    FSCAL mur = 2.928e-5;
-    FSCAL mut = 2.928e-5;
+    FSCAL mu = 2.928e-5;
 
     // xface
     dudx = (vel(i+1,j,k,0) -vel(i,j,k,0))/dx;
@@ -235,10 +234,15 @@ struct calculateStressTensor3dv {
     dvdz = ( (vel(i+1,j,k+1,1)+vel(i,j,k+1,1)) - (vel(i+1,j,k-1,1)+vel(i,j,k-1,1)) ) / (4*dz);
     dwdz = ( (vel(i+1,j,k+1,2)+vel(i,j,k+1,2)) - (vel(i+1,j,k-1,2)+vel(i,j,k-1,2)) ) / (4*dz);
 
-    stressx(i, j, k, 0, 0) = (2.0 / 3.0) * mur * (2.0 * dudx - dvdy);
-    stressx(i, j, k, 1, 1) = (2.0 / 3.0) * mur * (2.0 * dvdy - dudx);
-    stressx(i, j, k, 0, 1) = mur * (dudy + dvdx);
-    stressx(i, j, k, 1, 0) = stressx(i, j, k, 0, 1);
+    stressx(i,j,k,0,0) = (2.0 / 3.0) * mu * (2.0 * dudx - dvdy - dwdz);
+    stressx(i,j,k,1,1) = (2.0 / 3.0) * mu * (2.0 * dvdy - dudx - dwdz);
+    stressx(i,j,k,2,2) = (2.0 / 3.0) * mu * (2.0 * dwdz - dudx - dvdy);
+    stressx(i,j,k,0,1) = mu*(dudy + dvdx);
+    stressx(i,j,k,0,2) = mu*(dudz + dwdx);
+    stressx(i,j,k,1,2) = mu*(dvdz + dwdy);
+    stressx(i,j,k,1,0) = stressx(i,j,k,0,1);
+    stressx(i,j,k,2,0) = stressx(i,j,k,0,1);
+    stressx(i,j,k,2,1) = stressx(i,j,k,1,2);
 
     // yface
     dudx = ( (vel(i+1,j+1,k,0)+vel(i+1,j,k,0)) - (vel(i-1,j+1,k,0)+vel(i-1,j,k,0)) ) / (4*dx);
@@ -253,10 +257,15 @@ struct calculateStressTensor3dv {
     dvdz = ( (vel(i,j+1,k+1,1)+vel(i,j,k+1,1)) - (vel(i,j+1,k-1,1)+vel(i,j,k-1,1)) ) / (4*dz);
     dwdz = ( (vel(i,j+1,k+1,2)+vel(i,j,k+1,2)) - (vel(i,j+1,k-1,2)+vel(i,j,k-1,2)) ) / (4*dz);
 
-    stressy(i, j, k, 0, 0) = (2.0 / 3.0) * mut * (2.0 * dudx - dvdy);
-    stressy(i, j, k, 1, 1) = (2.0 / 3.0) * mut * (2.0 * dvdy - dudx);
-    stressy(i, j, k, 0, 1) = mut * (dudy + dvdx);
-    stressy(i, j, k, 1, 0) = stressy(i, j, k, 0, 1);
+    stressy(i,j,k,0,0) = (2.0 / 3.0) * mu * (2.0 * dudx - dvdy - dwdz);
+    stressy(i,j,k,1,1) = (2.0 / 3.0) * mu * (2.0 * dvdy - dudx - dwdz);
+    stressy(i,j,k,2,2) = (2.0 / 3.0) * mu * (2.0 * dwdz - dudx - dvdy);
+    stressy(i,j,k,0,1) = mu*(dudy + dvdx);
+    stressy(i,j,k,0,2) = mu*(dudz + dwdx);
+    stressy(i,j,k,1,2) = mu*(dvdz + dwdy);
+    stressy(i,j,k,1,0) = stressy(i,j,k,0,1);
+    stressy(i,j,k,2,0) = stressy(i,j,k,0,1);
+    stressy(i,j,k,2,1) = stressy(i,j,k,1,2);
 
     // zface
     dudx = ( (vel(i+1,j,k+1,0)+vel(i+1,j,k,0)) - (vel(i-1,j,k+1,0)+vel(i-1,j,k,0)) ) / (4*dx);
@@ -271,11 +280,15 @@ struct calculateStressTensor3dv {
     dvdz = (vel(i,j,k+1,1) -vel(i,j,k,1))/dz;
     dwdz = (vel(i,j,k+1,2) -vel(i,j,k,2))/dz;
     
-
-    stressz(i, j, k, 0, 0) = (2.0 / 3.0) * mut * (2.0 * dudx - dvdy);
-    stressz(i, j, k, 1, 1) = (2.0 / 3.0) * mut * (2.0 * dvdy - dudx);
-    stressz(i, j, k, 0, 1) = mut * (dudy + dvdx);
-    stressz(i, j, k, 1, 0) = stressz(i, j, k, 0, 1);
+    stressz(i,j,k,0,0) = (2.0 / 3.0) * mu * (2.0 * dudx - dvdy - dwdz);
+    stressz(i,j,k,1,1) = (2.0 / 3.0) * mu * (2.0 * dvdy - dudx - dwdz);
+    stressz(i,j,k,2,2) = (2.0 / 3.0) * mu * (2.0 * dwdz - dudx - dvdy);
+    stressz(i,j,k,0,1) = mu*(dudy + dvdx);
+    stressz(i,j,k,0,2) = mu*(dudz + dwdx);
+    stressz(i,j,k,1,2) = mu*(dvdz + dwdy);
+    stressz(i,j,k,1,0) = stressz(i,j,k,0,1);
+    stressz(i,j,k,2,0) = stressz(i,j,k,0,1);
+    stressz(i,j,k,2,1) = stressz(i,j,k,1,2);
   }
 };
 struct calculateHeatFlux3dv {
@@ -299,9 +312,9 @@ struct calculateHeatFlux3dv {
     FSCAL dy = cd(2);
     FSCAL dz = cd(3);
 
-    qx(i,j,k) = -k * (T(i+1,j,k) - T(i,j,k)) / dx;
-    qy(i,j,k) = -k * (T(i,j+1,k) - T(i,j,k)) / dy;
-    qz(i,j,k) = -k * (T(i,j,k+1) - T(i,j,k)) / dz;
+    qx(i,j,k) = -k*(T(i+1,j,k) - T(i,j,k)) /dx;
+    qy(i,j,k) = -k*(T(i,j+1,k) - T(i,j,k)) /dy;
+    qz(i,j,k) = -k*(T(i,j,k+1) - T(i,j,k)) /dz;
   }
 };
 
@@ -328,7 +341,7 @@ struct applyViscousTerm3dv {
     FSCAL dx = cd(1);
     FSCAL dy = cd(2);
     FSCAL dz = cd(3);
-    FSCAL a, b, c1, c2;
+    FSCAL a, b, c, d1, d2;
 
     FSCAL ur = (vel(i+1,j,k,0)+vel(i,j,k,0))/2.0;
     FSCAL ul = (vel(i-1,j,k,0)+vel(i,j,k,0))/2.0;
@@ -352,23 +365,37 @@ struct applyViscousTerm3dv {
     FSCAL wh = (vel(i,j,k-1,2)+vel(i,j,k,2))/2.0;
 
     a = (stressx(i,j,k,0,0) - stressx(i-1,j,k,0,0)) / dx +
-        (stressy(i,j,k,0,1) - stressy(i,j-1,k,0,1)) / dy +
-        (stressy(i,j,k,0,3) - stressy(i,j,k-1,0,3)) / dz;
+        (stressy(i,j,k,1,0) - stressy(i,j-1,k,1,0)) / dy +
+        (stressz(i,j,k,2,0) - stressz(i,j,k-1,2,0)) / dz;
 
-    b = (stressx(i,j,1,0) - stressx(i-1,j,1,0)) / dx +
-        (stressy(i,j,1,1) - stressy(i,j-1,1,1)) / dy;
+    b = (stressx(i,j,k,0,1) - stressx(i-1,j,k,0,1)) / dx +
+        (stressy(i,j,k,1,1) - stressy(i,j-1,k,1,1)) / dy +
+        (stressz(i,j,k,2,1) - stressz(i,j,k-1,2,1)) / dz;
 
-    c1 = (ur*stressx(i,j,0,0) - ul*stressx(i-1,j,0,0)) / dx +
-         (vr*stressx(i,j,0,1) - vl*stressx(i-1,j,0,1)) / dx +
+    c = (stressx(i,j,k,0,2) - stressx(i-1,j,k,0,2)) / dx +
+        (stressy(i,j,k,1,2) - stressy(i,j-1,k,1,2)) / dy +
+        (stressz(i,j,k,2,2) - stressz(i,j,k-1,2,2)) / dz;
 
-         (ut*stressy(i,j,1,0) - ub*stressy(i,j-1,1,0)) / dy +
-         (vt*stressy(i,j,1,1) - vb*stressy(i,j-1,1,1)) / dy;
+    d1 = (ur*stressx(i,j,k,0,0) - ul*stressx(i-1,j,k,0,0)) / dx +
+         (vr*stressx(i,j,k,0,1) - vl*stressx(i-1,j,k,0,1)) / dx +
+         (wr*stressx(i,j,k,0,2) - wl*stressx(i-1,j,k,0,2)) / dx +
 
-    c2 = ( qx(i,j,k)-qx(i-1,j,k) )/dx + ( qy(i,j,k)-qy(i,j-1,k) )/dy + ( qz(i,j,k)-qz(i,j,k-1) )/dz;
+         (ut*stressy(i,j,k,1,0) - ub*stressy(i,j-1,k,1,0)) / dy +
+         (vt*stressy(i,j,k,1,1) - vb*stressy(i,j-1,k,1,1)) / dy +
+         (wt*stressy(i,j,k,1,2) - wb*stressy(i,j-1,k,1,2)) / dy +
 
-    dvar(i, j, 0, 0) = dvar(i, j, 0, 0) + a;
-    dvar(i, j, 0, 1) = dvar(i, j, 0, 1) + b;
-    dvar(i, j, 0, 2) = dvar(i, j, 0, 2) + c1 - c2;
+         (uf*stressz(i,j,k,2,0) - uh*stressz(i,j,k-1,2,0)) / dz +
+         (vf*stressz(i,j,k,2,1) - vh*stressz(i,j,k-1,2,1)) / dz +
+         (wf*stressz(i,j,k,2,2) - wh*stressz(i,j,k-1,2,2)) / dz;
+
+    d2 = ( qx(i,j,k)-qx(i-1,j,k) )/dx +
+         ( qy(i,j,k)-qy(i,j-1,k) )/dy +
+         ( qz(i,j,k)-qz(i,j,k-1) )/dz;
+
+    dvar(i,j,k,0) = dvar(i,j,k,0) + a;
+    dvar(i,j,k,1) = dvar(i,j,k,1) + b;
+    dvar(i,j,k,2) = dvar(i,j,k,2) + c;
+    dvar(i,j,k,3) = dvar(i,j,k,3) + d1 - d2;
   }
 };
 #endif
