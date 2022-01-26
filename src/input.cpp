@@ -46,11 +46,13 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
   cArgs.numDevices = 1;
   cArgs.numThreads = 1;
   cArgs.verbosity = 3;
+  cArgs.diagnostics = false;
 
   // create options
   static struct option long_options[] = {
       {"version", no_argument, NULL, 'V'},
       {"verbosity", optional_argument, NULL, 'v'},
+      {"diagnostics", optional_argument, NULL, 'd'},
       {"color", optional_argument, NULL, 'c'},
       {"kokkos-ndevices", optional_argument, NULL, 'k'},
       {"kokkos-num-devices", optional_argument, NULL, 'k'},
@@ -62,7 +64,7 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
   std::string copt;
   int c = 1;
   int opt_index;
-  while ((c = getopt_long(argc, argv, "Vv:ctn:", long_options, &opt_index)) != -1) {
+  while ((c = getopt_long(argc, argv, "dVv:ctn:", long_options, &opt_index)) != -1) {
     switch (c) {
     case 'c':
       if (optarg)
@@ -85,6 +87,9 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
       break;
     case 'V':
       cArgs.versionFlag = 1;
+      break;
+    case 'd':
+      cArgs.diagnostics = true;
       break;
     }
   }
@@ -124,6 +129,7 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   cf.colorFlag = cargs.colorFlag;
   cf.timeFormat = cargs.timeFormat;
   cf.verbosity = cargs.verbosity;
+  cf.diagnostics = cargs.diagnostics;
 
   luaReader L(cargs.fileName,"fiesta");
 

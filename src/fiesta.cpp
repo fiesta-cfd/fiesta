@@ -74,7 +74,7 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
   Kokkos::initialize(kokkosArgs);
 
   // Execute lua script and get input parameters
-  Log::message("Executing Lua Input Script");
+  Log::message("Executing Lua Input Script: '{}'",cArgs.fileName);
   executeConfiguration(cf,cArgs);
 
 #ifdef HAVE_MPI

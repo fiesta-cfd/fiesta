@@ -84,6 +84,7 @@ struct inputConfig {
   std::vector<FSCAL> gamma;
   std::vector<FSCAL> M;
   std::vector<FSCAL> mu;
+  bool diagnostics;
 
   FSCAL R;
   int scheme;
@@ -152,6 +153,7 @@ struct commandArgs {
   int timeFormat;
   int numThreads;
   int numDevices;
+  bool diagnostics;
   std::string fileName;
 };
 

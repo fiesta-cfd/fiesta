@@ -51,6 +51,7 @@ public:
   FS4D varx;
   std::vector<std::string> varxNames;
   FS4D dvar;
+  FS4D diag;
   FS4D tmp1;
   FS4D grid;
 

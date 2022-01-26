@@ -60,6 +60,9 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   var     = FS4D("var",       cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Primary Vars
   tmp1    = FS4D( "tmp1",     cf.ngi, cf.ngj, cf.ngk, cf.nvt); // Temp Vars
   dvar    = FS4D("dvar",      cf.ngi, cf.ngj, cf.ngk, cf.nvt); // RHS Output
+  if(cf.diagnostics){
+    diag    = FS4D("diag",      cf.ngi, cf.ngj, cf.ngk, cf.nvt); // RHS Output
+  }
 
   p       = FS3D("p",         cf.ngi, cf.ngj, cf.ngk);         // Pressure
   T       = FS3D("T",         cf.ngi, cf.ngj, cf.ngk);         // Temperature
@@ -194,11 +197,60 @@ FSCAL fsMax(const struct inputConfig &cf, policy_f3 &pol, T func){
     return max;
 }
 
+void startDiagnostics(fsconf cf,FS4D dvar,FS4D diag){
+  policy_f3 cell_pol = policy_f3( {cf.ng, cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
+  for(int v=0; v<cf.nvt; ++v){
+    Kokkos::parallel_for(cell_pol, KOKKOS_LAMBDA(const int i, const int j, const int k){
+      dvar(i,j,k,v)=0.0;
+      diag(i,j,k,v)=0.0;
+    });
+  }
+}
+
+void checkDiagnostics(std::string name, fsconf cf, size_t freq, FS4D dvar, FS4D diag){
+  if (cf.t % freq == 0){
+    policy_f3 cell_pol = policy_f3( {cf.ng, cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
+
+    FSCAL localmax;
+    std::vector<FSCAL> max(cf.nvt,0);
+
+    for(int v=0; v<cf.nvt; ++v){
+      Kokkos::parallel_reduce(cell_pol, KOKKOS_LAMBDA(const int i, const int j, const int k, FSCAL &m){
+        if (dvar(i,j,k,v) > m) m = dvar(i,j,k,v);
+      }, Kokkos::Max<FSCAL>(localmax));
+      #ifdef HAVE_MPI
+        MPI_Allreduce(&localmax, &max[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+      #else
+        max[v] = localmax;
+      #endif
+    }
+    Log::infoWarning("'{}' {}",name,max);
+
+    for(int v=0; v<cf.nvt; ++v){
+      Kokkos::parallel_for(cell_pol, KOKKOS_LAMBDA(const int i, const int j, const int k){
+        diag(i,j,k,v) += dvar(i,j,k,v);
+        dvar(i,j,k,v) = 0.0;
+      });
+    }
+  }
+}
+
+void endDiagnostics(fsconf cf,FS4D dvar,FS4D diag){
+  policy_f3 cell_pol = policy_f3( {cf.ng, cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
+  for(int v=0; v<cf.nvt; ++v){
+    Kokkos::parallel_for(cell_pol, KOKKOS_LAMBDA(const int i, const int j, const int k){
+      dvar(i,j,k,v) = diag(i,j,k,v);
+    });
+  }
+}
+
 void cart3d_func::compute() {
   // create range policies
   policy_f3 ghost_pol = policy_f3({0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk});
   policy_f3 cell_pol = policy_f3( {cf.ng, cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
   policy_f3 weno_pol = policy_f3({cf.ng - 1, cf.ng - 1, cf.ng - 1}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
+
+  if(cf.diagnostics) startDiagnostics(cf,dvar,diag);
 
   timers["calcSecond"].reset();
   Kokkos::parallel_for(ghost_pol, calculateRhoPT3D(var, p, rho, T, cd));
@@ -213,17 +265,20 @@ void cart3d_func::compute() {
     Kokkos::fence();
     timers["flux"].accumulate();
   }
+  if (cf.diagnostics) checkDiagnostics("advection",cf,cf.stat_freq,dvar,diag);
 
   timers["pressgrad"].reset();
   Kokkos::parallel_for(cell_pol, applyPressureGradient3D(dvar, varx, p, cd));
   Kokkos::fence();
   timers["pressgrad"].accumulate();
+    if (cf.diagnostics) checkDiagnostics("pressgrad",cf,cf.stat_freq,dvar,diag);
 
   if (cf.buoyancy) {
     timers["buoyancy"].reset();
     Kokkos::parallel_for(cell_pol, computeBuoyancy3D(dvar, var, varx, rho, cf.gAccel, cf.rhoRef));
     Kokkos::fence();
     timers["buoyancy"].accumulate();
+    if (cf.diagnostics) checkDiagnostics("buoyancy",cf,cf.stat_freq,dvar,diag);
   }
 
   if (cf.visc){
@@ -233,6 +288,7 @@ void cart3d_func::compute() {
     Kokkos::parallel_for(cell_pol, applyViscousTerm3dv(dvar, var, rho, vel, stressx, stressy, stressz, qx, qy, qz, cd));
     Kokkos::fence();
     timers["visc"].accumulate();
+    if (cf.diagnostics) checkDiagnostics("viscosity",cf,cf.stat_freq,dvar,diag);
   }
 
   if (cf.ceq) {
@@ -256,6 +312,7 @@ void cart3d_func::compute() {
     Kokkos::fence();
     timers["ceq"].accumulate();
   }
+  if(cf.diagnostics) endDiagnostics(cf,dvar,diag);
 }
 
 void cart3d_func::postStep() {

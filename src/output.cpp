@@ -115,6 +115,9 @@ void printConfig(struct inputConfig cf) {
     if (cf.scheme == 2) cout << format(keyString,"Scheme:","centered4");
     if (cf.scheme == 3) cout << format(keyString,"Scheme:","quick");
   
+    if (cf.diagnostics) cout << format(keyEnabled,"Diagnostics:");
+    else cout << format(keyDisabled,"Diagnostics:");
+
     if (cf.visc) cout << format(keyEnabled,"Viscosity:");
     else cout << format(keyDisabled,"Viscosity:");
   
