@@ -38,6 +38,7 @@
 #include "noise.hpp"
 #include "log2.hpp"
 #include "buoyancy.hpp"
+#include "viscosity.hpp"
 
 cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   size_t memEstimate = 3*cf.nvt+6;
@@ -127,6 +128,9 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   if (cf.visc == 1) {
     timers["stress"] = Timer::fiestaTimer("Stress Tensor Computation");
     timers["qflux"] = Timer::fiestaTimer("Heat Flux Calculation");
+    timers["visc"] = Timer::fiestaTimer("Viscous Term Calculation");
+  }
+  if (cf.visc){
     timers["visc"] = Timer::fiestaTimer("Viscous Term Calculation");
   }
   if (cf.ceq) {
@@ -220,6 +224,15 @@ void cart3d_func::compute() {
     Kokkos::parallel_for(cell_pol, computeBuoyancy3D(dvar, var, varx, rho, cf.gAccel, cf.rhoRef));
     Kokkos::fence();
     timers["buoyancy"].accumulate();
+  }
+
+  if (cf.visc){
+    timers["visc"].reset();
+    Kokkos::parallel_for(weno_pol, calculateStressTensor3dv(var, rho, vel, stressx, stressy, stressz, cd));
+    Kokkos::parallel_for(weno_pol, calculateHeatFlux3dv(var, rho, T, qx, qy, qz, cd));
+    Kokkos::parallel_for(cell_pol, applyViscousTerm3dv(dvar, var, rho, vel, stressx, stressy, stressz, qx, qy, qz, cd));
+    Kokkos::fence();
+    timers["visc"].accumulate();
   }
 
   if (cf.ceq) {
