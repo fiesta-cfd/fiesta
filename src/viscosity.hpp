@@ -280,62 +280,80 @@ struct calculateStressTensor3dv {
 };
 struct calculateHeatFlux3dv {
   FS4D var;
-  FS2D rho;
-  FS2D qx;
-  FS2D qy;
-  FS2D T;
+  FS3D rho;
+  FS3D qx;
+  FS3D qy;
+  FS3D qz;
+  FS3D T;
   Kokkos::View<FSCAL *> cd;
 
   FSCAL k = 0.026;
 
-  calculateHeatFlux3dv(FS4D var_, FS2D rho_, FS2D T_, FS2D qx_, FS2D qy_,
+  calculateHeatFlux3dv(FS4D var_, FS3D rho_, FS3D T_, FS3D qx_, FS3D qy_, FS3D qz_,
                        Kokkos::View<FSCAL *> cd_)
-      : var(var_), rho(rho_), T(T_), qx(qx_), qy(qy_), cd(cd_) {}
+      : var(var_), rho(rho_), T(T_), qx(qx_), qy(qy_), qz(qy_), cd(cd_) {}
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j) const {
+  void operator()(const int i, const int j, const int k) const {
     FSCAL dx = cd(1);
     FSCAL dy = cd(2);
+    FSCAL dz = cd(3);
 
-    qx(i, j) = -k * (T(i + 1, j) - T(i, j)) / dx;
-    qy(i, j) = -k * (T(i, j + 1) - T(i, j)) / dy;
+    qx(i,j,k) = -k * (T(i+1,j,k) - T(i,j,k)) / dx;
+    qy(i,j,k) = -k * (T(i,j+1,k) - T(i,j,k)) / dy;
+    qz(i,j,k) = -k * (T(i,j,k+1) - T(i,j,k)) / dz;
   }
 };
 
 struct applyViscousTerm3dv {
   FS4D dvar;
   FS4D var;
-  FS2D rho;
-  FS3D vel;
-  FS2D qx;
-  FS2D qy;
-  FS4D stressx;
-  FS4D stressy;
+  FS3D rho;
+  FS4D vel;
+  FS3D qx;
+  FS3D qy;
+  FS3D qz;
+  FS5D stressx;
+  FS5D stressy;
+  FS5D stressz;
   Kokkos::View<FSCAL *> cd;
 
-  applyViscousTerm3dv(FS4D dvar_, FS4D var_, FS2D rho_, FS3D vel_, FS4D strx_, FS4D stry_,
-                      FS2D qx_, FS2D qy_, Kokkos::View<FSCAL *> cd_)
-      : dvar(dvar_), var(var_), rho(rho_), vel(vel_), stressx(strx_), stressy(stry_),
-        qx(qx_), qy(qy_), cd(cd_) {}
+  applyViscousTerm3dv(FS4D dvar_, FS4D var_, FS3D rho_, FS4D vel_, FS5D strx_, FS5D stry_, FS5D strz_,
+                      FS3D qx_, FS3D qy_, FS3D qz_, Kokkos::View<FSCAL *> cd_)
+      : dvar(dvar_), var(var_), rho(rho_), vel(vel_), stressx(strx_), stressy(stry_), stressz(strz_),
+        qx(qx_), qy(qy_), qz(qz_), cd(cd_) {}
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j) const {
+  void operator()(const int i, const int j, const int k) const {
     FSCAL dx = cd(1);
     FSCAL dy = cd(2);
+    FSCAL dz = cd(3);
     FSCAL a, b, c1, c2;
 
-    FSCAL ur = (vel(i+1,j,0)+vel(i,j,0))/2.0;
-    FSCAL ul = (vel(i-1,j,0)+vel(i,j,0))/2.0;
-    FSCAL vr = (vel(i+1,j,1)+vel(i,j,1))/2.0;
-    FSCAL vl = (vel(i-1,j,1)+vel(i,j,1))/2.0;
+    FSCAL ur = (vel(i+1,j,k,0)+vel(i,j,k,0))/2.0;
+    FSCAL ul = (vel(i-1,j,k,0)+vel(i,j,k,0))/2.0;
+    FSCAL vr = (vel(i+1,j,k,1)+vel(i,j,k,1))/2.0;
+    FSCAL vl = (vel(i-1,j,k,1)+vel(i,j,k,1))/2.0;
+    FSCAL wr = (vel(i+1,j,k,2)+vel(i,j,k,2))/2.0;
+    FSCAL wl = (vel(i-1,j,k,2)+vel(i,j,k,2))/2.0;
 
-    FSCAL ut = (vel(i,j+1,0)+vel(i,j,0))/2.0;
-    FSCAL ub = (vel(i,j-1,0)+vel(i,j,0))/2.0;
-    FSCAL vt = (vel(i,j+1,1)+vel(i,j,1))/2.0;
-    FSCAL vb = (vel(i,j-1,1)+vel(i,j,1))/2.0;
+    FSCAL ut = (vel(i,j+1,k,0)+vel(i,j,k,0))/2.0;
+    FSCAL ub = (vel(i,j-1,k,0)+vel(i,j,k,0))/2.0;
+    FSCAL vt = (vel(i,j+1,k,1)+vel(i,j,k,1))/2.0;
+    FSCAL vb = (vel(i,j-1,k,1)+vel(i,j,k,1))/2.0;
+    FSCAL wt = (vel(i,j+1,k,2)+vel(i,j,k,2))/2.0;
+    FSCAL wb = (vel(i,j-1,k,2)+vel(i,j,k,2))/2.0;
 
-    a = (stressx(i,j,0,0) - stressx(i-1,j,0,0)) / dx +
-        (stressy(i,j,0,1) - stressy(i,j-1,0,1)) / dy;
+    FSCAL uf = (vel(i,j,k+1,0)+vel(i,j,k,0))/2.0;
+    FSCAL uh = (vel(i,j,k-1,0)+vel(i,j,k,0))/2.0;
+    FSCAL vf = (vel(i,j,k+1,1)+vel(i,j,k,1))/2.0;
+    FSCAL vh = (vel(i,j,k-1,1)+vel(i,j,k,1))/2.0;
+    FSCAL wf = (vel(i,j,k+1,2)+vel(i,j,k,2))/2.0;
+    FSCAL wh = (vel(i,j,k-1,2)+vel(i,j,k,2))/2.0;
+
+    a = (stressx(i,j,k,0,0) - stressx(i-1,j,k,0,0)) / dx +
+        (stressy(i,j,k,0,1) - stressy(i,j-1,k,0,1)) / dy +
+        (stressy(i,j,k,0,3) - stressy(i,j,k-1,0,3)) / dz;
 
     b = (stressx(i,j,1,0) - stressx(i-1,j,1,0)) / dx +
         (stressy(i,j,1,1) - stressy(i,j-1,1,1)) / dy;
@@ -346,7 +364,7 @@ struct applyViscousTerm3dv {
          (ut*stressy(i,j,1,0) - ub*stressy(i,j-1,1,0)) / dy +
          (vt*stressy(i,j,1,1) - vb*stressy(i,j-1,1,1)) / dy;
 
-    c2 = ( qx(i,j)-qx(i-1,j) )/dx + ( qy(i,j)-qy(i,j-1) )/dy;
+    c2 = ( qx(i,j,k)-qx(i-1,j,k) )/dx + ( qy(i,j,k)-qy(i,j-1,k) )/dy + ( qz(i,j,k)-qz(i,j,k-1) )/dz;
 
     dvar(i, j, 0, 0) = dvar(i, j, 0, 0) + a;
     dvar(i, j, 0, 1) = dvar(i, j, 0, 1) + b;
