@@ -43,7 +43,7 @@ void writeXMFDataItem(FILE* xmf, string path, int ndim, size_t *dims){
 }
 void writeXMF(string fname, string hname, int gridType, FSCAL time,
                int ndim, size_t *in_dims, vector<FSCAL> origin, vector<FSCAL> dx, int nvt, bool writeVarx,
-               vector<string> vNames, vector<string> vxNames ){
+               vector<string> vNames, vector<string> vxNames, std::map<std::string,FS4D> &dgmap){
 
     size_t gdims[ndim];
     size_t dims[ndim];
@@ -157,6 +157,14 @@ void writeXMF(string fname, string hname, int gridType, FSCAL time,
         fprintf(xmf, "     <Attribute Name=\"%s\" AttributeType=\"Scalar\" " "Center=\"Cell\">\n",vxNames[var].c_str());
         writeXMFDataItem(xmf, fmt::format("{}:/Solution/{}",hname,vxNames[var]), ndim, dims);
         fprintf(xmf, "     </Attribute>\n");
+      }
+      for (const auto& [name,data]:dgmap){
+        for (int nv=0;nv<nvt;++nv){
+          std::string myname = fmt::format("{}-{}",name,nv);
+          fprintf(xmf, "     <Attribute Name=\"%s\" AttributeType=\"Scalar\" " "Center=\"Cell\">\n",myname.c_str());
+          writeXMFDataItem(xmf, fmt::format("{}:/Solution/{}",hname,myname), ndim, dims);
+          fprintf(xmf, "     </Attribute>\n");
+        }
       }
     }
 

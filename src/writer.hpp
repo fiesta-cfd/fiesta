@@ -28,12 +28,12 @@
 #include <map>
 #include <string>
 
-class writer {
+class Writer {
 
 public:
   // writer(struct inputConfig &cf_, FS4D gridD, FS4D varD);
-  writer();
-  ~writer();
+  Writer();
+  ~Writer();
 
   //virtual void writeGrid(struct inputConfig cf, const FS4D gridD,
   //                       const char *fname) = 0;

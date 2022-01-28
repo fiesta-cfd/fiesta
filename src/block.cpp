@@ -30,6 +30,7 @@
 #include <string>
 #include <vector>
 #include <numeric>
+#include <map>
 #include "xdmf.hpp"
 #include "timer.hpp"
 #include "fmt/core.h"
@@ -349,6 +350,17 @@ void blockWriter<T>::write(struct inputConfig cf, std::unique_ptr<class rk_func>
         writer.write(f->varxNames[vn], cf.ndim, gExt, lExt, lOffset, varData, chunkable, cf.compressible); 
       }
     }
+    if (cf.diagnostics){
+      Log::debug("Diagnostic map has {} elements.",f->dgmap.size());
+      for (auto const& [name, data] : f->dgmap){
+        Log::debug("Writing diagnostic variables for '{}'.",name);
+        Kokkos::deep_copy(varH,data);
+        for (int vn = 0; vn < cf.nvt; ++vn) {
+          dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varxH,vn,avg);
+          writer.write(fmt::format("{}-{}",name,vn), cf.ndim, gExt, lExt, lOffset, varData, chunkable, cf.compressible); 
+        }
+      }
+    }
     writer.closeGroup();
 
     writer.openGroup("/Properties");
@@ -385,7 +397,7 @@ void blockWriter<T>::write(struct inputConfig cf, std::unique_ptr<class rk_func>
 
   //Log::message("[{}] Writing '{}'",cf.t,xmfPath);
   if (myColor==1){
-    writeXMF(xmfPath, hdfName, cf.grid, time, cf.ndim, gExt.data(),gOrigin,iodx, cf.nvt, writeVarx,f->varNames,f->varxNames);
+    writeXMF(xmfPath, hdfName, cf.grid, time, cf.ndim, gExt.data(),gOrigin,iodx, cf.nvt, writeVarx,f->varNames,f->varxNames,f->dgmap);
   }
 }
 

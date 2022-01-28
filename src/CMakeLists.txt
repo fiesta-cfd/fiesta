@@ -1,6 +1,6 @@
 set(FIESTA_LIB_SOURCES
      rk.cpp fiesta.cpp luaReader.cpp bc.cpp reader.cpp
-     status.cpp input.cpp output.cpp h5.cpp
+     status.cpp input.cpp output.cpp h5.cpp diagnostics.cpp
      rkfunction.cpp writer.cpp xdmf.cpp block.cpp
 )
 if(NOT Fiesta_NO_MPI)

@@ -38,7 +38,7 @@
 #include "log.hpp"
 #include <vector>
 #include <memory>
-#include "block.hpp"
+/* #include "block.hpp" */
 #include "bc.hpp"
 
 typedef struct inputConfig fsconf;
@@ -65,7 +65,7 @@ struct inputConfig {
   Timer::fiestaTimer gridTimer;
   Timer::fiestaTimer writeTimer;
 
-  std::shared_ptr<class writer> w;
+  std::shared_ptr<class Writer> w;
   std::shared_ptr<class mpiHaloExchange> m;
   //std::shared_ptr<class mpiBuffers> m;
   std::shared_ptr<class Logger> log;

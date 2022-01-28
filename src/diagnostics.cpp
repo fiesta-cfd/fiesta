@@ -17,14 +17,51 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "kokkosTypes.hpp"
-#include "input.hpp"
 #include "diagnostics.hpp"
+#include "kokkosTypes.hpp"
+#include "log2.hpp"
 #include <map>
 
-void diagnostics::start(fsconf cf,FS4D dvar){
-  policy_f3 cell_pol = policy_f3( {cf.ng, cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
-  for(int v=0; v<cf.nvt; ++v){
+Diagnostics::Diagnostics(){}
+
+Diagnostics::Diagnostics(size_t g_, size_t i_, size_t j_, size_t k_, size_t v_, int freq_):ng(g_),ni(i_),nj(j_),nk(k_),nv(v_),freq(freq_){
+  diag = FS4D("diag", ni, nj, nk, nv);
+}
+
+Diagnostics::Diagnostics(Diagnostics&& d1):ng(d1.ng),ni(d1.ni),nj(d1.nj),nk(d1.nk),nv(d1.nv),freq(d1.freq){
+  diag = FS4D("diag", ni, nj, nk, nv);
+}
+
+Diagnostics& Diagnostics::operator=(Diagnostics&& d1){
+  if (&d1 == this)
+    return *this;
+  ng = d1.ng;
+  ni = d1.ni;
+  nj = d1.nj;
+  nk = d1.nk;
+  nv = d1.nv;
+  freq = d1.freq;
+  diag = FS4D("diag", ni, nj, nk, nv);
+  return *this;
+}
+
+Diagnostics& Diagnostics::operator=(const Diagnostics& d1){
+  if (&d1 == this)
+    return *this;
+  ng = d1.ng;
+  ni = d1.ni;
+  nj = d1.nj;
+  nk = d1.nk;
+  nv = d1.nv;
+  freq = d1.freq;
+  diag = FS4D("diag", ni, nj, nk, nv);
+  return *this;
+}
+
+
+void Diagnostics::start(FS4D dvar){
+  policy_f3 cell_pol = policy_f3( {ng, ng, ng}, {ni-ng, nj-ng, nk-ng});
+  for(size_t v=0; v<nv; ++v){
     Kokkos::parallel_for(cell_pol, KOKKOS_LAMBDA(const int i, const int j, const int k){
       dvar(i,j,k,v)=0.0;
       diag(i,j,k,v)=0.0;
@@ -32,27 +69,29 @@ void diagnostics::start(fsconf cf,FS4D dvar){
   }
 }
 
-void diagnostics::check(std::string name, FS4D dvar, std::map<std::string, FS4D> dgvar){
-  if (cf.t % freq == 0){
-    policy_f3 cell_pol = policy_f3( {cf.ng, cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
+void Diagnostics::check(std::string name, size_t t, FS4D dvar, std::map<std::string, FS4D> &dgvar){
+  if (t % freq == 0){
+  policy_f3 cell_pol = policy_f3( {ng, ng, ng}, {ni-ng, nj-ng, nk-ng});
 
     FSCAL localmax;
-    std::vector<FSCAL> max(cf.nvt,0);
+    std::vector<FSCAL> max(nv,0);
+    if (dgvar.count(name)==0) {
+      Log::debug("Creating new diagnostic entry for : '{}'",name);
+      dgvar[name] = FS4D(name, ni, nj, nk, nv);
+    }
 
-    for(int v=0; v<cf.nvt; ++v){
+    for(int v=0; v<nv; ++v){
       Kokkos::parallel_reduce(cell_pol, KOKKOS_LAMBDA(const int i, const int j, const int k, FSCAL &m){
         if (dvar(i,j,k,v) > m) m = dvar(i,j,k,v);
       }, Kokkos::Max<FSCAL>(localmax));
-      #ifdef HAVE_MPI
-        MPI_Allreduce(&localmax, &max[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-      #else
-        max[v] = localmax;
-      #endif
+      max[v] = localmax;
     }
     Log::infoWarning("'{}' {}",name,max);
 
-    for(int v=0; v<cf.nvt; ++v){
+    FS4D tmp = dgvar[name];
+    for(int v=0; v<nv; ++v){
       Kokkos::parallel_for(cell_pol, KOKKOS_LAMBDA(const int i, const int j, const int k){
+        tmp(i,j,k,v) = dvar(i,j,k,v);
         diag(i,j,k,v) += dvar(i,j,k,v);
         dvar(i,j,k,v) = 0.0;
       });
@@ -60,9 +99,9 @@ void diagnostics::check(std::string name, FS4D dvar, std::map<std::string, FS4D>
   }
 }
 
-void diagnostics::stop(fsconf cf,FS4D dvar){
-  policy_f3 cell_pol = policy_f3( {cf.ng, cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
-  for(int v=0; v<cf.nvt; ++v){
+void Diagnostics::stop(FS4D dvar){
+  policy_f3 cell_pol = policy_f3( {ng, ng, ng}, {ni-ng, nj-ng, nk-ng});
+  for(int v=0; v<nv; ++v){
     Kokkos::parallel_for(cell_pol, KOKKOS_LAMBDA(const int i, const int j, const int k){
       dvar(i,j,k,v) = diag(i,j,k,v);
     });

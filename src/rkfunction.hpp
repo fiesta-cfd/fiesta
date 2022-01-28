@@ -31,6 +31,7 @@
 #include <string>
 #include <vector>
 #include "block.hpp"
+#include "diagnostics.hpp"
 
 class rk_func {
 
@@ -54,6 +55,8 @@ public:
   FS4D diag;
   FS4D tmp1;
   FS4D grid;
+  Diagnostics dg;
+  std::map<std::string,FS4D> dgmap;
 
   std::map<std::string, Timer::fiestaTimer> timers;
   policy_f ghostPol = policy_f({0, 0}, {1, 1});

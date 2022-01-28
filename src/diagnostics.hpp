@@ -17,23 +17,25 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef VISCOSOTY_HPP
-#define VISCOSOTY_HPP
-
 #include "kokkosTypes.hpp"
-#include "input.hpp"
 #include <string>
 #include <map>
 
-class diagnostics {
+#ifndef DIAGNOSTICS_HPP
+#define DIAGNOSTICS_HPP
+
+class Diagnostics {
   public:
-    diagnostics(fsconf &cf, size_t freq);
+    Diagnostics(size_t ng_, size_t ni_, size_t nj_, size_t nk_, size_t nv_, int freq_);
+    Diagnostics(Diagnostics&& d1);
+    Diagnostics();
+    Diagnostics& operator=(const Diagnostics& d1);
+    Diagnostics& operator=(Diagnostics&& d1);
     void start(FS4D dvar);
-    void check(std::string name, FS4D dvar, std::map<std::string,FS4D> dgvar);
+    void check(std::string name, size_t t, FS4D dvar, std::map<std::string,FS4D> &dgvar);
     void stop(FS4D dvar);
   private:
-    fsconf cf;
-    size_t freq;
+    size_t ng,ni,nj,nk,nv,freq;
     FS4D diag;
 };
 

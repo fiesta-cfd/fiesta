@@ -39,6 +39,7 @@
 #include "log2.hpp"
 #include "buoyancy.hpp"
 #include "viscosity.hpp"
+#include "diagnostics.hpp"
 
 cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   size_t memEstimate = 3*cf.nvt+6;
@@ -89,6 +90,9 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   if (cf.noise) {
     noise = FS3D_I("noise", cf.ngi, cf.ngj, cf.ngk);
   }
+
+  dg = Diagnostics(cf.ng,cf.ngi,cf.ngj,cf.ngk,cf.nvt,cf.stat_freq);
+  
 
   // Primary Variable Names
   varNames.push_back("X-Momentum");
@@ -205,6 +209,7 @@ void cart3d_func::compute() {
   policy_f3 weno_pol = policy_f3({cf.ng - 1, cf.ng - 1, cf.ng - 1}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
 
   /* if(cf.diagnostics) startDiagnostics(cf,dvar,diag); */
+  if(cf.diagnostics) dg.start(dvar);
 
   timers["calcSecond"].reset();
   Kokkos::parallel_for(ghost_pol, calculateRhoPT3D(var, p, rho, T, cd));
@@ -243,6 +248,7 @@ void cart3d_func::compute() {
     Kokkos::fence();
     timers["visc"].accumulate();
     /* if (cf.diagnostics) checkDiagnostics("viscosity",cf,cf.stat_freq,dvar,diag); */
+    if (cf.diagnostics) dg.check("viscosity",cf.t,dvar,dgmap);
   }
 
   if (cf.ceq) {
@@ -267,6 +273,7 @@ void cart3d_func::compute() {
     timers["ceq"].accumulate();
   }
   /* if(cf.diagnostics) endDiagnostics(cf,dvar,diag); */
+  if(cf.diagnostics) dg.stop(dvar);
 }
 
 void cart3d_func::postStep() {

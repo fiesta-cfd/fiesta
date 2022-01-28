@@ -23,11 +23,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
+#include <map>
 #include <vector>
 #include "kokkosTypes.hpp"
 
 using namespace std;
 void writeXMFDataItem(FILE*, string, int, vector<int> &);
-void writeXMF(string, string, int, FSCAL, int, size_t*, vector<FSCAL>, vector<FSCAL>, int, bool, vector<string>, vector<string>);
+void writeXMF(string, string, int, FSCAL, int, size_t*, vector<FSCAL>, vector<FSCAL>, int, bool, vector<string>, vector<string>, std::map<std::string,FS4D>&);
 
 #endif

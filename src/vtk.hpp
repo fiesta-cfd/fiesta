@@ -25,7 +25,7 @@
 #include "rkfunction.hpp"
 #include "writer.hpp"
 
-class serialVTKWriter : public writer {
+class serialVTKWriter : public Writer {
 
 public:
   serialVTKWriter(struct inputConfig, FS4D gridD, FS4D varD);
