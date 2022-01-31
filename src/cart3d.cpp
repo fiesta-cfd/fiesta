@@ -92,6 +92,12 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   }
 
   dg = Diagnostics(cf.ng,cf.ngi,cf.ngj,cf.ngk,cf.nvt,cf.stat_freq);
+  /* Log::debug("1: dgmap.size()={}",dgmap.size()); */
+  /* dgmap["testname1"] = FS4D("testname1", cf.ngi, cf.ngj, cf.ngk, cf.nvt); */
+  /* dgmap.emplace("testname1",FS4D("testname1", cf.ngi, cf.ngj, cf.ngk, cf.nvt)); */
+  /* dgmap["dvar"] = FS4D("dvard", cf.ngi, cf.ngj, cf.ngk, cf.nvt); */
+  /* Log::debug("2: dgmap.size()={}",dgmap.size()); */
+  /* Log::debug("3: dgmap[\"testname1\"].extent(0)={}",dgmap["testname1"].extent(0)); */
   
 
   // Primary Variable Names
@@ -205,11 +211,11 @@ FSCAL fsMax(const struct inputConfig &cf, policy_f3 &pol, T func){
 void cart3d_func::compute() {
   // create range policies
   policy_f3 ghost_pol = policy_f3({0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk});
-  policy_f3 cell_pol = policy_f3( {cf.ng, cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
-  policy_f3 weno_pol = policy_f3({cf.ng - 1, cf.ng - 1, cf.ng - 1}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
+  policy_f3 cell_pol  = policy_f3({cf.ng, cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
+  policy_f3 weno_pol  = policy_f3({cf.ng-1, cf.ng-1, cf.ng-1}, {cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
 
-  /* if(cf.diagnostics) startDiagnostics(cf,dvar,diag); */
-  if(cf.diagnostics) dg.start(dvar);
+  if(cf.diagnostics) dg.init(cf.t,dvar);
+  Kokkos::fence();
 
   timers["calcSecond"].reset();
   Kokkos::parallel_for(ghost_pol, calculateRhoPT3D(var, p, rho, T, cd));
@@ -217,6 +223,7 @@ void cart3d_func::compute() {
   Kokkos::fence();
   timers["calcSecond"].accumulate();
 
+  if (cf.diagnostics) dg.start(cf.t,dvar);
   for (int v = 0; v < cf.nv; ++v) {
     timers["flux"].reset();
     Kokkos::parallel_for(weno_pol, calculateFluxesG(var, p, rho, vel, fluxx, fluxy, fluxz, cf.dx, cf.dy, cf.dz, v));
@@ -224,31 +231,35 @@ void cart3d_func::compute() {
     Kokkos::fence();
     timers["flux"].accumulate();
   }
-  /* if (cf.diagnostics) checkDiagnostics("advection",cf,cf.stat_freq,dvar,diag); */
+  if (cf.diagnostics) dg.stop("advection",cf.t,dvar,dgmap);
+  Kokkos::fence();
 
+  if (cf.diagnostics) dg.start(cf.t,dvar);
   timers["pressgrad"].reset();
   Kokkos::parallel_for(cell_pol, applyPressureGradient3D(dvar, varx, p, cd));
   Kokkos::fence();
   timers["pressgrad"].accumulate();
-    /* if (cf.diagnostics) checkDiagnostics("pressgrad",cf,cf.stat_freq,dvar,diag); */
+  if (cf.diagnostics) dg.stop("pressgrad",cf.t,dvar,dgmap);
+  Kokkos::fence();
 
   if (cf.buoyancy) {
     timers["buoyancy"].reset();
     Kokkos::parallel_for(cell_pol, computeBuoyancy3D(dvar, var, varx, rho, cf.gAccel, cf.rhoRef));
     Kokkos::fence();
     timers["buoyancy"].accumulate();
-    /* if (cf.diagnostics) checkDiagnostics("buoyancy",cf,cf.stat_freq,dvar,diag); */
+    Kokkos::fence();
   }
 
   if (cf.visc){
+    if (cf.diagnostics) dg.start(cf.t,dvar);
     timers["visc"].reset();
     Kokkos::parallel_for(weno_pol, calculateStressTensor3dv(var, rho, vel, stressx, stressy, stressz, cd));
     Kokkos::parallel_for(weno_pol, calculateHeatFlux3dv(var, rho, T, qx, qy, qz, cd));
     Kokkos::parallel_for(cell_pol, applyViscousTerm3dv(dvar, var, rho, vel, stressx, stressy, stressz, qx, qy, qz, cd));
     Kokkos::fence();
     timers["visc"].accumulate();
-    /* if (cf.diagnostics) checkDiagnostics("viscosity",cf,cf.stat_freq,dvar,diag); */
-    if (cf.diagnostics) dg.check("viscosity",cf.t,dvar,dgmap);
+    if (cf.diagnostics) dg.stop("viscosity",cf.t,dvar,dgmap);
+    Kokkos::fence();
   }
 
   if (cf.ceq) {
@@ -268,12 +279,12 @@ void cart3d_func::compute() {
     Kokkos::parallel_for(weno_pol, calculateCeqFaces(var, varx, rho, mFlux, alpha, cf.nv));
     Kokkos::parallel_for(weno_pol, calculateCeqGrads(vel, mFlux, cf.dx, cf.dy, cf.dz));
     Kokkos::parallel_for(cell_pol, applyCeq(dvar, varx, mFlux, cf.dx, cf.dy, cf.dz));
-
     Kokkos::fence();
     timers["ceq"].accumulate();
+    Kokkos::fence();
   }
-  /* if(cf.diagnostics) endDiagnostics(cf,dvar,diag); */
-  if(cf.diagnostics) dg.stop(dvar);
+  if(cf.diagnostics) dg.finalize(cf.t,dvar,dgmap);
+  Kokkos::fence();
 }
 
 void cart3d_func::postStep() {

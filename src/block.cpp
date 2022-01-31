@@ -351,12 +351,11 @@ void blockWriter<T>::write(struct inputConfig cf, std::unique_ptr<class rk_func>
       }
     }
     if (cf.diagnostics){
-      Log::debug("Diagnostic map has {} elements.",f->dgmap.size());
       for (auto const& [name, data] : f->dgmap){
-        Log::debug("Writing diagnostic variables for '{}'.",name);
-        Kokkos::deep_copy(varH,data);
+        FS4DH dataH = Kokkos::create_mirror_view(data);
+        Kokkos::deep_copy(dataH,data);
         for (int vn = 0; vn < cf.nvt; ++vn) {
-          dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, varxH,vn,avg);
+          dataPack(cf.ndim, cf.ng, lStart, lEnd, lExt, stride, varData, dataH,vn,avg);
           writer.write(fmt::format("{}-{}",name,vn), cf.ndim, gExt, lExt, lOffset, varData, chunkable, cf.compressible); 
         }
       }

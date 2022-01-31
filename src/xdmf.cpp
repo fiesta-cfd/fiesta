@@ -158,13 +158,14 @@ void writeXMF(string fname, string hname, int gridType, FSCAL time,
         writeXMFDataItem(xmf, fmt::format("{}:/Solution/{}",hname,vxNames[var]), ndim, dims);
         fprintf(xmf, "     </Attribute>\n");
       }
-      for (const auto& [name,data]:dgmap){
-        for (int nv=0;nv<nvt;++nv){
-          std::string myname = fmt::format("{}-{}",name,nv);
-          fprintf(xmf, "     <Attribute Name=\"%s\" AttributeType=\"Scalar\" " "Center=\"Cell\">\n",myname.c_str());
-          writeXMFDataItem(xmf, fmt::format("{}:/Solution/{}",hname,myname), ndim, dims);
-          fprintf(xmf, "     </Attribute>\n");
-        }
+    }
+
+    for (const auto& [name,data]:dgmap){
+      for (int nv=0;nv<nvt;++nv){
+        std::string myname = fmt::format("{}-{}",name,nv);
+        fprintf(xmf, "     <Attribute Name=\"%s\" AttributeType=\"Scalar\" " "Center=\"Cell\">\n",myname.c_str());
+        writeXMFDataItem(xmf, fmt::format("{}:/Solution/{}",hname,myname), ndim, dims);
+        fprintf(xmf, "     </Attribute>\n");
       }
     }
 

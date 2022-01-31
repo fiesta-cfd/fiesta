@@ -31,9 +31,10 @@ class Diagnostics {
     Diagnostics();
     Diagnostics& operator=(const Diagnostics& d1);
     Diagnostics& operator=(Diagnostics&& d1);
-    void start(FS4D dvar);
-    void check(std::string name, size_t t, FS4D dvar, std::map<std::string,FS4D> &dgvar);
-    void stop(FS4D dvar);
+    void init(size_t t, FS4D &dvar);
+    void start(size_t t, FS4D &dvar);
+    void stop(std::string name, size_t t, FS4D &dvar, std::map<std::string,FS4D> &dgvar);
+    void finalize(size_t t, FS4D &dvar,std::map<std::string,FS4D> &dgvar);
   private:
     size_t ng,ni,nj,nk,nv,freq;
     FS4D diag;

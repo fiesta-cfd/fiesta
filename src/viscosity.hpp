@@ -241,7 +241,7 @@ struct calculateStressTensor3dv {
     stressx(i,j,k,0,2) = mu*(dudz + dwdx);
     stressx(i,j,k,1,2) = mu*(dvdz + dwdy);
     stressx(i,j,k,1,0) = stressx(i,j,k,0,1);
-    stressx(i,j,k,2,0) = stressx(i,j,k,0,1);
+    stressx(i,j,k,2,0) = stressx(i,j,k,0,2);
     stressx(i,j,k,2,1) = stressx(i,j,k,1,2);
 
     // yface
@@ -264,7 +264,7 @@ struct calculateStressTensor3dv {
     stressy(i,j,k,0,2) = mu*(dudz + dwdx);
     stressy(i,j,k,1,2) = mu*(dvdz + dwdy);
     stressy(i,j,k,1,0) = stressy(i,j,k,0,1);
-    stressy(i,j,k,2,0) = stressy(i,j,k,0,1);
+    stressy(i,j,k,2,0) = stressy(i,j,k,0,2);
     stressy(i,j,k,2,1) = stressy(i,j,k,1,2);
 
     // zface
@@ -287,7 +287,7 @@ struct calculateStressTensor3dv {
     stressz(i,j,k,0,2) = mu*(dudz + dwdx);
     stressz(i,j,k,1,2) = mu*(dvdz + dwdy);
     stressz(i,j,k,1,0) = stressz(i,j,k,0,1);
-    stressz(i,j,k,2,0) = stressz(i,j,k,0,1);
+    stressz(i,j,k,2,0) = stressz(i,j,k,0,2);
     stressz(i,j,k,2,1) = stressz(i,j,k,1,2);
   }
 };

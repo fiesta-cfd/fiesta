@@ -26,6 +26,7 @@
 #endif
 #include "kokkosTypes.hpp"
 #include "hdf5.h"
+#include <map>
 
 template <typename T>
 class blockWriter {
@@ -75,6 +76,7 @@ class blockWriter {
     FS4DH gridH;
     FS4DH varH;
     FS4DH varxH;
+    std::map<std::string,FS4D> dgmapH;
 
     bool slicePresent;
     int offsetDelta;
