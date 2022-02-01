@@ -266,8 +266,8 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, std::unique_ptr<class rk_fun
     // global dimensions to accomadate the stride.
     // Processes will use the minimum extent and end index.
     gMin=0;
-#ifdef HAVE_MPI
     for (int i=0; i<cf.ndim; ++i){
+#ifdef HAVE_MPI
       MPI_Allreduce(&gEnd[i],&gMin,1,MPI_INT,MPI_MIN,sliceComm);
       gEnd[i]=gMin;
 
@@ -276,11 +276,11 @@ blockWriter<T>::blockWriter(struct inputConfig& cf, std::unique_ptr<class rk_fun
 
       MPI_Allreduce(&gExtG[i],&gMin,1,MPI_INT,MPI_MIN,sliceComm);
       gExtG[i]=gMin;
+#endif
 
       gOrigin.push_back(gStart[i]*cf.dxvec[i]);
       iodx.push_back(cf.dxvec[i]*stride[i]);
     }
-#endif
   }
  
   // allocate pack buffers
