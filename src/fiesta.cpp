@@ -40,7 +40,9 @@
 #include "log2.hpp"
 #include <iostream>
 #include "reader.hpp"
+#ifdef HAVE_LIBYOGRT
 #include "yogrt.h"
+#endif
 #include "signal.hpp"
 #include "rk.hpp"
 
@@ -212,6 +214,7 @@ void Fiesta::checkIO(Simulation &sim, size_t t){
     }
   }
 
+#ifdef HAVE_LIBYOGRT
   // Check Time-Remaining and Flag Restart
   if (sim.cf.rank==0){
     if(yogrt_remaining() < sim.cf.restartTimeRemaining){
@@ -220,6 +223,7 @@ void Fiesta::checkIO(Simulation &sim, size_t t){
       Log::error("Time remaining is less than {}s:  Writing restart and exiting after timestep {}.",sim.cf.restartTimeRemaining,sim.cf.t);
     }
   }
+#endif
 
   #ifdef HAVE_MPI
   {

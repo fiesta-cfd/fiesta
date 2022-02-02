@@ -30,7 +30,9 @@
 #include "fmt/core.h"
 #include "pretty.hpp"
 #include "log2.hpp"
+#ifdef HAVE_LIBYOGRT
 #include "yogrt.h"
+#endif
 #include <limits>
 
 using std::cout;
@@ -135,11 +137,13 @@ void statusCheck(int cFlag, struct inputConfig cf, std::unique_ptr<class rk_func
       etrf = "?";
     cout << fmt::format("{: >8}ETR:       {}{}{}\n","", c(magenta),etrf,c(reset));
 
+#ifdef HAVE_LIBYOGRT
     int tremain = yogrt_remaining();
     if (tremain == std::numeric_limits<int>::max())
       cout << fmt::format("{: >8}Time Left: {}inf{}\n","", c(magenta),c(reset));
     else
       cout << fmt::format("{: >8}Time Left: {}{}s{}\n","", c(magenta),tremain,c(reset));
+#endif
 
 
 

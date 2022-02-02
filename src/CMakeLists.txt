@@ -24,6 +24,10 @@ target_link_libraries(FiestaCore
     $<$<AND:$<CXX_COMPILER_ID:GNU>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9.0>>:-lstdc++fs>
     )
 
+if (Fiesta_ENABLE_YOGRT)
+    target_link_libraries(FiestaCore ${YOGRT_LIBS})
+endif()
+
 if (NOT Fiesta_NO_MPI)
     target_link_libraries(FiestaCore MPI::MPI_CXX)
 endif()
@@ -41,6 +45,9 @@ set(DEV_MACRO "HAVE_${DEVICE}")
 target_compile_definitions(fiesta     PRIVATE ${DEV_MACRO})
 target_compile_definitions(FiestaCore PUBLIC  ${DEV_MACRO})
 
+if (Fiesta_ENABLE_YOGRT)
+    target_compile_definitions(fiesta     PRIVATE HAVE_YOGRT)
+endif()
 if(Fiesta_NO_MPI)
     target_compile_definitions(fiesta     PRIVATE HAVE_NOMPI)
     target_compile_definitions(FiestaCore PUBLIC  HAVE_NOMPI)
