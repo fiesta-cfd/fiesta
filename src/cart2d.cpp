@@ -134,6 +134,7 @@ cart2d_func::cart2d_func(struct inputConfig &cf_) : rk_func(cf_) {
 };
 
 void cart2d_func::preSim() {
+  applyBCs(cf,this);
   timers["calcSecond"].reset();
   policy_f ghost_pol = policy_f({0, 0}, {cf.ngi, cf.ngj});
   Kokkos::parallel_for(ghost_pol, calculateRhoPT2D(var, p, rho, T, cd));
@@ -144,6 +145,7 @@ void cart2d_func::preSim() {
 }
 
 void cart2d_func::preStep() {
+  applyBCs(cf,this);
 }
 
 void cart2d_func::compute() {
@@ -162,7 +164,7 @@ void cart2d_func::compute() {
   for (int v = 0; v < cf.nv; ++v) {
     timers["advect"].reset();
     if (cf.scheme == 3) {
-      Kokkos::parallel_for( face_pol, computeFluxQuick2D(var, p, rho, fluxx, fluxy, cd, v));
+      Kokkos::parallel_for( face_pol, computeFluxQuick2D(var, p, vel, fluxx, fluxy, cd, v));
     } else if (cf.scheme == 2) {
       Kokkos::parallel_for( face_pol, computeFluxCentered2D(var, p, rho, fluxx, fluxy, cd, v));
     } else {

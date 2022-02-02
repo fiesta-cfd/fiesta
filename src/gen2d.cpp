@@ -111,7 +111,7 @@ void gen2d_func::compute() {
   timers["flux"].reset();
   for (int v = 0; v < cf.nv; ++v) {
     if (cf.scheme == 3) {
-      parallel_for(facePol, computeFluxQuick2D(var,p,rho,fluxx,fluxy,cd,v));
+      parallel_for(facePol, computeFluxQuick2D(var,p,tvel,fluxx,fluxy,cd,v));
     } else if (cf.scheme == 2) {
       parallel_for(facePol, computeFluxCentered2D(var,p,rho,fluxx,fluxy,cd,v));
     } else {

@@ -19,6 +19,7 @@
 
 #ifndef FLUX_HPP
 #define FLUX_HPP
+#include "Kokkos_Macros.hpp"
 struct computeFluxWeno2D {
   FS4D var;
   FS2D p;
@@ -168,18 +169,22 @@ struct computeFluxCentered2D {
 struct computeFluxQuick2D {
   FS4D var;
   FS2D p;
-  FS2D rho;
+  FS3D vel;
   FS2D fluxx;
   FS2D fluxy;
   Kokkos::View<FSCAL *> cd;
   int v;
   FSCAL eps = 0.000001;
 
-  computeFluxQuick2D(FS4D var_, FS2D p_, FS2D rho_, FS2D fluxx_, FS2D fluxy_,
+  computeFluxQuick2D(FS4D var_, FS2D p_, FS3D vel_, FS2D fluxx_, FS2D fluxy_,
                      Kokkos::View<FSCAL *> cd_, int v_)
-      : var(var_), p(p_), rho(rho_), fluxx(fluxx_), fluxy(fluxy_), cd(cd_),
+      : var(var_), p(p_), vel(vel_), fluxx(fluxx_), fluxy(fluxy_), cd(cd_),
         v(v_) {}
 
+  KOKKOS_INLINE_FUNCTION
+  FSCAL quick(FSCAL f1, FSCAL f2, FSCAL f3) const {
+    return 0.75*f2 + 0.375*f3 - 0.125*f1;
+  }
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j) const {
 
@@ -188,58 +193,31 @@ struct computeFluxQuick2D {
     FSCAL dx = cd(1);
     FSCAL dy = cd(2);
 
-    // calculate cell face velocities (in positive direction) with 4th order
-    // interpolation velocity is momentum divided by total density
-    ur = (-var(i + 2, j, 0, 0) / rho(i + 2, j) +
-          7.0 * var(i + 1, j, 0, 0) / rho(i + 1, j) +
-          7.0 * var(i, j, 0, 0) / rho(i, j) -
-          var(i - 1, j, 0, 0) / rho(i - 1, j)) /
-         12.0;
-
-    vr = (-var(i, j + 2, 0, 1) / rho(i, j + 2) +
-          7.0 * var(i, j + 1, 0, 1) / rho(i, j + 1) +
-          7.0 * var(i, j, 0, 1) / rho(i, j) -
-          var(i, j - 1, 0, 1) / rho(i, j - 1)) /
-         12.0;
-
-    // for each direction
-    for (int idx = 0; idx < 2; ++idx) {
-      // get stencil data.  the flux for the energy equation includes pressure
-      // so only add pressure for the energy variable (index 2 for 2d problem)
-      if (idx == 0) {
-        if (ur < 0.0) {
-          f1 = var(i + 2, j, 0, v) + (v == 2) * p(i + 2, j);
-          f2 = var(i + 1, j, 0, v) + (v == 2) * p(i + 1, j);
-          f3 = var(i, j, 0, v) + (v == 2) * p(i, j);
-        } else {
-          f1 = var(i - 1, j, 0, v) + (v == 2) * p(i - 1, j);
-          f2 = var(i, j, 0, v) + (v == 2) * p(i, j);
-          f3 = var(i + 1, j, 0, v) + (v == 2) * p(i + 1, j);
-        }
-      }
-      if (idx == 1) {
-        if (vr < 0.0) {
-          f1 = var(i, j + 2, 0, v) + (v == 2) * p(i, j + 2);
-          f2 = var(i, j + 1, 0, v) + (v == 2) * p(i, j + 1);
-          f3 = var(i, j, 0, v) + (v == 2) * p(i, j);
-        } else {
-          f1 = var(i, j - 1, 0, v) + (v == 2) * p(i, j - 1);
-          f2 = var(i, j, 0, v) + (v == 2) * p(i, j);
-          f3 = var(i, j + 1, 0, v) + (v == 2) * p(i, j + 1);
-        }
-      }
-
-      // quick weights
-      w = 0.75 * f2 + 0.375 * f3 - 0.125 * f1;
-
-      // calculate weno flux
-      if (idx == 0) {
-        fluxx(i, j) = ur * w / dx;
-      }
-      if (idx == 1) {
-        fluxy(i, j) = vr * w / dy;
-      }
+    ur = (-vel(i+2,j,0) + 7.0*vel(i+1,j,0) + 7.0*vel(i,j,0) - vel(i-1,j,0))/12.0;
+    if (ur < 0.0) {
+      f1 = var(i+2,j,0,v) + (v==2) * p(i+2,j);
+      f2 = var(i+1,j,0,v) + (v==2) * p(i+1,j);
+      f3 = var(i  ,j,0,v) + (v==2) * p(i  ,j);
+    } else {
+      f1 = var(i-1,j,0,v) + (v==2) * p(i-1,j);
+      f2 = var(i  ,j,0,v) + (v==2) * p(i  ,j);
+      f3 = var(i+1,j,0,v) + (v==2) * p(i+1,j);
     }
+    fluxx(i, j) = ur*quick(f1,f2,f3)/dx;
+
+    vr = (-vel(i,j+2,1) + 7.0*vel(i,j+1,1) + 7.0*vel(i,j,1) - vel(i,j-1,1))/12.0;
+    if (vr < 0.0) {
+      f1 = var(i,j+2,0,v) + (v==2) * p(i,j+2);
+      f2 = var(i,j+1,0,v) + (v==2) * p(i,j+1);
+      f3 = var(i,j  ,0,v) + (v==2) * p(i,j  );
+    } else {
+      f1 = var(i,j-1,0,v) + (v==2) * p(i,j-1);
+      f2 = var(i,j  ,0,v) + (v==2) * p(i,j  );
+      f3 = var(i,j+1,0,v) + (v==2) * p(i,j+1);
+    }
+    w = 0.75*f2 + 0.375*f3 - 0.125*f1;
+    fluxy(i, j) = vr*quick(f1,f2,f3)/dy;
+
   }
 };
 
