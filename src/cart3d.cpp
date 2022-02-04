@@ -213,12 +213,12 @@ void cart3d_func::pushRegion(std::string name, bool saveDvar){
 inline
 void cart3d_func::popRegion(std::string name, bool saveDvar){
   if (cf.diagnostics){
+    Kokkos::fence();
+    timers[name].accumulate();
     if (saveDvar) {
       Kokkos::fence();
       dg.stop(name,cf.t,dvar,dgmap);
     }
-    Kokkos::fence();
-    timers[name].accumulate();
   }
 }
 
