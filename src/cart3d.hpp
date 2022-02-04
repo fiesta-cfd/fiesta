@@ -34,6 +34,8 @@ public:
   void postStep();
   void preSim();
   void postSim();
+  void pushRegion(std::string name, bool saveDvar);
+  void popRegion(std::string name, bool saveDvar);
 
   FS3D p;       // Pressure
   FS3D T;       // Temperature
