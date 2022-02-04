@@ -333,25 +333,26 @@ void packedHaloExchange::sendHalo(MPI_Request reqs[6]){
   // appropiately.
   size_t bufferLength = 0;
 
-  bufferLength = cf.ng*cf.ngj*cf.ngk*cf.nvt;
   pack({-1,0,0},deviceV,leftSend);
   pack({+1,0,0},deviceV,rightSend);
+  pack({0,-1,0},deviceV,bottomSend);
+  pack({0,+1,0},deviceV,topSend);
+  if (cf.ndim == 3){
+    pack({0,0,-1},deviceV,backSend);
+    pack({0,0,+1},deviceV,frontSend);
+  }
   Kokkos::fence();
+
+  bufferLength = cf.ng*cf.ngj*cf.ngk*cf.nvt;
   MPI_Isend(leftSend.data(),  bufferLength, MPI_FSCAL, cf.xMinus, FIESTA_BACKWARD_TAG, cf.comm, &reqs[0]);
   MPI_Isend(rightSend.data(), bufferLength, MPI_FSCAL, cf.xPlus,  FIESTA_FORWARD_TAG,  cf.comm, &reqs[1]);
 
   bufferLength = cf.ngi*cf.ng*cf.ngk*cf.nvt;
-  pack({0,-1,0},deviceV,bottomSend);
-  pack({0,+1,0},deviceV,topSend);
-  Kokkos::fence();
   MPI_Isend(bottomSend.data(), bufferLength, MPI_FSCAL, cf.yMinus, FIESTA_BACKWARD_TAG, cf.comm, &reqs[2]);
   MPI_Isend(topSend.data(),    bufferLength, MPI_FSCAL, cf.yPlus,  FIESTA_FORWARD_TAG,  cf.comm, &reqs[3]);
 
   if (cf.ndim == 3){
     bufferLength = cf.ngi*cf.ngj*cf.ng*cf.nvt;
-    pack({0,0,-1},deviceV,backSend);
-    pack({0,0,+1},deviceV,frontSend);
-    Kokkos::fence();
     MPI_Isend(backSend.data(),  bufferLength, MPI_FSCAL, cf.zMinus, FIESTA_BACKWARD_TAG, cf.comm, &reqs[4]);
     MPI_Isend(frontSend.data(), bufferLength, MPI_FSCAL, cf.zPlus,  FIESTA_FORWARD_TAG,  cf.comm, &reqs[5]);
   }

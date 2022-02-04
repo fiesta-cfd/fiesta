@@ -194,7 +194,6 @@ void cart3d_func::preSim() {
 }
 
 void cart3d_func::preStep() {
-  applyBCs(cf,this);
 }
 
 template<typename T>
@@ -209,10 +208,17 @@ FSCAL fsMax(const struct inputConfig &cf, policy_f3 &pol, T func){
 
 
 void cart3d_func::compute() {
+  applyBCs(cf,this);
   // create range policies
   policy_f3 ghost_pol = policy_f3({0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk});
   policy_f3 cell_pol  = policy_f3({cf.ng, cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng, cf.ngk - cf.ng});
   policy_f3 weno_pol  = policy_f3({cf.ng-1, cf.ng-1, cf.ng-1}, {cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
+  //policy_f3 tile_pol  = policy_f3({cf.ng-1, cf.ng-1, cf.ng-1}, {cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng},{10,10,10});
+
+  Kokkos::MDRangePolicy<Kokkos::Rank<3,Kokkos::Iterate::Right,Kokkos::Iterate::Left>> tile_pol(
+      {cf.ng-1, cf.ng-1, cf.ng-1}, 
+      {cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng},
+      {1,1,1});
 
   if(cf.diagnostics) dg.init(cf.t,dvar);
   Kokkos::fence();

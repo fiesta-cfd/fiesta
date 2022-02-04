@@ -189,7 +189,7 @@ struct computeFluxQuick2D {
   void operator()(const int i, const int j) const {
 
     int ns = (int)cd(0);
-    FSCAL ur, vr, w, f1, f2, f3;
+    FSCAL ur, vr, f1, f2, f3;
     FSCAL dx = cd(1);
     FSCAL dy = cd(2);
 
@@ -215,7 +215,6 @@ struct computeFluxQuick2D {
       f2 = var(i,j  ,0,v) + (v==2) * p(i,j  );
       f3 = var(i,j+1,0,v) + (v==2) * p(i,j+1);
     }
-    w = 0.75*f2 + 0.375*f3 - 0.125*f1;
     fluxy(i, j) = vr*quick(f1,f2,f3)/dy;
 
   }
@@ -241,25 +240,25 @@ struct calculateFluxesG {
   KOKKOS_INLINE_FUNCTION
   FSCAL weno(FSCAL f1, FSCAL f2, FSCAL f3, FSCAL f4, FSCAL f5) const {
     FSCAL b1, b2, b3, w1, w2, w3, p1, p2, p3, a1, a2;
-    a1 = f1 - 2.0 * f2 + f3;
-    a2 = f1 - 4.0 * f2 + 3.0 * f3;
-    b1 = (13.0 / 12.0) * a1 * a1 + (0.25) * a2 * a2;
+    a1 = f1 - 2.0f * f2 + f3;
+    a2 = f1 - 4.0f * f2 + 3.0f * f3;
+    b1 = (13.0f / 12.0f) * a1 * a1 + (0.25f) * a2 * a2;
     a1 = f2 - 2.0 * f3 + f4;
     a2 = f2 - f4;
-    b2 = (13.0 / 12.0) * a1 * a1 + (0.25) * a2 * a2;
+    b2 = (13.0f / 12.0f) * a1 * a1 + (0.25f) * a2 * a2;
     a1 = f3 - 2.0 * f4 + f5;
     a2 = 3.0 * f3 - 4.0 * f4 + f5;
-    b3 = (13.0 / 12.0) * a1 * a1 + (0.25) * a2 * a2;
+    b3 = (13.0f / 12.0f) * a1 * a1 + (0.25f) * a2 * a2;
     a1 = eps + b1;
-    w1 = (0.1) / (a1 * a1);
+    w1 = (0.1f) / (a1 * a1);
     a1 = eps + b2;
-    w2 = (0.6) / (a1 * a1);
+    w2 = (0.6f) / (a1 * a1);
     a1 = eps + b3;
-    w3 = (0.3) / (a1 * a1);
+    w3 = (0.3f) / (a1 * a1);
 
-    p1 = (1.0 / 3.0) * f1 + (-7.0 / 6.0) * f2 + (11.0 / 6.0) * f3;
-    p2 = (-1.0 / 6.0) * f2 + (5.0 / 6.0) * f3 + (1.0 / 3.0) * f4;
-    p3 = (1.0 / 3.0) * f3 + (5.0 / 6.0) * f4 + (-1.0 / 6.0) * f5;
+    p1 = (1.0f / 3.0f) * f1 + (-7.0f / 6.0f) * f2 + (11.0f / 6.0f) * f3;
+    p2 = (-1.0f / 6.0f) * f2 + (5.0f / 6.0f) * f3 + (1.0f / 3.0f) * f4;
+    p3 = (1.0f / 3.0f) * f3 + (5.0f / 6.0f) * f4 + (-1.0f / 6.0f) * f5;
 
     return (w1 * p1 + w2 * p2 + w3 * p3) / (w1 + w2 + w3);
   }
@@ -267,55 +266,46 @@ struct calculateFluxesG {
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j, const int k) const {
 
-    FSCAL ur, vr, wr, f1, f2, f3, f4, f5;
+    FSCAL ur, vr, wr, f1, f2, f3, f4, f5, f6;
 
-    ur = (-vel(i+2,j,k,0) + 7.0*vel(i+1,j,k,0) + 7.0*vel(i,j,k,0) - vel(i-1,j,k,0))/12.0;
-    if (ur < 0.0) {
-      f1 = var(i + 3, j, k, v) + (v == 3) * p(i + 3, j, k);
-      f2 = var(i + 2, j, k, v) + (v == 3) * p(i + 2, j, k);
-      f3 = var(i + 1, j, k, v) + (v == 3) * p(i + 1, j, k);
-      f4 = var(i, j, k, v) + (v == 3) * p(i, j, k);
-      f5 = var(i - 1, j, k, v) + (v == 3) * p(i - 1, j, k);
-    } else {
-      f1 = var(i - 2, j, k, v) + (v == 3) * p(i - 2, j, k);
-      f2 = var(i - 1, j, k, v) + (v == 3) * p(i - 1, j, k);
-      f3 = var(i, j, k, v) + (v == 3) * p(i, j, k);
-      f4 = var(i + 1, j, k, v) + (v == 3) * p(i + 1, j, k);
-      f5 = var(i + 2, j, k, v) + (v == 3) * p(i + 2, j, k);
-    }
-    fluxx(i, j, k) = ur * weno(f1,f2,f3,f4,f5)/dx;
+    f1 = var(i + 3, j, k, v) + (v == 3) * p(i + 3, j, k);
+    f2 = var(i + 2, j, k, v) + (v == 3) * p(i + 2, j, k);
+    f3 = var(i + 1, j, k, v) + (v == 3) * p(i + 1, j, k);
+    f4 = var(i, j, k, v) + (v == 3) * p(i, j, k);
+    f5 = var(i - 1, j, k, v) + (v == 3) * p(i - 1, j, k);
+    f6 = var(i - 2, j, k, v) + (v == 3) * p(i - 2, j, k);
 
-    vr = (-vel(i,j+2,k,1) + 7.0*vel(i,j+1,k,1) + 7.0*vel(i,j,k,1) - vel(i,j-1,k,1))/12.0;
-    if (vr < 0.0) {
-      f1 = var(i, j + 3, k, v) + (v == 3) * p(i, j + 3, k);
-      f2 = var(i, j + 2, k, v) + (v == 3) * p(i, j + 2, k);
-      f3 = var(i, j + 1, k, v) + (v == 3) * p(i, j + 1, k);
-      f4 = var(i, j, k, v) + (v == 3) * p(i, j, k);
-      f5 = var(i, j - 1, k, v) + (v == 3) * p(i, j - 1, k);
-    } else {
-      f1 = var(i, j - 2, k, v) + (v == 3) * p(i, j - 2, k);
-      f2 = var(i, j - 1, k, v) + (v == 3) * p(i, j - 1, k);
-      f3 = var(i, j, k, v) + (v == 3) * p(i, j, k);
-      f4 = var(i, j + 1, k, v) + (v == 3) * p(i, j + 1, k);
-      f5 = var(i, j + 2, k, v) + (v == 3) * p(i, j + 2, k);
-    }
-    fluxy(i, j, k) = vr * weno(f1,f2,f3,f4,f5)/dy;
+    ur = (-vel(i+2,j,k,0) + 7.0f*vel(i+1,j,k,0) + 7.0f*vel(i,j,k,0) - vel(i-1,j,k,0))/12.0f;
+    if (ur < 0.0)
+      fluxx(i, j, k) = ur * weno(f1,f2,f3,f4,f5)/dx;
+    else
+      fluxx(i, j, k) = ur * weno(f6,f5,f4,f3,f2)/dx;
 
-    wr = (-vel(i,j,k+2,2) + 7.0*vel(i,j,k+1,2) + 7.0*vel(i,j,k,2) - vel(i,j,k-1,2))/12.0;
-    if (wr < 0.0) {
-      f1 = var(i, j, k + 3, v) + (v == 3) * p(i, j, k + 3);
-      f2 = var(i, j, k + 2, v) + (v == 3) * p(i, j, k + 2);
-      f3 = var(i, j, k + 1, v) + (v == 3) * p(i, j, k + 1);
-      f4 = var(i, j, k, v) + (v == 3) * p(i, j, k);
-      f5 = var(i, j, k - 1, v) + (v == 3) * p(i, j, k - 1);
-    } else {
-      f1 = var(i, j, k - 2, v) + (v == 3) * p(i, j, k - 2);
-      f2 = var(i, j, k - 1, v) + (v == 3) * p(i, j, k - 1);
-      f3 = var(i, j, k, v) + (v == 3) * p(i, j, k);
-      f4 = var(i, j, k + 1, v) + (v == 3) * p(i, j, k + 1);
-      f5 = var(i, j, k + 2, v) + (v == 3) * p(i, j, k + 2);
-    }
-    fluxz(i, j, k) = wr * weno(f1,f2,f3,f4,f5)/dz;
+    f1 = var(i, j + 3, k, v) + (v == 3) * p(i, j + 3, k);
+    f2 = var(i, j + 2, k, v) + (v == 3) * p(i, j + 2, k);
+    f3 = var(i, j + 1, k, v) + (v == 3) * p(i, j + 1, k);
+    f4 = var(i, j, k, v) + (v == 3) * p(i, j, k);
+    f5 = var(i, j - 1, k, v) + (v == 3) * p(i, j - 1, k);
+    f6 = var(i, j - 2, k, v) + (v == 3) * p(i, j - 2, k);
+
+    vr = (-vel(i,j+2,k,1) + 7.0f*vel(i,j+1,k,1) + 7.0f*vel(i,j,k,1) - vel(i,j-1,k,1))/12.0f;
+    if (vr < 0.0)
+      fluxy(i, j, k) = vr * weno(f1,f2,f3,f4,f5)/dy;
+    else
+      fluxy(i, j, k) = vr * weno(f6,f5,f4,f3,f2)/dy;
+
+    f1 = var(i, j, k + 3, v) + (v == 3) * p(i, j, k + 3);
+    f2 = var(i, j, k + 2, v) + (v == 3) * p(i, j, k + 2);
+    f3 = var(i, j, k + 1, v) + (v == 3) * p(i, j, k + 1);
+    f4 = var(i, j, k, v) + (v == 3) * p(i, j, k);
+    f5 = var(i, j, k - 1, v) + (v == 3) * p(i, j, k - 1);
+    f6 = var(i, j, k - 2, v) + (v == 3) * p(i, j, k - 2);
+
+    wr = (-vel(i,j,k+2,2) + 7.0f*vel(i,j,k+1,2) + 7.0f*vel(i,j,k,2) - vel(i,j,k-1,2))/12.0f;
+    if (wr < 0.0)
+      fluxz(i, j, k) = wr * weno(f1,f2,f3,f4,f5)/dz;
+    else
+      fluxz(i, j, k) = wr * weno(f6,f5,f4,f3,f2)/dz;
   }
 };
 #endif

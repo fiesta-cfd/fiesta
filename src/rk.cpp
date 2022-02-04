@@ -45,7 +45,7 @@ void rkAdvance(struct inputConfig &cf, class std::unique_ptr<class rk_func>&f){
         for (int v=0; v<nvt; ++v){
           mytmp(i, j, k, v) = myvar(i, j, k, v);
           myvar(i, j, k, v) =
-            myvar(i, j, k, v) + 0.5 * dt * mydvar(i, j, k, v);
+            myvar(i, j, k, v) + 0.5f * dt * mydvar(i, j, k, v);
         }
       });
   Kokkos::fence();
