@@ -91,7 +91,7 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
     noise = FS3D_I("noise", cf.ngi, cf.ngj, cf.ngk);
   }
 
-  dg = Diagnostics(cf.ng,cf.ngi,cf.ngj,cf.ngk,cf.nvt,cf.stat_freq);
+  if (cf.diagnostics) dg = Diagnostics(cf.ng,cf.ngi,cf.ngj,cf.ngk,cf.nvt,cf.stat_freq);
   /* Log::debug("1: dgmap.size()={}",dgmap.size()); */
   /* dgmap["testname1"] = FS4D("testname1", cf.ngi, cf.ngj, cf.ngk, cf.nvt); */
   /* dgmap.emplace("testname1",FS4D("testname1", cf.ngi, cf.ngj, cf.ngk, cf.nvt)); */
@@ -182,7 +182,7 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
 };
 
 void cart3d_func::preSim() {
-  applyBCs(cf,this);
+  //applyBCs(cf,this);
   policy_f3 ghost_pol = policy_f3({0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk});
 
   timers["calcSecond"].reset();
