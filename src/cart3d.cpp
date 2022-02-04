@@ -215,10 +215,10 @@ void cart3d_func::compute() {
   policy_f3 weno_pol  = policy_f3({cf.ng-1, cf.ng-1, cf.ng-1}, {cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng});
   //policy_f3 tile_pol  = policy_f3({cf.ng-1, cf.ng-1, cf.ng-1}, {cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng},{10,10,10});
 
-  Kokkos::MDRangePolicy<Kokkos::Rank<3,Kokkos::Iterate::Right,Kokkos::Iterate::Left>> tile_pol(
+  Kokkos::MDRangePolicy<Kokkos::Rank<3>> tile_pol(
       {cf.ng-1, cf.ng-1, cf.ng-1}, 
       {cf.ngi-cf.ng, cf.ngj-cf.ng, cf.ngk-cf.ng},
-      {1,1,1});
+      {4,4,4});
 
   if(cf.diagnostics) dg.init(cf.t,dvar);
   Kokkos::fence();
@@ -232,7 +232,7 @@ void cart3d_func::compute() {
   if (cf.diagnostics) dg.start(cf.t,dvar);
   for (int v = 0; v < cf.nv; ++v) {
     timers["flux"].reset();
-    Kokkos::parallel_for(weno_pol, calculateFluxesG(var, p, rho, vel, fluxx, fluxy, fluxz, cf.dx, cf.dy, cf.dz, v));
+    Kokkos::parallel_for(tile_pol, calculateFluxesG(var, p, rho, vel, fluxx, fluxy, fluxz, cf.dx, cf.dy, cf.dz, v));
     Kokkos::parallel_for(cell_pol, advect3D(dvar, varx, fluxx, fluxy, fluxz, v));
     Kokkos::fence();
     timers["flux"].accumulate();
