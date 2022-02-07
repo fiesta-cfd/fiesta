@@ -20,6 +20,8 @@
 #include "diagnostics.hpp"
 #include "kokkosTypes.hpp"
 #include "log2.hpp"
+#include <string>
+#include <vector>
 #include <map>
 
 std::string vform(std::vector<FSCAL> vec){

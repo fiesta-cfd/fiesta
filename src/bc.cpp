@@ -66,9 +66,9 @@ struct bc_gen {
       FSCAL reflect=1.0;
       for (int v=0; v<nv; ++v){
         reflect=1.0;
-        if(ihat != 0 && (v==1 || v==2)) reflect=-1.0;
-        if(jhat != 0 && (v==0 || v==2)) reflect=-1.0;
-        if(khat != 0 && (v==0 || v==1)) reflect=-1.0;
+        if(ihat != 0 && (v==0 || v==1 || v==2)) reflect=-1.0;
+        if(jhat != 0 && (v==0 || v==1 || v==2)) reflect=-1.0;
+        if(khat != 0 && (v==0 || v==1 || v==2)) reflect=-1.0;
         for (int n=0; n<ng; ++n){
           u(i+ihat*(n+1),j+jhat*(n+1),k+khat*(n+1),v) = reflect*u(i-ihat*n,j-jhat*n,k-khat*n,v);
         }
