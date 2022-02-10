@@ -157,6 +157,7 @@ void statusCheck(int cFlag, struct inputConfig cf, std::unique_ptr<class rk_func
     for (int v = 0; v < cf.nvt; ++v) {
       Kokkos::parallel_reduce(cell_pol, maxVarFunctor2d(f->var, v), Kokkos::Max<FSCAL>(max[v]));
       Kokkos::parallel_reduce(cell_pol, minVarFunctor2d(f->var, v), Kokkos::Min<FSCAL>(min[v]));
+      Kokkos::fence();
       #ifdef HAVE_MPI
         MPI_Allreduce(&max[v], &max_recv[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
         MPI_Allreduce(&min[v], &min_recv[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
@@ -169,6 +170,7 @@ void statusCheck(int cFlag, struct inputConfig cf, std::unique_ptr<class rk_func
     for (int v = 0; v < cf.nvt; ++v) {
       Kokkos::parallel_reduce(cell_pol, maxVarFunctor3d(f->var, v), Kokkos::Max<FSCAL>(max[v]));
       Kokkos::parallel_reduce(cell_pol, minVarFunctor3d(f->var, v), Kokkos::Min<FSCAL>(min[v]));
+      Kokkos::fence();
       #ifdef HAVE_MPI
         MPI_Allreduce(&max[v], &max_recv[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
         MPI_Allreduce(&min[v], &min_recv[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
@@ -205,6 +207,7 @@ void statusCheck(int cFlag, struct inputConfig cf, std::unique_ptr<class rk_func
     for (size_t v = 0; v < f->varxNames.size(); ++v) {
       Kokkos::parallel_reduce(cell_pol, maxVarFunctor2d(f->varx, v), Kokkos::Max<FSCAL>(max[v]));
       Kokkos::parallel_reduce(cell_pol, minVarFunctor2d(f->varx, v), Kokkos::Min<FSCAL>(min[v]));
+      Kokkos::fence();
       #ifdef HAVE_MPI
         MPI_Allreduce(&max[v], &max_recv[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
         MPI_Allreduce(&min[v], &min_recv[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
@@ -217,6 +220,7 @@ void statusCheck(int cFlag, struct inputConfig cf, std::unique_ptr<class rk_func
     for (size_t v = 0; v < f->varxNames.size(); ++v) {
       Kokkos::parallel_reduce(cell_pol, maxVarFunctor3d(f->varx, v), Kokkos::Max<FSCAL>(max[v]));
       Kokkos::parallel_reduce(cell_pol, minVarFunctor3d(f->varx, v), Kokkos::Min<FSCAL>(min[v]));
+      Kokkos::fence();
       #ifdef HAVE_MPI
         MPI_Allreduce(&max[v], &max_recv[v], 1, MPI_DOUBLE, MPI_MAX, cf.comm);
         MPI_Allreduce(&min[v], &min_recv[v], 1, MPI_DOUBLE, MPI_MIN, cf.comm);
