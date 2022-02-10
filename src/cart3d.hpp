@@ -47,6 +47,7 @@ public:
   FS3D fluxx;   // Weno Fluxes in X direction
   FS3D fluxy;   // Weno Fluxes in Y direction
   FS3D fluxz;   // Weno Fluxes in Z direction
+  FS4D stress; // Stress tensor on X faces
   FS5D stressx; // Stress tensor on X faces
   FS5D stressy; // Stress tensor on Y faces
   FS5D stressz; // Stress tensor on Z faces

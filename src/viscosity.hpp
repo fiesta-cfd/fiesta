@@ -412,4 +412,253 @@ struct applyViscousTerm3dv {
     dvar(i,j,k,3) = dvar(i,j,k,3) + d1;// - d2;
   }
 };
+
+struct calculateStressTensorx3dv {
+  FS4D var;
+  FS3D rho;
+  FS4D stress;
+  FS4D vel;
+  Kokkos::View<FSCAL *> cd;
+
+  calculateStressTensorx3dv(FS4D var_, FS3D rho_, FS4D v_, FS4D str_, Kokkos::View<FSCAL *> cd_)
+      : var(var_), rho(rho_), vel(v_), stress(str_), cd(cd_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j, const int k) const {
+    int ns = (int)cd(0);
+    FSCAL dx = cd(1);
+    FSCAL dy = cd(2);
+    FSCAL dz = cd(3);
+    FSCAL dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz;
+    FSCAL mu;
+
+    // xface
+    mu = 0.0;
+    for (int sdx=0; sdx<ns; ++sdx){
+        mu += ((var(i+1,j,k,4+sdx)/rho(i+1,j,k) + var(i,j,k,4+sdx)/rho(i,j,k))/2.0)*cd(6+3*sdx+2);
+    }
+    dudx = (vel(i+1,j,k,0) -vel(i,j,k,0))/dx;
+    dvdx = (vel(i+1,j,k,1) -vel(i,j,k,1))/dx;
+    dwdx = (vel(i+1,j,k,2) -vel(i,j,k,2))/dx;
+
+    dudy = ( (vel(i+1,j+1,k,0)+vel(i,j+1,k,0)) - (vel(i+1,j-1,k,0)+vel(i,j-1,k,0)) ) / (4*dy);
+    dvdy = ( (vel(i+1,j+1,k,1)+vel(i,j+1,k,1)) - (vel(i+1,j-1,k,1)+vel(i,j-1,k,1)) ) / (4*dy);
+    dwdy = ( (vel(i+1,j+1,k,2)+vel(i,j+1,k,2)) - (vel(i+1,j-1,k,2)+vel(i,j-1,k,2)) ) / (4*dy);
+
+    dudz = ( (vel(i+1,j,k+1,0)+vel(i,j,k+1,0)) - (vel(i+1,j,k-1,0)+vel(i,j,k-1,0)) ) / (4*dz);
+    dvdz = ( (vel(i+1,j,k+1,1)+vel(i,j,k+1,1)) - (vel(i+1,j,k-1,1)+vel(i,j,k-1,1)) ) / (4*dz);
+    dwdz = ( (vel(i+1,j,k+1,2)+vel(i,j,k+1,2)) - (vel(i+1,j,k-1,2)+vel(i,j,k-1,2)) ) / (4*dz);
+
+    stress(i,j,k,0) = (2.0 / 3.0) * mu * (2.0 * dudx - dvdy - dwdz);
+    stress(i,j,k,1) = (2.0 / 3.0) * mu * (2.0 * dvdy - dudx - dwdz);
+    stress(i,j,k,2) = (2.0 / 3.0) * mu * (2.0 * dwdz - dudx - dvdy);
+    stress(i,j,k,3) = mu*(dudy + dvdx);
+    stress(i,j,k,4) = mu*(dudz + dwdx);
+    stress(i,j,k,5) = mu*(dvdz + dwdy);
+  }
+};
+struct applyViscousTermx3dv {
+  FS4D dvar;
+  FS4D var;
+  FS3D rho;
+  FS4D vel;
+  FS4D stress;
+  Kokkos::View<FSCAL *> cd;
+
+  applyViscousTermx3dv(FS4D dvar_, FS4D var_, FS3D rho_, FS4D vel_, FS4D str_, Kokkos::View<FSCAL *> cd_)
+      : dvar(dvar_), var(var_), rho(rho_), vel(vel_), stress(str_), cd(cd_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j, const int k) const {
+    FSCAL dx = cd(1);
+    FSCAL a, b, c, d;
+
+    FSCAL ur = (vel(i+1,j,k,0)+vel(i,j,k,0))/2.0;
+    FSCAL ul = (vel(i-1,j,k,0)+vel(i,j,k,0))/2.0;
+    FSCAL vr = (vel(i+1,j,k,1)+vel(i,j,k,1))/2.0;
+    FSCAL vl = (vel(i-1,j,k,1)+vel(i,j,k,1))/2.0;
+    FSCAL wr = (vel(i+1,j,k,2)+vel(i,j,k,2))/2.0;
+    FSCAL wl = (vel(i-1,j,k,2)+vel(i,j,k,2))/2.0;
+
+    a = (stress(i,j,k,0) - stress(i-1,j,k,0)) /dx;
+
+    b = (stress(i,j,k,3) - stress(i-1,j,k,3)) /dx;
+
+    c = (stress(i,j,k,4) - stress(i-1,j,k,4)) /dx;
+
+    d = (ur*stress(i,j,k,0) - ul*stress(i-1,j,k,0)) /dx +
+        (vr*stress(i,j,k,3) - vl*stress(i-1,j,k,3)) /dx +
+        (wr*stress(i,j,k,4) - wl*stress(i-1,j,k,4)) /dx;
+
+    dvar(i,j,k,0) += a;
+    dvar(i,j,k,1) += b;
+    dvar(i,j,k,2) += c;
+    dvar(i,j,k,3) += d;
+  }
+};
+struct calculateStressTensory3dv {
+  FS4D var;
+  FS3D rho;
+  FS4D stress;
+  FS4D vel;
+  Kokkos::View<FSCAL *> cd;
+
+  calculateStressTensory3dv(FS4D var_, FS3D rho_, FS4D v_, FS4D str_, Kokkos::View<FSCAL *> cd_)
+      : var(var_), rho(rho_), vel(v_), stress(str_), cd(cd_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j, const int k) const {
+    int ns = (int)cd(0);
+    FSCAL dx = cd(1);
+    FSCAL dy = cd(2);
+    FSCAL dz = cd(3);
+    FSCAL dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz;
+    FSCAL mu;
+
+    mu = 0.0;
+    for (int s=0; s<ns; ++s){
+        mu += ((var(i,j+1,k,4+s)/rho(i,j+1,k) + var(i,j,k,4+s)/rho(i,j,k))/2.0)*cd(6+3*s+2);
+    }
+    dudx = ( (vel(i+1,j+1,k,0)+vel(i+1,j,k,0)) - (vel(i-1,j+1,k,0)+vel(i-1,j,k,0)) ) / (4*dx);
+    dvdx = ( (vel(i+1,j+1,k,1)+vel(i+1,j,k,1)) - (vel(i-1,j+1,k,1)+vel(i-1,j,k,1)) ) / (4*dx);
+    dwdx = ( (vel(i+1,j+1,k,2)+vel(i+1,j,k,2)) - (vel(i-1,j+1,k,2)+vel(i-1,j,k,2)) ) / (4*dx);
+
+    dudy = (vel(i,j+1,k,0) -vel(i,j,k,0))/dy;
+    dvdy = (vel(i,j+1,k,1) -vel(i,j,k,1))/dy;
+    dwdy = (vel(i,j+1,k,2) -vel(i,j,k,2))/dy;
+
+    dudz = ( (vel(i,j+1,k+1,0)+vel(i,j,k+1,0)) - (vel(i,j+1,k-1,0)+vel(i,j,k-1,0)) ) / (4*dz);
+    dvdz = ( (vel(i,j+1,k+1,1)+vel(i,j,k+1,1)) - (vel(i,j+1,k-1,1)+vel(i,j,k-1,1)) ) / (4*dz);
+    dwdz = ( (vel(i,j+1,k+1,2)+vel(i,j,k+1,2)) - (vel(i,j+1,k-1,2)+vel(i,j,k-1,2)) ) / (4*dz);
+
+    stress(i,j,k,0) = (2.0 / 3.0) * mu * (2.0 * dudx - dvdy - dwdz);
+    stress(i,j,k,1) = (2.0 / 3.0) * mu * (2.0 * dvdy - dudx - dwdz);
+    stress(i,j,k,2) = (2.0 / 3.0) * mu * (2.0 * dwdz - dudx - dvdy);
+    stress(i,j,k,3) = mu*(dudy + dvdx);
+    stress(i,j,k,4) = mu*(dudz + dwdx);
+    stress(i,j,k,5) = mu*(dvdz + dwdy);
+  }
+};
+struct applyViscousTermy3dv {
+  FS4D dvar;
+  FS4D var;
+  FS3D rho;
+  FS4D vel;
+  FS4D stress;
+  Kokkos::View<FSCAL *> cd;
+
+  applyViscousTermy3dv(FS4D dvar_, FS4D var_, FS3D rho_, FS4D vel_, FS4D str_, Kokkos::View<FSCAL *> cd_)
+      : dvar(dvar_), var(var_), rho(rho_), vel(vel_), stress(str_),cd(cd_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j, const int k) const {
+    FSCAL dy = cd(2);
+    FSCAL a, b, c, d;
+
+    FSCAL ut = (vel(i,j+1,k,0)+vel(i,j,k,0))/2.0;
+    FSCAL ub = (vel(i,j-1,k,0)+vel(i,j,k,0))/2.0;
+    FSCAL vt = (vel(i,j+1,k,1)+vel(i,j,k,1))/2.0;
+    FSCAL vb = (vel(i,j-1,k,1)+vel(i,j,k,1))/2.0;
+    FSCAL wt = (vel(i,j+1,k,2)+vel(i,j,k,2))/2.0;
+    FSCAL wb = (vel(i,j-1,k,2)+vel(i,j,k,2))/2.0;
+
+    a = (stress(i,j,k,3) - stress(i,j-1,k,3)) /dy;
+
+    b = (stress(i,j,k,1) - stress(i,j-1,k,1)) /dy;
+
+    c = (stress(i,j,k,5) - stress(i,j-1,k,5)) /dy;
+
+    d = (ut*stress(i,j,k,3) - ub*stress(i,j-1,k,3)) /dy +
+        (vt*stress(i,j,k,1) - vb*stress(i,j-1,k,1)) /dy +
+        (wt*stress(i,j,k,5) - wb*stress(i,j-1,k,5)) /dy;
+
+    dvar(i,j,k,0) += a;
+    dvar(i,j,k,1) += b;
+    dvar(i,j,k,2) += c;
+    dvar(i,j,k,3) += d;
+  }
+};
+struct calculateStressTensorz3dv {
+  FS4D var;
+  FS3D rho;
+  FS4D stress;
+  FS4D vel;
+  Kokkos::View<FSCAL *> cd;
+
+  calculateStressTensorz3dv(FS4D var_, FS3D rho_, FS4D v_, FS4D str_, Kokkos::View<FSCAL *> cd_)
+      : var(var_), rho(rho_), vel(v_), stress(str_), cd(cd_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j, const int k) const {
+    int ns = (int)cd(0);
+    FSCAL dx = cd(1);
+    FSCAL dy = cd(2);
+    FSCAL dz = cd(3);
+    FSCAL dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz;
+    FSCAL mu;
+
+    // zface
+    mu = 0.0;
+    for (int s=0; s<ns; ++s){
+        mu += ((var(i,j,k+1,4+s)/rho(i,j,k+1) + var(i,j,k,4+s)/rho(i,j,k))/2.0)*cd(6+3*s+2);
+    }
+    dudx = ( (vel(i+1,j,k+1,0)+vel(i+1,j,k,0)) - (vel(i-1,j,k+1,0)+vel(i-1,j,k,0)) ) / (4*dx);
+    dvdx = ( (vel(i+1,j,k+1,1)+vel(i+1,j,k,1)) - (vel(i-1,j,k+1,1)+vel(i-1,j,k,1)) ) / (4*dx);
+    dwdx = ( (vel(i+1,j,k+1,2)+vel(i+1,j,k,2)) - (vel(i-1,j,k+1,2)+vel(i-1,j,k,2)) ) / (4*dx);
+
+    dudy = ( (vel(i,j+1,k+1,0)+vel(i,j+1,k,0)) - (vel(i,j-1,k+1,0)+vel(i,j-1,k,0)) ) / (4*dy);
+    dvdy = ( (vel(i,j+1,k+1,1)+vel(i,j+1,k,1)) - (vel(i,j-1,k+1,1)+vel(i,j-1,k,1)) ) / (4*dy);
+    dwdy = ( (vel(i,j+1,k+1,2)+vel(i,j+1,k,2)) - (vel(i,j-1,k+1,2)+vel(i,j-1,k,2)) ) / (4*dy);
+
+    dudz = (vel(i,j,k+1,0) -vel(i,j,k,0))/dz;
+    dvdz = (vel(i,j,k+1,1) -vel(i,j,k,1))/dz;
+    dwdz = (vel(i,j,k+1,2) -vel(i,j,k,2))/dz;
+    
+    stress(i,j,k,0) = (2.0 / 3.0) * mu * (2.0 * dudx - dvdy - dwdz);
+    stress(i,j,k,1) = (2.0 / 3.0) * mu * (2.0 * dvdy - dudx - dwdz);
+    stress(i,j,k,2) = (2.0 / 3.0) * mu * (2.0 * dwdz - dudx - dvdy);
+    stress(i,j,k,3) = mu*(dudy + dvdx);
+    stress(i,j,k,4) = mu*(dudz + dwdx);
+    stress(i,j,k,5) = mu*(dvdz + dwdy);
+  }
+};
+struct applyViscousTermz3dv {
+  FS4D dvar;
+  FS4D var;
+  FS3D rho;
+  FS4D vel;
+  FS4D stress;
+  Kokkos::View<FSCAL *> cd;
+
+  applyViscousTermz3dv(FS4D dvar_, FS4D var_, FS3D rho_, FS4D vel_, FS4D str_, Kokkos::View<FSCAL *> cd_)
+      : dvar(dvar_), var(var_), rho(rho_), vel(vel_), stress(str_),cd(cd_) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i, const int j, const int k) const {
+    FSCAL dz = cd(3);
+    FSCAL a, b, c, d;
+
+    FSCAL uf = (vel(i,j,k+1,0)+vel(i,j,k,0))/2.0;
+    FSCAL uh = (vel(i,j,k-1,0)+vel(i,j,k,0))/2.0;
+    FSCAL vf = (vel(i,j,k+1,1)+vel(i,j,k,1))/2.0;
+    FSCAL vh = (vel(i,j,k-1,1)+vel(i,j,k,1))/2.0;
+    FSCAL wf = (vel(i,j,k+1,2)+vel(i,j,k,2))/2.0;
+    FSCAL wh = (vel(i,j,k-1,2)+vel(i,j,k,2))/2.0;
+
+    a = (stress(i,j,k,4) - stress(i,j,k-1,4)) /dz;
+
+    b = (stress(i,j,k,5) - stress(i,j,k-1,5)) /dz;
+
+    c = (stress(i,j,k,2) - stress(i,j,k-1,2)) /dz;
+
+    d = (uf*stress(i,j,k,4) - uh*stress(i,j,k-1,4)) /dz +
+        (vf*stress(i,j,k,5) - vh*stress(i,j,k-1,5)) /dz +
+        (wf*stress(i,j,k,2) - wh*stress(i,j,k-1,2)) /dz;
+
+    dvar(i,j,k,0) += a;
+    dvar(i,j,k,1) += b;
+    dvar(i,j,k,2) += c;
+    dvar(i,j,k,3) += d;
+  }
+};
 #endif

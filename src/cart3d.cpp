@@ -75,12 +75,13 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   fluxz   = FS3D( "fluxz",    cf.ngi, cf.ngj, cf.ngk);    // Advective Fluxes Z
 
   if (cf.visc == 1) {
-    qx      = FS3D( "qx",       cf.ngi, cf.ngj, cf.ngk);         // Heat Flux X
-    qy      = FS3D( "qy",       cf.ngi, cf.ngj, cf.ngk);         // Heat Flux Y
-    qz      = FS3D( "qz",       cf.ngi, cf.ngj, cf.ngk);         // Heat Flux Z
-    stressx = FS5D( "stressx",  cf.ngi, cf.ngj, cf.ngk, 3, 3); // stress tensor X
-    stressy = FS5D( "stressy",  cf.ngi, cf.ngj, cf.ngk, 3, 3); // stress tensor Y
-    stressz = FS5D( "stressz",  cf.ngi, cf.ngj, cf.ngk, 3, 3); // stress tensor Z
+    //qx      = FS3D( "qx",       cf.ngi, cf.ngj, cf.ngk);         // Heat Flux X
+    //qy      = FS3D( "qy",       cf.ngi, cf.ngj, cf.ngk);         // Heat Flux Y
+    //qz      = FS3D( "qz",       cf.ngi, cf.ngj, cf.ngk);         // Heat Flux Z
+    //stressx = FS5D( "stressx",  cf.ngi, cf.ngj, cf.ngk, 3, 3); // stress tensor X
+    //stressy = FS5D( "stressy",  cf.ngi, cf.ngj, cf.ngk, 3, 3); // stress tensor Y
+    //stressz = FS5D( "stressz",  cf.ngi, cf.ngj, cf.ngk, 3, 3); // stress tensor Z
+    stress = FS4D( "stress",  cf.ngi, cf.ngj, cf.ngk, 6); // stress tensor Z
   }
   if (cf.ceq) {
     gradRho = FS4D( "gradRho",  cf.ngi, cf.ngj, cf.ngk, 5);    // Density Gradien
@@ -258,9 +259,15 @@ void cart3d_func::compute() {
 
   if (cf.visc){
     pushRegion("visc",true);
-    Kokkos::parallel_for(weno_pol, calculateStressTensor3dv(var, rho, vel, stressx, stressy, stressz, cd));
-    Kokkos::parallel_for(weno_pol, calculateHeatFlux3dv(var, rho, T, qx, qy, qz, cd));
-    Kokkos::parallel_for(cell_pol, applyViscousTerm3dv(dvar, var, rho, vel, stressx, stressy, stressz, qx, qy, qz, cd));
+    //Kokkos::parallel_for(weno_pol, calculateStressTensor3dv(var, rho, vel, stressx, stressy, stressz, cd));
+    //Kokkos::parallel_for(weno_pol, calculateHeatFlux3dv(var, rho, T, qx, qy, qz, cd));
+    //Kokkos::parallel_for(cell_pol, applyViscousTerm3dv(dvar, var, rho, vel, stressx, stressy, stressz, qx, qy, qz, cd));
+    Kokkos::parallel_for(weno_pol, calculateStressTensorx3dv(var, rho, vel, stress, cd));
+    Kokkos::parallel_for(cell_pol, applyViscousTermx3dv(dvar, var, rho, vel, stress, cd));
+    Kokkos::parallel_for(weno_pol, calculateStressTensory3dv(var, rho, vel, stress, cd));
+    Kokkos::parallel_for(cell_pol, applyViscousTermy3dv(dvar, var, rho, vel, stress, cd));
+    Kokkos::parallel_for(weno_pol, calculateStressTensorz3dv(var, rho, vel, stress, cd));
+    Kokkos::parallel_for(cell_pol, applyViscousTermz3dv(dvar, var, rho, vel, stress, cd));
     popRegion("visc",true);
   }
 
