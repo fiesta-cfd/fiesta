@@ -92,13 +92,6 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   }
 
   if (cf.diagnostics) dg = Diagnostics(cf.ng,cf.ngi,cf.ngj,cf.ngk,cf.nvt,cf.stat_freq);
-  /* Log::debug("1: dgmap.size()={}",dgmap.size()); */
-  /* dgmap["testname1"] = FS4D("testname1", cf.ngi, cf.ngj, cf.ngk, cf.nvt); */
-  /* dgmap.emplace("testname1",FS4D("testname1", cf.ngi, cf.ngj, cf.ngk, cf.nvt)); */
-  /* dgmap["dvar"] = FS4D("dvard", cf.ngi, cf.ngj, cf.ngk, cf.nvt); */
-  /* Log::debug("2: dgmap.size()={}",dgmap.size()); */
-  /* Log::debug("3: dgmap[\"testname1\"].extent(0)={}",dgmap["testname1"].extent(0)); */
-  
 
   // Primary Variable Names
   varNames.push_back("X-Momentum");
@@ -173,6 +166,7 @@ cart3d_func::cart3d_func(struct inputConfig &cf_) : rk_func(cf_) {
     hostcd(sdx + 2) = cf.mu[s];       // kinematic viscosity
     sdx += 3;
   }
+  Log::debug("ns={}, cd.size()={}",cf.ns,hostcd.size());
   Kokkos::deep_copy(cd, hostcd); // copy congifuration array to device
 
   dxmag = cf.dx*cf.dx + cf.dy*cf.dy + cf.dz*cf.dz;

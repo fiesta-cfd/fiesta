@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include "debug.hpp"
 
 std::string vform(std::vector<FSCAL> vec){
   int len = vec.size();
@@ -53,7 +54,8 @@ Diagnostics& Diagnostics::operator=(Diagnostics&& d1){
   nk = d1.nk;
   nv = d1.nv;
   freq = d1.freq;
-  diag = FS4D("diag", ni, nj, nk, nv);
+  diag = d1.diag;
+  //diag = FS4D("diag", ni, nj, nk, nv);
   return *this;
 }
 
@@ -66,32 +68,32 @@ Diagnostics& Diagnostics::operator=(const Diagnostics& d1){
   nk = d1.nk;
   nv = d1.nv;
   freq = d1.freq;
-  diag = FS4D("diag", ni, nj, nk, nv);
+  diag = d1.diag;
+  //diag = FS4D("diag", ni, nj, nk, nv);
   return *this;
 }
 
 void Diagnostics::init(size_t t, FS4D &dvar){
-  policy_f3 cell_pol = policy_f3( {0,0,0}, {ni, nj, nk});
-  for(size_t v=0; v<nv; ++v){
-    Kokkos::parallel_for(cell_pol, KOKKOS_LAMBDA(const int i, const int j, const int k){
-      diag(i,j,k,v)=0.0;
-      dvar(i,j,k,v)=0.0;
-    });
-  }
+  policy_f4 gpol = policy_f4( {0,0,0,0}, {ni, nj, nk, nv});
+
+  FS4D temp = diag;
+  Kokkos::parallel_for("diag_init",gpol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int v){
+    temp(i,j,k,v)=0.0;
+    dvar(i,j,k,v)=0.0;
+  });
 }
 
 void Diagnostics::start(size_t t, FS4D &dvar){
-  policy_f3 cell_pol = policy_f3( {0,0,0}, {ni, nj, nk});
-  for(size_t v=0; v<nv; ++v){
-    Kokkos::parallel_for(cell_pol, KOKKOS_LAMBDA(const int i, const int j, const int k){
-      diag(i,j,k,v)=dvar(i,j,k,v);
-      dvar(i,j,k,v)=0.0;
-    });
-  }
+  policy_f4 gpol = policy_f4( {0,0,0,0}, {ni, nj, nk, nv});
+  FS4D temp = diag;
+  Kokkos::parallel_for("diag_init",gpol, KOKKOS_LAMBDA(const int i, const int j, const int k, const int v){
+    temp(i,j,k,v)=dvar(i,j,k,v);
+    dvar(i,j,k,v)=0.0;
+  });
 }
 
 void Diagnostics::stop(std::string name, size_t t, FS4D &dvar, std::map<std::string, FS4D> &dgvar){
-  policy_f3 cell_pol = policy_f3( {0,0,0}, {ni, nj, nk});
+  policy_f3 gpol = policy_f3( {0,0,0}, {ni, nj, nk});
 
   FSCAL localmax = 0.0;
   std::vector<FSCAL> max(nv,0);
@@ -103,7 +105,7 @@ void Diagnostics::stop(std::string name, size_t t, FS4D &dvar, std::map<std::str
 
   if (t % freq == 0){
     for(int v=0; v<nv; ++v){
-      Kokkos::parallel_reduce(cell_pol, KOKKOS_LAMBDA(const int i, const int j, const int k, FSCAL &m){
+      Kokkos::parallel_reduce(gpol, KOKKOS_LAMBDA(const int i, const int j, const int k, FSCAL &m){
         if (dvar(i,j,k,v) > m) m = dvar(i,j,k,v);
       }, Kokkos::Max<FSCAL>(localmax));
       max[v] = localmax;
@@ -112,16 +114,17 @@ void Diagnostics::stop(std::string name, size_t t, FS4D &dvar, std::map<std::str
   }
 
   FS4D tmp = dgvar[name];
+  FS4D temp = diag;
   for(int v=0; v<nv; ++v){
-    Kokkos::parallel_for(cell_pol, KOKKOS_LAMBDA(const int i, const int j, const int k){
+    Kokkos::parallel_for(gpol, KOKKOS_LAMBDA(const int i, const int j, const int k){
       tmp(i,j,k,v) = dvar(i,j,k,v);
-      dvar(i,j,k,v) = diag(i,j,k,v) + dvar(i,j,k,v);
+      dvar(i,j,k,v) = temp(i,j,k,v) + dvar(i,j,k,v);
     });
   }
 }
 
 void Diagnostics::finalize(size_t t, FS4D &dvar, std::map<std::string,FS4D> &dgvar){
-  policy_f3 cell_pol = policy_f3( {0,0,0}, {ni, nj, nk});
+  policy_f3 gpol = policy_f3( {0,0,0}, {ni, nj, nk});
 
   std::string name{"dvar"};
 
@@ -133,7 +136,7 @@ void Diagnostics::finalize(size_t t, FS4D &dvar, std::map<std::string,FS4D> &dgv
   FS4D tmp = dgvar[name];
 
   for(int v=0; v<nv; ++v){
-    Kokkos::parallel_for(cell_pol, KOKKOS_LAMBDA(const int i, const int j, const int k){
+    Kokkos::parallel_for(gpol, KOKKOS_LAMBDA(const int i, const int j, const int k){
       tmp(i,j,k,v) = dvar(i,j,k,v);
     });
   }
@@ -142,7 +145,7 @@ void Diagnostics::finalize(size_t t, FS4D &dvar, std::map<std::string,FS4D> &dgv
     FSCAL localmax = 0;
     std::vector<FSCAL> max(nv,0);
     for(size_t v=0; v<nv; ++v){
-      Kokkos::parallel_reduce(cell_pol, KOKKOS_LAMBDA(const int i, const int j, const int k, FSCAL &m){
+      Kokkos::parallel_reduce(gpol, KOKKOS_LAMBDA(const int i, const int j, const int k, FSCAL &m){
         if (dvar(i,j,k,v) > m) m = dvar(i,j,k,v);
       }, Kokkos::Max<FSCAL>(localmax));
       max[v] = localmax;

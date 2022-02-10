@@ -36,8 +36,8 @@ class Diagnostics {
     void stop(std::string name, size_t t, FS4D &dvar, std::map<std::string,FS4D> &dgvar);
     void finalize(size_t t, FS4D &dvar,std::map<std::string,FS4D> &dgvar);
   private:
-    size_t ng,ni,nj,nk,nv,freq;
     FS4D diag;
+    size_t ng,ni,nj,nk,nv,freq;
 };
 
 #endif

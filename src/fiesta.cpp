@@ -104,9 +104,9 @@ void Fiesta::initializeSimulation(Simulation &sim){
 #ifdef HAVE_MPI
   if (sim.cf.visc || sim.cf.ceq){
     if (sim.cf.mpiScheme == 1)
-      sim.cf.m = std::make_shared<orderedHaloExchange>(sim.cf,sim.f->var);
-    else if (sim.cf.mpiScheme == 2)
       sim.cf.m = std::make_shared<orderedHostHaloExchange>(sim.cf,sim.f->var);
+    else if (sim.cf.mpiScheme == 2)
+      sim.cf.m = std::make_shared<orderedHaloExchange>(sim.cf,sim.f->var);
     else{
       Log::error("Invalid MPI type.  Only 'gpu-aware' and 'host' are available when viscosity or c-equations are enabled.");
       exit(EXIT_FAILURE);

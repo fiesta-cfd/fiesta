@@ -218,10 +218,15 @@ struct calculateStressTensor3dv {
     FSCAL dy = cd(2);
     FSCAL dz = cd(3);
     FSCAL dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz;
-
-    FSCAL mu = 2.928e-5;
+    FSCAL mu;
 
     // xface
+    mu = 0.0;
+    //mu += ((var(i+1,j,k,4)/rho(i+1,j,k) + var(i,j,k,4)/rho(i,j,k))/2.0)*cd(8);
+    //mu += ((var(i+1,j,k,5)/rho(i+1,j,k) + var(i,j,k,5)/rho(i,j,k))/2.0)*cd(11);
+    for (int sdx=0; sdx<ns; ++sdx){
+        mu += ((var(i+1,j,k,4+sdx)/rho(i+1,j,k) + var(i,j,k,4+sdx)/rho(i,j,k))/2.0)*cd(6+3*sdx+2);
+    }
     dudx = (vel(i+1,j,k,0) -vel(i,j,k,0))/dx;
     dvdx = (vel(i+1,j,k,1) -vel(i,j,k,1))/dx;
     dwdx = (vel(i+1,j,k,2) -vel(i,j,k,2))/dx;
@@ -245,6 +250,10 @@ struct calculateStressTensor3dv {
     stressx(i,j,k,2,1) = stressx(i,j,k,1,2);
 
     // yface
+    mu = 0.0;
+    for (int s=0; s<ns; ++s){
+        mu += ((var(i,j+1,k,4+s)/rho(i,j+1,k) + var(i,j,k,4+s)/rho(i,j,k))/2.0)*cd(6+3*s+2);
+    }
     dudx = ( (vel(i+1,j+1,k,0)+vel(i+1,j,k,0)) - (vel(i-1,j+1,k,0)+vel(i-1,j,k,0)) ) / (4*dx);
     dvdx = ( (vel(i+1,j+1,k,1)+vel(i+1,j,k,1)) - (vel(i-1,j+1,k,1)+vel(i-1,j,k,1)) ) / (4*dx);
     dwdx = ( (vel(i+1,j+1,k,2)+vel(i+1,j,k,2)) - (vel(i-1,j+1,k,2)+vel(i-1,j,k,2)) ) / (4*dx);
@@ -268,6 +277,10 @@ struct calculateStressTensor3dv {
     stressy(i,j,k,2,1) = stressy(i,j,k,1,2);
 
     // zface
+    mu = 0.0;
+    for (int s=0; s<ns; ++s){
+        mu += ((var(i,j,k+1,4+s)/rho(i,j,k+1) + var(i,j,k,4+s)/rho(i,j,k))/2.0)*cd(6+3*s+2);
+    }
     dudx = ( (vel(i+1,j,k+1,0)+vel(i+1,j,k,0)) - (vel(i-1,j,k+1,0)+vel(i-1,j,k,0)) ) / (4*dx);
     dvdx = ( (vel(i+1,j,k+1,1)+vel(i+1,j,k,1)) - (vel(i-1,j,k+1,1)+vel(i-1,j,k,1)) ) / (4*dx);
     dwdx = ( (vel(i+1,j,k+1,2)+vel(i+1,j,k,2)) - (vel(i-1,j,k+1,2)+vel(i-1,j,k,2)) ) / (4*dx);
@@ -291,6 +304,7 @@ struct calculateStressTensor3dv {
     stressz(i,j,k,2,1) = stressz(i,j,k,1,2);
   }
 };
+
 struct calculateHeatFlux3dv {
   FS4D var;
   FS3D rho;
@@ -341,7 +355,7 @@ struct applyViscousTerm3dv {
     FSCAL dx = cd(1);
     FSCAL dy = cd(2);
     FSCAL dz = cd(3);
-    FSCAL a, b, c, d1, d2;
+    FSCAL a, b, c, d1;//, d2;
 
     FSCAL ur = (vel(i+1,j,k,0)+vel(i,j,k,0))/2.0;
     FSCAL ul = (vel(i-1,j,k,0)+vel(i,j,k,0))/2.0;
@@ -388,14 +402,14 @@ struct applyViscousTerm3dv {
          (vf*stressz(i,j,k,2,1) - vh*stressz(i,j,k-1,2,1)) / dz +
          (wf*stressz(i,j,k,2,2) - wh*stressz(i,j,k-1,2,2)) / dz;
 
-    d2 = ( qx(i,j,k)-qx(i-1,j,k) )/dx +
-         ( qy(i,j,k)-qy(i,j-1,k) )/dy +
-         ( qz(i,j,k)-qz(i,j,k-1) )/dz;
+    //d2 = ( qx(i,j,k)-qx(i-1,j,k) )/dx +
+    //     ( qy(i,j,k)-qy(i,j-1,k) )/dy +
+    //     ( qz(i,j,k)-qz(i,j,k-1) )/dz;
 
     dvar(i,j,k,0) = dvar(i,j,k,0) + a;
     dvar(i,j,k,1) = dvar(i,j,k,1) + b;
     dvar(i,j,k,2) = dvar(i,j,k,2) + c;
-    dvar(i,j,k,3) = dvar(i,j,k,3) + d1 - d2;
+    dvar(i,j,k,3) = dvar(i,j,k,3) + d1;// - d2;
   }
 };
 #endif
