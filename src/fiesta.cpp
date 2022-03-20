@@ -102,23 +102,34 @@ struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **a
 /* void Fiesta::initializeSimulation(struct inputConfig &cf, std::unique_ptr<class rk_func>&f){ */
 void Fiesta::initializeSimulation(Simulation &sim){
 #ifdef HAVE_MPI
-  if (sim.cf.visc || sim.cf.ceq){
-    if (sim.cf.mpiScheme == 1)
-      sim.cf.m = std::make_shared<orderedHostHaloExchange>(sim.cf,sim.f->var);
-    else if (sim.cf.mpiScheme == 2)
-      sim.cf.m = std::make_shared<orderedHaloExchange>(sim.cf,sim.f->var);
-    else{
-      Log::error("Invalid MPI type.  Only 'gpu-aware' and 'host' are available when viscosity or c-equations are enabled.");
-      exit(EXIT_FAILURE);
-    }
-  }else{
-    if (sim.cf.mpiScheme == 1)
-      sim.cf.m = std::make_shared<copyHaloExchange>(sim.cf,sim.f->var);
-    else if (sim.cf.mpiScheme == 2)
-      sim.cf.m = std::make_shared<packedHaloExchange>(sim.cf,sim.f->var);
-    else if (sim.cf.mpiScheme == 3)
-      sim.cf.m = std::make_shared<directHaloExchange>(sim.cf,sim.f->var);
-  }
+  //if (sim.cf.visc || sim.cf.ceq){
+  //  if (sim.cf.mpiScheme == 1)
+  //    sim.cf.m = std::make_shared<orderedHostHaloExchange>(sim.cf,sim.f->var);
+  //  else if (sim.cf.mpiScheme == 2)
+  //    sim.cf.m = std::make_shared<orderedHaloExchange>(sim.cf,sim.f->var);
+  //  else{
+  //    Log::error("Invalid MPI type.  Only 'gpu-aware' and 'host' are available when viscosity or c-equations are enabled.");
+  //    exit(EXIT_FAILURE);
+  //  }
+  //}else{
+  //  if (sim.cf.mpiScheme == 1)
+  //    sim.cf.m = std::make_shared<copyHaloExchange>(sim.cf,sim.f->var);
+  //  else if (sim.cf.mpiScheme == 2)
+  //    sim.cf.m = std::make_shared<packedHaloExchange>(sim.cf,sim.f->var);
+  //  else if (sim.cf.mpiScheme == 3)
+  //    sim.cf.m = std::make_shared<directHaloExchange>(sim.cf,sim.f->var);
+  //}
+
+  if (sim.cf.mpiScheme == 1)
+    sim.cf.m = std::make_shared<copyHaloExchange>(sim.cf,sim.f->var);
+  else if (sim.cf.mpiScheme == 2)
+    sim.cf.m = std::make_shared<packedHaloExchange>(sim.cf,sim.f->var);
+  else if (sim.cf.mpiScheme == 3)
+    sim.cf.m = std::make_shared<directHaloExchange>(sim.cf,sim.f->var);
+  else if (sim.cf.mpiScheme == 4)
+    sim.cf.m = std::make_shared<orderedHaloExchange>(sim.cf,sim.f->var);
+  else
+    sim.cf.m = std::make_shared<orderedHostHaloExchange>(sim.cf,sim.f->var);
 #endif
   //sim.cf.w = std::make_shared<hdfWriter>(sim.cf,f);
 
