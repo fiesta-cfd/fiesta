@@ -366,6 +366,7 @@ void blockWriter<T>::write(struct inputConfig cf, std::unique_ptr<class rk_func>
     writer.writeAttribute("time_index",tdx);
     writer.writeAttribute("time",time);
     writer.writeAttribute("title",cf.title);
+    writer.writeAttribute("metadata",cf.metadata);
     writer.writeAttribute("fiesta_version",std::string(FIESTA_VERSION));
     writer.writeAttribute("fiesta_options",std::string(FIESTA_OPTIONS));
     writer.writeAttribute("fiesta_btime",std::string(FIESTA_BTIME));

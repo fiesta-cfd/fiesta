@@ -75,6 +75,7 @@ struct inputConfig {
   int timeFormat;
   std::string inputFname;
   std::string title;
+  std::string metadata;
   std::string terrainName;
   int xmp, ymp, zmp;
   int ndim;

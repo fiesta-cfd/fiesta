@@ -159,6 +159,7 @@ void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
 
 
   // Defaultable Parameters
+  L.get({"metadata"}, cf.metadata, std::string("none"));
   L.get({"eos","R"},        cf.R,       8.314462);
   //L.get("cequations"},      cf.ceq,     0);
   //L.get("noise"},    cf.noise,   0);
