@@ -1,7 +1,7 @@
 fiesta.title = "Two Dimensional Rayleigh-Taylor"
 
 --Output Options
-fiesta.status_frequency = 5000
+fiesta.status.frequency = 5000
 
 --Gas Properties
 fiesta.R = 1.0                          --Universal Gas Constant [J/(K*mol)]
@@ -43,10 +43,10 @@ fiesta.bc.ymax = "hydrostatic"
 
 --Cequations
 fiesta.ceq.enabled=true
-fiesta.ceq.kappa=10
-fiesta.ceq.epsilon=5
-fiesta.ceq.alpha=40
-fiesta.ceq.beta=0
+fiesta.ceq.kappa=10.0
+fiesta.ceq.epsilon=0.4
+fiesta.ceq.alpha=40.0
+fiesta.ceq.beta=0.0
 fiesta.ceq.betae=0
 
 --Noise Filter

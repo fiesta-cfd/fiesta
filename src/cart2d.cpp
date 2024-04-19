@@ -199,9 +199,11 @@ void cart2d_func::compute() {
   }
 
   if (cf.ceq) {
-    FSCAL maxS,maxS_recv;
-    FSCAL maxC,maxC_recv;
-    FSCAL maxCh,maxCh_recv;
+    FSCAL maxS, maxC, maxCh;
+
+#ifdef HAVE_MPI
+    FSCAL maxS_recv, maxC_recv, maxCh_recv;
+#endif
 
     timers["ceq"].reset();
 
@@ -216,11 +218,11 @@ void cart2d_func::compute() {
     MPI_Allreduce(&maxS, &maxS_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
     MPI_Allreduce(&maxC, &maxC_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
     MPI_Allreduce(&maxCh, &maxCh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
-#endif
 
     maxS=maxS_recv;
     maxC=maxC_recv;
     maxCh=maxCh_recv;
+#endif
 
     FSCAL alpha = (cf.dx*cf.dx + cf.dy*cf.dy)/(maxCh+1.0e-6)*cf.alpha;
 
@@ -271,12 +273,15 @@ void cart2d_func::postStep() {
     policy_f cell_pol = policy_f({cf.ng, cf.ng}, {cf.ngi - cf.ng, cf.ngj - cf.ng});
 
     if (cf.ceq == 1) {
-      FSCAL maxCh,maxCh_recv;
+      FSCAL maxCh;
+      #ifdef HAVE_MPI
+          FSCAL maxCh_recv;
+      #endif
       Kokkos::parallel_reduce(cell_pol, maxCvar2D(var, 1, cd), Kokkos::Max<FSCAL>(maxCh));
       #ifdef HAVE_MPI
         MPI_Allreduce(&maxCh, &maxCh_recv, 1, MPI_DOUBLE, MPI_MAX, cf.comm);
+	maxCh=maxCh_recv;
       #endif
-      maxCh=maxCh_recv;
       coff = cf.n_coff * maxCh;
     } else {
       coff = 0.0;
