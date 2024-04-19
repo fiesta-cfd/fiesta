@@ -17,6 +17,9 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifndef CART3D_H
+#define CART3D_H
+
 #include "Kokkos_Core.hpp"
 #include "kokkosTypes.hpp"
 #include "input.hpp"
@@ -31,6 +34,8 @@ public:
   void postStep();
   void preSim();
   void postSim();
+  void pushRegion(std::string name, bool saveDvar);
+  void popRegion(std::string name, bool saveDvar);
 
   FS3D p;       // Pressure
   FS3D T;       // Temperature
@@ -42,11 +47,16 @@ public:
   FS3D fluxx;   // Weno Fluxes in X direction
   FS3D fluxy;   // Weno Fluxes in Y direction
   FS3D fluxz;   // Weno Fluxes in Z direction
+  FS4D stress; // Stress tensor on X faces
   FS5D stressx; // Stress tensor on X faces
   FS5D stressy; // Stress tensor on Y faces
   FS5D stressz; // Stress tensor on Z faces
   FS4D gradRho; // Density Gradient array
   FS4D cFlux;
   FS6D mFlux;
+  FS3D_I noise;
   FS1D cd; // Device configuration array
+  FSCAL dxmag;
 };
+
+#endif

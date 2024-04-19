@@ -20,6 +20,14 @@
 #ifndef FIESTA_HPP
 #define FIESTA_HPP
 
+#ifdef HAVE_SINGLE
+#define FSCAL float
+#define MPI_FSCAL MPI_FLOAT
+#else
+#define FSCAL double
+#define MPI_FSCAL MPI_DOUBLE
+#endif
+
 #include "Kokkos_Core.hpp"
 #include "debug.hpp"
 #include <fstream>
@@ -31,20 +39,20 @@
 //#define FS_LAYOUT  Kokkos::LayoutLeft
 #define FS_LAYOUT Kokkos::DefaultExecutionSpace::array_layout
 
-// double view types
-typedef typename Kokkos::View<double ******, FS_LAYOUT> FS6D;
-typedef typename Kokkos::View<double *****, FS_LAYOUT> FS5D;
-typedef typename Kokkos::View<double ****, FS_LAYOUT> FS4D;
-typedef typename Kokkos::View<double ***, FS_LAYOUT> FS3D;
-typedef typename Kokkos::View<double **, FS_LAYOUT> FS2D;
-typedef typename Kokkos::View<double *, FS_LAYOUT> FS1D;
+// FSCAL view types
+typedef typename Kokkos::View<FSCAL ******, FS_LAYOUT> FS6D;
+typedef typename Kokkos::View<FSCAL *****, FS_LAYOUT> FS5D;
+typedef typename Kokkos::View<FSCAL ****, FS_LAYOUT> FS4D;
+typedef typename Kokkos::View<FSCAL ***, FS_LAYOUT> FS3D;
+typedef typename Kokkos::View<FSCAL **, FS_LAYOUT> FS2D;
+typedef typename Kokkos::View<FSCAL *, FS_LAYOUT> FS1D;
 
-typedef typename Kokkos::View<double ******, FS_LAYOUT>::HostMirror FS6DH;
-typedef typename Kokkos::View<double *****, FS_LAYOUT>::HostMirror FS5DH;
-typedef typename Kokkos::View<double ****, FS_LAYOUT>::HostMirror FS4DH;
-typedef typename Kokkos::View<double ***, FS_LAYOUT>::HostMirror FS3DH;
-typedef typename Kokkos::View<double **, FS_LAYOUT>::HostMirror FS2DH;
-typedef typename Kokkos::View<double *, FS_LAYOUT>::HostMirror FS1DH;
+typedef typename Kokkos::View<FSCAL ******, FS_LAYOUT>::HostMirror FS6DH;
+typedef typename Kokkos::View<FSCAL *****, FS_LAYOUT>::HostMirror FS5DH;
+typedef typename Kokkos::View<FSCAL ****, FS_LAYOUT>::HostMirror FS4DH;
+typedef typename Kokkos::View<FSCAL ***, FS_LAYOUT>::HostMirror FS3DH;
+typedef typename Kokkos::View<FSCAL **, FS_LAYOUT>::HostMirror FS2DH;
+typedef typename Kokkos::View<FSCAL *, FS_LAYOUT>::HostMirror FS1DH;
 
 // int view types
 typedef typename Kokkos::View<int ******, FS_LAYOUT> FS6D_I;

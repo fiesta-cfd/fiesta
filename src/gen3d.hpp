@@ -17,6 +17,9 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifndef GEN3D_H
+#define GEN3D_H
+
 #include "Kokkos_Core.hpp"
 #include "kokkosTypes.hpp"
 #include "input.hpp"
@@ -50,8 +53,10 @@ public:
   FS4D cFlux;
   FS6D mFlux;
   FS1D cd; // Device configuration array
-#ifndef NOMPI
+#ifdef HAVE_MPI
   FS5D ls, lr, rs, rr, bs, br, ts, tr, hs, hr, fs, fr;
   FS5DH lsH, lrH, rsH, rrH, bsH, brH, tsH, trH, hsH, hrH, fsH, frH;
 #endif
 };
+
+#endif

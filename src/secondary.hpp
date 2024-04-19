@@ -20,6 +20,8 @@
 #ifndef SECONDARY_H
 #define SECONDARY_H
 
+#include "kokkosTypes.hpp"
+
 struct copyExtraVars2D {
   FS4D varx;
   FS3D vel;
@@ -50,8 +52,8 @@ struct copyExtraVars3D {
     varx(i,j,k,0) = vel(i,j,k,0);
     varx(i,j,k,1) = vel(i,j,k,1);
     varx(i,j,k,2) = vel(i,j,k,2);
-    varx(i,j,k,3) = p(i,j,k);
-    varx(i,j,k,4) = T(i,j,k);
+    varx(i,j,k,3) =   p(i,j,k);
+    varx(i,j,k,4) =   T(i,j,k);
     varx(i,j,k,5) = rho(i,j,k);
   }
 };
@@ -70,9 +72,9 @@ public:
 
     int ns = (int)cd(0);
     int nv = (int)cd(4);
-    double gamma, gammas, Rs;
-    double Cp = 0;
-    double Cv = 0;
+    FSCAL gamma, gammas, Rs;
+    FSCAL Cp = 0;
+    FSCAL Cv = 0;
 
     rho(i, j) = 0.0;
 
@@ -117,9 +119,9 @@ struct calculateRhoPT3D {
 
     int ns = (int)cd(0);
     int nv = (int)cd(4);
-    double gamma, gammas, Rs;
-    double Cp = 0;
-    double Cv = 0;
+    FSCAL gamma, gammas, Rs;
+    FSCAL Cp = 0;
+    FSCAL Cv = 0;
 
     rho(i, j, k) = 0.0;
 

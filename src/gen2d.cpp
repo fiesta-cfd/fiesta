@@ -78,18 +78,18 @@ gen2d_func::gen2d_func(struct inputConfig &cf_) : rk_func(cf_) {
   varx  = FS4D("varx", cf.ngi, cf.ngj, cf.ngk, varxNames.size()); // Extra Vars
 
   // Create Timers
-  timers["flux"] = fiestaTimer("Flux Calculation");
-  timers["pressgrad"] = fiestaTimer("Pressure Gradient Calculation");
-  timers["calcSecond"] = fiestaTimer("Secondary Variable Calculation");
-  timers["solWrite"] = fiestaTimer("Solution Write Time");
-  timers["resWrite"] = fiestaTimer("Restart Write Time");
-  timers["statCheck"] = fiestaTimer("Status Check");
-  timers["rk"] = fiestaTimer("Runge Stage Update");
-  timers["halo"] = fiestaTimer("Halo Exchanges");
-  timers["bc"] = fiestaTimer("Boundary Conditions");
-  timers["calcMetrics"] = fiestaTimer("Metric Calculations");
+  timers["flux"] = Timer::fiestaTimer("Flux Calculation");
+  timers["pressgrad"] = Timer::fiestaTimer("Pressure Gradient Calculation");
+  timers["calcSecond"] = Timer::fiestaTimer("Secondary Variable Calculation");
+  timers["solWrite"] = Timer::fiestaTimer("Solution Write Time");
+  timers["resWrite"] = Timer::fiestaTimer("Restart Write Time");
+  timers["statCheck"] = Timer::fiestaTimer("Status Check");
+  timers["rk"] = Timer::fiestaTimer("Runge Stage Update");
+  timers["halo"] = Timer::fiestaTimer("Halo Exchanges");
+  timers["bc"] = Timer::fiestaTimer("Boundary Conditions");
+  timers["calcMetrics"] = Timer::fiestaTimer("Metric Calculations");
   if (cf.noise == 1) {
-    timers["noise"] = fiestaTimer("Noise Removal");
+    timers["noise"] = Timer::fiestaTimer("Noise Removal");
   }
 
   ghostPol = policy_f({0, 0}, {cf.ngi, cf.ngj});
@@ -111,11 +111,11 @@ void gen2d_func::compute() {
   timers["flux"].reset();
   for (int v = 0; v < cf.nv; ++v) {
     if (cf.scheme == 3) {
-      parallel_for(facePol, computeFluxQuick2D(var,p,rho,fluxx,fluxy,cd,v));
+      parallel_for(facePol, computeFluxQuick2D(var,p,tvel,fluxx,fluxy,cd,v));
     } else if (cf.scheme == 2) {
       parallel_for(facePol, computeFluxCentered2D(var,p,rho,fluxx,fluxy,cd,v));
     } else {
-      parallel_for(facePol, computeFluxWeno2D(var,p,rho,tvel,fluxx,fluxy,cd,v));
+      parallel_for(facePol, computeFluxWeno2D(var,p,rho,tvel,fluxx,fluxy,cf.dx,cf.dy,v));
     }
     parallel_for(cellPol, advect2D(dvar, fluxx, fluxy, cd, v));
   }
@@ -150,7 +150,7 @@ void gen2d_func::postStep() {
   if (cf.noise == 1) {
     int M = 0;
     int N = 0;
-    double coff;
+    FSCAL coff;
 
     if ((cf.nci - 1) % 2 == 0)
       M = (cf.nci - 1) / 2;
@@ -168,11 +168,10 @@ void gen2d_func::postStep() {
     timers["noise"].reset();
     for (int v = 0; v < 2; ++v) {
       Kokkos::parallel_for(noise_pol,
-                           detectNoise2D(var, noise, cf.n_dh, coff, cd, v));
+                           detectNoise2D(var, varx, noise, cf.n_dh, coff, cd, v));
       for (int tau = 0; tau < cf.n_nt; ++tau) {
-        Kokkos::parallel_for(cellPol,
-                             removeNoise2D(dvar, var, noise, cf.n_eta, cd, v));
-        Kokkos::parallel_for(cellPol, updateNoise2D(dvar, var, v));
+        Kokkos::parallel_for(cellPol, removeNoise2D(dvar, var, varx, noise, cf.n_eta, cd, v));
+        //Kokkos::parallel_for(cellPol, updateNoise2D(dvar, var, v));
       }
     }
     Kokkos::fence();
@@ -198,16 +197,16 @@ void gen2d_func::preSim() {
   int mnci = cf.nci;
   int mncj = cf.ncj;
 
-#ifndef NOMPI
+#ifdef HAVE_MPI
   // mpi exchange of metrics
-  ls = Kokkos::View<double ****, FS_LAYOUT>("leftSend", cf.ng, cf.ngj, 2, 2);
-  lr = Kokkos::View<double ****, FS_LAYOUT>("leftRecv", cf.ng, cf.ngj, 2, 2);
-  rs = Kokkos::View<double ****, FS_LAYOUT>("rightSend", cf.ng, cf.ngj, 2, 2);
-  rr = Kokkos::View<double ****, FS_LAYOUT>("rightRecv", cf.ng, cf.ngj, 2, 2);
-  bs = Kokkos::View<double ****, FS_LAYOUT>("bottomSend", cf.ngi, cf.ng, 2, 2);
-  br = Kokkos::View<double ****, FS_LAYOUT>("bottomRecv", cf.ngi, cf.ng, 2, 2);
-  ts = Kokkos::View<double ****, FS_LAYOUT>("topSend", cf.ngi, cf.ng, 2, 2);
-  tr = Kokkos::View<double ****, FS_LAYOUT>("topRecv", cf.ngi, cf.ng, 2, 2);
+  ls = Kokkos::View<FSCAL ****, FS_LAYOUT>("leftSend", cf.ng, cf.ngj, 2, 2);
+  lr = Kokkos::View<FSCAL ****, FS_LAYOUT>("leftRecv", cf.ng, cf.ngj, 2, 2);
+  rs = Kokkos::View<FSCAL ****, FS_LAYOUT>("rightSend", cf.ng, cf.ngj, 2, 2);
+  rr = Kokkos::View<FSCAL ****, FS_LAYOUT>("rightRecv", cf.ng, cf.ngj, 2, 2);
+  bs = Kokkos::View<FSCAL ****, FS_LAYOUT>("bottomSend", cf.ngi, cf.ng, 2, 2);
+  br = Kokkos::View<FSCAL ****, FS_LAYOUT>("bottomRecv", cf.ngi, cf.ng, 2, 2);
+  ts = Kokkos::View<FSCAL ****, FS_LAYOUT>("topSend", cf.ngi, cf.ng, 2, 2);
+  tr = Kokkos::View<FSCAL ****, FS_LAYOUT>("topRecv", cf.ngi, cf.ng, 2, 2);
 
   lsH = Kokkos::create_mirror_view(ls);
   lrH = Kokkos::create_mirror_view(lr);

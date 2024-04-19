@@ -17,19 +17,16 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include "rkfunction.hpp"
 #include "rk.hpp"
 #include "kokkosTypes.hpp"
 #include "Kokkos_Core.hpp"
 #include "debug.hpp"
 #include "input.hpp"
-#include "rkfunction.hpp"
 #include "bc.hpp"
 
-void rkAdvance(struct inputConfig &cf, class rk_func *f){
+void rkAdvance(struct inputConfig &cf, class std::unique_ptr<class rk_func>&f){
   typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_1;
-  // apply boundary conditions
-  applyBCs(cf, f);
-
   // First Stage Compute
   f->compute();
 
@@ -37,8 +34,8 @@ void rkAdvance(struct inputConfig &cf, class rk_func *f){
   FS4D mytmp = f->tmp1;
   FS4D myvar = f->var;
   FS4D mydvar = f->dvar;
-  double dt = cf.dt;
-  double nvt = cf.nvt;
+  FSCAL dt = cf.dt;
+  FSCAL nvt = cf.nvt;
 
   // First stage update
   f->timers["rk"].reset();
@@ -48,20 +45,16 @@ void rkAdvance(struct inputConfig &cf, class rk_func *f){
         for (int v=0; v<nvt; ++v){
           mytmp(i, j, k, v) = myvar(i, j, k, v);
           myvar(i, j, k, v) =
-            myvar(i, j, k, v) + 0.5 * dt * mydvar(i, j, k, v);
+            myvar(i, j, k, v) + 0.5f * dt * mydvar(i, j, k, v);
         }
       });
   Kokkos::fence();
   f->timers["rk"].accumulate();
 
-  // apply boundary conditions
-  applyBCs(cf, f);
-
   // Second stage compute
   f->compute();
 
   // assign temporary variables
-  // mytmp = f->tmp1;
   myvar = f->var;
   mydvar = f->dvar;
 

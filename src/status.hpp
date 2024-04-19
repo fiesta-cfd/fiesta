@@ -17,6 +17,9 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifndef STATUS_H
+#define STATUS_H
+
 #include "Kokkos_Core.hpp"
 #include "kokkosTypes.hpp"
 #include "timer.hpp"
@@ -24,5 +27,7 @@
 #include <iomanip>
 #include <iostream>
 
-void statusCheck(int cFlag, struct inputConfig cf, rk_func *f, double time,
-                                         fiestaTimer &wall, fiestaTimer &sim);
+void statusCheck(int cFlag, struct inputConfig cf, std::unique_ptr<class rk_func>&f, FSCAL time,
+                                         Timer::fiestaTimer &wall, Timer::fiestaTimer &sim);
+
+#endif

@@ -17,54 +17,81 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <memory>
 #include "fiesta.hpp"
 #include "input.hpp"
 #include "debug.hpp"
-#ifndef NOMPI
+#ifdef HAVE_MPI
 #include "mpi.hpp"
 #endif
 #include "output.hpp"
 #include "rkfunction.hpp"
 #include "status.hpp"
-#include <iostream>
 #include <set>
+#include "log.hpp"
+#include "block.hpp"
+//#include <csignal>
+#include <string>
+#include <vector>
+#include "luaReader.hpp"
+#include "fmt/core.h"
+#include "pretty.hpp"
+#include <filesystem>
+#include "log2.hpp"
+#include <iostream>
+#include "reader.hpp"
+#ifdef HAVE_LIBYOGRT
+#include "yogrt.h"
+#endif
+#include "signal.hpp"
+#include "rk.hpp"
 
 using namespace std;
 
 //
 // Initialize Fiesta and fill configuration structure with input file variables
 //
-struct inputConfig Fiesta::initialize(int argc, char **argv){
+struct inputConfig Fiesta::initialize(struct inputConfig &cf, int argc, char **argv){
   struct commandArgs cArgs = getCommandlineOptions(argc, argv);
-
-  Kokkos::InitArguments kokkosArgs;
-#ifdef HAVE_CUDA
-  kokkosArgs.ndevices = cArgs.numDevices;
-#elif HAVE_OPENMP
-  kokkosArgs.num_threads = cArgs.numThreads;
-#endif
 
   // Initialize MPI and get temporary rank.
   int temp_rank = 0;
-#ifndef NOMPI
+#ifdef HAVE_MPI
   MPI_Init(NULL, NULL);
   MPI_Comm_rank(MPI_COMM_WORLD, &temp_rank);
 #endif
 
   if (temp_rank == 0) printSplash(cArgs.colorFlag);
 
-  // Initialize kokkos and set kokkos finalize as exit function.
+  Log::Logger(cArgs.verbosity,cArgs.colorFlag,temp_rank);
+
+  // Initialize Kokkos
+  Log::message("Initializing Kokkos");
+  Kokkos::InitArguments kokkosArgs;
+#ifdef HAVE_CUDA
+  kokkosArgs.ndevices = cArgs.numDevices;
+#elif HAVE_OPENMP
+  kokkosArgs.num_threads = cArgs.numThreads;
+#endif
   Kokkos::initialize(kokkosArgs);
-  // Kokkos::initialize(argc, argv);
 
   // Execute lua script and get input parameters
-  struct inputConfig cf = executeConfiguration(cArgs);
+  Log::message("Executing Lua Input Script: '{}'",cArgs.fileName);
+  executeConfiguration(cf,cArgs);
 
-#ifndef NOMPI
-  // perform domain decomposition and MPI initialization.
+#ifdef HAVE_MPI
+  // perform domain decomposition
+  Log::message("Initializing MPI Setup");
   mpi_init(cf);
+  MPI_Barrier(cf.comm);
 #endif
+  Log::message("Printing Configuration");
   printConfig(cf);
+
+  // create signal handler
+  class fiestaSignalHandler *signalHandler = 0;
+  signalHandler = signalHandler->getInstance(cf);
+  signalHandler->registerSignals();
 
   return cf;
 }
@@ -72,194 +99,250 @@ struct inputConfig Fiesta::initialize(int argc, char **argv){
 //
 // Initialize the simulation and load initial data
 //
-void Fiesta::initializeSimulation(struct inputConfig &cf, rk_func *f){
-  //create IO object
-#ifdef NOMPI
-  cf.w = new serialVTKWriter(cf, f->grid, f->var);
-#else
-  cf.w = new hdfWriter(cf, f);
-  if (cf.mpiScheme == 1)
-    cf.m = new copyHaloExchange(cf, f->var);
-  else if (cf.mpiScheme == 2)
-    cf.m = new packedHaloExchange(cf, f->var);
-  else if (cf.mpiScheme == 3)
-    cf.m = new directHaloExchange(cf, f->var);
+/* void Fiesta::initializeSimulation(struct inputConfig &cf, std::unique_ptr<class rk_func>&f){ */
+void Fiesta::initializeSimulation(Simulation &sim){
+#ifdef HAVE_MPI
+  //if (sim.cf.visc || sim.cf.ceq){
+  //  if (sim.cf.mpiScheme == 1)
+  //    sim.cf.m = std::make_shared<orderedHostHaloExchange>(sim.cf,sim.f->var);
+  //  else if (sim.cf.mpiScheme == 2)
+  //    sim.cf.m = std::make_shared<orderedHaloExchange>(sim.cf,sim.f->var);
+  //  else{
+  //    Log::error("Invalid MPI type.  Only 'gpu-aware' and 'host' are available when viscosity or c-equations are enabled.");
+  //    exit(EXIT_FAILURE);
+  //  }
+  //}else{
+  //  if (sim.cf.mpiScheme == 1)
+  //    sim.cf.m = std::make_shared<copyHaloExchange>(sim.cf,sim.f->var);
+  //  else if (sim.cf.mpiScheme == 2)
+  //    sim.cf.m = std::make_shared<packedHaloExchange>(sim.cf,sim.f->var);
+  //  else if (sim.cf.mpiScheme == 3)
+  //    sim.cf.m = std::make_shared<directHaloExchange>(sim.cf,sim.f->var);
+  //}
+
+  if (sim.cf.mpiScheme == 1)
+    sim.cf.m = std::make_shared<copyHaloExchange>(sim.cf,sim.f->var);
+  else if (sim.cf.mpiScheme == 2)
+    sim.cf.m = std::make_shared<packedHaloExchange>(sim.cf,sim.f->var);
+  else if (sim.cf.mpiScheme == 3)
+    sim.cf.m = std::make_shared<directHaloExchange>(sim.cf,sim.f->var);
+  else if (sim.cf.mpiScheme == 4)
+    sim.cf.m = std::make_shared<orderedHaloExchange>(sim.cf,sim.f->var);
+  else
+    sim.cf.m = std::make_shared<orderedHostHaloExchange>(sim.cf,sim.f->var);
 #endif
+  //sim.cf.w = std::make_shared<hdfWriter>(sim.cf,f);
+
 
   // If not restarting, generate initial conditions and grid
-  if (cf.restart == 0) {
+  if (sim.cf.restart == 0) {
     // Generate Grid Coordinates
-    if (cf.rank == 0)
-      cout << c(cf.colorFlag, GRE) << "Generating Grid:" << c(cf.colorFlag, NON) << endl;
-    cf.gridTimer.start();
-    loadGrid(cf, f->grid);
-    cf.gridTimer.stop();
-    if (cf.rank == 0)
-      cout << "    Generated in: " << c(cf.colorFlag, CYA) << cf.gridTimer.getf(cf.timeFormat)
-           << c(cf.colorFlag, NON) << endl
-           << endl;
+    Log::message("Generating grid");
+    sim.cf.gridTimer.start();
+    loadGrid(sim.cf, sim.f->grid);
+    sim.cf.gridTimer.stop();
+    Log::message("Grid generated in: {}",sim.cf.gridTimer.get());
 
     // Generate Initial Conditions
-    if (cf.rank == 0)
-      cout << c(cf.colorFlag, GRE)
-           << "Generating Initial Conditions:" << c(cf.colorFlag, NON) << endl;
-    cf.loadTimer.start();
-    loadInitialConditions(cf, f->var, f->grid);
-    cf.loadTimer.stop();
-    if (cf.rank == 0)
-      cout << "    Generated in: " << c(cf.colorFlag, CYA) << cf.loadTimer.getf(cf.timeFormat)
-           << c(cf.colorFlag, NON) << endl
-           << endl;
+    Log::message("Generating initial conditions");
+    sim.cf.loadTimer.start();
+    loadInitialConditions(sim.cf, sim.f->var, sim.f->grid);
+    sim.cf.loadTimer.stop();
+    Log::message("Initial conditions generated in: {}",sim.cf.loadTimer.get());
 
-    cf.writeTimer.start();
-    // Write Initial Solution File
-    if (cf.rank == 0)
-      if (cf.write_freq > 0 || cf.restart_freq > 0)
-        cout << c(cf.colorFlag, GRE)
-             << "Writing Initial Conditions:" << c(cf.colorFlag, NON) << endl;
-    if (cf.write_freq > 0) {
-      f->timers["solWrite"].reset();
-      cf.w->writeSolution(cf, f, 0, 0.00);
-      f->timers["solWrite"].accumulate();
-    }
-    // Write Initial Restart File
-    if (cf.restart_freq > 0) {
-      f->timers["resWrite"].reset();
-      cf.w->writeRestart(cf, f, 0, 0.00);
-      f->timers["resWrite"].accumulate();
-    }
-    cf.writeTimer.stop();
-    if (cf.rank == 0)
-      if (cf.write_freq > 0 || cf.restart_freq > 0)
-        cout << "    Wrote in: " << c(cf.colorFlag, CYA) << cf.writeTimer.getf(cf.timeFormat)
-             << c(cf.colorFlag, NON) << endl;
+    // sim.cf.writeTimer.start();
+    // // Write initial solution file
+    // if (sim.cf.write_freq > 0) {
+    //   sim.f->timers["solWrite"].reset();
+    //   sim.cf.w->writeSolution(sim.cf, f, 0, 0.00);
+    //   sim.f->timers["solWrite"].accumulate();
+    // }
 
+    // // Write Initial Restart File
+    // if (sim.cf.restart_freq > 0) {
+    //   sim.f->timers["resWrite"].reset();
+    //   sim.cf.w->writeRestart(sim.cf, f, 0, 0.00);
+    //   sim.f->timers["resWrite"].accumulate();
+    // }
+    // sim.cf.writeTimer.stop();
   }else{ // If Restarting, Load Restart File
-    cf.writeTimer.start();
-    if (cf.rank == 0)
-      cout << c(cf.colorFlag, GRE) << "Loading Restart File:" << c(cf.colorFlag, NON)
-           << endl;
-    cf.loadTimer.reset();
-    cf.w->readSolution(cf, f->grid, f->var);
-    cf.loadTimer.stop();
-    if (cf.rank == 0)
-      cout << "    Loaded in: " << setprecision(2) << c(cf.colorFlag, CYA)
-           << cf.loadTimer.getf(cf.timeFormat) << "s" << c(cf.colorFlag, NON) << endl;
+    sim.cf.writeTimer.start();
+    Log::message("Loading restart file:");
+    sim.cf.loadTimer.reset();
+    readRestart(sim.cf, sim.f);
+    sim.cf.loadTimer.stop();
+    Log::message("Loaded restart data in: {}",sim.cf.loadTimer.get());
+  }
 
+  if (sim.cf.rank==0){
+    if (!std::filesystem::exists(sim.cf.pathName)){
+      Log::message("Creating directory: '{}'",sim.cf.pathName);
+      std::filesystem::create_directories(sim.cf.pathName);
+    }
   }
-  // notify simulation start
-  if (cf.rank == 0) {
-    cout << endl << "-----------------------" << endl << endl;
-   cout << c(cf.colorFlag, GRE) << "Starting Simulation:" << c(cf.colorFlag, NON) << endl;
-  }
+
+  sim.restartview = std::make_unique<blockWriter<FSCAL>>(sim.cf, sim.f, sim.cf.autoRestartName, sim.cf.pathName, false, sim.cf.restart_freq,!sim.cf.autoRestart);
+
+  luaReader L(sim.cf.inputFname,"fiesta");
+  L.getIOBlock(sim.cf,sim.f,sim.cf.ndim,sim.ioviews);
+  L.close();
+
 }
 
 // Write solutions, restarts and status checks
-void Fiesta::checkIO(struct inputConfig &cf, rk_func *f, int t, double time){
+void Fiesta::checkIO(Simulation &sim, size_t t){
+  collectSignals(sim.cf);
   // Print current time step
-  if (cf.rank == 0) {
-    if (cf.out_freq > 0)
-      if ((t + 1) % cf.out_freq == 0)
-        cout << c(cf.colorFlag, YEL) << left << setw(15)
-             << "    Iteration:" << c(cf.colorFlag, NON) << c(cf.colorFlag, CYA) << right
-             << setw(0) << t + 1 << c(cf.colorFlag, NON) << "/" << c(cf.colorFlag, CYA)
-             << left << setw(0) << cf.tend << c(cf.colorFlag, NON) << ", "
-             << c(cf.colorFlag, CYA) << right << setw(0) << setprecision(3)
-             << scientific << time << "s" << c(cf.colorFlag, NON) << endl;
+  if (sim.cf.rank == 0) {
+    if (sim.cf.out_freq > 0)
+      if (t % sim.cf.out_freq == 0)
+        Log::info("[{}] Timestep {} of {}. Simulation Time: {:.2e}s",t,t,sim.cf.tend,sim.cf.time);
   }
-  // Write solution file if necessary
-  if (cf.write_freq > 0) {
-    if ((t + 1) % cf.write_freq == 0) {
-      f->timers["solWrite"].reset();
-      cf.w->writeSolution(cf, f, t + 1, time);
-      Kokkos::fence();
-      f->timers["solWrite"].accumulate();
-    }
-  }
-  // Write restart file if necessary
-  if (cf.restart_freq > 0) {
-    if ((t + 1) % cf.restart_freq == 0) {
-      f->timers["resWrite"].reset();
-      cf.w->writeRestart(cf, f, t + 1, time);
-      Kokkos::fence();
-      f->timers["resWrite"].accumulate();
-    }
-  }
+
   // Print status check if necessary
-  if (cf.stat_freq > 0) {
-    if ((t + 1) % cf.stat_freq == 0) {
-      f->timers["statCheck"].reset();
-      statusCheck(cf.colorFlag, cf, f, time, cf.totalTimer, cf.simTimer);
-      f->timers["statCheck"].accumulate();
+  if (sim.cf.stat_freq > 0) {
+    if (t % sim.cf.stat_freq == 0) {
+      sim.f->timers["statCheck"].reset();
+      statusCheck(sim.cf.colorFlag, sim.cf, sim.f, sim.cf.time, sim.cf.totalTimer, sim.cf.simTimer);
+      sim.f->timers["statCheck"].accumulate();
+    }
+  }
+
+  // Write solution file if necessary
+  if (sim.cf.write_freq > 0) {
+    if (t % sim.cf.write_freq == 0) {
+      sim.f->timers["solWrite"].reset();
+      sim.cf.w->writeSolution(sim.cf, sim.f, t, sim.cf.time);
+      Kokkos::fence();
+      sim.f->timers["solWrite"].accumulate();
+    }
+  }
+
+  // Check Restart Frequency
+  if (sim.cf.restart_freq > 0 && t > sim.cf.tstart) {
+    if (t % sim.cf.restart_freq == 0) {
+      sim.cf.restartFlag=1;
+    }
+  }
+
+#ifdef HAVE_LIBYOGRT
+  // Check Time-Remaining and Flag Restart
+  if (sim.cf.rank==0){
+    if(yogrt_remaining() < sim.cf.restartTimeRemaining){
+      sim.cf.restartFlag = 1;
+      sim.cf.exitFlag = 1;
+      Log::error("Time remaining is less than {}s:  Writing restart and exiting after timestep {}.",sim.cf.restartTimeRemaining,sim.cf.t);
+    }
+  }
+#endif
+
+  #ifdef HAVE_MPI
+  {
+  int glblRestartFlag=0;
+  int glblExitFlag=0;
+  MPI_Allreduce(&sim.cf.restartFlag,&glblRestartFlag,1,MPI_INT,MPI_MAX,sim.cf.comm);
+  sim.cf.restartFlag=glblRestartFlag;
+  MPI_Allreduce(&sim.cf.exitFlag,&glblExitFlag,1,MPI_INT,MPI_MAX,sim.cf.comm);
+  sim.cf.exitFlag=glblExitFlag;
+  }
+  #endif
+
+  // Write restart file if necessary
+  if (sim.cf.restartFlag==1){
+    sim.f->timers["resWrite"].reset();
+    //sim.cf.w->writeRestart(sim.cf, f, t, time);
+    sim.restartview->write(sim.cf,sim.f,t,sim.cf.time);
+    Kokkos::fence();
+    sim.f->timers["resWrite"].accumulate();
+    sim.cf.restartFlag=0;
+  }
+
+  // Write solution blocks
+  for (auto& block : sim.ioviews){
+    if(block.frq() > 0){
+      if (t % block.frq() == 0) {
+        sim.f->timers["solWrite"].reset();
+        block.write(sim.cf,sim.f,t,sim.cf.time);
+        sim.f->timers["solWrite"].accumulate();
+      }
+    }
+    sim.cf.ioThisStep = false;
+    if (t % block.frq() == 0){
+      sim.cf.ioThisStep = true;
     }
   }
 }
 
-void Fiesta::reportTimers(struct inputConfig &cf, rk_func *f){
-  // notify simulation complete
-  if (cf.rank == 0)
-    cout << c(cf.colorFlag, GRE) << "Simulation Complete!" << c(cf.colorFlag, NON) << endl;
+void Fiesta::collectSignals(struct inputConfig &cf){
+#ifdef HAVE_MPI
+  int glblRestartFlag=0;
+  int glblExitFlag=0;
 
+  MPI_Allreduce(&cf.restartFlag,&glblRestartFlag,1,MPI_INT,MPI_MAX,cf.comm);
+  cf.restartFlag=glblRestartFlag;
+
+  MPI_Allreduce(&cf.exitFlag,&glblExitFlag,1,MPI_INT,MPI_MAX,cf.comm);
+  cf.exitFlag=glblExitFlag;
+#endif
+
+  if (cf.restartFlag && cf.exitFlag)
+      Log::warning("Recieved SIGURG:  Writing restart and exiting after timestep {}.",cf.t);
+  else if (cf.restartFlag)
+      Log::message("Recieved SIGUSR1:  Writing restart after timestep {}.",cf.t);
+  else if (cf.exitFlag)
+      Log::error("Recieved SIGTERM:  Exiting after timestep {}.",cf.t);
+}
+
+void Fiesta::reportTimers(struct inputConfig &cf, std::unique_ptr<class rk_func>&f){
+  Log::message("Reporting Timers:");
   // Sort computer timers
-  typedef std::function<bool(std::pair<std::string, fiestaTimer>,
-                             std::pair<std::string, fiestaTimer>)>
+  typedef std::function<bool(std::pair<std::string, Timer::fiestaTimer>,
+                             std::pair<std::string, Timer::fiestaTimer>)>
       Comparator;
-  Comparator compFunctor = [](std::pair<std::string, fiestaTimer> elem1,
-                              std::pair<std::string, fiestaTimer> elem2) {
+  Comparator compFunctor = [](std::pair<std::string, Timer::fiestaTimer> elem1,
+                              std::pair<std::string, Timer::fiestaTimer> elem2) {
     return elem1.second.get() > elem2.second.get();
   };
-  std::set<std::pair<std::string, fiestaTimer>, Comparator> stmr(
+  std::set<std::pair<std::string, Timer::fiestaTimer>, Comparator> stmr(
       f->timers.begin(), f->timers.end(), compFunctor);
 
-  // print timer values
-  if (cf.rank == 0) {
-    cout << endl << "-----------------------" << endl << endl;
-    cout.precision(2);
-    cout << c(cf.colorFlag, GRE) << left << setw(36)
-         << "Total Time:" << c(cf.colorFlag, NON) << c(cf.colorFlag, CYA) << right
-         << setw(13) << cf.totalTimer.getf(cf.timeFormat) << c(cf.colorFlag, NON) << endl
-         << endl;
+  if (cf.rank==0){
+    using fmt::format;
+    ansiColors c(cf.colorFlag);
 
-    cout << c(cf.colorFlag, GRE) << left << setw(36)
-         << "  Setup Time:" << c(cf.colorFlag, NON) << c(cf.colorFlag, CYA) << right
-         << setw(13) << cf.initTimer.getf(cf.timeFormat) << c(cf.colorFlag, NON) << endl;
-    if (cf.restart == 1)
-      cout << c(cf.colorFlag, NON) << left << setw(36)
-           << "    Restart Read:" << c(cf.colorFlag, NON) << c(cf.colorFlag, CYA) << right
-           << setw(13) << cf.loadTimer.getf(cf.timeFormat) << c(cf.colorFlag, NON) << endl
-           << endl;
-    else {
-      cout << c(cf.colorFlag, NON) << left << setw(36)
-           << "    Initial Condition Generation:" << c(cf.colorFlag, NON)
-           << c(cf.colorFlag, CYA) << right << setw(13) << cf.loadTimer.getf(cf.timeFormat)
-           << c(cf.colorFlag, NON) << endl;
-      cout << c(cf.colorFlag, NON) << left << setw(36)
-           << "    Grid Generation:" << c(cf.colorFlag, NON) << c(cf.colorFlag, CYA)
-           << right << setw(13) << cf.gridTimer.getf(cf.timeFormat) << c(cf.colorFlag, NON) << endl;
-      cout << c(cf.colorFlag, NON) << left << setw(36)
-           << "    Initial Condition WriteTime:" << c(cf.colorFlag, NON)
-           << c(cf.colorFlag, CYA) << right << setw(13) << cf.writeTimer.getf(cf.timeFormat)
-           << c(cf.colorFlag, NON) << endl
-           << endl;
-    }
+    string timerFormat = format("{: >8}{{}}{{: <{}}}{{:{}.3e}}{}\n","",32,16,c(reset));
+    cout << format(timerFormat,c(green),"Total Execution Time",cf.totalTimer.get());
+    cout << "\n";
 
-    cout << c(cf.colorFlag, GRE) << left << setw(36)
-         << "  Simulation Time:" << c(cf.colorFlag, NON) << c(cf.colorFlag, CYA) << right
-         << setw(13) << cf.simTimer.getf(cf.timeFormat) << c(cf.colorFlag, NON) << endl;
-    for (auto tmr : stmr) {
-      cout << c(cf.colorFlag, NON) << left << setw(36)
-           << "    " + tmr.second.describe() + ":" << c(cf.colorFlag, NON)
-           << c(cf.colorFlag, CYA) << right << setw(13) << tmr.second.getf(cf.timeFormat)
-           << c(cf.colorFlag, NON) << endl;
+    cout << format(timerFormat,c(green),"Total Startup Time",cf.initTimer.get());
+    if (cf.restart==1)
+      cout << format(timerFormat,c(reset),"Restart Read",cf.loadTimer.get());
+    else{
+      cout << format(timerFormat,c(reset),"Initial Condition Generation",cf.loadTimer.get());
+      cout << format(timerFormat,c(reset),"Grid Generation",cf.gridTimer.get());
+      cout << format(timerFormat,c(reset),"Initial Condition Write Time",cf.writeTimer.get());
     }
-    cout << " " << endl;
+    cout << "\n";
+
+    cout << format(timerFormat,c(green),"Total Simulation Time",cf.simTimer.get());
+    for (auto tmr : stmr)
+      cout << format(timerFormat,c(reset),tmr.second.describe(),tmr.second.get());
   }
+}
+
+void Fiesta::step(Simulation &sim, size_t t){
+      sim.f->preStep();
+      rkAdvance(sim.cf,sim.f);
+      sim.f->postStep();
+
+      sim.cf.time += sim.cf.dt;
+      sim.cf.t = t + 1;
 }
  
 // clean up kokkos and mpi
 void Fiesta::finalize(){
   Kokkos::finalize();
-#ifndef NOMPI
+#ifdef HAVE_MPI
   MPI_Finalize();
 #endif
 }

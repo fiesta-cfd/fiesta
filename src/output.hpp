@@ -17,6 +17,9 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifndef OUTPUT_H
+#define OUTPUT_H
+
 #include "input.hpp"
 #include <string>
 
@@ -28,3 +31,5 @@ void printConfig(struct inputConfig cf);
 enum Color { RED, GRE, YEL, BLU, MAG, CYA, NON };
 
 string c(int cFlag, Color color);
+
+#endif

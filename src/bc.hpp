@@ -16,12 +16,21 @@
   You should have received a copy of the GNU Lesser General Public License
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
+#ifndef BC_H
+#define BC_H
 
+#include "rkfunction.hpp"
 #include "Kokkos_Core.hpp"
 #include "kokkosTypes.hpp"
 #include "input.hpp"
-#ifndef NOMPI
+#include <string>
+#ifdef HAVE_MPI
 #include "mpi.hpp"
 #endif
 
+enum class BCType {outflow,reflective,noslip,hydrostatic};
+/* void applyBCs(struct inputConfig cf, std::unique_ptr<class rk_func>&f); */
 void applyBCs(struct inputConfig cf, class rk_func *f);
+BCType parseBC(std::string name);
+
+#endif

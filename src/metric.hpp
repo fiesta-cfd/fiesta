@@ -29,7 +29,7 @@ struct computeMetrics2D {
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i, const int j) const {
 
-    double x_xi, y_xi, x_et, y_et, jac;
+    FSCAL x_xi, y_xi, x_et, y_et, jac;
     int ii, jj;
 
     ii = i - 3;
@@ -68,85 +68,85 @@ struct computeMetrics3D {
     int jj = j - 3;
     int kk = k - 3;
 
-    double xmx = (grid(ii, jj, kk, 0) + grid(ii, jj + 1, kk, 0) +
+    FSCAL xmx = (grid(ii, jj, kk, 0) + grid(ii, jj + 1, kk, 0) +
                   grid(ii, jj, kk + 1, 0) + grid(ii, jj + 1, kk + 1, 0)) /
                  4.0;
-    double xpx =
+    FSCAL xpx =
         (grid(ii + 1, jj, kk, 0) + grid(ii + 1, jj + 1, kk, 0) +
          grid(ii + 1, jj, kk + 1, 0) + grid(ii + 1, jj + 1, kk + 1, 0)) /
         4.0;
-    double xmy = (grid(ii, jj, kk, 1) + grid(ii, jj + 1, kk, 1) +
+    FSCAL xmy = (grid(ii, jj, kk, 1) + grid(ii, jj + 1, kk, 1) +
                   grid(ii, jj, kk + 1, 1) + grid(ii, jj + 1, kk + 1, 1)) /
                  4.0;
-    double xpy =
+    FSCAL xpy =
         (grid(ii + 1, jj, kk, 1) + grid(ii + 1, jj + 1, kk, 1) +
          grid(ii + 1, jj, kk + 1, 1) + grid(ii + 1, jj + 1, kk + 1, 1)) /
         4.0;
-    double xmz = (grid(ii, jj, kk, 2) + grid(ii, jj + 1, kk, 2) +
+    FSCAL xmz = (grid(ii, jj, kk, 2) + grid(ii, jj + 1, kk, 2) +
                   grid(ii, jj, kk + 1, 2) + grid(ii, jj + 1, kk + 1, 2)) /
                  4.0;
-    double xpz =
+    FSCAL xpz =
         (grid(ii + 1, jj, kk, 2) + grid(ii + 1, jj + 1, kk, 2) +
          grid(ii + 1, jj, kk + 1, 2) + grid(ii + 1, jj + 1, kk + 1, 2)) /
         4.0;
 
-    double zmx = (grid(ii, jj, kk, 0) + grid(ii + 1, jj, kk, 0) +
+    FSCAL zmx = (grid(ii, jj, kk, 0) + grid(ii + 1, jj, kk, 0) +
                   grid(ii, jj + 1, kk, 0) + grid(ii + 1, jj + 1, kk, 0)) /
                  4.0;
-    double zpx =
+    FSCAL zpx =
         (grid(ii, jj, kk + 1, 0) + grid(ii + 1, jj, kk + 1, 0) +
          grid(ii, jj + 1, kk + 1, 0) + grid(ii + 1, jj + 1, kk + 1, 0)) /
         4.0;
-    double zmy = (grid(ii, jj, kk, 1) + grid(ii + 1, jj, kk, 1) +
+    FSCAL zmy = (grid(ii, jj, kk, 1) + grid(ii + 1, jj, kk, 1) +
                   grid(ii, jj + 1, kk, 1) + grid(ii + 1, jj + 1, kk, 1)) /
                  4.0;
-    double zpy =
+    FSCAL zpy =
         (grid(ii, jj, kk + 1, 1) + grid(ii + 1, jj, kk + 1, 1) +
          grid(ii, jj + 1, kk + 1, 1) + grid(ii + 1, jj + 1, kk + 1, 1)) /
         4.0;
-    double zmz = (grid(ii, jj, kk, 2) + grid(ii + 1, jj, kk, 2) +
+    FSCAL zmz = (grid(ii, jj, kk, 2) + grid(ii + 1, jj, kk, 2) +
                   grid(ii, jj + 1, kk, 2) + grid(ii + 1, jj + 1, kk, 2)) /
                  4.0;
-    double zpz =
+    FSCAL zpz =
         (grid(ii, jj, kk + 1, 2) + grid(ii + 1, jj, kk + 1, 2) +
          grid(ii, jj + 1, kk + 1, 2) + grid(ii + 1, jj + 1, kk + 1, 2)) /
         4.0;
 
-    double ymx = (grid(ii, jj, kk, 0) + grid(ii + 1, jj, kk, 0) +
+    FSCAL ymx = (grid(ii, jj, kk, 0) + grid(ii + 1, jj, kk, 0) +
                   grid(ii, jj, kk + 1, 0) + grid(ii + 1, jj, kk + 1, 0)) /
                  4.0;
-    double ypx =
+    FSCAL ypx =
         (grid(ii, jj + 1, kk, 0) + grid(ii + 1, jj + 1, kk, 0) +
          grid(ii, jj + 1, kk + 1, 0) + grid(ii + 1, jj + 1, kk + 1, 0)) /
         4.0;
-    double ymy = (grid(ii, jj, kk, 1) + grid(ii + 1, jj, kk, 1) +
+    FSCAL ymy = (grid(ii, jj, kk, 1) + grid(ii + 1, jj, kk, 1) +
                   grid(ii, jj, kk + 1, 1) + grid(ii + 1, jj, kk + 1, 1)) /
                  4.0;
-    double ypy =
+    FSCAL ypy =
         (grid(ii, jj + 1, kk, 1) + grid(ii + 1, jj + 1, kk, 1) +
          grid(ii, jj + 1, kk + 1, 1) + grid(ii + 1, jj + 1, kk + 1, 1)) /
         4.0;
-    double ymz = (grid(ii, jj, kk, 2) + grid(ii + 1, jj, kk, 2) +
+    FSCAL ymz = (grid(ii, jj, kk, 2) + grid(ii + 1, jj, kk, 2) +
                   grid(ii, jj, kk + 1, 2) + grid(ii + 1, jj, kk + 1, 2)) /
                  4.0;
-    double ypz =
+    FSCAL ypz =
         (grid(ii, jj + 1, kk, 2) + grid(ii + 1, jj + 1, kk, 2) +
          grid(ii, jj + 1, kk + 1, 2) + grid(ii + 1, jj + 1, kk + 1, 2)) /
         4.0;
 
-    double xxi = xpx - xmx;
-    double xet = ypx - ymx;
-    double xzt = zpx - zmx;
+    FSCAL xxi = xpx - xmx;
+    FSCAL xet = ypx - ymx;
+    FSCAL xzt = zpx - zmx;
 
-    double yxi = xpy - xmy;
-    double yet = ypy - ymy;
-    double yzt = zpy - zmy;
+    FSCAL yxi = xpy - xmy;
+    FSCAL yet = ypy - ymy;
+    FSCAL yzt = zpy - zmy;
 
-    double zxi = xpz - xmz;
-    double zet = ypz - ymz;
-    double zzt = zpz - zmz;
+    FSCAL zxi = xpz - xmz;
+    FSCAL zet = ypz - ymz;
+    FSCAL zzt = zpz - zmz;
 
-    double jac =
+    FSCAL jac =
         1.0 / (xxi * (yet * zzt - yzt * zet) + xet * (yzt * zxi - yxi * zzt) +
                xzt * (yxi * zet - yet * zxi));
 

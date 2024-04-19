@@ -20,7 +20,7 @@
 #include "kokkosTypes.hpp"
 #include <cassert>
 #include "input.hpp"
-#ifndef NOMPI
+#ifdef HAVE_MPI
 #include "mpi.hpp"
 #include "mpi.h"
 #endif
@@ -94,16 +94,16 @@ gen3d_func::gen3d_func(struct inputConfig &cf_) : rk_func(cf_) {
   varx = FS4D("varx",cf.ngi,cf.ngj,cf.ngk,varxNames.size());
 
   // Create Timers
-  timers["flux"]        = fiestaTimer("Flux Calculation");
-  timers["pressgrad"]   = fiestaTimer("Pressure Gradient Calculation");
-  timers["calcSecond"]  = fiestaTimer("Secondary Variable Calculation");
-  timers["solWrite"]    = fiestaTimer("Solution Write Time");
-  timers["resWrite"]    = fiestaTimer("Restart Write Time");
-  timers["statCheck"]   = fiestaTimer("Status Check");
-  timers["rk"] = fiestaTimer("Runge Stage Update");
-  timers["halo"] = fiestaTimer("Halo Exchanges");
-  timers["bc"] = fiestaTimer("Boundary Conditions");
-  timers["calcMetrics"] = fiestaTimer("Metric Computations");
+  timers["flux"]        = Timer::fiestaTimer("Flux Calculation");
+  timers["pressgrad"]   = Timer::fiestaTimer("Pressure Gradient Calculation");
+  timers["calcSecond"]  = Timer::fiestaTimer("Secondary Variable Calculation");
+  timers["solWrite"]    = Timer::fiestaTimer("Solution Write Time");
+  timers["resWrite"]    = Timer::fiestaTimer("Restart Write Time");
+  timers["statCheck"]   = Timer::fiestaTimer("Status Check");
+  timers["rk"] = Timer::fiestaTimer("Runge Stage Update");
+  timers["halo"] = Timer::fiestaTimer("Halo Exchanges");
+  timers["bc"] = Timer::fiestaTimer("Boundary Conditions");
+  timers["calcMetrics"] = Timer::fiestaTimer("Metric Computations");
 };
 
 void gen3d_func::preStep() {}
@@ -144,7 +144,7 @@ void gen3d_func::preSim() {
   int mnck = cf.nck;
   int mng = cf.ng;
 
-#ifndef NOMPI
+#ifdef HAVE_MPI
   // mpi exchange of metrics
   ls = FS5D("leftSend", cf.ng, cf.ngj, cf.ngk, 3, 3);
   lr = FS5D("leftRecv", cf.ng, cf.ngj, cf.ngk, 3, 3);
@@ -336,7 +336,6 @@ void gen3d_func::preSim() {
 void gen3d_func::postSim() {}
 
 void gen3d_func::compute() {
-
   // create range policies
   policy_f3 ghost_pol = policy_f3({0, 0, 0}, {cf.ngi, cf.ngj, cf.ngk});
   policy_f3 cell_pol = policy_f3(
@@ -357,8 +356,8 @@ void gen3d_func::compute() {
   for (int v = 0; v < cf.nv; ++v) {
     Kokkos::parallel_for(
         weno_pol,
-        calculateWenoFluxesG(var, p, rho, tvel, fluxx, fluxy, fluxz, cd, v));
-    Kokkos::parallel_for(cell_pol, advect3D(dvar, fluxx, fluxy, fluxz, v));
+        calculateFluxesG(var, p, rho, tvel, fluxx, fluxy, fluxz, cf.dx, cf.dy, cf.dx, v));
+    Kokkos::parallel_for(cell_pol, advect3D(dvar, varx, fluxx, fluxy, fluxz, v));
   }
   Kokkos::fence();
   timers["flux"].accumulate();

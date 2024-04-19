@@ -21,110 +21,112 @@
 #include "debug.hpp"
 #include "kokkosTypes.hpp"
 #include "input.hpp"
-#ifndef NOMPI
+#include <algorithm>
+#include "log2.hpp"
+#ifdef HAVE_MPI
 #include "mpi.hpp"
 #include "mpi.h"
 #endif
 
-struct bc_L {
-  FS4D u;
-  int n, ng, bc_type;
+#include <cstdio>
 
-  bc_L(int n_, int ng_, int bc_type_, FS4D u_)
-      : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
+struct bc_gen {
+  FS4D u;
+  int ihat, jhat, khat, ng, nv, ndim;
+  BCType type;
+
+  bc_gen(BCType type_, int ng_, int i_, int j_, int k_, int nv_, FS4D u_, int ndim_)
+      : type(type_), ng(ng_), ihat(i_), jhat(j_), khat(k_), nv(nv_), u(u_), ndim(ndim_) {}
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(const int j, const int k, const int v) const {
-    for (int i = 0; i < ng; ++i)
-      if (v == 0 && bc_type == 1)
-        u(n - i - 1, j, k, v) = -u(n + i, j, k, v);
-      else
-        u(n - i - 1, j, k, v) = u(n + i, j, k, v);
-  }
-};
+  void operator()(const int i, const int j, const int k) const {
 
-struct bc_R {
-  FS4D u;
-  int n, ng, bc_type;
+    if (type == BCType::outflow){
+      for (int v=0; v<nv; ++v){
+        for (int n=0; n<ng; ++n){
+          u(i+ihat*(n+1),j+jhat*(n+1),k+khat*(n+1),v) = u(i-ihat*n,j-jhat*n,k-khat*n,v);
+        }
+      }
+    }
 
-  bc_R(int n_, int ng_, int bc_type_, FS4D u_)
-      : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
+    if (type == BCType::reflective){
+      FSCAL reflect=1.0;
+      for (int v=0; v<nv; ++v){
+        reflect=1.0;
+        if(ihat != 0 && v==0) reflect=-1.0;
+        if(jhat != 0 && v==1) reflect=-1.0;
+        if(khat != 0 && v==2) reflect=-1.0;
+        for (int n=0; n<ng; ++n){
+          u(i+ihat*(n+1),j+jhat*(n+1),k+khat*(n+1),v) = reflect*u(i-ihat*n,j-jhat*n,k-khat*n,v);
+        }
+      }
+    }
 
-  KOKKOS_INLINE_FUNCTION
-  void operator()(const int j, const int k, const int v) const {
-    for (int i = 0; i < ng; ++i)
-      if (v == 0 && bc_type == 1)
-        u(n + i, j, k, v) = -u(n - i - 1, j, k, v);
-      else
-        u(n + i, j, k, v) = u(n - i - 1, j, k, v);
-  }
-};
+    if (type == BCType::noslip){
+      FSCAL reflect=1.0;
+      for (int v=0; v<nv; ++v){
+        reflect=1.0;
+        if(ihat != 0 && (v==0 || v==1 || v==2)) reflect=-1.0;
+        if(jhat != 0 && (v==0 || v==1 || v==2)) reflect=-1.0;
+        if(khat != 0 && (v==0 || v==1 || v==2)) reflect=-1.0;
+        for (int n=0; n<ng; ++n){
+          u(i+ihat*(n+1),j+jhat*(n+1),k+khat*(n+1),v) = reflect*u(i-ihat*n,j-jhat*n,k-khat*n,v);
+        }
+      }
+    }
 
-struct bc_B {
-  FS4D u;
-  int n, ng, bc_type;
+    if (type == BCType::hydrostatic){
+      // Do normal reflection first (to get momentums and other variables)
+      FSCAL reflect=1.0;
+      for (int v=0; v<nv; ++v){
+        reflect=1.0;
+        if(ihat != 0 && v==0) reflect=-1.0;
+        if(jhat != 0 && v==1) reflect=-1.0;
+        if(khat != 0 && v==2) reflect=-1.0;
+        for (int n=0; n<ng; ++n){
+          u(i+ihat*(n+1),j+jhat*(n+1),k+khat*(n+1),v) = reflect*u(i-ihat*n,j-jhat*n,k-khat*n,v);
+        }
+      }
+      // correct energy variable with linear pressure extension
+      int ig,jg,kg; //coordinates of ghost points
+      int i1,j1,k1; //coordinates of real points
+      int i2,j2,k2; //coordinates of real points
+      int edx=ndim;      // index of energy variable
+      int rdx=ndim+1;      // index of total density
+      for (int n=0; n<ng; ++n){
+        ig = i+ihat*(n+1);
+        jg = j+jhat*(n+1);
+        kg = k+khat*(n+1);
+        i1= ig-ihat;
+        j1= jg-jhat;
+        k1= kg-khat;
+        i2= ig-2*ihat;
+        j2= jg-2*jhat;
+        k2= kg-2*khat;
+        FSCAL ke=0;
+        FSCAL ke1=0;
+        FSCAL ke2=0;
 
-  bc_B(int n_, int ng_, int bc_type_, FS4D u_)
-      : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
+        //compute kinetic energies
+        for (int d=0; d<ndim; ++d){
+          ke  += 0.5*(u(ig,jg,kg,d)*u(ig,jg,kg,d));
+          ke1 += 0.5*(u(i1,j1,k1,d)*u(i1,j1,k1,d));
+          ke2 += 0.5*(u(i2,j2,k2,d)*u(i2,j2,k2,d));
+        }
+        ke  = ke/u(ig,jg,kg,rdx);
+        ke1 = ke1/u(i1,j1,k1,rdx);
+        ke2 = ke2/u(i2,j2,k2,rdx);
 
-  KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int k, const int v) const {
-    for (int j = 0; j < ng; ++j)
-      if (v == 1 && bc_type == 1)
-        u(i, n - j - 1, k, v) = -u(i, n + j, k, v);
-      else
-        u(i, n - j - 1, k, v) = u(i, n + j, k, v);
-  }
-};
+        u(ig,jg,kg,edx)= 2*(u(i1,j1,k1,edx)-ke1) - (u(i2,j2,k2,edx)-ke2) + ke;
 
-struct bc_T {
-  FS4D u;
-  int n, ng, bc_type;
+        //FSCAL ke = 0.5*(u(ig,jg,kg,0)*u(ig,jg,kg,0) + u(ig,jg,kg,1)*u(ig,jg,kg,1) + u(ig,jg,kg,2)*u(ig,jg,kg,2))/u(ig,jg,kg,4);
+        //FSCAL ke1= 0.5*(u(i1,j1,k1,0)*u(i1,j1,k1,0) + u(i1,j1,k1,1)*u(i1,j1,k1,1) + u(i1,j1,k1,2)*u(i1,j1,k1,2))/u(i1,j1,k1,4);
+        //FSCAL ke2= 0.5*(u(i2,j2,k2,0)*u(i2,j2,k2,0) + u(i2,j2,k2,1)*u(i2,j2,k2,1) + u(i2,j2,k2,2)*u(i2,j2,k2,2))/u(i2,j2,k2,4);
 
-  bc_T(int n_, int ng_, int bc_type_, FS4D u_)
-      : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
-
-  KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int k, const int v) const {
-    for (int j = 0; j < ng; ++j)
-      if (v == 1 && bc_type == 1)
-        u(i, n + j, k, v) = -u(i, n - j - 1, k, v);
-      else
-        u(i, n + j, k, v) = u(i, n - j - 1, k, v);
-  }
-};
-
-struct bc_H {
-  FS4D u;
-  int n, ng, bc_type;
-
-  bc_H(int n_, int ng_, int bc_type_, FS4D u_)
-      : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
-
-  KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j, const int v) const {
-    for (int k = 0; k < ng; ++k)
-      if (v == 2 && bc_type == 1)
-        u(i, j, n - k - 1, v) = -u(i, j, n + k, v);
-      else
-        u(i, j, n - k - 1, v) = u(i, j, n + k, v);
-  }
-};
-
-struct bc_F {
-  FS4D u;
-  int n, ng, bc_type;
-
-  bc_F(int n_, int ng_, int bc_type_, FS4D u_)
-      : n(n_), ng(ng_), bc_type(bc_type_), u(u_) {}
-
-  KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j, const int v) const {
-    for (int k = 0; k < ng; ++k)
-      if (v == 2 && bc_type == 1)
-        u(i, j, n + k, v) = -u(i, j, n - k - 1, v);
-      else
-        u(i, j, n + k, v) = u(i, j, n - k - 1, v);
+        // extrapolate pressure
+        //u(ig,jg,kg,3)= 2*(u(i1,j1,k1,3)-ke1) - (u(i2,j2,k2,3)-ke2) + ke;
+      }
+    }
   }
 };
 
@@ -135,12 +137,10 @@ struct bc_xPer {
   bc_xPer(int ng_, int nci_, FS4D u_) : ng(ng_), nci(nci_), u(u_) {}
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j, const int k, const int v) const {
-    double tmp;
-    for (int g = 1; g < ng + 1; ++g) {
-      tmp = u(i - g, j, k, v);
-      u(i - g, j, k, v) = u(nci + g, j, k, v);
-      u(nci + g, j, k, v) = tmp;
+  void operator()(const int j, const int k, const int v) const {
+    for (int g=0; g<ng; ++g) {
+      u(g,j,k,v) = u(nci+g,j,k,v);
+      u(nci+ng+g,j,k,v) = u(ng+g,j,k,v);
     }
   }
 };
@@ -152,12 +152,10 @@ struct bc_yPer {
   bc_yPer(int ng_, int ncj_, FS4D u_) : ng(ng_), ncj(ncj_), u(u_) {}
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j, const int k, const int v) const {
-    double tmp;
-    for (int g = 1; g < ng + 1; ++g) {
-      tmp = u(i, j - g, k, v);
-      u(i, j - g, k, v) = u(i, ncj + g, k, v);
-      u(i, ncj + g, k, v) = tmp;
+  void operator()(const int i, const int k, const int v) const {
+    for (int g=0; g<ng; ++g) {
+      u(i,g,k,v) = u(i,ncj+g,k,v);
+      u(i,ncj+ng+g,k,v) = u(i,ng+g,k,v);
     }
   }
 };
@@ -169,73 +167,104 @@ struct bc_zPer {
   bc_zPer(int ng_, int nck_, FS4D u_) : ng(ng_), nck(nck_), u(u_) {}
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(const int i, const int j, const int k, const int v) const {
-    double tmp;
-    for (int g = 1; g < ng + 1; ++g) {
-      tmp = u(i, j, k - g, v);
-      u(i, j, k - g, v) = u(i, j, nck + g, v);
-      u(i, j, nck + g, v) = tmp;
+  void operator()(const int i, const int j, const int v) const {
+    for (int g=0; g<ng; ++g) {
+      u(i,j,g,v) = u(i,j,nck+g,v);
+      u(i,j,nck+ng+g,v) = u(i,j,ng+g,v);
     }
   }
 };
 
+/* void applyBCs(struct inputConfig cf, class std::unique_ptr<class rk_func>&f) { */
 void applyBCs(struct inputConfig cf, class rk_func *f) {
 
   typedef Kokkos::MDRangePolicy<Kokkos::Rank<3>> policy_bl;
   typedef Kokkos::MDRangePolicy<Kokkos::Rank<4>> policy_bl4;
 
-#ifndef NOMPI
+#ifdef HAVE_MPI
   f->timers["halo"].reset();
   cf.m->haloExchange();
   f->timers["halo"].accumulate();
   f->timers["bc"].reset();
+//  if (cf.xPer == 1 && cf.xProcs==1)
+//    Kokkos::parallel_for(
+//        policy_bl({0, 0, 0}, {cf.ngj, cf.ngk, cf.nvt}),
+//        bc_xPer(cf.ng, cf.nci, f->var));
+//  if (cf.yPer == 1 && cf.yProcs==1)
+//    Kokkos::parallel_for(
+//        policy_bl({0, 0, 0}, {cf.ngi, cf.ngk, cf.nvt}),
+//        bc_yPer(cf.ng, cf.ncj, f->var));
+//  if (cf.ndim == 3 && cf.zPer == 1 && cf.zProcs==1)
+//    Kokkos::parallel_for(
+//        policy_bl({0, 0, 0}, {cf.ngi, cf.ngj, cf.nvt}),
+//        bc_zPer(cf.ng, cf.nck, f->var));
 #else
   f->timers["bc"].reset();
   if (cf.xPer == 1)
     Kokkos::parallel_for(
-        policy_bl4({0, 0, 0, 0}, {cf.nci, cf.ngj, cf.ngk, cf.nvt}),
+        policy_bl({0, 0, 0}, {cf.ngj, cf.ngk, cf.nvt}),
         bc_xPer(cf.ng, cf.nci, f->var));
   if (cf.yPer == 1)
     Kokkos::parallel_for(
-        policy_bl4({0, 0, 0, 0}, {cf.ngi, cf.ncj, cf.ngk, cf.nvt}),
+        policy_bl({0, 0, 0}, {cf.ngi, cf.ngk, cf.nvt}),
         bc_yPer(cf.ng, cf.ncj, f->var));
   if (cf.ndim == 3 && cf.zPer == 1)
     Kokkos::parallel_for(
-        policy_bl4({0, 0, 0, 0}, {cf.ngi, cf.ngj, cf.nck, cf.nvt}),
+        policy_bl({0, 0, 0}, {cf.ngi, cf.ngj, cf.nvt}),
         bc_zPer(cf.ng, cf.nck, f->var));
-
 #endif
 
   if (cf.xMinus < 0) {
-    Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngj, cf.ngk, cf.nvt}),
-                         bc_L(cf.ng, cf.ng, cf.bcL, f->var));
+    Kokkos::parallel_for(policy_bl({cf.ng, 0, 0}, {cf.ng+1, cf.ngj, cf.ngk}),
+                         bc_gen(cf.bcL, cf.ng, -1, 0, 0, cf.nvt, f->var,cf.ndim));
   }
 
   if (cf.xPlus < 0) {
-    Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngj, cf.ngk, cf.nvt}),
-                         bc_R(cf.ng + cf.nci, cf.ng, cf.bcR, f->var));
+    Kokkos::parallel_for(policy_bl({cf.ng+cf.nci-1, 0, 0}, {cf.ng+cf.nci, cf.ngj, cf.ngk}),
+                         bc_gen(cf.bcR, cf.ng, 1, 0, 0, cf.nvt, f->var,cf.ndim));
   }
 
   if (cf.yMinus < 0) {
-    Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngi, cf.ngk, cf.nvt}),
-                         bc_B(cf.ng, cf.ng, cf.bcB, f->var));
+    Kokkos::parallel_for(policy_bl({0, cf.ng, 0}, {cf.ngi, cf.ng+1, cf.ngk}),
+                         bc_gen(cf.bcB, cf.ng, 0, -1, 0, cf.nvt, f->var,cf.ndim));
   }
 
   if (cf.yPlus < 0) {
-    Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngi, cf.ngk, cf.nvt}),
-                         bc_T(cf.ng + cf.ncj, cf.ng, cf.bcT, f->var));
+    Kokkos::parallel_for(policy_bl({0, cf.ng+cf.ncj-1, 0}, {cf.ngi, cf.ng+cf.ncj, cf.ngk}),
+                         bc_gen(cf.bcT, cf.ng, 0, 1, 0, cf.nvt, f->var,cf.ndim));
   }
 
   if (cf.ndim == 3) {
     if (cf.zMinus < 0) {
-      Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngi, cf.ngj, cf.nvt}),
-                           bc_H(cf.ng, cf.ng, cf.bcH, f->var));
+      Kokkos::parallel_for(policy_bl({0, 0, cf.ng}, {cf.ngi, cf.ngj, cf.ng+1}),
+                           bc_gen(cf.bcH, cf.ng, 0, 0, -1, cf.nvt, f->var,cf.ndim));
     }
 
     if (cf.zPlus < 0) {
-      Kokkos::parallel_for(policy_bl({0, 0, 0}, {cf.ngi, cf.ngj, cf.nvt}),
-                           bc_F(cf.ng + cf.nck, cf.ng, cf.bcF, f->var));
+      Kokkos::parallel_for(policy_bl({0, 0, cf.ng+cf.nck-1}, {cf.ngi, cf.ngj, cf.ng+cf.nck}),
+                           bc_gen(cf.bcF, cf.ng, 0, 0, 1, cf.nvt, f->var,cf.ndim));
     }
   }
   f->timers["bc"].accumulate();
+}
+
+BCType parseBC(std::string name){
+  string oldname = name;
+  std::transform(name.begin(),name.end(),name.begin(),::tolower);
+  name.erase(std::remove(name.begin(),name.end(),'-'),name.end());
+  name.erase(std::remove(name.begin(),name.end(),'_'),name.end());
+  name.erase(std::remove(name.begin(),name.end(),' '),name.end());
+
+  if(name.compare("outflow")==0)
+    return BCType::outflow;
+  else if(name.compare("reflective")==0)
+    return BCType::reflective;
+  else if(name.compare("noslip")==0)
+    return BCType::noslip;
+  else if(name.compare("hydrostatic")==0)
+    return BCType::hydrostatic;
+  else{
+    Log::error("Unknown boundary condition '{}'",oldname);
+    exit(EXIT_FAILURE);
+  }
 }

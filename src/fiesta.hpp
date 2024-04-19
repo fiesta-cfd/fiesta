@@ -20,22 +20,35 @@
 #ifndef FIESTA2_HPP
 #define FIESTA2_HPP
 
-#include "input.hpp"
-#include "writer.hpp"
 #include "rkfunction.hpp"
+#include "writer.hpp"
+#include "input.hpp"
 #include <iostream>
-#ifndef NOMPI
-#include "hdf.hpp"
-#else
-#include "vtk.hpp"
-#endif
+#include <vector>
+#include "block.hpp"
+#include <memory>
 
-namespace Fiesta{
-    struct inputConfig initialize(int, char **);
-    void initializeSimulation(struct inputConfig&, rk_func*);
-    void reportTimers(struct inputConfig&, rk_func*);
-    void checkIO(struct inputConfig&, rk_func*, int, double);
+#define FIESTA_RESTART_VERSION 2
+
+namespace Fiesta {
+    struct Simulation {
+      std::unique_ptr<class rk_func> f;
+      std::unique_ptr<blockWriter<FSCAL>> restartview;
+      std::vector<blockWriter<float>> ioviews;
+      fsconf cf;
+    };
+
+    struct inputConfig initialize(struct inputConfig&,int, char **);
+    void initializeSimulation(struct inputConfig&, std::unique_ptr<class rk_func>&);
+    void initializeSimulation(Simulation &sim);
+    void reportTimers(struct inputConfig&, std::unique_ptr<class rk_func>&);
+    void checkIO(Simulation &sim, size_t t);
+    //void finalize(struct inputConfig &);
+    void step(Simulation &sim, size_t t);
+    void collectSignals(struct inputConfig &cf);
     void finalize();
+    int fiestaTest(int,int);
+
 };
 
 #endif

@@ -15,25 +15,37 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.14)
 include(ExternalProject)
-
-# Switch to nvcc compiler wrapper if building for cuda
-if (CUDA)
-  set(CMAKE_CXX_COMPILER "${CMAKE_SOURCE_DIR}/kokkos/bin/nvcc_wrapper")
-elseif(AMDGPU)
-  set(CMAKE_CXX_COMPILER "hipcc")
-endif()
+include(FetchContent)
 
 # set project name and languages
 project(Fiesta CXX C Fortran)
 
+# project wide settings
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Default cache variables
+set (Fiesta_CUDA             OFF CACHE BOOL "Enable Cuda build"       )
+set (Fiesta_HIP              OFF CACHE BOOL "Enable HIP build"        )
+set (Fiesta_OPENMP           OFF CACHE BOOL "Enable OpenMP build"     )
+set (Fiesta_SERIAL           OFF CACHE BOOL "Enable Serial build"     )
+set (Fiesta_BUILD_ALL        OFF CACHE BOOL "Enable super-build"      )
+set (Fiesta_BUILD_KOKKOS     OFF CACHE BOOL "Build kokkos"            )
+set (Fiesta_BUILD_HDF5       OFF CACHE BOOL "Build hdf5"              )
+set (Fiesta_BUILD_LUA        OFF CACHE BOOL "Build lua"               )
+set (Fiesta_BUILD_FMT        OFF CACHE BOOL "Build fmt"               )
+set (Fiesta_BUILD_TESTS      OFF CACHE BOOL "Build all tests"         )
+set (Fiesta_ENABLE_DEBUG     OFF CACHE BOOL "Enable Fiesta Debugging" )
+set (Fiesta_NO_MPI           OFF CACHE BOOL "Build Fiesta without MPI")
+set (Fiesta_ENABLE_YOGRT     OFF CACHE BOOL "Build the yogrt library" )
+set (Fiesta_SINGLE_PRECISION OFF CACHE BOOL "Use single precision"    )
 
 # get git branch and hash to set version, build type and date variables
-execute_process(COMMAND bash -c "cd ${CMAKE_CURRENT_LIST_DIR} && git describe --tags --dirty=+"
+execute_process(COMMAND bash -c "cd ${CMAKE_CURRENT_SOURCE_DIR} && git describe --tags --dirty=+"
                 OUTPUT_VARIABLE GIT_VER)
-execute_process(COMMAND bash -c "cd ${CMAKE_CURRENT_LIST_DIR} && git rev-parse --abbrev-ref HEAD"
+execute_process(COMMAND bash -c "cd ${CMAKE_CURRENT_SOURCE_DIR} && git rev-parse --abbrev-ref HEAD"
                 OUTPUT_VARIABLE GIT_BRANCH)
 string(STRIP ${GIT_VER} GIT_VER)
 string(STRIP ${GIT_BRANCH} GIT_BRANCH)
@@ -41,15 +53,14 @@ set(FIESTA_VER "${GIT_BRANCH}-${GIT_VER}")
 set_property(GLOBAL APPEND
     PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/.git/index")
-if (LITE)
-    set(FIESTA_OPTS "LITE")
+string(TIMESTAMP BUILD_TIME "%Y-%m-%dT%H:%MZ" UTC)
+if(Fiesta_NO_MPI)
+    set(FIESTA_OPTS "NO_MPI")
 else()
     set(FIESTA_OPTS "FULL")
 endif()
-string(TIMESTAMP BUILD_TIME "%Y-%m-%dT%H:%MZ" UTC)
 
 # compile flags
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
@@ -57,180 +68,62 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -pedantic -Wall -Wextra -fdiagnostics-color=al
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
 
-message("######## ${CMAKE_BUILD_TYPE} ########")
-if (CMAKE_BUILD_TYPE=Debug)
-    set(Kokkos_ENABLE_DEBUG ON CACHE BOOL "")
-    set(Kokkos_ENABLE_DEBUG_BOUNDS_CHECK ON CACHE BOOL "")
+# set parameters for debug builds
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(Fiesta_ENABLE_DEBUG ON CACHE BOOL "Enable Fiesta Debugging" FORCE)
+    set(Kokkos_ENABLE_DEBUG ON CACHE BOOL "" FORCE)
+    set(Kokkos_ENABLE_DEBUG_BOUNDS_CHECK ON CACHE BOOL "" FORCE)
 endif()
 
-# set kokkos options depending on build type
-if (CUDA)
-  # detect cuda architecture
-  find_package(CUDA)
-  CUDA_SELECT_NVCC_ARCH_FLAGS(TEST_ARCH Auto)
-
-  # set kokkos architecture flags depending on detected cuda architecture
-  if ("${TEST_ARCH_readable}" STREQUAL "sm_35")
-    set(Kokkos_ARCH_KEPLER35 ON CACHE BOOL "")
-  elseif ("${TEST_ARCH_readable}" STREQUAL "sm_60")
-    set(Kokkos_ARCH_PASCAL60 ON CACHE BOOL "")
-  elseif ("${TEST_ARCH_readable}" STREQUAL "sm_61")
-    set(Kokkos_ARCH_PASCAL61 ON CACHE BOOL "")
-  elseif ("${TEST_ARCH_readable}" STREQUAL "sm_70")
-    message("TURNING ON VOLTA70")
-    set(Kokkos_ARCH_VOLTA70 ON CACHE BOOL "")
-  endif()
-
-  # enable other kokkos cuda options and append build type string
-  set(Kokkos_ENABLE_CUDA ON CACHE BOOL "")
-  set(Kokkos_ENABLE_CUDA_LAMBDA ON CACHE BOOL "")
-  set(Kokkos_ENABLE_CXX17 ON CACHE BOOL "")
-  set(FIESTA_OPTS "${FIESTA_OPTS}+CUDA")
-elseif(AMDGPU)
-  set(Kokkos_ENABLE_HIP ON CACHE BOOL "")
-  set(Kokkos_ARCH_VEGA900 ON CACHE BOOL "")
-  set(FIESTA_OPTS "${FIESTA_OPTS}+AMD")
-elseif(OPENMP)
-  # set kokkos openmp optins and append build type string
-  set(Kokkos_ENABLE_OPENMP ON CACHE BOOL "")
-  set(FIESTA_OPTS "${FIESTA_OPTS}+OPENMP")
+#setup device list
+if (Fiesta_CUDA)
+    set(DEVICE CUDA)
+    set(FIESTA_OPTS "${FIESTA_OPTS}+CUDA")
+elseif(Fiesta_HIP)
+    set(DEVICE HIP)
+    set(FIESTA_OPTS "${FIESTA_OPTS}+HIP")
+elseif(Fiesta_OPENMP)
+    set(DEVICE OPENMP)
+    set(FIESTA_OPTS "${FIESTA_OPTS}+OPENMP")
+else()
+    set(DEVICE SERIAL)
+    set(FIESTA_OPTS "${FIESTA_OPTS}+SERIAL")
+    set(Fiesta_SERIAL ON CACHE BOOL "Enable Serial build" FORCE)
 endif()
 
-# Configure Kokkos
-include_directories(${Kokkos_INCLUDE_DIRS_RET})
-add_subdirectory(kokkos)
-
-# Get and Configure Tempi
-#find_package(Git QUIET)
-#if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
-# Update submodules as needed
-#    option(GIT_SUBMODULE "Check submodules during build" ON)
-#    if(GIT_SUBMODULE)
-#        message(STATUS "Submodule update")
-#        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
-#                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-#                        RESULT_VARIABLE GIT_SUBMOD_RESULT)
-#        if(NOT GIT_SUBMOD_RESULT EQUAL "0")
-#            message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
-#        endif()
-#    endif()
-#endif()
-#
-#if(NOT EXISTS "${PROJECT_SOURCE_DIR}/extern/tempi/CMakeLists.txt")
-#    message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
-#endif()
-
-#if(USE_TEMPI)
-#  add_subdirectory(extern/tempi)
-#endif(USE_TEMPI)
-
-# Configure Lua
-include_directories(lua/src)
-add_subdirectory(lua)
-
-## enforce static build
-#SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-#SET(BUILD_SHARED_LIBS OFF)
-#SET(CMAKE_EXE_LINKER_FLAGS "-static")
-
-# If doing a full build, find mpi
-if (NOT LITE)
-    # MPI
-    find_package(MPI REQUIRED)
-    include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+if(Fiesta_BUILD_ALL)
+    message(STATUS "FIESTA: Super-build enabled.")
+    set (Fiesta_BUILD_KOKKOS ON CACHE BOOL "Build kokkos" FORCE)
+    set (Fiesta_BUILD_HDF5   ON CACHE BOOL "Build hdf5"   FORCE)
+    set (Fiesta_BUILD_LUA    ON CACHE BOOL "Build lua"    FORCE)
+    set (Fiesta_BUILD_FMT    ON CACHE BOOL "Build fmt"    FORCE)
 endif()
 
-# set install directory for third party components
-set(installDir ${CMAKE_CURRENT_BINARY_DIR}/install)
+#find third party components
+if (NOT Fiesta_NO_MPI)
+    find_package(MPI QUIET REQUIRED)
+endif()
+include(tpls/kokkos.cmake)
+include(tpls/lua.cmake)
+include(tpls/fmt.cmake)
+include(tpls/hdf5.cmake)
+include(tpls/yogrt.cmake)
 
-# If doing a full build, find or build hdf5
-if (NOT LITE)
-    if (NOT BUILD_HDF5)
-        find_package(HDF5)
-    endif()
+#import FiestaCore and fiesta targetrs
+include_directories(src)
+add_subdirectory(src)
+add_dependencies(FiestaCore ${YOGRT_PREFIX})
 
-    if (HDF5_FOUND AND HDF5_IS_PARALLEL)
-        include_directories(SYSTEM ${HDF5_C_INCLUDE_DIRS})
-    else()
-        ExternalProject_Add(hdf5Parallel
-          SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/hdf5
-          INSTALL_DIR ${installDir}
-          BUILD_BYPRODUCTS ${installDir}/lib/libhdf5.a
-                           ${installDir}/lib/libhdf5_hl.a
-                           ${installDir}/lib/libhdf5_tools.a
-          CMAKE_ARGS -D BUILD_SHARED_LIBS:BOOL=OFF
-                     -D BUILD_TESTING:BOOL=OFF
-                     -D HDF5_BUILD_EXAMPLES:BOOL=OFF
-                     -D HDF5_DISABLE_COMPILER_WARNINGS:BOOL=ON
-                     -D HDF5_ENABLE_PARALLEL:BOOL=ON
-                     -D HDF5_BUILD_CPP_LIB:BOOL=OFF
-                     -D CMAKE_INSTALL_PREFIX:PATH=${installDir}
-        )
-    endif()
+# import tests
+if (Fiesta_BUILD_TESTS)
+    include(tests/tests.cmake)
 endif()
 
-# include third party headers (might be empty if third party components are provided elsewhere)
-include_directories(${installDir}/include)
-
-# set base source files
-set(FIESTA_SRCS src/rk.cpp src/fiesta.cpp src/luaReader.cpp src/bc.cpp
-     src/status.cpp src/timer.cpp src/input.cpp src/output.cpp
-     src/main.cpp src/rkfunction.cpp src/writer.cpp
-     src/cart2d.cpp src/cart3d.cpp src/gen2d.cpp src/gen3d.cpp)
-
-add_executable(fiesta ${FIESTA_SRCS})
-target_link_libraries(fiesta PRIVATE
-                      kokkos
-                      lua)
-
-if (LITE)
-    # add LITE only build files and link
-    target_sources(fiesta PRIVATE src/vtk.cpp)
-else(LITE)
-    # add additional build files for non-lite builds
-    target_sources(fiesta PRIVATE src/mpi.cpp src/hdf.cpp)
-    target_link_libraries(fiesta PRIVATE kokkos)
-  
-    if (HDF5_FOUND AND HDF5_IS_PARALLEL)
-        message("### Using System HDF5")
-        # link to built hdf5 library
-        target_link_libraries(fiesta PRIVATE ${HDF5_C_LIBRARIES})
-    else()
-        # link to found hdf5 library
-        message("### Building HDF5")
-        add_dependencies(fiesta hdf5Parallel)
-        target_link_libraries(fiesta PRIVATE 
-                              ${installDir}/lib/libhdf5.a
-                              ${installDir}/lib/libhdf5_hl.a
-                              ${installDir}/lib/libhdf5_tools.a
-        )
-    endif(HDF5_FOUND AND HDF5_IS_PARALLEL)
-
-    if (TEMPI)
-        target_link_libraries(fiesta PRIVATE tempi)
-    endif (TEMPI)
-
-    target_link_libraries(fiesta PRIVATE ${MPI_CXX_LIBRARIES})
-endif(LITE)
-
-# add built strings to source code
-if(CUDA)
-    target_compile_definitions(fiesta PRIVATE HAVE_CUDA)
-elseif(OPENMP)
-    target_compile_definitions(fiesta PRIVATE HAVE_OPENMP)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set (Fiesta_ENABLE_DEBUG ON CACHE BOOL "Enable Fiesta Debugging" FORCE)
 endif()
-target_compile_definitions(fiesta PRIVATE FIESTA_VERSION="${FIESTA_VER}")
-target_compile_definitions(fiesta PRIVATE FIESTA_OPTIONS="${FIESTA_OPTS}")
-target_compile_definitions(fiesta PRIVATE FIESTA_BTIME="${BUILD_TIME}")
-if (LITE)
-    target_compile_definitions(fiesta PRIVATE NOMPI)
-endif()
-
-# set install destination
-install(TARGETS fiesta
-        RUNTIME DESTINATION)
 
 # print build strings
-message("Fiesta Version ${FIESTA_VER}")
-message("Fiesta Build Options ${FIESTA_OPTS}")
-message("Fiesta Build Time ${BUILD_TIME}")
+message("Fiesta Version:       ${FIESTA_VER}" )
+message("Fiesta Build Options: ${FIESTA_OPTS}")
+message("Fiesta Build Time:    ${BUILD_TIME}" )

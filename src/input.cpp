@@ -27,12 +27,14 @@
 #include <string>
 #include <regex>
 #include "luaReader.hpp"
-#include "hdf.hpp"
 #include <sys/types.h>
 #include <sys/stat.h>
+#include "unistd.h"
+#include "log2.hpp"
+#include "bc.hpp"
+#include <filesystem>
 
 struct commandArgs getCommandlineOptions(int argc, char **argv){
-
   // create command argumet structure
   struct commandArgs cArgs;
 
@@ -43,14 +45,19 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
   cArgs.colorFlag = 0;
   cArgs.numDevices = 1;
   cArgs.numThreads = 1;
+  cArgs.verbosity = 3;
+  cArgs.diagnostics = false;
 
   // create options
   static struct option long_options[] = {
-      {"version", no_argument, NULL, 'v'},
+      {"version", no_argument, NULL, 'V'},
+      {"verbosity", optional_argument, NULL, 'v'},
+      {"diagnostics", optional_argument, NULL, 'd'},
       {"color", optional_argument, NULL, 'c'},
-      {"time-format", optional_argument, NULL, 't'},
-      {"kokkos-ndevices", optional_argument, NULL, 'k'},
-      {"kokkos-num-devices", optional_argument, NULL, 'k'},
+      {"gpus-per-node", optional_argument, NULL, 'n'},
+      {"num-threads", optional_argument, NULL, 'n'},
+      {"kokkos-ndevices", optional_argument, NULL, 'n'},
+      {"kokkos-num-devices", optional_argument, NULL, 'n'},
       {"kokkos-threads", optional_argument, NULL, 'k'},
       {"kokkos-help", optional_argument, NULL, 'k'},
       {"kokkos-numa", optional_argument, NULL, 'k'},
@@ -59,13 +66,13 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
   std::string copt;
   int c = 1;
   int opt_index;
-  while ((c = getopt_long(argc, argv, "vctn:", long_options, &opt_index)) != -1) {
+  while ((c = getopt_long(argc, argv, "dVv:ctn:", long_options, &opt_index)) != -1) {
     switch (c) {
     case 'c':
       if (optarg)
         copt = std::string(optarg);
       else
-        copt = "auto";
+        copt = "on";
       break;
     case 'n':
 #ifdef HAVE_CUDA
@@ -75,23 +82,25 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
 #endif
       break;
     case 'v':
+      if (optarg)
+        cArgs.verbosity = atoi(optarg);
+      else
+        cArgs.verbosity = 3;
+      break;
+    case 'V':
       cArgs.versionFlag = 1;
       break;
-    case 't':
-      if (optarg)
-        cArgs.timeFormat = atoi(optarg);
-      else
-        cArgs.timeFormat = 0;
+    case 'd':
+      cArgs.diagnostics = true;
       break;
     }
   }
 
-  if (copt.compare("off") == 0)
-    cArgs.colorFlag = 0;
-  else if (copt.compare("on") == 0)
-    cArgs.colorFlag = 1;
-  else if (copt.compare("auto") == 0)
-    cArgs.colorFlag = 2;
+  cArgs.colorFlag = false;
+  if (copt.compare("on") == 0)
+    cArgs.colorFlag = true;
+  else if (copt.compare("auto") == 0 && isatty(fileno(stdout)))
+      cArgs.colorFlag = true;
 
   if (optind < argc)
     cArgs.fileName = std::string(argv[optind]);
@@ -111,92 +120,176 @@ struct commandArgs getCommandlineOptions(int argc, char **argv){
   return cArgs;
 }
 
-struct inputConfig executeConfiguration(struct commandArgs cargs) {
-  struct inputConfig cf;
+inputConfig::~inputConfig(){}
+
+//int Log::verbosity;
+//ansiColors *Log::c;
+//int Log::rank;
+//Kokkos::Timer *Log::timer;
+
+void executeConfiguration(struct inputConfig &cf, struct commandArgs cargs){
   cf.colorFlag = cargs.colorFlag;
   cf.timeFormat = cargs.timeFormat;
+  cf.verbosity = cargs.verbosity;
+  cf.diagnostics = cargs.diagnostics;
 
-  luaReader L(cargs.fileName);
+  luaReader L(cargs.fileName,"fiesta");
 
   // Required Parameters
-  L.get("nt",    cf.nt);
-  L.get("ni",    cf.glbl_nci);
-  L.get("nj",    cf.glbl_ncj);
-  L.get("ns",    cf.ns);
-  L.get("dt",    cf.dt);
-  L.get("R",     cf.R);
-  L.get("title", cf.title);
-  L.getArray("species_names",cf.speciesName,cf.ns);
+  L.get({"title"}, cf.title);
+
+  L.get({"time","nt"},cf.nt,0);
+  L.get({"time","dt"},cf.dt);
+  L.get({"time","start_index"},   cf.tstart,  0);
+  L.get({"time","start_time"},     cf.time,    0.0);
+  // Calculate time indices
+  cf.t = cf.tstart;
+  if(cf.nt==0){
+    cf.tinterval = false;
+    L.get({"time","tend"},cf.tend,0);
+    if(cf.tend==0){
+      Log::error("Must specify either 'fiesta.time.nt' or 'fiesta.time.tend'");
+      exit(EXIT_FAILURE);
+    }
+    cf.nt=cf.tend-cf.tstart;
+  }else{
+    cf.tinterval=true;
+    cf.tend = cf.tstart + cf.nt;
+  }
+
 
   // Defaultable Parameters
-  L.get("tstart",   cf.tstart,  0);
-  L.get("time",     cf.time,    0.0);
-  L.get("ceq",      cf.ceq,     0);
-  L.get("noise",    cf.noise,   0);
-  L.get("buoyancy", cf.gravity, 0);
-  L.get("ndim",     cf.ndim,    2);
-  L.get("visc",     cf.visc,    0);
-  L.get("procsx",   cf.xProcs,  1);
-  L.get("procsy",   cf.yProcs,  1);
-  L.get("ng",       cf.ng,      3);
-  L.get("xPer",     cf.xPer,    0);
-  L.get("yPer",     cf.yPer,    0);
-  L.get("bcXmin",   cf.bcL,     0);
-  L.get("bcXmax",   cf.bcR,     0);
-  L.get("bcYmin",   cf.bcB,     0);
-  L.get("bcYmax",   cf.bcT,     0);
-  L.get("restart",  cf.restart, 0);
-  L.get("out_freq",     cf.out_freq,    0);
-  L.get("write_freq",   cf.write_freq,  0);
-  L.get("restart_freq", cf.restart_freq,0);
-  L.get("stat_freq",    cf.stat_freq,   0);
-  L.get("restartName",  cf.restartName, "restart-0000000.h5");
-  L.get("terrainName", cf.terrainName, "terrain.h5");
-  L.get("pathName",     cf.pathName, ".");
+  L.get({"metadata"}, cf.metadata, std::string("none"));
+  L.get({"eos","R"},        cf.R,       8.314462);
+  //L.get("cequations"},      cf.ceq,     0);
+  //L.get("noise"},    cf.noise,   0);
+  L.get({"grid","ndim"},     cf.ndim,    2);
+  L.get({"viscosity","enabled"},     cf.visc,    false);
+  L.get({"ng"},       cf.ng,      3);
+  L.get({"bc","xperiodic"},     cf.xPer,    false);
+  L.get({"bc","yperiodic"},     cf.yPer,    false);
 
-  // Check if pathName is accessable
-  struct stat st;
-  if(stat(cf.pathName.c_str(),&st) != 0){
-    printf("Cannot access: %s\n",cf.pathName.c_str());
-    exit(EXIT_FAILURE);
-  }else if(st.st_mode & S_IFDIR == 0){
-    printf("Cannot access: %s\n",cf.pathName.c_str());
-    exit(EXIT_FAILURE);
+  L.get({"progress","frequency"},     cf.out_freq,    0);
+  L.get({"write_frequency"},   cf.write_freq,  0);
+  //L.get({"restart_frequency"}, cf.restart_freq,0);
+  L.get({"status","frequency"},    cf.stat_freq,   0);
+
+  L.get({"terrain","name"}, cf.terrainName, std::string("terrain.h5"));
+
+  L.get({"restart","enabled"}, cf.restart, false);
+  L.get({"restart","name"},    cf.restartName, std::string("restart-0000000.h5"));
+  L.get({"restart","path"},    cf.pathName, std::string("."));
+  L.get({"restart","reset"}, cf.restartReset, false);
+  L.get({"restart","auto"}, cf.autoRestart, false);
+  L.get({"restart","auto_name"}, cf.autoRestartName, std::string("restart-auto"));
+  L.get({"restart","time_remaining"}, cf.restartTimeRemaining, 0);
+  if(cf.autoRestart){
+    cf.restart=true;
+    cf.restartName=format("{}/{}.h5",cf.pathName,cf.autoRestartName);
+    Log::debug("Auto Restart Name: '{}'",cf.restartName);
+    if (!std::filesystem::exists(cf.restartName)){
+      Log::warning("Auto Restart '{}' not found. Initiating fresh run.",cf.autoRestartName);
+      cf.restart=false;
+    }
+    L.get({"restart","frequency"}, cf.restart_freq,cf.tend);
+  }else{
+    cf.autoRestartName="restart";
+    L.get({"restart","frequency"}, cf.restart_freq,0);
   }
 
   std::string scheme, grid, mpi;
-  L.get("scheme", scheme,"weno5");
-  L.get("grid",   grid,"cartesian");
-  L.get("mpi",    mpi, "host");
+  L.get({"mpi","type"}, mpi, std::string("host"));
+  L.get({"hdf5","chunk"}, cf.chunkable, false);
+  L.get({"hdf5","compress"}, cf.compressible, false);
+
+  if (!cf.chunkable && cf.compressible){
+    cf.compressible = false;
+    Log::warning("HDF5 Compression requires chunking.  Disabling.");
+  }
+
+  L.get({"advection_scheme"}, scheme, std::string("weno5"));
+  L.get({"grid","type"},   grid, std::string("cartesian"));
+
+  //vector<FSCAL> dx;
+  //L.getArray("dx",dx,cf.ndim);
+  L.get({"grid","dx"},cf.dxvec,cf.ndim);
+
+  vector<size_t> ni;
+  //L.getArray("ni",ni,cf.ndim);
+  L.get({"grid","ni"},ni,cf.ndim);
+  cf.glbl_nci = ni[0];
+  cf.glbl_ncj = ni[1];
+  if (cf.ndim == 3) 
+    cf.glbl_nck = ni[2];
+  else
+    cf.glbl_nck = 1.0;
+
+  vector<size_t> procs;
+  //L.getArray("procs",procs,cf.ndim);
+  L.get({"mpi","procs"},procs,cf.ndim);
+  cf.xProcs=procs[0];
+  cf.yProcs=procs[1];
+  if (cf.ndim == 3) 
+    cf.zProcs=procs[2];
+  else
+    cf.zProcs=1;
+
+  std::string bcname;
+
+  if (!cf.xPer){
+    L.get({"bc","xmin"},bcname);
+    cf.bcL=parseBC(bcname);
+    L.get({"bc","xmax"},bcname);
+    cf.bcR=parseBC(bcname);
+  }
+  if (!cf.yPer){
+    L.get({"bc","ymin"},bcname);
+    cf.bcB=parseBC(bcname);
+    L.get({"bc","ymax"},bcname);
+    cf.bcT=parseBC(bcname);
+  }
 
   // Dependent Parameters
-  if (cf.ceq == 1) {
-    L.get("kappa",  cf.kap);
-    L.get("epsilon",cf.eps);
-    L.get("alpha",  cf.alpha);
-    L.get("beta",   cf.beta);
-    L.get("betae",  cf.betae);
-    L.get("st",     cf.st,10);
+  //
+  L.get({"buoyancy","enabled"}, cf.buoyancy, false);
+  if (cf.buoyancy){
+    L.get({"buoyancy","acceleration"},cf.gAccel,9.81);
+    L.get({"buoyancy","rho_reference"},cf.rhoRef,0.0);
   }
-  if (cf.noise == 1) {
-    L.get("n_dh",  cf.n_dh);
-    L.get("n_eta", cf.n_eta);
-    L.get("n_coff",cf.n_coff);
-    L.get("n_nt",  cf.n_nt,1);
+  std::string test;
+  L.get({"ceq","enabled"},cf.ceq,false);
+  if(cf.ceq){
+    L.get({"ceq","kappa"},cf.kap,1.23456);
+    L.get({"ceq","epsilon"},cf.eps);
+    L.get({"ceq","alpha"},cf.alpha);
+    L.get({"ceq","beta"},cf.beta);
+    L.get({"ceq","betae"},cf.betae);
+    L.get({"ceq","st"},cf.st,0);
+  }
+
+  L.get({"noise","enabled"},cf.noise,false);
+  if(cf.noise){
+    L.get({"noise","dh"},cf.n_dh);
+    L.get({"noise","eta"},cf.n_eta);
+    L.get({"noise","coff"},cf.n_coff);
+    L.get({"noise","nt"},cf.n_nt,1);
+    L.get({"noise","mode"},cf.n_mode,1);
   }
   if (cf.ndim == 3) {
-    L.get("nk",     cf.glbl_nck);
-    L.get("procsz", cf.zProcs,1);
-    L.get("zPer",   cf.zPer,0);
-    L.get("bcZmin", cf.bcH,0);
-    L.get("bcZmaz", cf.bcF,0);
+    L.get({"bc","zperiodic"},   cf.zPer,false);
+    if(!cf.zPer){
+      L.get({"bc","zmin"}, bcname);
+      cf.bcH=parseBC(bcname);
+      L.get({"bc","zmax"}, bcname);
+      cf.bcF=parseBC(bcname);
+    }
   }
   if (grid.compare("cartesian") == 0) {
     cf.grid = 0;
-    L.get("dx",cf.dx);
-    L.get("dy",cf.dy);
+    cf.dx=cf.dxvec[0];
+    cf.dy=cf.dxvec[1];
     if (cf.ndim == 3)
-      L.get("dz",cf.dz);
+      cf.dz=cf.dxvec[2];
   }
   if (grid.compare("terrain") == 0) {
     if (cf.ndim == 3){
@@ -204,21 +297,15 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
       cf.dx=1.0;
       cf.dy=1.0;
       cf.dz = 1.0;
-      L.get("tdx",cf.tdx);
-      L.get("tdy",cf.tdy);
-      L.get("h",cf.h);
+      L.get({"tdx"},cf.tdx);
+      L.get({"tdy"},cf.tdy);
+      L.get({"h"},cf.h);
     } else {
       printf("ndim must be equal to 3 for terrain");
       exit(EXIT_FAILURE);
     }
   }
-  // Array Parameters
-  cf.M = (double *)malloc(cf.ns * sizeof(double));
-  cf.gamma = (double *)malloc(cf.ns * sizeof(double));
-  cf.mu = (double *)malloc(cf.ns * sizeof(double));
-  L.getArray("gamma",cf.gamma,cf.ns);
-  L.getArray("M",cf.M,cf.ns);
-  L.getArray("mu",cf.mu,cf.ns);
+  L.getSpeciesData(cf);
 
   // Close Lua File
   L.close();
@@ -235,7 +322,7 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   if (scheme.compare("quick") == 0)
     cf.scheme = 3;
 
-#ifndef NOMPI
+#ifdef HAVE_MPI
   // MPI halo exchange strategy from name
   if (mpi.compare("host") == 0)
     cf.mpiScheme = 1;
@@ -243,6 +330,10 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
     cf.mpiScheme = 2;
   else if (mpi.compare("gpu-type") == 0)
     cf.mpiScheme = 3;
+  else if (mpi.compare("gpu-aware-ordered") == 0)
+    cf.mpiScheme = 4;
+  else if (mpi.compare("host-ordered") == 0)
+    cf.mpiScheme = 5;
   else {
       printf("Invalid MPI communication scheme.\n");
       exit(EXIT_FAILURE);
@@ -258,10 +349,6 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
       cf.dz = 1.0;
   }
 
-  // Calculate time indices
-  cf.t = cf.tstart;
-  cf.tend = cf.tstart + cf.nt;
-
 
   // Set defaults for 2d grids
   if (cf.ndim == 2) {
@@ -269,8 +356,8 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
     cf.dz = cf.dx;
     cf.zProcs = 1;
     cf.glbl_nck = 1;
-    cf.bcH = 0;
-    cf.bcF = 0;
+    cf.bcH = BCType::outflow;
+    cf.bcF = BCType::outflow;
     cf.zPer = 0;
   }else{
     cf.nv = 4 + cf.ns;
@@ -278,6 +365,7 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
 
   // nvt = Number of Variables Total (including c variables)
   cf.nvt = cf.nv;
+
   if (cf.ceq == 1)
     cf.nvt += 5;
 
@@ -324,58 +412,99 @@ struct inputConfig executeConfiguration(struct commandArgs cargs) {
   cf.zMinus = -1 + cf.zPer;
   cf.zPlus = -1 + cf.zPer;
 
-  return cf;
+  // initialize signal flags to inactive
+  cf.restartFlag=0;
+  cf.exitFlag=0;
+
+  cf.xmp = 0;
+  cf.ymp = 0;
+  cf.zmp = 0;
+#ifndef HAVE_MPI
+  cf.globalGridDims.push_back(cf.glbl_ni);
+  cf.globalGridDims.push_back(cf.glbl_nj);
+  cf.globalCellDims.push_back(cf.glbl_nci);
+  cf.globalCellDims.push_back(cf.glbl_ncj);
+  cf.localGridDims.push_back(cf.ni);
+  cf.localGridDims.push_back(cf.nj);
+  cf.localCellDims.push_back(cf.nci);
+  cf.localCellDims.push_back(cf.ncj);
+  cf.subdomainOffset.push_back(cf.iStart);
+  cf.subdomainOffset.push_back(cf.jStart);
+  if(cf.ndim==3){
+    cf.globalGridDims.push_back(cf.glbl_nk);
+    cf.globalCellDims.push_back(cf.glbl_nck);
+    cf.localGridDims.push_back(cf.nk);
+    cf.localCellDims.push_back(cf.nck);
+    cf.subdomainOffset.push_back(cf.kStart);
+  }
+#endif
+
+  cf.ioThisStep = false;
 }
 
 int loadInitialConditions(struct inputConfig cf, FS4D &deviceV, FS4D &deviceG) {
-
-  //int ii,jj,kk;
-  double x,y,z;
+  FSCAL x,y,z;
   FS4DH hostV = Kokkos::create_mirror_view(deviceV);
   FS4DH hostG = Kokkos::create_mirror_view(deviceG);
+  if(cf.grid!=0){
+    Kokkos::deep_copy(hostG,deviceG);
+  }
 
-  Kokkos::deep_copy(hostG,deviceG);
-
-  luaReader L(cf.inputFname);
+  luaReader L(cf.inputFname,"fiesta");
 
   for (int v = 0; v < cf.nv; ++v) {
     if (cf.ndim == 3) {
       for (int k = cf.ng; k < cf.nck + cf.ng; ++k) {
         for (int j = cf.ng; j < cf.ncj + cf.ng; ++j) {
           for (int i = cf.ng; i < cf.nci + cf.ng; ++i) {
-            x = 0;
-            y = 0;
-            z = 0;
-            for (int ix=0; ix<2; ++ix){
-              for (int iy=0; iy<2; ++iy){
-                for (int iz=0; iz<2; ++iz){
-                  x += hostG(i+ix-cf.ng,j+iy-cf.ng,k+iz-cf.ng,0);
-                  y += hostG(i+ix-cf.ng,j+iy-cf.ng,k+iz-cf.ng,1);
-                  z += hostG(i+ix-cf.ng,j+iy-cf.ng,k+iz-cf.ng,2);
+            if(cf.grid==0){
+              // compute cell center coordintes for uniform grids
+              x=cf.dx*(i-cf.ng+cf.subdomainOffset[0]) + 0.5*cf.dx;
+              y=cf.dy*(j-cf.ng+cf.subdomainOffset[1]) + 0.5*cf.dy;
+              z=cf.dz*(k-cf.ng+cf.subdomainOffset[2]) + 0.5*cf.dz;
+            }else{
+              // average cell nodes to compute cell center coordinate for non-uniform grids
+              x = 0;
+              y = 0;
+              z = 0;
+              for (int ix=0; ix<2; ++ix){
+                for (int iy=0; iy<2; ++iy){
+                  for (int iz=0; iz<2; ++iz){
+                    x += hostG(i+ix-cf.ng,j+iy-cf.ng,k+iz-cf.ng,0);
+                    y += hostG(i+ix-cf.ng,j+iy-cf.ng,k+iz-cf.ng,1);
+                    z += hostG(i+ix-cf.ng,j+iy-cf.ng,k+iz-cf.ng,2);
+                  }
                 }
               }
+              x = x/8.0;
+              y = y/8.0;
+              z = z/8.0;
             }
-            x = x/8.0;
-            y = y/8.0;
-            z = z/8.0;
-            hostV(i, j, k, v) = L.call("f",4,x,y,z,(double)v);
+            hostV(i, j, k, v) = L.call("initial_conditions",4,x,y,z,(FSCAL)v);
           }
         }
       }
     } else {
       for (int j = cf.ng; j < cf.ncj + cf.ng; ++j) {
         for (int i = cf.ng; i < cf.nci + cf.ng; ++i) {
-            x = 0;
-            y = 0;
-            for (int ix=0; ix<2; ++ix){
-              for (int iy=0; iy<2; ++iy){
-                x += hostG(i+ix-cf.ng,j+iy-cf.ng,0,0);
-                y += hostG(i+ix-cf.ng,j+iy-cf.ng,0,1);
+            if(cf.grid==0){
+              // compute cell center coordintes for uniform grids
+              x=cf.dx*(i-cf.ng+cf.subdomainOffset[0]) + 0.5*cf.dx;
+              y=cf.dy*(j-cf.ng+cf.subdomainOffset[1]) + 0.5*cf.dy;
+            }else{
+              // average cell nodes to compute cell center coordinate for non-uniform grids
+              x = 0;
+              y = 0;
+              for (int ix=0; ix<2; ++ix){
+                for (int iy=0; iy<2; ++iy){
+                  x += hostG(i+ix-cf.ng,j+iy-cf.ng,0,0);
+                  y += hostG(i+ix-cf.ng,j+iy-cf.ng,0,1);
+                }
               }
+              x = x/4.0;
+              y = y/4.0;
             }
-            x = x/4.0;
-            y = y/4.0;
-            hostV(i, j, 0, v) = L.call("f",4,x,y,0.0,(double)v);
+            hostV(i, j, 0, v) = L.call("initial_conditions",4,x,y,0.0,(FSCAL)v);
         }
       }
     }
@@ -398,12 +527,11 @@ void error(lua_State *L, const char *fmt, ...) {
 }
 
 int loadGrid(struct inputConfig cf, FS4D &deviceV) {
-
   FS4DH hostV = Kokkos::create_mirror_view(deviceV);
 
   if (cf.grid == 1) {
 
-    luaReader L(cf.inputFname);
+    luaReader L(cf.inputFname,"fiesta");
 
     int ii,jj,kk;
     for (int v = 0; v < cf.ndim; ++v) {
@@ -413,7 +541,7 @@ int loadGrid(struct inputConfig cf, FS4D &deviceV) {
             ii = cf.iStart + i;
             jj = cf.jStart + j;
             kk = cf.kStart + k;
-            hostV(i, j, k, v) = L.call("g",4,(double)ii,(double)jj,(double)kk,(double)v);
+            hostV(i, j, k, v) = L.call("initialize_grid",4,(FSCAL)ii,(FSCAL)jj,(FSCAL)kk,(FSCAL)v);
           }
         }
       }
@@ -422,17 +550,6 @@ int loadGrid(struct inputConfig cf, FS4D &deviceV) {
     Kokkos::deep_copy(deviceV, hostV);
   } else if (cf.grid == 2) {
     cf.w->readTerrain(cf,deviceV);
-  } else {
-    for (int k = 0; k < cf.nk; ++k) {
-      for (int j = 0; j < cf.nj; ++j) {
-        for (int i = 0; i < cf.ni; ++i) {
-          hostV(i, j, k, 0) = (cf.iStart + i) * cf.dx;
-          hostV(i, j, k, 1) = (cf.jStart + j) * cf.dy;
-          hostV(i, j, k, 2) = (cf.kStart + k) * cf.dz;
-        }
-      }
-    }
-    Kokkos::deep_copy(deviceV, hostV);
   }
 
 

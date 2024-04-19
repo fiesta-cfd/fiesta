@@ -28,14 +28,20 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#ifndef NOMPI
+#ifdef HAVE_MPI
 #include "mpi.h"
 #endif
 #include <string>
 #include "timer.hpp"
 //#include "rkfunction.hpp"
 #include <map>
+#include "log.hpp"
 #include <vector>
+#include <memory>
+/* #include "block.hpp" */
+#include "bc.hpp"
+
+typedef struct inputConfig fsconf;
 
 // Lua error function
 void error(lua_State *L, const char *fmt, ...);
@@ -46,41 +52,54 @@ int getglobbool(lua_State *L, const char *var);
 // Lua get integer value
 int getglobint(lua_State *L, const char *var);
 
-// Lua get double value
-double getglobdbl(lua_State *L, const char *var);
+// Lua get FSCAL value
+FSCAL getglobdbl(lua_State *L, const char *var);
 
 // configuration structure
 struct inputConfig {
-  fiestaTimer totalTimer;
-  fiestaTimer initTimer;
-  fiestaTimer simTimer;
-  fiestaTimer loadTimer;
-  fiestaTimer gridTimer;
-  fiestaTimer writeTimer;
+  ~inputConfig();
+  Timer::fiestaTimer totalTimer;
+  Timer::fiestaTimer initTimer;
+  Timer::fiestaTimer simTimer;
+  Timer::fiestaTimer loadTimer;
+  Timer::fiestaTimer gridTimer;
+  Timer::fiestaTimer writeTimer;
 
-  class writer *w;
-  class mpiHaloExchange *m;
+  std::shared_ptr<class Writer> w;
+  std::shared_ptr<class mpiHaloExchange> m;
+  //std::shared_ptr<class mpiBuffers> m;
+  std::shared_ptr<class Logger> log;
+  //std::vector<blockWriter<float> > ioblocks;
 
-  int colorFlag,timeFormat;
+  bool colorFlag;
+  int timeFormat;
   std::string inputFname;
   std::string title;
+  std::string metadata;
   std::string terrainName;
   int xmp, ymp, zmp;
   int ndim;
   int glbl_ni, glbl_nj, glbl_nk;
   int glbl_nci, glbl_ncj, glbl_nck;
   std::vector<std::string> speciesName;
-  double *gamma;
-  double *M;
-  double *mu;
-  double R;
+  std::vector<FSCAL> gamma;
+  std::vector<FSCAL> M;
+  std::vector<FSCAL> mu;
+  bool diagnostics;
+
+  FSCAL R;
   int scheme;
-  int visc;
-  int gravity;
-  double g_accel;
-  double *g_vec;
-  double dt, dx, dy, dz;
+  bool visc;
+  bool buoyancy;
+  FSCAL gAccel;
+  FSCAL rhoRef;
+  FSCAL *g_vec;
+  FSCAL dt, dx, dy, dz;
+  std::vector<FSCAL> dxvec;
+  bool autoRestart;
+  std::string autoRestartName;
   int xProcs, yProcs, zProcs, numProcs;
+  int proc[26];
   int xPlus, yPlus, zPlus;
   int xMinus, yMinus, zMinus;
   int rank;
@@ -88,47 +107,59 @@ struct inputConfig {
   int nt, ni, nj, nk, nv, ns, nvt;
   int iStart, jStart, kStart;
   int iEnd, jEnd, kEnd;
-#ifndef NOMPI
+#ifdef HAVE_MPI
   int mpiScheme;
   MPI_Comm comm;
 #endif
   int cF, cB, cZ;
   int ng, ngi, ngj, ngk;
-  int xPer, yPer, zPer;
-  int restart;
+  bool xPer, yPer, zPer;
+  bool restart;
   std::string restartName;
+  bool restartReset;
+  int restartTimeRemaining;
   std::string pathName;
   int tstart, tend;
-  double time;
-  int ceq,st;
-  double kap, eps, alpha, beta, betae;
-  int bcL, bcR, bcB, bcT, bcH, bcF;
-  double n_dh, n_coff, n_eta;
-  int noise, n_nt;
+  bool tinterval;
+  bool chunkable;
+  bool compressible;
+  FSCAL time;
+  int st;
+  bool ceq,noise;
+  FSCAL kap, eps, alpha, beta, betae;
+  BCType bcL, bcR, bcB, bcT, bcH, bcF;
+  FSCAL n_dh, n_coff, n_eta;
+  int n_nt,n_mode;
   int t;
   int grid;
-  double h, tdx, tdy;
+  FSCAL h, tdx, tdy;
+  int verbosity;
+  int restartFlag;
+  int exitFlag;
+  bool ioThisStep;
 
-  int globalGridDims[3];
-  int globalCellDims[3];
-  int localGridDims[3];
-  int localCellDims[3];
-  int subdomainOffset[3];
+  std::vector<size_t> globalGridDims;
+  std::vector<size_t> globalCellDims;
+  std::vector<size_t> localGridDims;
+  std::vector<size_t> localCellDims;
+  std::vector<size_t> subdomainOffset;
 
   int out_freq, stat_freq, write_freq, restart_freq;
 };
 
 struct commandArgs {
   int versionFlag;
+  int verbosity;
   int colorFlag;
   int timeFormat;
   int numThreads;
   int numDevices;
+  bool diagnostics;
   std::string fileName;
 };
 
 struct commandArgs getCommandlineOptions(int argc, char **argv);
-struct inputConfig executeConfiguration(struct commandArgs cargs);
+void executeConfiguration(struct inputConfig &, struct commandArgs cargs);
 
 int loadInitialConditions(struct inputConfig cf,  FS4D &v, FS4D &g);
 int loadGrid(struct inputConfig cf, FS4D &v);

@@ -17,11 +17,14 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifndef GEN2D_H
+#define GEN2D_H
+
 #include "kokkosTypes.hpp"
 #include "input.hpp"
 #include "noise.hpp"
 #include "rkfunction.hpp"
-#ifndef NOMPI
+#ifdef HAVE_MPI
 #include "mpi.hpp"
 #endif
 #include "advect.hpp"
@@ -52,8 +55,10 @@ public:
   FS1D cd;      // Device configuration array
   FS4D metrics; // jacobian metrics
 
-#ifndef NOMPI
+#ifdef HAVE_MPI
   FS4D ls, lr, rs, rr, bs, br, ts, tr;
   FS4DH lsH, lrH, rsH, rrH, bsH, brH, tsH, trH;
 #endif
 };
+
+#endif

@@ -17,10 +17,13 @@
   along with FIESTA.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#ifndef CART2D_H
+#define CART2D_H
+
 #include "kokkosTypes.hpp"
 #include "input.hpp"
 #include "rkfunction.hpp"
-#ifndef NOMPI
+#ifdef HAVE_MPI
 #include "mpi.hpp"
 #endif
 #include "advect.hpp"
@@ -56,5 +59,8 @@ public:
   FS4D stressx; // stress tensor on x faces
   FS4D stressy; // stress tensor on y faces
   FS3D gradRho; // Density Gradient array
+  FS5D m;
   FS2D_I noise; // Noise indicator array
 };
+
+#endif
